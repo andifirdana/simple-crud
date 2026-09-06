@@ -1,0 +1,578 @@
+<nav style="
+  background:#fff;
+  padding:16px 30px;
+  border-bottom:1px solid #e5e7eb;
+  display:flex;
+  gap:10px;
+">
+  <a href="/index.html"
+     style="
+       text-decoration:none;
+       padding:8px 12px;
+       color:#6b7280;
+     ">
+    Master Klien
+  </a>
+
+  <a href="/partner.html"
+     style="
+       text-decoration:none;
+       padding:8px 12px;
+       background:#eef2ff;
+       color:#4338ca;
+       border-radius:8px;
+     ">
+    Master Partner
+  </a>
+</nav>
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Master Data Partner</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, Arial, sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+
+    /* =========================
+       NAVBAR
+    ========================= */
+
+    .navbar {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 16px 40px;
+
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .nav-menu {
+      display: flex;
+      gap: 10px;
+    }
+
+    .nav-menu a {
+      text-decoration: none;
+      color: #6b7280;
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .nav-menu a:hover {
+      background: #f3f4f6;
+    }
+
+    .nav-menu .active {
+      background: #eef2ff;
+      color: #4338ca;
+      font-weight: 600;
+    }
+
+    /* =========================
+       CONTAINER
+    ========================= */
+
+    .container {
+      max-width: 1450px;
+      margin: 35px auto;
+      padding: 0 25px;
+    }
+
+    .page-header {
+      margin-bottom: 25px;
+    }
+
+    .page-header h1 {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    .page-header p {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    /* =========================
+       CARD
+    ========================= */
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 25px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .card-header h2 {
+      font-size: 17px;
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    /* =========================
+       FORM
+    ========================= */
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .form-group.full {
+      grid-column: span 2;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+      background: white;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 42px;
+    }
+
+    .form-actions {
+      margin-top: 22px;
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      background: #4f46e5;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #4338ca;
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    /* =========================
+       TABLE HEADER
+    ========================= */
+
+    .table-header {
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table-header h2 {
+      font-size: 17px;
+    }
+
+    .search-box {
+      width: 320px;
+    }
+
+    /* =========================
+       TABLE
+    ========================= */
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1200px;
+    }
+
+    th {
+      background: #f9fafb;
+      text-align: left;
+      padding: 13px 15px;
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 14px 15px;
+      border-bottom: 1px solid #f0f1f3;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    tbody tr:hover {
+      background: #fafafa;
+    }
+
+    .btn-edit {
+      background: #eef2ff;
+      color: #4338ca;
+      margin-right: 5px;
+    }
+
+    .btn-delete {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    /* =========================
+       STATUS
+    ========================= */
+
+    .status {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .status-aktif {
+      background: #ecfdf5;
+      color: #047857;
+    }
+
+    .status-nonaktif {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .empty-data {
+      text-align: center;
+      color: #9ca3af;
+      padding: 35px;
+    }
+
+    @media (max-width: 1000px) {
+      .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 650px) {
+      .navbar {
+        padding: 15px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-group.full {
+        grid-column: span 1;
+      }
+
+      .table-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .search-box {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+
+    <div class="brand">
+      Project Management
+    </div>
+
+    <div class="nav-menu">
+      <a href="/index.html">
+        Master Klien
+      </a>
+
+      <a href="/partner.html" class="active">
+        Master Partner
+      </a>
+    </div>
+
+  </nav>
+
+
+  <main class="container">
+
+    <!-- HEADER -->
+
+    <div class="page-header">
+      <h1>Master Data Partner</h1>
+
+      <p>
+        Kelola informasi partner, vendor, PIC dan status kerja sama.
+      </p>
+    </div>
+
+
+    <!-- FORM -->
+
+    <div class="card">
+
+      <div class="card-header">
+        <h2 id="formTitle">Tambah Partner</h2>
+      </div>
+
+      <div class="card-body">
+
+        <form id="partnerForm">
+
+          <div class="form-grid">
+
+            <div class="form-group">
+              <label>Nama Partner *</label>
+
+              <input
+                type="text"
+                id="nama_partner"
+                placeholder="Contoh: PT Mitra Teknologi"
+                required
+              >
+            </div>
+
+
+            <div class="form-group">
+              <label>Inisial</label>
+
+              <input
+                type="text"
+                id="inisial"
+                placeholder="Contoh: MT"
+              >
+            </div>
+
+
+            <div class="form-group">
+              <label>Jenis Partner</label>
+
+              <select id="jenis_partner">
+                <option value="">Pilih jenis partner</option>
+                <option value="Vendor IT">Vendor IT</option>
+                <option value="Principal">Principal</option>
+                <option value="Distributor">Distributor</option>
+                <option value="Payment Gateway">Payment Gateway</option>
+                <option value="Consultant">Consultant</option>
+                <option value="Outsourcing">Outsourcing</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+
+
+            <div class="form-group">
+              <label>Status</label>
+
+              <select id="status">
+                <option value="Aktif">Aktif</option>
+                <option value="Nonaktif">Nonaktif</option>
+              </select>
+            </div>
+
+
+            <div class="form-group">
+              <label>Nama PIC</label>
+
+              <input
+                type="text"
+                id="nama_pic"
+                placeholder="Nama PIC"
+              >
+            </div>
+
+
+            <div class="form-group">
+              <label>No. PIC</label>
+
+              <input
+                type="tel"
+                id="no_pic"
+                placeholder="081234567890"
+                inputmode="numeric"
+                maxlength="20"
+              >
+            </div>
+
+
+            <div class="form-group">
+              <label>Email PIC</label>
+
+              <input
+                type="email"
+                id="email_pic"
+                placeholder="pic@partner.com"
+              >
+            </div>
+
+
+            <div class="form-group">
+              <label>Alamat</label>
+
+              <textarea
+                id="alamat"
+                placeholder="Alamat partner"
+              ></textarea>
+            </div>
+
+          </div>
+
+
+          <div class="form-actions">
+
+            <button
+              type="submit"
+              class="btn-primary"
+              id="submitButton"
+            >
+              + Simpan Partner
+            </button>
+
+            <button
+              type="button"
+              class="btn-secondary"
+              id="cancelEdit"
+              style="display:none;"
+            >
+              Batal
+            </button>
+
+          </div>
+
+        </form>
+
+      </div>
+
+    </div>
+
+
+    <!-- TABLE -->
+
+    <div class="card">
+
+      <div class="table-header">
+
+        <h2>Daftar Partner</h2>
+
+        <input
+          type="text"
+          id="searchInput"
+          class="search-box"
+          placeholder="Cari partner, PIC, email..."
+        >
+
+      </div>
+
+
+      <div class="table-wrapper">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nama Partner</th>
+              <th>Inisial</th>
+              <th>Jenis Partner</th>
+              <th>Nama PIC</th>
+              <th>No. PIC</th>
+              <th>Email PIC</th>
+              <th>Status</th>
+              <th>Created At</th>
+              <th>Updated At</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+
+          <tbody id="partnerTable"></tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <script src="/partner.js"></script>
+
+</body>
+</html>
