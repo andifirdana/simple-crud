@@ -10,3 +10,16 @@ const pool = new Pool({
 });
 
 module.exports = pool;
+
+pool.query(`
+  SELECT
+    current_database(),
+    current_user,
+    current_schema()
+`)
+.then(result => {
+  console.log("KONEKSI DATABASE:", result.rows[0]);
+})
+.catch(error => {
+  console.error("ERROR DATABASE:", error);
+});

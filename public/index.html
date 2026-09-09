@@ -1,581 +1,1259 @@
-<nav style="
-  background:#fff;
-  padding:16px 30px;
-  border-bottom:1px solid #e5e7eb;
-  display:flex;
-  gap:10px;
-">
-  <a href="/index.html"
-     style="
-       text-decoration:none;
-       padding:8px 12px;
-       background:#eef2ff;
-       color:#4338ca;
-       border-radius:8px;
-     ">
-    Master Klien
-  </a>
-
-  <a href="/partner.html"
-     style="
-       text-decoration:none;
-       padding:8px 12px;
-       color:#6b7280;
-     ">
-    Master Partner
-  </a>
-</nav>
-
 <!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Master Data Klien</title>
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Master Data Klien - Portopro</title>
+
+  <!-- GLOBAL STYLE -->
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
 
   <style>
+
     * {
       box-sizing: border-box;
-      margin: 0;
-      padding: 0;
     }
+
 
     body {
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+
+      font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
       background: #f5f7fb;
+
       color: #1f2937;
+
+      overflow-x: hidden;
     }
 
-    /* =========================
-       HEADER
-    ========================= */
 
-    .header {
-      background: #ffffff;
-      border-bottom: 1px solid #e5e7eb;
-      padding: 20px 40px;
 
+    /* =====================================================
+       APP LAYOUT
+    ===================================================== */
+
+    .app-layout {
+      min-height: 100vh;
+    }
+
+
+    .main-content {
+      margin-left: 260px;
+
+      width: calc(100% - 260px);
+
+      min-width: 0;
+
+      padding: 0;
+
+      box-sizing: border-box;
+    }
+
+
+    .client-page {
+      width: 100%;
+
+      max-width: 1500px;
+
+      margin: 0 auto;
+
+      padding: 32px;
+    }
+
+
+
+    /* =====================================================
+       PAGE HEADER
+    ===================================================== */
+
+    .page-header {
       display: flex;
-      align-items: center;
+
       justify-content: space-between;
-    }
 
-    .header-title h1 {
-      font-size: 22px;
-      font-weight: 700;
-      color: #111827;
-    }
+      align-items: center;
 
-    .header-title p {
-      font-size: 13px;
-      color: #6b7280;
-      margin-top: 4px;
-    }
+      gap: 20px;
 
-    .badge {
-      background: #eef2ff;
-      color: #4338ca;
-      padding: 7px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
+      margin-bottom: 24px;
     }
 
 
-    /* =========================
-       CONTAINER
-    ========================= */
+    .page-header h1 {
+      margin: 0 0 6px;
 
-    .container {
-      max-width: 1400px;
-      margin: auto;
-      padding: 35px 40px;
+      color: #0f172a;
+
+      font-size: 27px;
+
+      font-weight: 750;
+
+      letter-spacing: -0.5px;
     }
 
 
-    /* =========================
+    .page-header p {
+      margin: 0;
+
+      color: #64748b;
+
+      font-size: 14px;
+    }
+
+
+
+    /* =====================================================
        CARD
-    ========================= */
+    ===================================================== */
 
-    .card {
-      background: white;
-      border-radius: 14px;
-      padding: 25px;
-      margin-bottom: 25px;
+    .client-card {
+      width: 100%;
+
+      min-width: 0;
+
+      margin-bottom: 24px;
+
+      background: #ffffff;
 
       border: 1px solid #e5e7eb;
 
+      border-radius: 14px;
+
+      overflow: hidden;
+
       box-shadow:
-        0 1px 2px rgba(0,0,0,.03),
-        0 4px 12px rgba(0,0,0,.03);
-    }
-
-    .card-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 20px;
+        0 1px 2px rgba(15, 23, 42, 0.03);
     }
 
 
-    /* =========================
+
+    /* =====================================================
+       CARD HEADER
+    ===================================================== */
+
+    .card-header {
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: center;
+
+      gap: 16px;
+
+      padding: 18px 20px;
+
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+
+    .card-header h2 {
+      margin: 0 0 4px;
+
+      color: #0f172a;
+
+      font-size: 15px;
+
+      font-weight: 700;
+    }
+
+
+    .card-header p {
+      margin: 0;
+
+      color: #64748b;
+
+      font-size: 12px;
+    }
+
+
+
+    /* =====================================================
        FORM
-    ========================= */
+    ===================================================== */
+
+    .form-body {
+      padding: 20px;
+    }
+
 
     .form-grid {
       display: grid;
 
       grid-template-columns:
-        repeat(5, 1fr);
+        repeat(5, minmax(0, 1fr));
 
       gap: 16px;
     }
 
+
     .form-group {
-      display: flex;
-      flex-direction: column;
+      min-width: 0;
     }
 
+
     .form-group label {
-      font-size: 12px;
-      font-weight: 600;
+      display: block;
+
       margin-bottom: 7px;
-      color: #4b5563;
+
+      color: #475569;
+
+      font-size: 12px;
+
+      font-weight: 650;
     }
+
 
     .form-group input {
       width: 100%;
 
-      padding: 11px 13px;
+      height: 40px;
 
-      border:
-        1px solid #d1d5db;
+      padding: 9px 11px;
+
+      border: 1px solid #d1d5db;
 
       border-radius: 8px;
 
-      font-size: 14px;
+      background: #ffffff;
+
+      color: #334155;
+
+      font-family: inherit;
+
+      font-size: 13px;
 
       outline: none;
 
-      transition: .2s;
+      transition: 0.2s;
     }
+
+
+    .form-group input::placeholder {
+      color: #9ca3af;
+    }
+
 
     .form-group input:focus {
       border-color: #6366f1;
 
       box-shadow:
         0 0 0 3px
-        rgba(99,102,241,.12);
+        rgba(99, 102, 241, 0.08);
     }
 
 
-    /* =========================
-       BUTTON
-    ========================= */
+
+    /* =====================================================
+       FORM ACTION
+    ===================================================== */
 
     .form-action {
+      display: flex;
+
+      justify-content: flex-end;
+
+      align-items: center;
+
+      gap: 8px;
+
       margin-top: 20px;
 
-      display: flex;
-      justify-content: flex-end;
+      padding-top: 18px;
+
+      border-top: 1px solid #f1f5f9;
     }
 
-    .btn-primary {
+
+
+    /* =====================================================
+       BUTTON
+    ===================================================== */
+
+    .client-btn {
+      display: inline-flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      min-height: 36px;
+
+      padding: 9px 14px;
+
       border: none;
-
-      background: #4f46e5;
-      color: white;
-
-      padding: 11px 22px;
 
       border-radius: 8px;
 
-      font-size: 14px;
+      font-family: inherit;
+
+      font-size: 12px;
+
       font-weight: 600;
+
+      white-space: nowrap;
 
       cursor: pointer;
 
-      transition: .2s;
+      transition: 0.2s;
     }
 
-    .btn-primary:hover {
+
+    .client-btn-primary {
+      background: #4f46e5;
+
+      color: #ffffff;
+    }
+
+
+    .client-btn-primary:hover {
       background: #4338ca;
-      transform: translateY(-1px);
     }
 
 
-    /* =========================
-       TABLE HEADER
-    ========================= */
+    .client-btn-template {
+      background: #f3f4f6;
 
-    .table-header {
+      color: #374151;
+    }
+
+
+    .client-btn-template:hover {
+      background: #e5e7eb;
+    }
+
+
+    .client-btn-import {
+      background: #eef2ff;
+
+      color: #4338ca;
+    }
+
+
+    .client-btn-import:hover {
+      background: #e0e7ff;
+    }
+
+
+    .client-btn-export {
+      background: #ecfdf5;
+
+      color: #047857;
+    }
+
+
+    .client-btn-export:hover {
+      background: #d1fae5;
+    }
+
+
+
+    /* =====================================================
+       TABLE TOOLBAR
+    ===================================================== */
+
+    .table-toolbar {
       display: flex;
-      justify-content: space-between;
+
       align-items: center;
 
-      margin-bottom: 18px;
+      gap: 8px;
+
+      flex-wrap: wrap;
     }
 
-    .table-header h2 {
-      font-size: 16px;
-    }
 
-    .table-header span {
+    .table-search {
+      width: 260px;
+
+      height: 36px;
+
+      padding: 8px 11px;
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 8px;
+
+      background: #ffffff;
+
+      color: #334155;
+
+      font-family: inherit;
+
       font-size: 12px;
-      color: #6b7280;
+
+      outline: none;
     }
 
 
-    /* =========================
+    .table-search:focus {
+      border-color: #6366f1;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(99, 102, 241, 0.08);
+    }
+
+
+
+    /* =====================================================
        TABLE
-    ========================= */
+    ===================================================== */
 
     .table-wrapper {
+      width: 100%;
+
+      max-width: 100%;
+
       overflow-x: auto;
     }
 
+
+    .table-wrapper::-webkit-scrollbar {
+      height: 7px;
+    }
+
+
+    .table-wrapper::-webkit-scrollbar-track {
+      background: #f8fafc;
+    }
+
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+
+      border-radius: 999px;
+    }
+
+
     table {
       width: 100%;
+
+      min-width: 1150px;
+
       border-collapse: collapse;
+
       font-size: 13px;
     }
 
+
     thead {
-      background: #f9fafb;
+      background: #f8fafc;
     }
+
 
     th {
       padding: 13px 14px;
 
       text-align: left;
 
-      color: #6b7280;
+      color: #64748b;
 
       font-size: 11px;
-      font-weight: 600;
+
+      font-weight: 700;
 
       text-transform: uppercase;
 
-      letter-spacing: .04em;
-
-      border-bottom:
-        1px solid #e5e7eb;
+      letter-spacing: 0.04em;
 
       white-space: nowrap;
     }
 
-    td {
-      padding: 15px 14px;
 
-      border-bottom:
-        1px solid #f0f0f0;
+    td {
+      padding: 14px;
+
+      border-top: 1px solid #f1f5f9;
+
+      color: #334155;
+
+      font-size: 13px;
 
       vertical-align: middle;
 
       white-space: nowrap;
     }
 
+
     tbody tr {
-      transition: .15s;
+      transition: 0.15s;
     }
+
 
     tbody tr:hover {
-      background: #f9fafb;
+      background: #fafbff;
     }
 
 
-    /* =========================
-       DELETE BUTTON
-    ========================= */
+
+    /* =====================================================
+       ACTION BUTTON DARI APP.JS
+    ===================================================== */
 
     td button {
+      min-height: 30px;
+
+      padding: 6px 10px;
+
+      margin-right: 4px;
+
       border: none;
-
-      background: #fef2f2;
-      color: #dc2626;
-
-      padding: 7px 12px;
 
       border-radius: 6px;
 
-      font-size: 12px;
+      font-family: inherit;
+
+      font-size: 11px;
+
       font-weight: 600;
 
       cursor: pointer;
 
-      transition: .2s;
-    }
-
-    td button:hover {
-      background: #fee2e2;
+      transition: 0.2s;
     }
 
 
-    /* =========================
+
+    /* =====================================================
        RESPONSIVE
-    ========================= */
+    ===================================================== */
 
-    @media (max-width: 1000px) {
+    @media (max-width: 1200px) {
 
       .form-grid {
         grid-template-columns:
-          repeat(2, 1fr);
+          repeat(2, minmax(0, 1fr));
       }
 
     }
 
-    @media (max-width: 600px) {
 
-      .container {
+    @media (max-width: 900px) {
+
+      .card-header {
+        flex-direction: column;
+
+        align-items: flex-start;
+      }
+
+
+      .table-toolbar {
+        width: 100%;
+      }
+
+
+      .table-search {
+        width: 100%;
+      }
+
+    }
+
+
+    @media (max-width: 768px) {
+
+      .main-content {
+        margin-left: 0;
+
+        width: 100%;
+      }
+
+
+      .client-page {
         padding: 20px;
       }
 
-      .header {
-        padding: 18px 20px;
-      }
+    }
+
+
+    @media (max-width: 600px) {
 
       .form-grid {
         grid-template-columns: 1fr;
       }
 
+
+      .page-header h1 {
+        font-size: 23px;
+      }
+
     }
 
   </style>
+
 </head>
+
 
 
 <body>
 
 
-<!-- HEADER -->
+<div class="app-layout">
 
-<div class="header">
 
-  <div class="header-title">
+  <!-- =====================================================
+       SIDEBAR
+  ====================================================== -->
 
-    <h1>Master Data Klien</h1>
+  <aside class="sidebar">
 
-    <p>
-      Kelola informasi perusahaan dan PIC
-    </p>
 
-  </div>
+    <div class="logo">
+      Portopro
+    </div>
 
-  <div class="badge">
-    Client Management
-  </div>
+
+    <div class="sidebar-user">
+
+      <strong id="userNama">
+        User
+      </strong>
+
+    </div>
+
+
+    <div class="sidebar-user">
+
+      <span id="userRole">
+        PIC
+      </span>
+
+    </div>
+
+
+
+    <div class="menu">
+
+
+      <div class="menu-title">
+        Overview
+      </div>
+
+
+      <a href="/dashboard.html">
+        Dashboard
+      </a>
+
+
+      <a href="/proyek.html">
+        Proyek
+      </a>
+
+
+      <a href="/task.html">
+        Task List
+      </a>
+
+
+
+      <div class="menu-title">
+        Master Data
+      </div>
+
+
+      <a
+        href="/index.html"
+        class="active"
+      >
+        Master Klien
+      </a>
+
+
+      <a href="/partner.html">
+        Master Partner
+      </a>
+
+
+      <a href="/pic.html">
+        Master PIC
+      </a>
+
+
+      <a href="/kategori.html">
+        Master Kategori
+      </a>
+
+
+    </div>
+
+
+
+    <button
+      type="button"
+      id="logoutButton"
+    >
+      Logout
+    </button>
+
+
+  </aside>
+
+
+
+  <!-- =====================================================
+       MAIN CONTENT
+  ====================================================== -->
+
+  <main class="main-content">
+
+
+    <div class="client-page">
+
+
+
+      <!-- =================================================
+           PAGE HEADER
+      ================================================== -->
+
+      <div class="page-header">
+
+
+        <div>
+
+          <h1>
+            Master Data Klien
+          </h1>
+
+          <p>
+            Kelola data perusahaan dan PIC klien.
+          </p>
+
+        </div>
+
+
+      </div>
+
+
+
+      <!-- =================================================
+           FORM TAMBAH KLIEN
+      ================================================== -->
+
+      <div class="client-card">
+
+
+        <div class="card-header">
+
+
+          <div>
+
+            <h2>
+              Tambah Data Klien
+            </h2>
+
+            <p>
+              Tambahkan perusahaan dan informasi PIC klien.
+            </p>
+
+          </div>
+
+
+        </div>
+
+
+
+        <div class="form-body">
+
+
+          <form id="dataForm">
+
+
+            <div class="form-grid">
+
+
+
+              <!-- PERUSAHAAN -->
+
+              <div class="form-group">
+
+                <label for="perusahaan_klien">
+                  Perusahaan / Klien
+                </label>
+
+                <input
+                  type="text"
+                  id="perusahaan_klien"
+                  placeholder="PT ABC Indonesia"
+                  required
+                >
+
+              </div>
+
+
+
+              <!-- INISIAL -->
+
+              <div class="form-group">
+
+                <label for="inisial">
+                  Inisial
+                </label>
+
+                <input
+                  type="text"
+                  id="inisial"
+                  placeholder="ABC"
+                >
+
+              </div>
+
+
+
+              <!-- NAMA PIC -->
+
+              <div class="form-group">
+
+                <label for="nama_pic">
+                  Nama PIC
+                </label>
+
+                <input
+                  type="text"
+                  id="nama_pic"
+                  placeholder="Nama PIC"
+                >
+
+              </div>
+
+
+
+              <!-- NO PIC -->
+
+              <div class="form-group">
+
+                <label for="no_pic">
+                  No. Handphone
+                </label>
+
+                <input
+                  type="tel"
+                  id="no_pic"
+                  placeholder="0812XXX"
+                  inputmode="numeric"
+                  maxlength="15"
+                >
+
+              </div>
+
+
+
+              <!-- EMAIL PIC -->
+
+              <div class="form-group">
+
+                <label for="email_pic">
+                  Email PIC
+                </label>
+
+                <input
+                  type="email"
+                  id="email_pic"
+                  placeholder="nama@perusahaan.com"
+                >
+
+              </div>
+
+
+            </div>
+
+
+
+            <div class="form-action">
+
+
+              <button
+                type="submit"
+                class="
+                  client-btn
+                  client-btn-primary
+                "
+              >
+                + Simpan Data
+              </button>
+
+
+            </div>
+
+
+          </form>
+
+
+        </div>
+
+
+      </div>
+
+
+
+      <!-- =================================================
+           DAFTAR KLIEN
+      ================================================== -->
+
+      <div class="client-card">
+
+
+        <div class="card-header">
+
+
+          <div>
+
+            <h2>
+              Daftar Klien
+            </h2>
+
+            <p>
+              Data perusahaan dan PIC.
+            </p>
+
+          </div>
+
+
+
+          <!-- TOOLBAR -->
+
+          <div class="table-toolbar">
+
+
+            <!-- SEARCH -->
+
+            <input
+              type="text"
+              id="searchInput"
+              class="table-search"
+              placeholder="Cari perusahaan, PIC, email..."
+            >
+
+
+
+            <!-- DOWNLOAD TEMPLATE -->
+
+            <button
+              type="button"
+              id="downloadTemplateButton"
+              class="
+                client-btn
+                client-btn-template
+              "
+            >
+              Download Template
+            </button>
+
+
+
+            <!-- IMPORT -->
+
+            <button
+              type="button"
+              id="importButton"
+              class="
+                client-btn
+                client-btn-import
+              "
+            >
+              Import CSV
+            </button>
+
+
+
+            <!-- EXPORT -->
+
+            <button
+              type="button"
+              id="exportButton"
+              class="
+                client-btn
+                client-btn-export
+              "
+            >
+              Export CSV
+            </button>
+
+
+
+            <!-- FILE INPUT -->
+
+            <input
+              type="file"
+              id="importFile"
+              accept=".csv,text/csv"
+              style="display:none;"
+            >
+
+
+          </div>
+
+
+        </div>
+
+
+
+        <!-- TABLE -->
+
+        <div class="table-wrapper">
+
+
+          <table>
+
+
+            <thead>
+
+
+              <tr>
+
+                <th>
+                  ID
+                </th>
+
+                <th>
+                  Perusahaan
+                </th>
+
+                <th>
+                  Inisial
+                </th>
+
+                <th>
+                  Nama PIC
+                </th>
+
+                <th>
+                  No. PIC
+                </th>
+
+                <th>
+                  Email PIC
+                </th>
+
+                <th>
+                  Created At
+                </th>
+
+                <th>
+                  Updated At
+                </th>
+
+                <th>
+                  Aksi
+                </th>
+
+              </tr>
+
+
+            </thead>
+
+
+
+            <tbody id="dataTable">
+
+
+              <tr>
+
+                <td
+                  colspan="9"
+                  style="
+                    padding:40px;
+                    text-align:center;
+                    color:#64748b;
+                  "
+                >
+                  Memuat data klien...
+                </td>
+
+              </tr>
+
+
+            </tbody>
+
+
+          </table>
+
+
+        </div>
+
+
+      </div>
+
+
+    </div>
+    <!-- /client-page -->
+
+
+  </main>
+  <!-- /main-content -->
+
 
 </div>
+<!-- /app-layout -->
 
 
 
-<div class="container">
-
-
-  <!-- =========================
-       FORM INPUT
-  ========================== -->
-
-  <div class="card">
-
-    <div class="card-title">
-      Tambah Data Klien
-    </div>
-
-
-    <form id="dataForm">
-
-
-      <div class="form-grid">
-
-
-        <div class="form-group">
-
-          <label>
-            Perusahaan / Klien
-          </label>
-
-          <input
-            type="text"
-            id="perusahaan_klien"
-            placeholder="PT ABC Indonesia"
-            required
-          >
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>
-            Inisial
-          </label>
-
-          <input
-            type="text"
-            id="inisial"
-            placeholder="ABC"
-          >
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>
-            Nama PIC
-          </label>
-
-          <input
-            type="text"
-            id="nama_pic"
-            placeholder="Nama PIC"
-          >
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>
-            No. Handphone
-          </label>
-
-          <input
-            type="tel"
-            id="no_pic"
-            placeholder="0812XXX"
-            inputmode="numeric"
-            maxlength="15"
-          >
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>
-            Email PIC
-          </label>
-
-          <input
-            type="email"
-            id="email_pic"
-            placeholder="nama@perusahaan.com"
-          >
-
-        </div>
-
-
-      </div>
-
-
-      <div class="form-action">
-
-        <button
-          type="submit"
-          class="btn-primary"
-        >
-          + Simpan Data
-        </button>
-
-      </div>
-
-
-    </form>
-
-  </div>
-
-
-
-  <!-- =========================
-       DATA TABLE
-  ========================== -->
-
-  <div class="card">
-
-
-    <div class="table-header">
-
-      <div>
-
-        <h2>
-          Daftar Klien
-        </h2>
-
-        <span>
-          Data perusahaan dan PIC
-        </span>
-
-      </div>
-
-    </div>
-
-
-    <div class="table-wrapper">
-
-      <table>
-
-        <thead>
-
-          <tr>
-
-            <th>ID</th>
-
-            <th>
-              Perusahaan
-            </th>
-
-            <th>
-              Inisial
-            </th>
-
-            <th>
-              Nama PIC
-            </th>
-
-            <th>
-              No. PIC
-            </th>
-
-            <th>
-              Email PIC
-            </th>
-
-            <th>
-              Created At
-            </th>
-
-            <th>
-              Updated At
-            </th>
-
-            <th>
-              Aksi
-            </th>
-
-          </tr>
-
-        </thead>
-
-
-        <tbody id="dataTable">
-        </tbody>
-
-
-      </table>
-
-    </div>
-
-
-  </div>
-
-
-</div>
-
+<!-- =====================================================
+     JAVASCRIPT
+====================================================== -->
 
 <script src="/app.js"></script>
 
 
+
+<!-- =====================================================
+     USER SIDEBAR + LOGOUT
+====================================================== -->
+
+<script>
+
+  async function loadSidebarUser() {
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/me"
+        );
+
+
+      if (!response.ok) {
+
+        window.location.href =
+          "/login.html";
+
+        return;
+
+      }
+
+
+      const data =
+        await response.json();
+
+
+      const user =
+        data.user || data;
+
+
+      const userNama =
+        document.getElementById(
+          "userNama"
+        );
+
+
+      const userRole =
+        document.getElementById(
+          "userRole"
+        );
+
+
+      if (userNama) {
+
+        userNama.textContent =
+          user.nama ||
+          user.name ||
+          user.email ||
+          "User";
+
+      }
+
+
+      if (userRole) {
+
+        userRole.textContent =
+          user.role ||
+          user.jabatan ||
+          "PIC";
+
+      }
+
+
+    } catch (error) {
+
+      console.error(
+        "ERROR LOAD USER:",
+        error
+      );
+
+    }
+
+  }
+
+
+
+  const logoutButton =
+    document.getElementById(
+      "logoutButton"
+    );
+
+
+  if (logoutButton) {
+
+    logoutButton.addEventListener(
+      "click",
+      async () => {
+
+        try {
+
+          const response =
+            await fetch(
+              "/api/logout",
+              {
+                method: "POST"
+              }
+            );
+
+
+          if (!response.ok) {
+
+            throw new Error(
+              "Logout gagal"
+            );
+
+          }
+
+
+          window.location.href =
+            "/login.html";
+
+
+        } catch (error) {
+
+          console.error(
+            "ERROR LOGOUT:",
+            error
+          );
+
+
+          alert(
+            "Gagal logout."
+          );
+
+        }
+
+      }
+    );
+
+  }
+
+
+
+  loadSidebarUser();
+
+</script>
+
+
 </body>
+
 </html>

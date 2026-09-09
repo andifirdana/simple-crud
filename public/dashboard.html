@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+  <title>Dashboard - Portopro</title>
+  <link rel="stylesheet" href="/style.css">
+
+</head>
+
+<body>
+
+  <div class="layout">
+
+    <!-- =====================
+         SIDEBAR
+    ====================== -->
+
+    <aside class="sidebar">
+
+      <div class="logo">
+        Portopro
+      </div>
+      <div class="sidebar-user">
+        <strong id="userNama">User</strong>
+      </div>
+      <div class="sidebar-user">
+        <span id="userRole">PIC</span>
+      </div>
+
+      <div class="menu">
+
+        <div class="menu-title">
+          Overview
+        </div>
+
+        <a
+          href="/dashboard.html"
+          class="active"
+        >
+          Dashboard
+        </a>
+
+        <a href="/proyek.html">
+          Proyek
+        </a>
+
+        <a href="/task.html">
+          Task List
+        </a>
+
+
+        <div class="menu-title">
+          Master Data
+        </div>
+
+        <a href="/index.html">
+          Master Klien
+        </a>
+
+        <a href="/partner.html">
+          Master Partner
+        </a>
+
+        <a href="/pic.html">
+          Master PIC
+        </a>
+
+        <a href="/kategori.html">
+          Master Kategori
+        </a>
+
+      </div>
+      <button
+        type="button"
+        id="logoutButton"
+      >
+        Logout
+      </button>
+
+    </aside>
+
+
+    <!-- =====================
+         CONTENT
+    ====================== -->
+
+    <main class="content">
+
+      <div class="page-header">
+
+        <h1>Dashboard Proyek</h1>
+
+        <p>
+          Monitoring proyek, nilai kontrak,
+          pembayaran dan masa berlaku kontrak.
+        </p>
+
+      </div>
+
+
+      <!-- =====================
+           FILTER
+      ====================== -->
+
+      <div class="filter-card">
+
+        <div class="filter-title">
+          Filter Proyek
+        </div>
+
+        <div class="filter-grid">
+
+          <!-- SEARCH -->
+
+          <div class="form-group">
+
+            <label>
+              Cari Proyek
+            </label>
+
+            <input
+              type="text"
+              id="searchProyek"
+              class="form-control"
+              placeholder="Cari nama proyek..."
+            >
+
+          </div>
+
+
+          <!-- BULAN -->
+
+          <div class="form-group">
+
+            <label>
+              Bulan
+            </label>
+
+            <select
+              id="filterBulan"
+              class="form-control"
+            >
+
+              <option value="">
+                Semua Bulan
+              </option>
+
+              <option value="1">Januari</option>
+              <option value="2">Februari</option>
+              <option value="3">Maret</option>
+              <option value="4">April</option>
+              <option value="5">Mei</option>
+              <option value="6">Juni</option>
+              <option value="7">Juli</option>
+              <option value="8">Agustus</option>
+              <option value="9">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Desember</option>
+
+            </select>
+
+          </div>
+
+
+          <!-- TAHUN -->
+
+          <div class="form-group">
+
+            <label>
+              Tahun
+            </label>
+
+            <select
+              id="filterTahun"
+              class="form-control"
+            >
+
+              <option value="">
+                Semua Tahun
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <!-- PIC -->
+
+          <div class="form-group">
+
+            <label>
+              PIC
+            </label>
+
+            <select
+              id="filterPic"
+              class="form-control"
+            >
+
+              <option value="">
+                Semua PIC
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="btn-reset"
+            id="resetFilter"
+          >
+            Reset
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- =====================================================
+     SECTION PROYEK
+     ===================================================== -->
+
+<section class="dashboard-section">
+
+  <div class="section-title">
+    <div>
+      <h2>Proyek</h2>
+      <p>Ringkasan keseluruhan proyek sesuai filter.</p>
+    </div>
+  </div>
+
+  <div class="summary-grid project-summary">
+
+    <!-- TOTAL PROYEK -->
+    <div class="summary-card">
+      <div class="summary-icon">📁</div>
+
+      <div class="summary-content">
+        <div class="summary-label">
+          Total Proyek
+        </div>
+
+        <div
+          class="summary-value"
+          id="totalProyek"
+        >
+          0
+        </div>
+
+        <div class="summary-description">
+          Proyek sesuai filter
+        </div>
+      </div>
+    </div>
+
+
+    <!-- TOTAL NILAI PROYEK -->
+    <div class="summary-card">
+      <div class="summary-icon">💼</div>
+
+      <div class="summary-content">
+        <div class="summary-label">
+          Total Nilai Proyek
+        </div>
+
+        <div
+          class="summary-value"
+          id="totalNilaiProyek"
+        >
+          Rp 0
+        </div>
+
+        <div class="summary-description">
+          Total nilai final kontrak klien
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ESTIMASI PENDAPATAN -->
+    <div class="summary-card">
+      <div class="summary-icon">📈</div>
+
+      <div class="summary-content">
+        <div class="summary-label">
+          Estimasi Pendapatan
+        </div>
+
+        <div
+          class="summary-value"
+          id="estimasiPendapatan"
+        >
+          Rp 0
+        </div>
+
+        <div class="summary-description">
+          Estimasi margin proyek
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =====================================================
+     SECTION KLIEN & PARTNER
+===================================================== -->
+
+<section class="dashboard-section">
+
+  <div class="section-title">
+    <div>
+      <h2>Klien & Partner</h2>
+      <p>Monitoring pembayaran klien dan partner.</p>
+    </div>
+  </div>
+
+
+  <div class="summary-grid payment-summary">
+
+    <!-- DIBAYAR KLIEN -->
+    <div class="summary-card">
+      <div class="summary-icon">💰</div>
+
+      <div class="summary-content">
+        <div class="summary-label">
+        Dibayar Klien
+        </div>
+
+        <div
+          class="summary-value"
+          id="nilaiTertagihKlien"
+        >
+          Rp 0
+        </div>
+
+        <div class="summary-description">
+          Termin klien berstatus Dibayar
+        </div>
+      </div>
+    </div>
+
+
+    <!-- BELUM DIBAYAR KLIEN -->
+    <div class="summary-card">
+      <div class="summary-icon">🧾</div>
+
+      <div class="summary-content">
+        <div class="summary-label">
+      Belum Dibayar Klien
+        </div>
+
+        <div
+          class="summary-value"
+          id="nilaiBelumTertagihKlien"
+        >
+          Rp 0
+        </div>
+
+        <div class="summary-description">
+          Termin klien selain status Dibayar
+        </div>
+      </div>
+    </div>
+
+
+    <!-- DIBAYAR PARTNER -->
+    <div class="summary-card">
+      <div class="summary-icon">✅</div>
+
+      <div class="summary-content">
+        <div class="summary-label">
+          Dibayar Partner
+        </div>
+
+        <div
+          class="summary-value"
+          id="nilaiTerbayarPartner"
+        >
+          Rp 0
+        </div>
+
+        <div class="summary-description">
+          Termin partner berstatus Dibayar
+        </div>
+      </div>
+    </div>
+
+
+    <!-- BELUM DIBAYAR PARTNER -->
+    <div class="summary-card">
+      <div class="summary-icon">⌛</div>
+
+      <div class="summary-content">
+        <div class="summary-label">
+        Belum Dibayar Partner
+        </div>
+
+        <div
+          class="summary-value"
+          id="nilaiBelumTerbayarPartner"
+        >
+          Rp 0
+        </div>
+
+        <div class="summary-description">
+          Termin partner selain status Dibayar
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+
+
+      <!-- =====================
+           DAFTAR PROYEK
+      ====================== -->
+
+      <section class="section">
+
+        <div class="section-header">
+
+          <h2>
+            Daftar Proyek
+          </h2>
+
+          <p>
+            Data proyek berdasarkan filter
+            bulan, tahun, PIC dan pencarian.
+          </p>
+
+        </div>
+
+        <div class="table-card">
+
+          <div class="table-wrapper">
+
+            <table>
+
+              <thead>
+
+                <tr>
+                  <th>No</th>
+                  <th>Nama Proyek</th>
+                  <th>Klien</th>
+                  <th>PIC</th>
+                  <th>Tanggal Mulai</th>
+                  <th>Tanggal Akhir</th>
+                  <th>Nilai Proyek</th>
+                </tr>
+
+              </thead>
+
+              <tbody id="projectTableBody">
+
+                <tr>
+                  <td
+                    colspan="7"
+                    class="empty-state"
+                  >
+                    Memuat data...
+                  </td>
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =====================
+           KONTRAK KLIEN
+      ====================== -->
+
+      <section class="section">
+
+        <div class="section-header">
+
+          <h2>
+            Kontrak Klien Akan Jatuh Tempo
+          </h2>
+
+          <p>
+            Kontrak klien yang berakhir
+            dalam 3 bulan ke depan.
+          </p>
+
+        </div>
+
+        <div class="table-card">
+
+          <div class="table-wrapper">
+
+            <table>
+
+              <thead>
+
+                <tr>
+                  <th>Proyek</th>
+                  <th>Klien</th>
+                  <th>Tanggal Akhir</th>
+                  <th>Sisa Waktu</th>
+                  <th>Nilai Kontrak</th>
+                </tr>
+
+              </thead>
+
+              <tbody id="kontrakKlienBody">
+
+                <tr>
+                  <td
+                    colspan="5"
+                    class="empty-state"
+                  >
+                    Memuat data...
+                  </td>
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =====================
+           KONTRAK PARTNER
+      ====================== -->
+
+      <section class="section">
+
+        <div class="section-header">
+
+          <h2>
+            Kontrak Partner Akan Jatuh Tempo
+          </h2>
+
+          <p>
+            Kontrak partner yang berakhir
+            dalam 3 bulan ke depan.
+          </p>
+
+        </div>
+
+        <div class="table-card">
+
+          <div class="table-wrapper">
+
+            <table>
+
+              <thead>
+
+                <tr>
+                  <th>Proyek</th>
+                  <th>Partner</th>
+                  <th>Tanggal Akhir</th>
+                  <th>Sisa Waktu</th>
+                  <th>Nilai Kontrak</th>
+                </tr>
+
+              </thead>
+
+              <tbody id="kontrakPartnerBody">
+
+                <tr>
+                  <td
+                    colspan="5"
+                    class="empty-state"
+                  >
+                    Memuat data...
+                  </td>
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+    </main>
+
+  </div>
+
+
+  <script src="/dashboard.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Task List - Portopro</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+  <style>
+
+    body {
+      margin: 0;
+      font-family:
+        Inter,
+        Arial,
+        sans-serif;
+
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+
+   .task-page {
+      margin-left: 260px;
+
+      width: calc(100% - 260px);
+
+      min-width: 0;
+
+      padding: 32px;
+
+      box-sizing: border-box;
+}
+
+    .task-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .task-header h1 {
+      margin: 0 0 6px;
+      font-size: 30px;
+    }
+
+    .task-header p {
+      margin: 0;
+      color: #6b7280;
+    }
+
+    .btn-primary {
+      border: 0;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #4f46e5;
+      color: white;
+    }
+
+    .task-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  background: white;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+
+  overflow: hidden;
+
+  box-sizing: border-box;
+}
+
+.task-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  box-sizing: border-box;
+}
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1500px;
+    }
+
+    th {
+      text-align: left;
+      padding: 15px;
+      font-size: 12px;
+      color: #6b7280;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 15px;
+      border-bottom: 1px solid #f0f1f3;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    .catatan-cell {
+      max-width: 320px;
+      min-width: 250px;
+
+      white-space: normal;
+      line-height: 1.5;
+    }
+
+    .task-name {
+      font-weight: 600;
+      min-width: 180px;
+    }
+
+    .status {
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .status-not-started {
+      background: #f3f4f6;
+      color: #4b5563;
+    }
+
+    .status-on-progress {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .status-hold {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-done {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-edit,
+    .btn-delete {
+      border: 0;
+      padding: 7px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .btn-edit {
+      background: #eef2ff;
+      color: #4338ca;
+    }
+
+    .btn-delete {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    .modal {
+      display: none;
+
+      position: fixed;
+      inset: 0;
+
+      background:
+        rgba(17, 24, 39, 0.55);
+
+      align-items: center;
+      justify-content: center;
+
+      padding: 20px;
+
+      z-index: 999;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      width: 100%;
+      max-width: 650px;
+      max-height: 90vh;
+
+      overflow-y: auto;
+
+      background: white;
+
+      padding: 26px;
+
+      border-radius: 16px;
+    }
+
+    .modal-content h2 {
+      margin-top: 0;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+
+      width: 100%;
+
+      box-sizing: border-box;
+
+      padding: 11px;
+
+      border:
+        1px solid #d1d5db;
+
+      border-radius: 9px;
+
+      font: inherit;
+    }
+
+    .form-group textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .status-select {
+  width: 105px;
+  min-width: 105px;
+
+  height: 30px;
+
+  padding: 4px 22px 4px 9px;
+
+  border: none;
+  outline: none;
+  border-radius: 16px;
+
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+
+  cursor: pointer;
+
+  box-sizing: border-box;
+}
+
+th:nth-child(6),
+td:nth-child(6) {
+  width: 115px;
+  min-width: 115px;
+  max-width: 115px;
+}
+
+.status-not-started {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.status-on-progress {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-hold {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-done {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.task-table-wrapper::-webkit-scrollbar {
+  height: 7px;
+}
+
+.task-table-wrapper::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.task-table-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+  </style>
+
+</head>
+
+
+<body>
+
+  <!-- =====================
+         SIDEBAR
+    ====================== -->
+
+    <aside class="sidebar">
+
+      <div class="logo">
+        Portopro
+      </div>
+      <div class="sidebar-user">
+        <strong id="userNama">User</strong>
+      </div>
+      <div class="sidebar-user">
+        <span id="userRole">PIC</span>
+      </div>
+
+      <div class="menu">
+
+        <div class="menu-title">
+          Overview
+        </div>
+
+        <a
+          href="/dashboard.html"
+          
+        >
+          Dashboard
+        </a>
+
+        <a href="/proyek.html">
+          Proyek
+        </a>
+
+        <a href="/task.html"
+        class="active">
+          Task List
+        </a>
+
+
+        <div class="menu-title">
+          Master Data
+        </div>
+
+        <a href="/index.html">
+          Master Klien
+        </a>
+
+        <a href="/partner.html">
+          Master Partner
+        </a>
+
+        <a href="/pic.html">
+          Master PIC
+        </a>
+
+        <a href="/kategori.html">
+          Master Kategori
+        </a>
+
+      </div>
+      <button
+        type="button"
+        id="logoutButton"
+      >
+        Logout
+      </button>
+
+    </aside>
+
+  <div class="task-page">
+
+
+    <div class="task-header">
+
+      <div>
+
+        <h1>Task List</h1>
+
+        <p>
+          Kelola aktivitas dan target pekerjaan proyek.
+        </p>
+
+      </div>
+
+
+      <button
+        id="tambahTaskButton"
+        class="btn-primary"
+      >
+        + Tambah Task
+      </button>
+
+    </div>
+
+
+    <div class="task-card">
+
+      <div class="task-table-wrapper">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Proyek</th>
+              <th>Kategori</th>
+              <th>Task</th>
+              <th>Catatan</th>
+              <th>Link</th>
+              <th>Status</th>
+              <th>Tanggal Mulai</th>
+              <th>Target Date</th>
+              <th>Tanggal Selesai</th>
+              <th>Dibuat Oleh</th>
+              <th>Aksi</th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody id="taskTableBody">
+
+            <tr>
+              <td colspan="11">
+                Memuat task...
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- MODAL -->
+
+  <div
+    id="taskModal"
+    class="modal"
+  >
+
+    <div class="modal-content">
+
+      <h2 id="modalTitle">
+        Tambah Task
+      </h2>
+
+
+      <form id="taskForm">
+
+        <input
+          type="hidden"
+          id="taskId"
+        >
+
+
+        <div class="form-group">
+
+          <label>Nama Proyek</label>
+
+          <select
+            id="proyekId"
+            required
+          >
+            <option value="">
+              Pilih Proyek
+            </option>
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Kategori</label>
+
+          <input
+            id="kategori"
+            type="text"
+            readonly
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Task</label>
+
+          <input
+            id="task"
+            type="text"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Catatan</label>
+
+          <textarea
+            id="catatan"
+            placeholder="Tuliskan catatan pekerjaan secara lengkap..."
+          ></textarea>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Link</label>
+
+          <input
+            id="link"
+            type="url"
+            placeholder="https://..."
+          >
+
+        </div>
+
+
+        <div
+          class="form-group"
+          id="statusGroup"
+        >
+
+          <label>Status</label>
+
+          <select id="status">
+
+            <option value="Not Started">
+              Not Started
+            </option>
+
+            <option value="On Progress">
+              On Progress
+            </option>
+
+            <option value="Hold">
+              Hold
+            </option>
+
+            <option value="Done">
+              Done
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Target Date</label>
+
+          <input
+            id="targetDate"
+            type="date"
+          >
+
+        </div>
+
+
+        <div class="form-actions">
+
+          <button
+            type="button"
+            id="batalButton"
+          >
+            Batal
+          </button>
+
+          <button
+            type="submit"
+            class="btn-primary"
+          >
+            Simpan
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <script src="/task.js"></script>
+
+</body>
+
+
+</html>

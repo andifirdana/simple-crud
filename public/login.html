@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+
+<html lang="id">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Login | ProjectFlow
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+
+  <style>
+
+    body {
+      margin: 0;
+
+      min-height: 100vh;
+
+      background:
+        #f5f7fb;
+    }
+
+
+    .login-page {
+
+      min-height: 100vh;
+
+      display: grid;
+
+      grid-template-columns:
+        1.1fr 0.9fr;
+
+    }
+
+
+    /* LEFT */
+
+    .login-hero {
+
+      padding: 64px;
+
+      display: flex;
+
+      flex-direction: column;
+
+      justify-content:
+        space-between;
+
+      color: white;
+
+      background:
+        linear-gradient(
+          145deg,
+          #111827,
+          #312e81
+        );
+
+    }
+
+
+    .login-brand {
+
+      font-size: 22px;
+
+      font-weight: 750;
+
+    }
+
+
+    .login-hero-content {
+
+      max-width: 520px;
+
+    }
+
+
+    .login-hero-content h1 {
+
+      font-size: 48px;
+
+      line-height: 1.1;
+
+      letter-spacing: -1.5px;
+
+      margin-bottom: 18px;
+
+    }
+
+
+    .login-hero-content p {
+
+      color: #c7d2fe;
+
+      font-size: 16px;
+
+      line-height: 1.7;
+
+    }
+
+
+    .login-footer {
+
+      color: #a5b4fc;
+
+      font-size: 12px;
+
+    }
+
+
+
+    /* RIGHT */
+
+    .login-area {
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      padding: 40px;
+
+    }
+
+
+    .login-card {
+
+      width: 100%;
+
+      max-width: 420px;
+
+    }
+
+
+    .login-card h2 {
+
+      font-size: 28px;
+
+      margin-bottom: 8px;
+
+      color: #0f172a;
+
+    }
+
+
+    .login-description {
+
+      color: #64748b;
+
+      margin-bottom: 30px;
+
+      line-height: 1.6;
+
+    }
+
+
+    .login-group {
+
+      margin-bottom: 18px;
+
+    }
+
+
+    .login-group label {
+
+      display: block;
+
+      margin-bottom: 7px;
+
+      color: #334155;
+
+      font-size: 13px;
+
+      font-weight: 650;
+
+    }
+
+
+    .login-group input {
+
+      width: 100%;
+
+      height: 48px;
+
+      padding: 0 14px;
+
+      box-sizing: border-box;
+
+      border:
+        1px solid #dbe2ea;
+
+      border-radius: 10px;
+
+      outline: none;
+
+      background: white;
+
+      font-size: 14px;
+
+    }
+
+
+    .login-group input:focus {
+
+      border-color: #6366f1;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(99, 102, 241, .12);
+
+    }
+
+
+    .login-button {
+
+      width: 100%;
+
+      height: 48px;
+
+      margin-top: 5px;
+
+      border: 0;
+
+      border-radius: 10px;
+
+      background: #4f46e5;
+
+      color: white;
+
+      font-weight: 700;
+
+      cursor: pointer;
+
+    }
+
+
+    .login-button:hover {
+
+      background: #4338ca;
+
+    }
+
+
+    .login-button:disabled {
+
+      opacity: .6;
+
+      cursor: wait;
+
+    }
+
+
+    .login-error {
+
+      display: none;
+
+      margin-bottom: 18px;
+
+      padding: 12px 14px;
+
+      border-radius: 9px;
+
+      background: #fef2f2;
+
+      color: #b91c1c;
+
+      font-size: 13px;
+
+    }
+
+
+    @media (
+      max-width: 850px
+    ) {
+
+      .login-page {
+
+        grid-template-columns:
+          1fr;
+
+      }
+
+
+      .login-hero {
+
+        display: none;
+
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+<div class="login-page">
+
+
+  <!-- LEFT -->
+
+  <section class="login-hero">
+
+
+    <div class="login-brand">
+
+      ProjectFlow
+
+    </div>
+
+
+    <div class="login-hero-content">
+
+      <h1>
+
+        Manage projects
+        with clarity.
+
+      </h1>
+
+
+      <p>
+
+        Monitor proyek, kontrak,
+        pembayaran, partner dan PIC
+        dalam satu workspace.
+
+      </p>
+
+    </div>
+
+
+    <div class="login-footer">
+
+      Project Management System
+
+    </div>
+
+
+  </section>
+
+
+
+  <!-- RIGHT -->
+
+  <section class="login-area">
+
+
+    <div class="login-card">
+
+
+      <h2>
+
+        Selamat datang
+
+      </h2>
+
+
+      <div class="login-description">
+
+        Masuk menggunakan email
+        yang terdaftar pada akun PIC.
+
+      </div>
+
+
+
+      <div
+        id="loginError"
+        class="login-error"
+      >
+      </div>
+
+
+
+      <form id="loginForm">
+
+
+        <div class="login-group">
+
+          <label for="email">
+
+            Email
+
+          </label>
+
+
+          <input
+            type="email"
+            id="email"
+            placeholder="nama@perusahaan.com"
+            autocomplete="email"
+            required
+          >
+
+        </div>
+
+
+
+        <div class="login-group">
+
+          <label for="password">
+
+            Password
+
+          </label>
+
+
+          <input
+            type="password"
+            id="password"
+            placeholder="Masukkan password"
+            autocomplete="current-password"
+            required
+          >
+
+        </div>
+
+
+
+        <button
+          type="submit"
+          class="login-button"
+          id="loginButton"
+        >
+
+          Masuk
+
+        </button>
+
+
+      </form>
+
+
+    </div>
+
+  </section>
+
+
+</div>
+
+
+<script src="/login.js"></script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,2123 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Detail Proyek | ProjectFlow</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+  <style>
+    /* =====================================================
+   PORTOPRO DETAIL LAYOUT
+===================================================== */
+
+body {
+  margin: 0;
+  background: #f5f7fb;
+  color: #1f2937;
+  overflow-x: hidden;
+}
+
+.app-layout {
+  min-height: 100vh;
+}
+
+.main-content {
+  margin-left: 260px;
+  width: calc(100% - 260px);
+  max-width: calc(100% - 260px);
+  min-width: 0;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.detail-page {
+  width: 100%;
+  max-width: 1500px;
+  min-width: 0;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+
+/* TASK TABLE */
+
+.project-task-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.project-task-table {
+  width: 100%;
+  min-width: 1200px;
+  border-collapse: collapse;
+}
+
+.project-task-table th {
+  padding: 12px 13px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.project-task-table td {
+  padding: 13px;
+  border-top: 1px solid #f1f5f9;
+  color: #334155;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 768px) {
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 20px;
+  }
+
+}
+
+
+    /* ================================================
+       DETAIL PROYEK
+       ================================================ */
+
+    .detail-page {
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    .detail-topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .breadcrumb {
+      color: #64748b;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .breadcrumb a {
+      color: #4f46e5;
+      font-weight: 600;
+    }
+
+    .project-title {
+      font-size: 28px;
+      font-weight: 750;
+      letter-spacing: -0.7px;
+      margin-bottom: 6px;
+    }
+
+    .project-category {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+
+    /* ================================================
+       SUMMARY
+       ================================================ */
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .summary-card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 4px 12px rgba(15, 23, 42, 0.04);
+    }
+
+    .summary-label {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .summary-value {
+      color: #0f172a;
+      font-size: 21px;
+      font-weight: 750;
+    }
+
+
+    /* ================================================
+       SECTION CARD
+       ================================================ */
+
+    .project-section {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      overflow: hidden;
+
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 4px 12px rgba(15, 23, 42, 0.03);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+
+      padding: 18px 22px;
+
+      border-bottom:
+        1px solid #eef2f7;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-icon {
+      width: 38px;
+      height: 38px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 10px;
+
+      background: #eef2ff;
+
+      font-size: 18px;
+    }
+
+    .section-heading h2 {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .section-heading p {
+      margin-top: 2px;
+
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .section-body {
+      padding: 22px;
+    }
+
+
+    /* ================================================
+       INFORMATION GRID
+       ================================================ */
+
+    .grid {
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          auto-fit,
+          minmax(190px, 1fr)
+        );
+
+      gap: 14px;
+    }
+
+    .info {
+      padding: 15px;
+
+      border:
+        1px solid #eef2f7;
+
+      border-radius: 11px;
+
+      background: #f8fafc;
+    }
+
+    .label {
+      color: #64748b;
+
+      font-size: 11px;
+      font-weight: 600;
+
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+
+      margin-bottom: 5px;
+    }
+
+    .value {
+      color: #0f172a;
+
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+
+    /* ================================================
+       ACTION BUTTON
+       ================================================ */
+
+    .btn-edit {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+
+      min-height: 36px;
+
+      padding: 7px 13px;
+
+      border: 1px solid #dbe2ea;
+      border-radius: 9px;
+
+      background: #ffffff;
+
+      color: #334155;
+
+      font-size: 12px;
+      font-weight: 650;
+
+      cursor: pointer;
+
+      transition: 0.2s ease;
+    }
+
+    .btn-edit:hover {
+      color: #4f46e5;
+      border-color: #a5b4fc;
+      background: #eef2ff;
+    }
+
+
+    /* ================================================
+       SUB SECTION
+       ================================================ */
+
+    .sub-section {
+      margin-top: 24px;
+
+      padding-top: 20px;
+
+      border-top:
+        1px solid #eef2f7;
+    }
+
+    .sub-section-header {
+      display: flex;
+
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 12px;
+
+      margin-bottom: 15px;
+    }
+
+    .sub-section-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+
+    /* ================================================
+       PROGRESS
+       ================================================ */
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+
+      color: #64748b;
+
+      font-size: 12px;
+
+      margin-bottom: 8px;
+    }
+
+    .progress-track {
+      height: 7px;
+
+      overflow: hidden;
+
+      border-radius: 999px;
+
+      background: #e5e7eb;
+
+      margin-bottom: 18px;
+    }
+
+    .progress-bar {
+      height: 100%;
+
+      width: 0;
+
+      border-radius: inherit;
+
+      background: #4f46e5;
+
+      transition: width 0.3s ease;
+    }
+
+
+    /* ================================================
+       EMPTY
+       ================================================ */
+
+    .empty {
+      padding: 22px;
+
+      border:
+        1px dashed #dbe2ea;
+
+      border-radius: 10px;
+
+      color: #64748b;
+
+      text-align: center;
+
+      background: #f8fafc;
+    }
+
+
+    /* ================================================
+       MODAL
+       ================================================ */
+
+    .modal {
+      display: none;
+
+      position: fixed;
+      inset: 0;
+
+      z-index: 999;
+
+      padding: 20px;
+
+      background:
+        rgba(15, 23, 42, 0.55);
+
+      backdrop-filter: blur(4px);
+
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      width: min(560px, 100%);
+
+      max-height: 90vh;
+
+      overflow-y: auto;
+
+      padding: 24px;
+
+      background: #ffffff;
+
+      border-radius: 16px;
+
+      box-shadow:
+        0 25px 70px
+        rgba(15, 23, 42, 0.22);
+    }
+
+    .modal-large {
+      width: min(760px, 100%);
+    }
+
+    .modal-header {
+      display: flex;
+
+      justify-content:
+        space-between;
+
+      align-items: center;
+
+      margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+    }
+
+    .modal-actions {
+      display: flex;
+
+      justify-content:
+        flex-end;
+
+      gap: 10px;
+
+      margin-top: 22px;
+    }
+
+
+    /* ================================================
+       RESPONSIVE
+       ================================================ */
+
+    @media (max-width: 1000px) {
+
+      .summary-grid {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+
+    }
+
+    @media (max-width: 650px) {
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-topbar {
+        flex-direction: column;
+      }
+
+      .section-header {
+        align-items: flex-start;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+<div class="app-layout">
+
+
+  <!-- =====================================================
+     SIDEBAR
+====================================================== -->
+
+<aside class="sidebar">
+
+  <div class="logo">
+    Portopro
+  </div>
+
+
+  <div class="sidebar-user">
+
+    <strong id="userNama">
+      User
+    </strong>
+
+  </div>
+
+
+  <div class="sidebar-user">
+
+    <span id="userRole">
+      PIC
+    </span>
+
+  </div>
+
+
+  <div class="menu">
+
+    <div class="menu-title">
+      Overview
+    </div>
+
+
+    <a href="/dashboard.html">
+      Dashboard
+    </a>
+
+
+    <a
+      href="/proyek.html"
+      class="active"
+    >
+      Proyek
+    </a>
+
+
+    <a href="/task.html">
+      Task List
+    </a>
+
+
+    <div class="menu-title">
+      Master Data
+    </div>
+
+
+    <a href="/index.html">
+      Master Klien
+    </a>
+
+
+    <a href="/partner.html">
+      Master Partner
+    </a>
+
+
+    <a href="/pic.html">
+      Master PIC
+    </a>
+
+
+    <a href="/kategori.html">
+      Master Kategori
+    </a>
+
+  </div>
+
+
+  <button
+    type="button"
+    id="logoutButton"
+  >
+    Logout
+  </button>
+
+</aside>
+
+
+  <!-- ==================================================
+       MAIN
+       ================================================== -->
+
+  <main class="main-content">
+
+    <div class="detail-page">
+
+
+      <!-- ================================================
+           HEADER
+           ================================================ -->
+
+      <div class="detail-topbar">
+
+        <div>
+
+          <div class="breadcrumb">
+
+            <a href="/proyek.html">
+              Proyek
+            </a>
+
+            /
+
+            Detail Proyek
+
+          </div>
+
+
+          <h1
+            class="project-title"
+            id="judulProyek"
+          >
+            Memuat proyek...
+          </h1>
+
+
+          <div class="project-category">
+
+            Kategori:
+
+            <strong
+              id="kategoriProyek"
+            >
+              -
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <a
+          href="/proyek.html"
+          class="btn btn-secondary"
+        >
+          ← Kembali
+        </a>
+
+      </div>
+
+
+
+      <!-- ================================================
+           SUMMARY
+           ================================================ -->
+
+      <div class="summary-grid">
+
+
+        <div class="summary-card">
+
+          <div class="summary-label">
+            Nilai Klien
+          </div>
+
+          <div
+            class="summary-value"
+            id="nilaiKlien"
+          >
+            Rp 0
+          </div>
+
+        </div>
+
+
+        <div class="summary-card">
+
+          <div class="summary-label">
+            Nilai Partner
+          </div>
+
+          <div
+            class="summary-value"
+            id="nilaiPartner"
+          >
+            Rp 0
+          </div>
+
+        </div>
+
+
+        <div class="summary-card">
+
+          <div class="summary-label">
+            Margin
+          </div>
+
+          <div
+            class="summary-value"
+            id="margin"
+          >
+            Rp 0
+          </div>
+
+        </div>
+
+
+        <div class="summary-card">
+
+          <div class="summary-label">
+            Margin %
+          </div>
+
+          <div
+            class="summary-value"
+            id="marginPersen"
+          >
+            0%
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- ================================================
+           INFORMASI PROYEK
+           ================================================ -->
+
+      <section class="project-section">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              📁
+            </div>
+
+            <div>
+
+              <h2>
+                Informasi Proyek
+              </h2>
+
+              <p>
+                Informasi utama dan status proyek
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="btn-edit"
+            id="editProyekButton"
+          >
+            ✎ Edit
+          </button>
+
+        </div>
+
+
+        <div class="section-body">
+
+          <div class="grid">
+
+  <!-- KATEGORI -->
+  <div class="info">
+
+    <div class="label">
+      Kategori
+    </div>
+
+    <div
+      class="value"
+      id="kategoriInfoProyek"
+    >
+      -
+    </div>
+
+  </div>
+
+
+  <!-- JENIS PROYEK -->
+  <div class="info">
+
+    <div class="label">
+      Jenis Proyek
+    </div>
+
+    <div
+      class="value"
+      id="jenisProyek"
+    >
+      -
+    </div>
+
+  </div>
+
+
+  <!-- SUB JENIS PROYEK -->
+  <div class="info">
+
+    <div class="label">
+      Sub Jenis Proyek
+    </div>
+
+    <div
+      class="value"
+      id="subJenisProyek"
+    >
+      -
+    </div>
+
+  </div>
+
+
+  <!-- STATUS -->
+  <div class="info">
+
+    <div class="label">
+      Status
+    </div>
+
+    <div
+      class="value"
+      id="statusFinal"
+    >
+      -
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- DESKRIPSI -->
+<div
+  class="info"
+  style="margin-top:14px;"
+>
+
+  <div class="label">
+    Deskripsi
+  </div>
+
+  <div
+    class="value"
+    id="deskripsi"
+    style="
+      white-space:pre-wrap;
+      font-weight:500;
+    "
+  >
+    -
+  </div>
+
+</div>
+
+
+      <!-- ================================================
+           PIC
+           ================================================ -->
+
+      <section class="project-section">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              👤
+            </div>
+
+            <div>
+
+              <h2>
+                PIC
+              </h2>
+
+              <p>
+                Person in Charge proyek
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="btn-edit"
+            id="editPicButton"
+          >
+            ✎ Edit PIC
+          </button>
+
+        </div>
+
+
+        <div
+          class="section-body"
+          id="picContainer"
+        >
+
+          <div class="empty">
+            Memuat PIC...
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- ================================================
+           KLIEN
+           ================================================ -->
+
+      <section class="project-section">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              🏢
+            </div>
+
+            <div>
+
+              <h2>
+                Klien
+              </h2>
+
+              <p>
+                Kontrak, nilai dan pembayaran klien
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="btn-edit"
+            id="editKlienButton"
+          >
+            ✎ Edit Klien
+          </button>
+
+        </div>
+
+
+        <div class="section-body">
+
+
+          <!-- INFORMASI KLIEN -->
+
+          <div id="klienInfo">
+
+            <div class="empty">
+              Memuat data klien...
+            </div>
+
+          </div>
+
+
+
+          <!-- ============================================
+               TERMIN KLIEN
+               ============================================ -->
+
+          <div class="sub-section">
+
+            <div class="sub-section-header">
+
+              <div class="sub-section-title">
+                Termin Pembayaran
+              </div>
+
+
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="tambahTerminButton"
+              >
+                + Tambah Termin
+              </button>
+
+            </div>
+
+
+            <div class="progress-header">
+
+              <span>
+                Total Termin
+              </span>
+
+              <strong
+                id="totalTermin"
+              >
+                0%
+              </strong>
+
+            </div>
+
+
+            <div class="progress-track">
+
+              <div
+                class="progress-bar"
+                id="terminProgress"
+              >
+              </div>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      Termin
+                    </th>
+
+                    <th>
+                      Persentase
+                    </th>
+
+                    <th>
+                      Nominal
+                    </th>
+
+                    <th>
+                      Status
+                    </th>
+
+                    <th>
+                      Jatuh Tempo
+                    </th>
+
+                    <th>
+                      Tanggal Bayar
+                    </th>
+
+                    <th>
+                      Aksi
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody
+                  id="terminTable"
+                >
+
+                  <tr>
+
+                    <td colspan="7">
+                      Memuat termin...
+                    </td>
+
+                  </tr>
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+
+
+          <!-- ============================================
+               DOKUMEN KLIEN
+               ============================================ -->
+
+          <div class="sub-section">
+
+            <div class="sub-section-header">
+
+              <div class="sub-section-title">
+                Dokumen Klien
+              </div>
+
+
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="tambahDokumenButton"
+              >
+                + Tambah Dokumen
+              </button>
+
+            </div>
+
+
+            <div id="dokumenContainer">
+
+              <div class="empty">
+                Memuat dokumen...
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- ================================================
+           PARTNER
+           ================================================ -->
+
+      <section class="project-section">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              🤝
+            </div>
+
+            <div>
+
+              <h2>
+                Partner
+              </h2>
+
+              <p>
+                Partner, kontrak, termin dan dokumen proyek
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="btn-edit"
+            id="editPartnerButton"
+          >
+            ✎ Kelola Partner
+          </button>
+
+        </div>
+
+
+        <div
+          class="section-body"
+          id="partnerContainer"
+        >
+
+          <div class="empty">
+            Memuat partner...
+          </div>
+
+        </div>
+
+      </section>
+      <!-- ================================================
+     TASK LIST
+     ================================================ -->
+
+<section class="project-section">
+
+  <div class="section-header">
+
+    <div class="section-heading">
+
+      <div class="section-icon">
+        ✓
+      </div>
+
+      <div>
+        <h2>Task List</h2>
+        <p>
+          Aktivitas seluruh PIC pada proyek ini
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="section-body">
+
+    <div class="project-task-table-wrapper">
+
+      <table class="project-task-table">
+
+        <thead>
+
+          <tr>
+            <th>PIC</th>
+            <th>Task</th>
+            <th>Catatan</th>
+            <th>Link</th>
+            <th>Status</th>
+            <th>Tanggal Mulai</th>
+            <th>Target Date</th>
+            <th>Tanggal Selesai</th>
+            <th>Dibuat</th>
+          </tr>
+
+        </thead>
+
+
+        <tbody id="detailProjectTaskBody">
+
+          <tr>
+
+            <td
+              colspan="9"
+              style="
+                text-align:center;
+                color:#64748b;
+                padding:30px;
+              "
+            >
+              Memuat task...
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+    </div>
+
+  </main>
+
+</div>
+
+
+
+<!-- =====================================================
+     MODAL TERMIN
+     ===================================================== -->
+
+<div
+  class="modal"
+  id="terminModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h3 id="terminModalTitle">
+        Tambah Termin
+      </h3>
+
+    </div>
+
+
+    <form id="terminForm">
+
+      <input
+        type="hidden"
+        id="terminId"
+      >
+
+
+      <div class="form-group">
+
+        <label for="namaTermin">
+          Nama Termin
+        </label>
+
+        <input
+          type="text"
+          id="namaTermin"
+          placeholder="Contoh: Termin 1"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="persentaseTermin">
+          Persentase
+        </label>
+
+        <input
+          type="number"
+          id="persentaseTermin"
+          min="0.01"
+          max="100"
+          step="0.01"
+          placeholder="Contoh: 30"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="statusPembayaran">
+          Status Pembayaran
+        </label>
+
+        <select
+          id="statusPembayaran"
+          required
+        >
+
+          <option value="Belum Dibayar">
+            Belum Dibayar
+          </option>
+
+          <option value="Proses">
+            Proses
+          </option>
+
+          <option value="Dibayar">
+            Dibayar
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="tanggalJatuhTempo">
+            Tanggal Jatuh Tempo
+          </label>
+
+          <input
+            type="date"
+            id="tanggalJatuhTempo"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="tanggalBayar">
+            Tanggal Bayar
+          </label>
+
+          <input
+            type="date"
+            id="tanggalBayar"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalTermin"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     MODAL DOKUMEN
+     ===================================================== -->
+
+<div
+  class="modal"
+  id="dokumenModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h3>
+        Tambah Dokumen Klien
+      </h3>
+
+    </div>
+
+
+    <form id="dokumenForm">
+
+      <div class="form-group">
+
+        <label for="namaDokumen">
+          Nama Dokumen
+        </label>
+
+        <input
+          type="text"
+          id="namaDokumen"
+          placeholder="Contoh: Kontrak / BAST / PO"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="nomorDokumen">
+          Nomor Dokumen
+        </label>
+
+        <input
+          type="text"
+          id="nomorDokumen"
+          placeholder="Contoh: PKS/001/IX/2026"
+        >
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalDokumen"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Dokumen
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     MODAL EDIT INFORMASI PROYEK
+     ===================================================== -->
+
+<div
+  class="modal"
+  id="editProyekModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <h3>
+        Edit Informasi Proyek
+      </h3>
+
+    </div>
+
+
+    <form id="editProyekForm">
+
+      <div class="form-group">
+
+        <label for="editNamaProyek">
+          Nama Proyek
+        </label>
+
+        <input
+          type="text"
+          id="editNamaProyek"
+          required
+        >
+
+      </div>
+
+      <div class="form-group">
+
+    <label for="editKategoriProyek">
+      Kategori
+    </label>
+
+    <select
+      id="editKategoriProyek"
+      required
+    >
+      <option value="">
+        Pilih Kategori
+      </option>
+    </select>
+
+  </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editJenisProyek">
+            Jenis Proyek
+          </label>
+
+          <select id="editJenisProyek">
+
+            <option value="">
+              Pilih Jenis
+            </option>
+
+            <option value="Reguler/SLA">
+              Reguler/SLA
+            </option>
+
+            <option value="Project">
+              Project
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editSubJenisProyek">
+            Sub Jenis Proyek
+          </label>
+
+          <input
+            type="text"
+            id="editSubJenisProyek"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="editStatusFinal">
+          Status
+        </label>
+
+        <select id="editStatusFinal">
+
+          <option value="Aktif">
+            Aktif
+          </option>
+
+          <option value="Done">
+            Done
+          </option>
+
+          <option value="Cancel">
+            Cancel
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="editDeskripsi">
+          Deskripsi
+        </label>
+
+        <textarea
+          id="editDeskripsi"
+          rows="5"
+        ></textarea>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalEditProyek"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Perubahan
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     MODAL EDIT PIC
+     ===================================================== -->
+
+<div
+  class="modal"
+  id="editPicModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h3>
+        Edit PIC Proyek
+      </h3>
+
+    </div>
+
+
+    <form id="editPicForm">
+
+      <div id="editPicContainer">
+
+        <div class="empty">
+          Memuat daftar PIC...
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalEditPic"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan PIC
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     MODAL EDIT KLIEN
+     ===================================================== -->
+
+<div
+  class="modal"
+  id="editKlienModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <h3>
+        Edit Data Klien
+      </h3>
+
+    </div>
+
+
+    <form id="editKlienForm">
+
+      <div class="form-group">
+
+        <label for="editKlienId">
+          Klien
+        </label>
+
+        <select id="editKlienId">
+
+          <option value="">
+            Pilih Klien
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editNilaiSubmitKlien">
+            Nilai Submit
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiSubmitKlien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editNilaiNego1Klien">
+            Nilai Nego 1
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiNego1Klien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editNilaiNego2Klien">
+            Nilai Nego 2
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiNego2Klien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editNilaiNego3Klien">
+            Nilai Nego 3
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiNego3Klien"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editTanggalMulaiKlien">
+            Tanggal Mulai
+          </label>
+
+          <input
+            type="date"
+            id="editTanggalMulaiKlien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editTanggalAkhirKlien">
+            Tanggal Akhir
+          </label>
+
+          <input
+            type="date"
+            id="editTanggalAkhirKlien"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editStatusPengadaanKlien">
+            Status Pengadaan
+          </label>
+
+          <input
+            type="text"
+            id="editStatusPengadaanKlien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editStatusTeknisKlien">
+            Status Teknis
+          </label>
+
+          <input
+            type="text"
+            id="editStatusTeknisKlien"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalEditKlien"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Perubahan
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     MODAL KELOLA PARTNER
+     ===================================================== -->
+
+<div
+  class="modal"
+  id="editPartnerModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <h3>
+        Kelola Partner Proyek
+      </h3>
+
+    </div>
+
+
+    <div id="editPartnerContainer">
+
+      <div class="empty">
+        Memuat data partner...
+      </div>
+
+    </div>
+
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        id="batalEditPartner"
+      >
+        Tutup
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+
+<script src="/detail-proyek.js"></script>
+
+
+<script>
+
+  async function loadSidebarUser() {
+
+    try {
+
+      const response =
+        await fetch("/api/me");
+
+
+      if (!response.ok) {
+
+        window.location.href =
+          "/login.html";
+
+        return;
+
+      }
+
+
+      const data =
+        await response.json();
+
+
+      const user =
+        data.user || data;
+
+
+      const userNama =
+        document.getElementById("userNama");
+
+
+      const userRole =
+        document.getElementById("userRole");
+
+
+      if (userNama) {
+
+        userNama.textContent =
+          user.nama ||
+          user.name ||
+          user.email ||
+          "User";
+
+      }
+
+
+      if (userRole) {
+
+        userRole.textContent =
+          user.role ||
+          user.jabatan ||
+          "PIC";
+
+      }
+
+
+    } catch (error) {
+
+      console.error(
+        "ERROR LOAD USER:",
+        error
+      );
+
+    }
+
+  }
+
+
+
+  const logoutButton =
+    document.getElementById("logoutButton");
+
+
+  if (logoutButton) {
+
+    logoutButton.addEventListener(
+      "click",
+      async () => {
+
+        try {
+
+          const response =
+            await fetch(
+              "/api/logout",
+              {
+                method: "POST"
+              }
+            );
+
+
+          if (!response.ok) {
+
+            throw new Error(
+              "Logout gagal"
+            );
+
+          }
+
+
+          window.location.href =
+            "/login.html";
+
+
+        } catch (error) {
+
+          console.error(
+            "ERROR LOGOUT:",
+            error
+          );
+
+
+          alert(
+            "Gagal logout."
+          );
+
+        }
+
+      }
+    );
+
+  }
+
+
+  loadSidebarUser();
+
+</script>
+
+</body>
+
+
+</html>
