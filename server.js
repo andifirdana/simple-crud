@@ -318,6 +318,46 @@ app.post(
   }
 );
 
+
+// ======================================================
+// MENU
+// ======================================================
+app.get('/api/menu', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        nama_menu,
+        kode_menu,
+        url,
+        icon,
+        group_menu,
+        parent_id,
+        urutan,
+        status
+      FROM master_menu
+      WHERE status = 'Aktif'
+      ORDER BY
+        CASE
+          WHEN group_menu = 'Overview' THEN 1
+          WHEN group_menu = 'Master Data' THEN 2
+          ELSE 99
+        END,
+        urutan,
+        id
+    `);
+
+    res.json(result.rows);
+
+  } catch (error) {
+    console.error('Error mengambil menu:', error);
+
+    res.status(500).json({
+      message: 'Gagal mengambil data menu'
+    });
+  }
+});
+
 // ======================================================
 // PROTEKSI DASHBOARD
 // ======================================================
