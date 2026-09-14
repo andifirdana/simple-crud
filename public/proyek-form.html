@@ -581,102 +581,11 @@
 <div class="app-layout">
 
 
-  <!-- =====================================================
+   <!-- =====================================================
        SIDEBAR
   ====================================================== -->
 
-  <aside class="sidebar">
-
-
-    <div class="logo">
-      Portopro
-    </div>
-
-
-    <div class="sidebar-user">
-
-      <strong id="userNama">
-        User
-      </strong>
-
-    </div>
-
-
-    <div class="sidebar-user">
-
-      <span id="userRole">
-        PIC
-      </span>
-
-    </div>
-
-
-
-    <div class="menu">
-
-
-      <div class="menu-title">
-        Overview
-      </div>
-
-
-      <a href="/dashboard.html">
-        Dashboard
-      </a>
-
-
-      <a
-        href="/proyek.html"
-        class="active"
-      >
-        Proyek
-      </a>
-
-
-      <a href="/task.html">
-        Task List
-      </a>
-
-
-
-      <div class="menu-title">
-        Master Data
-      </div>
-
-
-      <a href="/index.html">
-        Master Klien
-      </a>
-
-
-      <a href="/partner.html">
-        Master Partner
-      </a>
-
-
-      <a href="/pic.html">
-        Master PIC
-      </a>
-
-
-      <a href="/kategori.html">
-        Master Kategori
-      </a>
-
-
-    </div>
-
-
-
-    <button
-      type="button"
-      id="logoutButton"
-    >
-      Logout
-    </button>
-
-
-  </aside>
+ <div id="sidebarContainer"></div>
 
 
 
@@ -760,19 +669,20 @@
               <div class="form-group">
 
                 <label for="kategori_produk_id">
-                  Kategori *
+                  Kategori
                 </label>
 
                 <select
-                  id="kategori_produk_id"
-                  required
-                >
+                    id="kategori_produk_id"
+                    multiple
+                    required
+                    size="5"
+                  >
+                  </select>
 
-                  <option value="">
-                    Pilih Kategori
-                  </option>
-
-                </select>
+                  <small>
+                    Bisa memilih lebih dari satu kategori.
+                  </small>
 
               </div>
 
@@ -1028,21 +938,21 @@
 
               <!-- NILAI SUBMIT -->
 
-              <div class="form-group">
+                <div class="form-group">
 
-                <label for="nilai_submit_klien">
-                  Nilai Submit
-                </label>
+                  <label for="nilai_submit_klien">
+                    Nilai Submit
+                  </label>
 
-                <input
-                  type="number"
-                  min="0"
-                  id="nilai_submit_klien"
-                  placeholder="0"
-                >
+                  <input
+                    type="number"
+                    id="nilai_submit_klien"
+                    min="0"
+                    step="1"
+                    placeholder="0"
+                  >
 
-              </div>
-
+                </div>
 
 
               <!-- NEGO 1 -->
@@ -1426,6 +1336,11 @@
 
 </script>
 
+ <!-- =====================================================
+     USER SIDEBAR + LOGOUT
+====================================================== -->
+<script src="/layout.js"></script>
+<script src="/sidebar.js"></script>
 
 </body>
 

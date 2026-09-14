@@ -6,11 +6,6 @@ const taskTableBody =
     "taskTableBody"
   );
 
-const taskModal =
-  document.getElementById(
-    "taskModal"
-  );
-
 const taskForm =
   document.getElementById(
     "taskForm"
@@ -20,6 +15,101 @@ const proyekSelect =
   document.getElementById(
     "proyekId"
   );
+
+const adaDokumenInput =
+  document.getElementById(
+    "adaDokumen"
+  );
+
+const dokumenGroup =
+  document.getElementById(
+    "dokumenGroup"
+  );
+
+const masterDokumenInput =
+  document.getElementById(
+    "masterDokumenId"
+  );
+
+const urgentTaskInput =
+  document.getElementById(
+    "urgentTask"
+  );
+
+const nomorDokumenInput =
+  document.getElementById(
+    "nomorDokumen"
+  );
+
+let masterDokumen = [];
+
+const adaPembayaranInput =
+  document.getElementById(
+    "adaPembayaran"
+  );
+
+const pembayaranGroup =
+  document.getElementById(
+    "pembayaranGroup"
+  );
+
+const jenisPembayaranInput =
+  document.getElementById(
+    "jenisPembayaran"
+  );
+
+const targetPembayaranInput =
+  document.getElementById(
+    "targetPembayaran"
+  );
+
+const namaTerminTaskInput =
+  document.getElementById(
+    "namaTerminTask"
+  );
+
+const persentaseTerminTaskInput =
+  document.getElementById(
+    "persentaseTerminTask"
+  );
+
+const nominalTerminTaskInput =
+  document.getElementById(
+    "nominalTerminTask"
+  );
+
+const statusPembayaranTaskInput =
+  document.getElementById(
+    "statusPembayaranTask"
+  );
+
+const jatuhTempoTerminTaskInput =
+  document.getElementById(
+    "jatuhTempoTerminTask"
+  );
+
+const tanggalBayarTerminTaskInput =
+  document.getElementById(
+    "tanggalBayarTerminTask"
+  );
+
+  urgentTaskInput.addEventListener(
+  "change",
+  () => {
+
+    if (
+      urgentTaskInput.checked
+    ) {
+
+      document.getElementById(
+        "status"
+      ).value =
+        "Urgent";
+
+    }
+
+  }
+);
 
 
 // ======================================================
@@ -39,9 +129,8 @@ function formatDate(value) {
 
 }
 
-
 // ======================================================
-// LOAD PROYEK
+// LOAD PROYEK DARI TABLE public.proyek
 // ======================================================
 
 async function loadProyek() {
@@ -53,15 +142,27 @@ async function loadProyek() {
         "/api/task-list/proyek"
       );
 
+    const data =
+      await response.json();
+
     if (!response.ok) {
+
       throw new Error(
+        data.error ||
         "Gagal mengambil proyek"
       );
+
     }
 
     daftarProyek =
-      await response.json();
+      Array.isArray(data)
+        ? data
+        : [];
 
+    console.log(
+      "DAFTAR PROYEK:",
+      daftarProyek
+    );
 
     proyekSelect.innerHTML =
       `
@@ -69,7 +170,6 @@ async function loadProyek() {
         Pilih Proyek
       </option>
       `;
-
 
     daftarProyek.forEach(
       proyek => {
@@ -99,35 +199,50 @@ async function loadProyek() {
       error
     );
 
+    proyekSelect.innerHTML =
+      `
+      <option value="">
+        Gagal mengambil proyek
+      </option>
+      `;
+
   }
 
 }
 
 
 // ======================================================
-// KATEGORI OTOMATIS
+// SAAT PROYEK DIPILIH
 // ======================================================
 
 proyekSelect.addEventListener(
   "change",
-  () => {
+  async () => {
 
     const proyek =
       daftarProyek.find(
         item =>
           String(item.id) ===
-          String(proyekSelect.value)
+          String(
+            proyekSelect.value
+          )
       );
-
 
     document.getElementById(
       "kategori"
     ).value =
       proyek?.kategori || "";
 
+    if (
+      adaPembayaranInput.checked
+    ) {
+
+      await loadTargetPembayaran();
+
+    }
+
   }
 );
-
 
 // ======================================================
 // LOAD TASK
@@ -142,14 +257,32 @@ async function loadTask() {
         "/api/task-list"
       );
 
+
+    const data =
+      await response.json();
+
+
     if (!response.ok) {
+
       throw new Error(
+        data.error ||
         "Gagal mengambil task"
       );
+
     }
 
+
     daftarTask =
-      await response.json();
+      Array.isArray(data)
+        ? data
+        : [];
+
+
+    console.log(
+      "DATA TASK:",
+      daftarTask
+    );
+
 
     renderTask();
 
@@ -161,10 +294,11 @@ async function loadTask() {
       error
     );
 
+
     taskTableBody.innerHTML =
       `
       <tr>
-        <td colspan="11">
+        <td colspan="13">
           Gagal mengambil data task.
         </td>
       </tr>
@@ -176,19 +310,126 @@ async function loadTask() {
 
 
 // ======================================================
+// LOAD MASTER DOKUMEN
+// ======================================================
+
+async function loadMasterDokumen() {
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/master-dokumen"
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.error ||
+        "Gagal mengambil master dokumen"
+      );
+
+    }
+
+
+    masterDokumen =
+      Array.isArray(data)
+        ? data
+        : [];
+
+
+    masterDokumenInput.innerHTML =
+      `
+      <option value="">
+        Pilih Dokumen
+      </option>
+
+      ${
+        masterDokumen
+          .map(
+            item => `
+              <option
+                value="${item.id}"
+              >
+                ${item.kode} - ${item.deskripsi}
+              </option>
+            `
+          )
+          .join("")
+      }
+      `;
+
+
+  } catch (error) {
+
+    console.error(
+      "ERROR LOAD MASTER DOKUMEN:",
+      error
+    );
+
+  }
+
+}
+
+
+// ======================================================
+// CHECKLIST DOKUMEN
+// ======================================================
+
+adaDokumenInput.addEventListener(
+  "change",
+  () => {
+
+    if (
+      adaDokumenInput.checked
+    ) {
+
+      dokumenGroup.style.display =
+        "block";
+
+    } else {
+
+      dokumenGroup.style.display =
+        "none";
+
+
+      masterDokumenInput.value =
+        "";
+
+
+      nomorDokumenInput.value =
+        "";
+
+    }
+
+  }
+);
+
+
+// ======================================================
 // RENDER TASK
 // ======================================================
 
 function renderTask() {
 
-  if (daftarTask.length === 0) {
+  if (
+    daftarTask.length === 0
+  ) {
 
     taskTableBody.innerHTML =
       `
       <tr>
         <td
-          colspan="11"
-          style="text-align:center;padding:40px;"
+          colspan="13"
+          style="
+            text-align:center;
+            padding:40px;
+          "
         >
           Belum ada task.
         </td>
@@ -201,156 +442,324 @@ function renderTask() {
 
 
   taskTableBody.innerHTML =
-    daftarTask.map(
-      item => {
+    daftarTask
+      .map(
+        item => {
 
-        const classStatus =
-          item.status
-            .toLowerCase()
-            .replaceAll(" ", "-");
+          const classStatus =
+            String(
+              item.status ||
+              "Not Started"
+            )
+              .toLowerCase()
+              .replaceAll(
+                " ",
+                "-"
+              );
 
 
-        return `
-          <tr>
+          return `
+            <tr>
 
-            <td>
-              ${item.nama_proyek || "-"}
-            </td>
+              <td>
+                ${
+                  item.nama_proyek ||
+                  "-"
+                }
+              </td>
 
-            <td>
-              ${item.kategori || "-"}
-            </td>
 
-            <td class="task-name">
-              ${item.task}
-            </td>
+              <td>
+                ${
+                  item.kategori ||
+                  "-"
+                }
+              </td>
 
-            <td class="catatan-cell">
-              ${item.catatan || "-"}
-            </td>
 
-            <td>
-              ${
-                item.link
-                  ? `
-                    <a
-                      href="${item.link}"
-                      target="_blank"
-                    >
-                      Buka Link
-                    </a>
-                  `
-                  : "-"
-              }
-            </td>
+              <td class="task-name">
+                ${
+                  item.task ||
+                  "-"
+                }
+              </td>
 
-            <td>
 
-            <select
-                class="status-select status-${classStatus}"
-                onchange="ubahStatusTask(${item.id}, this.value)"
-            >
+              <td class="catatan-cell">
+                ${
+                  item.catatan ||
+                  "-"
+                }
+              </td>
 
-                <option
-                value="Not Started"
-                ${item.status === "Not Started" ? "selected" : ""}
+
+              <td>
+
+                ${
+                  item.link
+                    ? `
+                      <a
+                        href="${item.link}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Buka Link
+                      </a>
+                    `
+                    : "-"
+                }
+
+              </td>
+
+
+              <!-- DOKUMEN -->
+
+              <td>
+                ${
+                  item.kode_dokumen
+                    ? item.kode_dokumen
+                    : "-"
+                }
+              </td>
+
+
+              <!-- NOMOR DOKUMEN -->
+
+              <td>
+                ${
+                  item.nomor_dokumen
+                    ? item.nomor_dokumen
+                    : "-"
+                }
+              </td>
+
+
+              <!-- STATUS -->
+
+              <td>
+
+                <select
+                  class="
+                    status-select
+                    status-${classStatus}
+                  "
+                  onchange="
+                    ubahStatusTask(
+                      ${item.id},
+                      this.value
+                    )
+                  "
                 >
-                Not Started
+
+                  <option
+                    value="Not Started"
+                    ${
+                      item.status ===
+                      "Not Started"
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    Not Started
+                  </option>
+
+
+                  <option
+                    value="On Progress"
+                    ${
+                      item.status ===
+                      "On Progress"
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    On Progress
+                  </option>
+
+
+                  <option
+                    value="Hold"
+                    ${
+                      item.status ===
+                      "Hold"
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    Hold
+                  </option>
+
+
+                  <option
+                    value="Done"
+                    ${
+                      item.status ===
+                      "Done"
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    Done
+                  </option>
+
+                  <option
+                  value="Urgent"
+                  ${
+                    item.status ===
+                    "Urgent"
+                      ? "selected"
+                      : ""
+                  }
+                >
+                  Urgent
                 </option>
 
-                <option
-                value="On Progress"
-                ${item.status === "On Progress" ? "selected" : ""}
+                </select>
+
+              </td>
+
+
+              <td>
+                ${
+                  formatDate(
+                    item.tanggal_mulai
+                  )
+                }
+              </td>
+
+
+              <td>
+                ${
+                  formatDate(
+                    item.target_date
+                  )
+                }
+              </td>
+
+
+              <td>
+                ${
+                  formatDate(
+                    item.tanggal_selesai
+                  )
+                }
+              </td>
+
+
+              <td>
+                ${
+                  item.dibuat_oleh ||
+                  "-"
+                }
+              </td>
+
+
+              <td>
+
+                <div
+                  class="action-buttons"
                 >
-                On Progress
-                </option>
 
-                <option
-                value="Hold"
-                ${item.status === "Hold" ? "selected" : ""}
-                >
-                Hold
-                </option>
+                  <button
+                    type="button"
+                    class="btn-edit"
+                    onclick="
+                      editTask(
+                        ${item.id}
+                      )
+                    "
+                  >
+                    Edit
+                  </button>
 
-                <option
-                value="Done"
-                ${item.status === "Done" ? "selected" : ""}
-                >
-                Done
-                </option>
 
-            </select>
+                  <button
+                    type="button"
+                    class="btn-delete"
+                    onclick="
+                      hapusTask(
+                        ${item.id}
+                      )
+                    "
+                  >
+                    Hapus
+                  </button>
 
-            </td>
+                </div>
 
-            <td>
-              ${formatDate(
-                item.tanggal_mulai
-              )}
-            </td>
+              </td>
 
-            <td>
-              ${formatDate(
-                item.target_date
-              )}
-            </td>
+            </tr>
+          `;
 
-            <td>
-              ${formatDate(
-                item.tanggal_selesai
-              )}
-            </td>
-
-            <td>
-              ${item.dibuat_oleh || "-"}
-            </td>
-
-            <td>
-
-              <div class="action-buttons">
-
-                <button
-                  class="btn-edit"
-                  onclick="editTask(${item.id})"
-                >
-                  Edit
-                </button>
-
-                <button
-                  class="btn-delete"
-                  onclick="hapusTask(${item.id})"
-                >
-                  Hapus
-                </button>
-
-              </div>
-
-            </td>
-
-          </tr>
-        `;
-
-      }
-    ).join("");
+        }
+      )
+      .join("");
 
 }
+
+
 
 // ======================================================
 // UPDATE STATUS LANGSUNG DARI TABLE
 // ======================================================
 
 window.ubahStatusTask =
-  async function (id, statusBaru) {
+  async function (
+    id,
+    statusBaru
+  ) {
 
     const item =
       daftarTask.find(
-        task => task.id === id
+        task =>
+          Number(task.id) ===
+          Number(id)
       );
 
+
     if (!item) {
-      alert("Task tidak ditemukan");
+
+      alert(
+        "Task tidak ditemukan"
+      );
+
       return;
+
     }
+
+
+    const body = {
+
+      proyek_id:
+        item.proyek_id,
+
+      task:
+        item.task,
+
+      catatan:
+        item.catatan || "",
+
+      link:
+        item.link || "",
+
+      master_dokumen_id:
+        item.master_dokumen_id ||
+        null,
+
+      nomor_dokumen:
+        item.nomor_dokumen ||
+        null,
+
+
+ status: statusBaru,
+    };
+
+
+    console.log(
+      "BODY UPDATE STATUS:",
+      body
+    );
 
 
     try {
@@ -359,36 +768,21 @@ window.ubahStatusTask =
         await fetch(
           `/api/task-list/${id}`,
           {
-            method: "PUT",
+
+            method:
+              "PUT",
 
             headers: {
+
               "Content-Type":
                 "application/json"
+
             },
 
-            body: JSON.stringify({
-
-              proyek_id:
-                item.proyek_id,
-
-              task:
-                item.task,
-
-              catatan:
-                item.catatan || "",
-
-              link:
-                item.link || "",
-
-              status:
-                statusBaru,
-
-              target_date:
-                item.target_date
-                  ? item.target_date.substring(0, 10)
-                  : null
-
-            })
+            body:
+              JSON.stringify(
+                body
+              )
 
           }
         );
@@ -408,9 +802,6 @@ window.ubahStatusTask =
       }
 
 
-      // Refresh data
-      // termasuk tanggal selesai
-
       await loadTask();
 
 
@@ -421,13 +812,11 @@ window.ubahStatusTask =
         error
       );
 
+
       alert(
         error.message
       );
 
-
-      // kembalikan dropdown
-      // ke status sebelumnya
 
       await loadTask();
 
@@ -436,41 +825,493 @@ window.ubahStatusTask =
   };
 
 // ======================================================
-// TAMBAH TASK
+// CHECKLIST PEMBAYARAN
 // ======================================================
+  adaPembayaranInput.addEventListener(
+  "change",
+  async () => {
 
-document.getElementById(
-  "tambahTaskButton"
-).addEventListener(
-  "click",
+    pembayaranGroup.style.display =
+      adaPembayaranInput.checked
+        ? "block"
+        : "none";
+
+    if (
+      adaPembayaranInput.checked &&
+      proyekSelect.value
+    ) {
+
+      await loadTargetPembayaran();
+
+    }
+
+  }
+);
+
+let dataPembayaranProyek =
+  null;
+
+
+async function loadTargetPembayaran() {
+
+  const proyekId =
+    proyekSelect.value;
+
+
+  targetPembayaranInput.innerHTML =
+    `
+    <option value="">
+      Memuat...
+    </option>
+    `;
+
+
+  if (!proyekId) {
+
+    targetPembayaranInput.innerHTML =
+      `
+      <option value="">
+        Pilih proyek terlebih dahulu
+      </option>
+      `;
+
+    return;
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        `/api/task-list/proyek/${proyekId}/pembayaran-target`
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.error ||
+        "Gagal mengambil pembayaran proyek"
+      );
+
+    }
+
+
+    dataPembayaranProyek =
+      data;
+
+
+    updatePilihanTargetPembayaran();
+
+
+    const jenisProyek =
+      String(
+        data.proyek?.jenis_proyek ||
+        ""
+      )
+        .trim()
+        .toLowerCase();
+
+
+    const nominalMode =
+      jenisProyek === "sewa" ||
+      jenisProyek === "transaksi";
+
+
+    document.getElementById(
+      "terminPersentaseGroup"
+    ).style.display =
+      nominalMode
+        ? "none"
+        : "block";
+
+
+    document.getElementById(
+      "terminNominalGroup"
+    ).style.display =
+      nominalMode
+        ? "block"
+        : "none";
+
+
+  } catch (error) {
+
+    console.error(
+      "ERROR LOAD PEMBAYARAN:",
+      error
+    );
+
+    targetPembayaranInput.innerHTML =
+      `
+      <option value="">
+        Gagal mengambil data
+      </option>
+      `;
+
+  }
+
+}
+
+jenisPembayaranInput.addEventListener(
+  "change",
   () => {
 
-    taskForm.reset();
-
-    document.getElementById(
-      "taskId"
-    ).value = "";
-
-    document.getElementById(
-      "modalTitle"
-    ).textContent =
-      "Tambah Task";
-
-    document.getElementById(
-      "statusGroup"
-    ).style.display =
-      "none";
-
-    taskModal.classList.add(
-      "active"
-    );
+    updatePilihanTargetPembayaran();
 
   }
 );
 
 
+function updatePilihanTargetPembayaran() {
+
+  const jenis =
+    jenisPembayaranInput.value;
+
+
+  targetPembayaranInput.innerHTML =
+    `
+    <option value="">
+      Pilih
+    </option>
+    `;
+
+
+  if (
+    !dataPembayaranProyek
+  ) {
+    return;
+  }
+
+
+  if (
+    jenis === "klien"
+  ) {
+
+    document.getElementById(
+      "labelTargetPembayaran"
+    ).textContent =
+      "Klien";
+
+
+    dataPembayaranProyek
+      .klien
+      .forEach(
+        item => {
+
+          const option =
+            document.createElement(
+              "option"
+            );
+
+          option.value =
+            item.proyek_klien_id;
+
+          option.textContent =
+            item.nama;
+
+          targetPembayaranInput
+            .appendChild(option);
+
+        }
+      );
+
+  }
+
+
+  if (
+    jenis === "partner"
+  ) {
+
+    document.getElementById(
+      "labelTargetPembayaran"
+    ).textContent =
+      "Partner";
+
+
+    dataPembayaranProyek
+      .partner
+      .forEach(
+        item => {
+
+          const option =
+            document.createElement(
+              "option"
+            );
+
+          option.value =
+            item.proyek_partner_id;
+
+          option.textContent =
+            item.nama;
+
+          targetPembayaranInput
+            .appendChild(option);
+
+        }
+      );
+
+  }
+
+}
+
+async function simpanPembayaranTask() {
+
+  if (!adaPembayaranInput.checked) {
+    return;
+  }
+
+  const jenis =
+    jenisPembayaranInput.value;
+
+  const targetId =
+    targetPembayaranInput.value;
+
+
+  // ======================================================
+  // VALIDASI
+  // ======================================================
+
+  if (!jenis) {
+    throw new Error(
+      "Pilih Termin Klien atau Partner."
+    );
+  }
+
+  if (!targetId) {
+    throw new Error(
+      "Pilih klien atau partner."
+    );
+  }
+
+  if (
+    !namaTerminTaskInput.value.trim()
+  ) {
+    throw new Error(
+      "Nama termin wajib diisi."
+    );
+  }
+
+
+  // ======================================================
+  // CEK JENIS PROYEK
+  // ======================================================
+
+  const jenisProyek =
+    String(
+      dataPembayaranProyek
+        ?.proyek
+        ?.jenis_proyek || ""
+    )
+      .trim()
+      .toLowerCase();
+
+
+  const nominalMode =
+    jenisProyek === "sewa" ||
+    jenisProyek === "transaksi";
+
+
+  // ======================================================
+  // VALIDASI NILAI TERMIN
+  // ======================================================
+
+  if (nominalMode) {
+
+    const nominal =
+      Number(
+        nominalTerminTaskInput.value
+      );
+
+    if (
+      !nominal ||
+      nominal <= 0
+    ) {
+      throw new Error(
+        "Nominal termin harus lebih dari Rp 0."
+      );
+    }
+
+  } else {
+
+    const persentase =
+      Number(
+        persentaseTerminTaskInput.value
+      );
+
+    if (
+      !persentase ||
+      persentase <= 0 ||
+      persentase > 100
+    ) {
+      throw new Error(
+        "Persentase termin harus lebih dari 0 dan maksimal 100%."
+      );
+    }
+
+  }
+
+
+  // ======================================================
+  // PAYLOAD
+  // ======================================================
+
+  const payload = {
+
+    nama_termin:
+      namaTerminTaskInput
+        .value
+        .trim(),
+
+    persentase:
+      nominalMode
+        ? null
+        : Number(
+            persentaseTerminTaskInput.value
+          ),
+
+    nominal:
+      nominalMode
+        ? Number(
+            nominalTerminTaskInput.value
+          )
+        : null,
+
+    status_pembayaran:
+      statusPembayaranTaskInput.value,
+
+    tanggal_jatuh_tempo:
+      jatuhTempoTerminTaskInput.value ||
+      null,
+
+    tanggal_bayar:
+      tanggalBayarTerminTaskInput.value ||
+      null
+
+  };
+
+
+  // ======================================================
+  // URL
+  // ======================================================
+
+  const url =
+    jenis === "klien"
+      ? `/api/proyek/klien/${targetId}/termin`
+      : `/api/proyek/partner/${targetId}/termin`;
+
+
+  console.log(
+    "===================================="
+  );
+
+  console.log(
+    "SIMPAN TERMIN DARI TASK"
+  );
+
+  console.log(
+    "TERMIN URL:",
+    url
+  );
+
+  console.log(
+    "TERMIN METHOD:",
+    "POST"
+  );
+
+  console.log(
+    "TERMIN PAYLOAD:",
+    payload
+  );
+
+
+  // ======================================================
+  // REQUEST
+  // ======================================================
+
+  const response =
+    await fetch(
+      url,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body:
+          JSON.stringify(
+            payload
+          )
+      }
+    );
+
+
+  console.log(
+    "TERMIN STATUS:",
+    response.status
+  );
+
+
+  // ======================================================
+  // RESPONSE
+  // ======================================================
+
+  const responseText =
+    await response.text();
+
+
+  console.log(
+    "TERMIN RESPONSE:",
+    responseText
+  );
+
+  console.log(
+    "===================================="
+  );
+
+
+  let result = {};
+
+
+  try {
+
+    result =
+      responseText
+        ? JSON.parse(
+            responseText
+          )
+        : {};
+
+  } catch (error) {
+
+    throw new Error(
+      `Response termin bukan JSON. HTTP ${response.status} - ${url}`
+    );
+
+  }
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      result.error ||
+      `Gagal menyimpan termin. HTTP ${response.status}`
+    );
+
+  }
+
+
+  return result;
+
+}
+
 // ======================================================
-// EDIT
+// EDIT TASK
 // ======================================================
 
 window.editTask =
@@ -479,10 +1320,20 @@ window.editTask =
     const item =
       daftarTask.find(
         task =>
-          task.id === id
+          Number(task.id) ===
+          Number(id)
       );
 
-    if (!item) return;
+
+    if (!item) {
+
+      alert(
+        "Task tidak ditemukan"
+      );
+
+      return;
+
+    }
 
 
     document.getElementById(
@@ -499,14 +1350,18 @@ window.editTask =
       daftarProyek.find(
         p =>
           String(p.id) ===
-          String(item.proyek_id)
+          String(
+            item.proyek_id
+          )
       );
 
 
     document.getElementById(
       "kategori"
     ).value =
-      proyek?.kategori || "";
+      proyek?.kategori ||
+      item.kategori ||
+      "";
 
 
     document.getElementById(
@@ -527,17 +1382,66 @@ window.editTask =
       item.link || "";
 
 
+// ======================================================
+// DOKUMEN
+// ======================================================
+
+    if (
+      item.master_dokumen_id
+    ) {
+
+      adaDokumenInput.checked =
+        true;
+
+
+      dokumenGroup.style.display =
+        "block";
+
+
+      masterDokumenInput.value =
+        String(
+          item.master_dokumen_id
+        );
+
+
+      nomorDokumenInput.value =
+        item.nomor_dokumen ||
+        "";
+
+    } else {
+
+      adaDokumenInput.checked =
+        false;
+
+
+      dokumenGroup.style.display =
+        "none";
+
+
+      masterDokumenInput.value =
+        "";
+
+
+      nomorDokumenInput.value =
+        "";
+
+    }
+
+
     document.getElementById(
       "status"
     ).value =
-      item.status;
+      item.status ||
+      "Not Started";
 
 
     document.getElementById(
       "targetDate"
     ).value =
       item.target_date
-        ? item.target_date.substring(
+        ? String(
+            item.target_date
+          ).substring(
             0,
             10
           )
@@ -551,21 +1455,53 @@ window.editTask =
 
 
     document.getElementById(
-      "modalTitle"
-    ).textContent =
-      "Edit Task";
+  "formTitle"
+).textContent =
+  "Edit Task";
 
+document.getElementById(
+  "simpanTaskButton"
+).textContent =
+  "Simpan Perubahan";
 
-    taskModal.classList.add(
-      "active"
-    );
+document.getElementById(
+  "batalButton"
+).style.display =
+  "inline-block";
+
+document.getElementById(
+  "taskFormCard"
+).scrollIntoView({
+  behavior: "smooth",
+  block: "start"
+});
 
   };
 
 
 // ======================================================
-// SIMPAN
+// SIMPAN TASK
 // ======================================================
+
+function resetTaskForm() {
+  taskForm.reset();
+
+  // reset ID task jika sedang mode edit
+  const taskIdInput =
+    document.getElementById("taskId");
+
+  if (taskIdInput) {
+    taskIdInput.value = "";
+  }
+
+  // reset tombol submit jika sebelumnya mode edit
+  const submitButton =
+    taskForm.querySelector('button[type="submit"]');
+
+  if (submitButton) {
+    submitButton.textContent = "Simpan";
+  }
+}
 
 taskForm.addEventListener(
   "submit",
@@ -600,50 +1536,231 @@ taskForm.addEventListener(
           "link"
         ).value,
 
+      master_dokumen_id:
+        adaDokumenInput.checked
+          ? masterDokumenInput.value ||
+            null
+          : null,
+
+      nomor_dokumen:
+        adaDokumenInput.checked
+          ? nomorDokumenInput
+              .value
+              .trim() ||
+            null
+          : null,
+
       target_date:
         document.getElementById(
           "targetDate"
-        ).value
+        ).value ||
+        null
 
     };
 
 
-    if (id) {
+    // ==================================================
+    // VALIDASI PROJECT
+    // ==================================================
 
-      body.status =
-        document.getElementById(
-          "status"
-        ).value;
+    if (
+      !body.proyek_id
+    ) {
+
+      alert(
+        "Silakan pilih proyek."
+      );
+
+      return;
 
     }
 
 
+    // ==================================================
+    // VALIDASI TASK
+    // ==================================================
+
+    if (
+      !String(
+        body.task
+      ).trim()
+    ) {
+
+      alert(
+        "Task wajib diisi."
+      );
+
+      return;
+
+    }
+
+
+    // ==================================================
+    // VALIDASI DOKUMEN
+    // ==================================================
+
+    if (
+      adaDokumenInput.checked &&
+      !masterDokumenInput.value
+    ) {
+
+      alert(
+        "Silakan pilih kode dokumen."
+      );
+
+      return;
+
+    }
+
+
+    if (
+      adaDokumenInput.checked &&
+      !nomorDokumenInput
+        .value
+        .trim()
+    ) {
+
+      alert(
+        "Nomor dokumen wajib diisi."
+      );
+
+      return;
+
+    }
+
+
+    // ==================================================
+    // STATUS HANYA SAAT EDIT
+    // ==================================================
+
+    if (
+  urgentTaskInput?.checked
+) {
+
+  body.status =
+    "Urgent";
+
+} else if (id) {
+
+  body.status =
+    document.getElementById(
+      "status"
+    ).value;
+
+} else {
+
+  body.status =
+    "Not Started";
+
+}
+
+console.log(
+  "URGENT CHECKED:",
+  urgentTaskInput?.checked
+);
+
+console.log(
+  "STATUS YANG DIKIRIM:",
+  body.status
+);
+
+    // ==================================================
+    // DEBUG
+    // ==================================================
+
+    console.log(
+      "===================================="
+    );
+
+    console.log(
+      id
+        ? "EDIT TASK"
+        : "TAMBAH TASK"
+    );
+
+    console.log(
+      "BODY TASK YANG DIKIRIM:",
+      body
+    );
+
+    console.log(
+      "CHECKLIST DOKUMEN:",
+      adaDokumenInput.checked
+    );
+
+    console.log(
+      "MASTER DOKUMEN ID:",
+      masterDokumenInput.value
+    );
+
+    console.log(
+      "NOMOR DOKUMEN:",
+      nomorDokumenInput.value
+    );
+
+    console.log(
+      "===================================="
+    );
+
+
     try {
+
+      const url =
+        id
+          ? `/api/task-list/${id}`
+          : "/api/task-list";
+
+
+      const method =
+        id
+          ? "PUT"
+          : "POST";
+
+
+      console.log(
+        "REQUEST:",
+        method,
+        url
+      );
+
 
       const response =
         await fetch(
-          id
-            ? `/api/task-list/${id}`
-            : "/api/task-list",
+          url,
           {
-            method:
-              id
-                ? "PUT"
-                : "POST",
+
+            method,
 
             headers: {
+
               "Content-Type":
                 "application/json"
+
             },
 
             body:
-              JSON.stringify(body)
+              JSON.stringify(
+                body
+              )
+
           }
         );
 
 
+      console.log(
+        "HTTP STATUS:",
+        response.status
+      );
+
+
       const result =
         await response.json();
+
+
+      console.log(
+        "RESPONSE API:",
+        result
+      );
 
 
       if (!response.ok) {
@@ -654,19 +1771,38 @@ taskForm.addEventListener(
         );
 
       }
+      if (
+        adaPembayaranInput.checked
+      ) {
+
+        await simpanPembayaranTask();
+
+      }
+
+      resetTaskForm();
+
+    await loadTask();
 
 
-      taskModal.classList.remove(
-        "active"
+      console.log(
+        "TASK BERHASIL DISIMPAN:",
+        result
       );
-
 
       await loadTask();
 
 
     } catch (error) {
 
-      alert(error.message);
+      console.error(
+        "ERROR SAVE TASK:",
+        error
+      );
+
+
+      alert(
+        error.message
+      );
 
     }
 
@@ -686,7 +1822,12 @@ window.hapusTask =
         "Yakin ingin menghapus task ini?"
       );
 
-    if (!konfirmasi) return;
+
+    if (!konfirmasi) {
+
+      return;
+
+    }
 
 
     try {
@@ -695,7 +1836,10 @@ window.hapusTask =
         await fetch(
           `/api/task-list/${id}`,
           {
-            method: "DELETE"
+
+            method:
+              "DELETE"
+
           }
         );
 
@@ -719,7 +1863,15 @@ window.hapusTask =
 
     } catch (error) {
 
-      alert(error.message);
+      console.error(
+        "ERROR DELETE TASK:",
+        error
+      );
+
+
+      alert(
+        error.message
+      );
 
     }
 
@@ -730,18 +1882,24 @@ window.hapusTask =
 // CLOSE MODAL
 // ======================================================
 
-document.getElementById(
-  "batalButton"
-).addEventListener(
-  "click",
-  () => {
+const batalButton =
+  document.getElementById(
+    "batalButton"
+  );
 
-    taskModal.classList.remove(
-      "active"
-    );
+if (batalButton) {
 
-  }
-);
+  batalButton.addEventListener(
+    "click",
+    () => {
+
+      resetTaskForm();
+
+    }
+  );
+
+}
+
 
 // ======================================================
 // LOGOUT
@@ -755,7 +1913,10 @@ async function logout() {
       await fetch(
         "/api/logout",
         {
-          method: "POST"
+
+          method:
+            "POST"
+
         }
       );
 
@@ -764,6 +1925,7 @@ async function logout() {
 
       const result =
         await response.json();
+
 
       throw new Error(
         result.error ||
@@ -783,6 +1945,7 @@ async function logout() {
       "ERROR LOGOUT:",
       error
     );
+
 
     alert(
       "Gagal logout"
@@ -814,106 +1977,18 @@ if (logoutButton) {
 
 
 // ======================================================
-// LOAD USER
-// ======================================================
-
-async function loadCurrentUser() {
-
-  try {
-
-    const response =
-      await fetch("/api/me");
-
-    console.log(
-      "STATUS /api/me:",
-      response.status
-    );
-
-    const data =
-      await response.json();
-
-    console.log(
-      "DATA /api/me:",
-      data
-    );
-
-
-    if (!response.ok) {
-
-      window.location.href =
-        "/login.html";
-
-      return;
-    }
-
-
-    const userNama =
-      document.getElementById(
-        "userNama"
-      );
-
-    const userRole =
-      document.getElementById(
-        "userRole"
-      );
-
-
-    console.log(
-      "ELEMENT NAMA:",
-      userNama
-    );
-
-    console.log(
-      "ELEMENT ROLE:",
-      userRole
-    );
-
-
-    if (userNama) {
-
-      userNama.textContent =
-        data.nama ||
-        data.name ||
-        data.email ||
-        "User";
-
-    }
-
-
-    if (userRole) {
-
-      userRole.textContent =
-        data.role ||
-        "PIC";
-
-    }
-
-
-  } catch (error) {
-
-    console.error(
-      "ERROR LOAD USER:",
-      error
-    );
-
-  }
-
-}
-
-
-
-// ======================================================
 // INITIAL LOAD
 // ======================================================
 
 async function init() {
 
-  await loadCurrentUser();
-
   await loadProyek();
+
+  await loadMasterDokumen();
 
   await loadTask();
 
 }
+
 
 init();

@@ -10,7 +10,7 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Detail Proyek | ProjectFlow</title>
+  <title>Portopro</title>
 
   <link
     rel="stylesheet"
@@ -18,85 +18,92 @@
   >
 
   <style>
-    /* =====================================================
-   PORTOPRO DETAIL LAYOUT
-===================================================== */
+  
 
-body {
-  margin: 0;
-  background: #f5f7fb;
-  color: #1f2937;
-  overflow-x: hidden;
-}
-
-.app-layout {
-  min-height: 100vh;
-}
-
-.main-content {
-  margin-left: 260px;
-  width: calc(100% - 260px);
-  max-width: calc(100% - 260px);
-  min-width: 0;
-  padding: 32px;
-  box-sizing: border-box;
-}
-
-.detail-page {
-  width: 100%;
-  max-width: 1500px;
-  min-width: 0;
-  margin: 0 auto;
-  box-sizing: border-box;
-}
+ /* ================================================
+      CSS
+  ================================================ */
 
 
-/* TASK TABLE */
+      /* =====================================================
+        PORTOPRO DETAIL LAYOUT
+      ===================================================== */
 
-.project-task-table-wrapper {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.project-task-table {
-  width: 100%;
-  min-width: 1200px;
-  border-collapse: collapse;
-}
-
-.project-task-table th {
-  padding: 12px 13px;
-  background: #f8fafc;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 700;
-  text-align: left;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.project-task-table td {
-  padding: 13px;
-  border-top: 1px solid #f1f5f9;
-  color: #334155;
-  font-size: 12px;
-  vertical-align: middle;
-}
-
-
-/* RESPONSIVE */
-
-@media (max-width: 768px) {
-
-  .main-content {
-    margin-left: 0;
-    width: 100%;
-    max-width: 100%;
-    padding: 20px;
+  body {
+    margin: 0;
+    background: #f5f7fb;
+    color: #1f2937;
+    overflow-x: hidden;
   }
 
-}
+  .app-layout {
+    min-height: 100vh;
+  }
+
+  .main-content {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    max-width: calc(100% - 260px);
+    min-width: 0;
+    padding: 32px;
+    box-sizing: border-box;
+  }
+
+  .detail-page {
+    width: 100%;
+    max-width: 1500px;
+    min-width: 0;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+
+  /* TASK TABLE */
+
+  .project-task-table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .project-task-table {
+    width: 100%;
+    min-width: 1200px;
+    border-collapse: collapse;
+  }
+
+  .project-task-table th {
+    padding: 12px 13px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .project-task-table td {
+    padding: 13px;
+    border-top: 1px solid #f1f5f9;
+    color: #334155;
+    font-size: 12px;
+    vertical-align: middle;
+  }
+
+
+  /* RESPONSIVE */
+
+  @media (max-width: 768px) {
+
+    .main-content {
+      margin-left: 0;
+      width: 100%;
+      max-width: 100%;
+      padding: 20px;
+    }
+
+  }
 
 
     /* ================================================
@@ -524,102 +531,13 @@ body {
 
 </head>
 
-
 <body>
-
 <div class="app-layout">
 
-
-  <!-- =====================================================
-     SIDEBAR
-====================================================== -->
-
-<aside class="sidebar">
-
-  <div class="logo">
-    Portopro
-  </div>
-
-
-  <div class="sidebar-user">
-
-    <strong id="userNama">
-      User
-    </strong>
-
-  </div>
-
-
-  <div class="sidebar-user">
-
-    <span id="userRole">
-      PIC
-    </span>
-
-  </div>
-
-
-  <div class="menu">
-
-    <div class="menu-title">
-      Overview
-    </div>
-
-
-    <a href="/dashboard.html">
-      Dashboard
-    </a>
-
-
-    <a
-      href="/proyek.html"
-      class="active"
-    >
-      Proyek
-    </a>
-
-
-    <a href="/task.html">
-      Task List
-    </a>
-
-
-    <div class="menu-title">
-      Master Data
-    </div>
-
-
-    <a href="/index.html">
-      Master Klien
-    </a>
-
-
-    <a href="/partner.html">
-      Master Partner
-    </a>
-
-
-    <a href="/pic.html">
-      Master PIC
-    </a>
-
-
-    <a href="/kategori.html">
-      Master Kategori
-    </a>
-
-  </div>
-
-
-  <button
-    type="button"
-    id="logoutButton"
-  >
-    Logout
-  </button>
-
-</aside>
-
+   <!-- =====================================================
+       SIDEBAR
+  ====================================================== -->
+ <div id="sidebarContainer"></div>
 
   <!-- ==================================================
        MAIN
@@ -643,10 +561,7 @@ body {
             <a href="/proyek.html">
               Proyek
             </a>
-
-            /
-
-            Detail Proyek
+            / Detail Proyek
 
           </div>
 
@@ -804,21 +719,21 @@ body {
           <div class="grid">
 
   <!-- KATEGORI -->
-  <div class="info">
+<!-- KATEGORI -->
+<div class="info">
 
-    <div class="label">
-      Kategori
-    </div>
-
-    <div
-      class="value"
-      id="kategoriInfoProyek"
-    >
-      -
-    </div>
-
+  <div class="label">
+    Kategori
   </div>
 
+  <div
+    class="value"
+    id="kategoriInfoProyek"
+  >
+    -
+  </div>
+
+</div>
 
   <!-- JENIS PROYEK -->
   <div class="info">
@@ -1341,23 +1256,39 @@ body {
       </div>
 
 
-      <div class="form-group">
+    <div class="form-group" id="persentaseTerminGroup">
 
-        <label for="persentaseTermin">
-          Persentase
-        </label>
+  <label for="persentaseTermin">
+    Persentase
+  </label>
 
-        <input
-          type="number"
-          id="persentaseTermin"
-          min="0.01"
-          max="100"
-          step="0.01"
-          placeholder="Contoh: 30"
-          required
-        >
+  <input
+    type="number"
+    id="persentaseTermin"
+    min="0.01"
+    max="100"
+    step="0.01"
+    placeholder="Contoh: 30"
+  >
 
-      </div>
+</div>
+
+
+<div class="form-group" id="nominalTerminGroup">
+
+  <label for="nominalTermin">
+    Nominal
+  </label>
+
+  <input
+    type="number"
+    id="nominalTermin"
+    min="0"
+    step="1"
+    placeholder="Contoh: 50000000"
+  >
+
+</div>
 
 
       <div class="form-group">
@@ -1530,7 +1461,6 @@ body {
 <!-- =====================================================
      MODAL EDIT INFORMASI PROYEK
      ===================================================== -->
-
 <div
   class="modal"
   id="editProyekModal"
@@ -1549,6 +1479,11 @@ body {
 
     <form id="editProyekForm">
 
+
+      <!-- =========================================
+           NAMA PROYEK
+      ========================================== -->
+
       <div class="form-group">
 
         <label for="editNamaProyek">
@@ -1563,23 +1498,61 @@ body {
 
       </div>
 
+
+      <!-- =========================================
+           KATEGORI
+      ========================================== -->
+
       <div class="form-group">
 
-    <label for="editKategoriProyek">
-      Kategori
-    </label>
+        <label>
+          Kategori
+        </label>
 
-    <select
-      id="editKategoriProyek"
-      required
-    >
-      <option value="">
-        Pilih Kategori
-      </option>
-    </select>
+        <div
+          style="
+            display:flex;
+            gap:8px;
+            align-items:center;
+          "
+        >
 
-  </div>
+          <select id="editKategoriSelect">
 
+            <option value="">
+              Pilih Kategori
+            </option>
+
+          </select>
+
+
+          <button
+            type="button"
+            id="tambahEditKategori"
+          >
+            + Tambah
+          </button>
+
+        </div>
+
+
+        <div
+          id="editKategoriTerpilih"
+          style="
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            margin-top:10px;
+          "
+        >
+        </div>
+
+      </div>
+
+
+      <!-- =========================================
+           JENIS & SUB JENIS PROYEK
+      ========================================== -->
 
       <div class="form-grid">
 
@@ -1597,6 +1570,14 @@ body {
 
             <option value="Reguler/SLA">
               Reguler/SLA
+            </option>
+
+            <option value="Sewa">
+              Sewa
+            </option>
+
+            <option value="Transaksi">
+              Transaksi
             </option>
 
             <option value="Project">
@@ -1624,6 +1605,10 @@ body {
       </div>
 
 
+      <!-- =========================================
+           STATUS
+      ========================================== -->
+
       <div class="form-group">
 
         <label for="editStatusFinal">
@@ -1649,6 +1634,10 @@ body {
       </div>
 
 
+      <!-- =========================================
+           DESKRIPSI
+      ========================================== -->
+
       <div class="form-group">
 
         <label for="editDeskripsi">
@@ -1663,6 +1652,10 @@ body {
       </div>
 
 
+      <!-- =========================================
+           ACTION
+      ========================================== -->
+
       <div class="modal-actions">
 
         <button
@@ -1673,6 +1666,7 @@ body {
           Batal
         </button>
 
+
         <button
           type="submit"
           class="btn btn-primary"
@@ -1682,13 +1676,12 @@ body {
 
       </div>
 
+
     </form>
 
   </div>
 
 </div>
-
-
 
 <!-- =====================================================
      MODAL EDIT PIC
@@ -2116,6 +2109,11 @@ body {
   loadSidebarUser();
 
 </script>
+ <!-- =====================================================
+     USER SIDEBAR + LOGOUT
+====================================================== -->
+<script src="/layout.js"></script>
+<script src="/sidebar.js"></script>
 
 </body>
 

@@ -24,7 +24,59 @@ let allKategori = [];
 let allPIC = [];
 let editId = null;
 
+let currentPage = 1;
 
+const itemsPerPage = 10;
+
+
+function renderKategoriPagination(
+  data
+) {
+
+  const start =
+    (currentPage - 1) *
+    itemsPerPage;
+
+  const end =
+    start +
+    itemsPerPage;
+
+
+  const pageData =
+    data.slice(
+      start,
+      end
+    );
+
+
+  tampilkan(pageData);
+
+
+  createPagination({
+
+    containerId:
+      "pagination",
+
+    currentPage,
+
+    totalItems:
+      data.length,
+
+    itemsPerPage,
+
+    onPageChange:
+      page => {
+
+        currentPage =
+          page;
+
+        applySearch();
+
+      }
+
+  });
+
+}
 // ========================================
 // FORMAT RUPIAH
 // ========================================
@@ -339,18 +391,47 @@ form.addEventListener(
 
 function editKategori(id) {
 
+  console.log(
+    "EDIT DIKLIK:",
+    id
+  );
+
   const item =
     allKategori.find(
       x =>
         Number(x.id) === Number(id)
     );
 
+console.log(
+    "DATA ITEM:",
+    item
+  );
 
   if (!item) return;
 
 
   editId = item.id;
 
+console.log(
+  "ELEMEN NAMA:",
+  document.getElementById(
+    "nama_kategori_produk"
+  )
+);
+
+console.log(
+  "ELEMEN NILAI:",
+  document.getElementById(
+    "total_nilai"
+  )
+);
+
+console.log(
+  "ELEMEN STATUS:",
+  document.getElementById(
+    "status"
+  )
+);
 
   document.getElementById(
     "nama_kategori_produk"
@@ -370,20 +451,25 @@ function editKategori(id) {
     item.status;
 
 
-  document
-    .querySelectorAll(
-      'input[name="pic"]'
-    )
-    .forEach(cb => {
+const kategoriPIC =
+  Array.isArray(item.pic)
+    ? item.pic
+    : [];
 
-      cb.checked =
-        item.pic.some(
-          p =>
-            Number(p.id) ===
-            Number(cb.value)
-        );
+document
+  .querySelectorAll(
+    'input[name="pic"]'
+  )
+  .forEach(cb => {
 
-    });
+    cb.checked =
+      kategoriPIC.some(
+        p =>
+          Number(p.id) ===
+          Number(cb.value)
+      );
+
+  });
 
 
   submitButton.textContent =
@@ -395,11 +481,13 @@ function editKategori(id) {
   formTitle.textContent =
     "Edit Kategori Produk";
 
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
+  document
+  .getElementById(
+    "kategoriModal"
+  )
+  .classList.add(
+    "show"
+  );
 
 }
 
@@ -482,7 +570,6 @@ cancelButton.addEventListener(
   resetForm
 );
 
-
 // ========================================
 // SEARCH
 // ========================================
@@ -496,41 +583,57 @@ function applySearch() {
 
 
   const hasil =
-    allKategori.filter(item =>
+    allKategori.filter(item => {
 
-      String(
-        item.nama_kategori_produk
-      )
-        .toLowerCase()
-        .includes(keyword)
-
-      ||
-
-      String(item.status)
-        .toLowerCase()
-        .includes(keyword)
-
-      ||
-
-      item.pic.some(pic =>
-        String(pic.nama)
-          .toLowerCase()
-          .includes(keyword)
-      )
-
-    );
+      const namaKategori =
+        String(
+          item.nama_kategori_produk || ""
+        )
+          .toLowerCase();
 
 
-  tampilkan(hasil);
+      const status =
+        String(
+          item.status || ""
+        )
+          .toLowerCase();
+
+
+      const picMatch =
+        Array.isArray(item.pic) &&
+        item.pic.some(pic =>
+          String(pic.nama || "")
+            .toLowerCase()
+            .includes(keyword)
+        );
+
+
+      return (
+        namaKategori.includes(keyword) ||
+        status.includes(keyword) ||
+        picMatch
+      );
+
+    });
+
+
+  renderKategoriPagination(
+    hasil
+  );
 
 }
 
 
 searchInput.addEventListener(
   "input",
-  applySearch
-);
+  () => {
 
+    currentPage = 1;
+
+    applySearch();
+
+  }
+);
 
 // ========================================
 // START

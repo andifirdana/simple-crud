@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Master Dokumen - Portopro</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+  <style>
+
+    body {
+      margin: 0;
+      font-family:
+        Inter,
+        Arial,
+        sans-serif;
+
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+
+
+    .dokumen-page {
+      margin-left: 260px;
+
+      width: calc(100% - 260px);
+
+      min-width: 0;
+
+      padding: 32px;
+
+      box-sizing: border-box;
+    }
+
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      gap: 16px;
+
+      margin-bottom: 24px;
+    }
+
+
+    .page-header h1 {
+      margin: 0 0 6px;
+
+      font-size: 28px;
+
+      color: #0f172a;
+    }
+
+
+    .page-header p {
+      margin: 0;
+
+      color: #64748b;
+
+      font-size: 14px;
+    }
+
+
+    .btn {
+      border: none;
+
+      border-radius: 8px;
+
+      padding: 10px 14px;
+
+      font-size: 13px;
+      font-weight: 600;
+
+      cursor: pointer;
+    }
+
+
+    .btn-primary {
+      background: #4f46e5;
+      color: white;
+    }
+
+
+    .btn-primary:hover {
+      background: #4338ca;
+    }
+
+
+    .btn-secondary {
+      background: #eef2ff;
+      color: #4338ca;
+    }
+
+
+    .btn-danger {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+
+    .card {
+      background: white;
+
+      border: 1px solid #e5e7eb;
+
+      border-radius: 14px;
+
+      overflow: hidden;
+
+      box-shadow:
+        0 1px 2px
+        rgba(15,23,42,0.03);
+    }
+
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      gap: 12px;
+
+      padding: 18px 20px;
+
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+
+    .search-input {
+      width: 360px;
+      max-width: 100%;
+
+      padding: 10px 12px;
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 8px;
+
+      font-size: 13px;
+
+      outline: none;
+    }
+
+
+    .search-input:focus {
+      border-color: #6366f1;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(99,102,241,0.08);
+    }
+
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+
+    table {
+      width: 100%;
+
+      border-collapse: collapse;
+    }
+
+
+    th,
+    td {
+      padding: 13px 16px;
+
+      border-bottom: 1px solid #e5e7eb;
+
+      text-align: left;
+
+      font-size: 13px;
+
+      vertical-align: middle;
+    }
+
+
+    th {
+      background: #f8fafc;
+
+      color: #475569;
+
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+
+    td {
+      color: #334155;
+    }
+
+
+    tr:hover td {
+      background: #fafafa;
+    }
+
+
+    .badge {
+      display: inline-flex;
+
+      align-items: center;
+
+      padding: 5px 9px;
+
+      border-radius: 999px;
+
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+
+    .badge-admin {
+      background: #eef2ff;
+      color: #4338ca;
+    }
+
+
+    .badge-teknis {
+      background: #ecfdf5;
+      color: #047857;
+    }
+
+
+    .badge-pembayaran {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+
+
+    .aksi {
+      display: flex;
+
+      gap: 6px;
+
+      flex-wrap: wrap;
+    }
+
+
+    .empty {
+      padding: 30px;
+
+      text-align: center;
+
+      color: #64748b;
+    }
+
+
+    /* =====================================================
+       MODAL
+    ===================================================== */
+
+    .modal {
+      display: none;
+
+      position: fixed;
+
+      inset: 0;
+
+      background:
+        rgba(15,23,42,0.45);
+
+      z-index: 9999;
+
+      align-items: center;
+      justify-content: center;
+
+      padding: 20px;
+    }
+
+
+    .modal.show {
+      display: flex;
+    }
+
+
+    .modal-content {
+      width: 100%;
+      max-width: 520px;
+
+      background: white;
+
+      border-radius: 14px;
+
+      box-shadow:
+        0 20px 40px
+        rgba(15,23,42,0.2);
+
+      overflow: hidden;
+    }
+
+
+    .modal-header {
+      padding: 18px 20px;
+
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+
+    .modal-header h3 {
+      margin: 0;
+
+      font-size: 17px;
+
+      color: #0f172a;
+    }
+
+
+    .modal-body {
+      padding: 20px;
+    }
+
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+
+    .form-group label {
+      display: block;
+
+      margin-bottom: 7px;
+
+      font-size: 12px;
+      font-weight: 650;
+
+      color: #475569;
+    }
+
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+
+      box-sizing: border-box;
+
+      padding: 10px 11px;
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 8px;
+
+      font-family: inherit;
+      font-size: 13px;
+
+      outline: none;
+    }
+
+
+    textarea {
+      min-height: 100px;
+
+      resize: vertical;
+    }
+
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #6366f1;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(99,102,241,0.08);
+    }
+
+
+    .modal-actions {
+      display: flex;
+
+      justify-content: flex-end;
+
+      gap: 8px;
+
+      margin-top: 20px;
+    }
+
+
+    @media (max-width: 768px) {
+
+      .dokumen-page {
+        margin-left: 0;
+
+        width: 100%;
+
+        padding: 20px;
+      }
+
+
+      .page-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+      }
+
+
+      .toolbar {
+        align-items: stretch;
+
+        flex-direction: column;
+      }
+
+
+      .search-input {
+        width: 100%;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+  <div id="sidebarContainer"></div>
+
+
+  <main class="dokumen-page">
+
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="page-header">
+
+      <div>
+
+        <h1>
+          Master Dokumen
+        </h1>
+
+        <p>
+          Kelola daftar dokumen berdasarkan flag Admin,
+          Teknis dan Pembayaran.
+        </p>
+
+      </div>
+
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        id="tambahDokumenButton"
+      >
+        + Tambah Dokumen
+      </button>
+
+    </div>
+
+
+    <!-- =====================================================
+         TABLE CARD
+    ====================================================== -->
+
+    <div class="card">
+
+
+      <div class="toolbar">
+
+        <input
+          type="text"
+          id="searchDokumen"
+          class="search-input"
+          placeholder="Cari kode, deskripsi atau flag..."
+        >
+
+      </div>
+
+
+      <div class="table-wrapper">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Flag
+              </th>
+
+              <th>
+                Kode
+              </th>
+
+              <th>
+                Deskripsi
+              </th>
+
+              <th>
+                Created At
+              </th>
+
+              <th>
+                Updated At
+              </th>
+
+              <th>
+                Aksi
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody id="dokumenTableBody">
+
+            <tr>
+
+              <td
+                colspan="6"
+                class="empty"
+              >
+                Memuat data...
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+    </div>
+
+
+  </main>
+
+
+  <!-- =====================================================
+       MODAL TAMBAH / EDIT
+  ====================================================== -->
+
+  <div
+    class="modal"
+    id="dokumenModal"
+  >
+
+    <div class="modal-content">
+
+
+      <div class="modal-header">
+
+        <h3 id="dokumenModalTitle">
+          Tambah Dokumen
+        </h3>
+
+      </div>
+
+
+      <div class="modal-body">
+
+        <form id="dokumenForm">
+
+
+          <input
+            type="hidden"
+            id="dokumenId"
+          >
+
+
+          <div class="form-group">
+
+            <label for="flag">
+              Flag *
+            </label>
+
+            <select
+              id="flag"
+              required
+            >
+
+              <option value="">
+                Pilih Flag
+              </option>
+
+              <option value="Admin">
+                Admin
+              </option>
+
+              <option value="Teknis">
+                Teknis
+              </option>
+
+              <option value="Pembayaran">
+                Pembayaran
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="kode">
+              Kode *
+            </label>
+
+            <input
+              type="text"
+              id="kode"
+              required
+              maxlength="50"
+              placeholder="Contoh: ADM-001"
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="deskripsi">
+              Deskripsi *
+            </label>
+
+            <textarea
+              id="deskripsi"
+              required
+              placeholder="Contoh: Surat Penawaran"
+            ></textarea>
+
+          </div>
+
+
+          <div class="modal-actions">
+
+            <button
+              type="button"
+              class="btn btn-secondary"
+              id="batalDokumenButton"
+            >
+              Batal
+            </button>
+
+
+            <button
+              type="submit"
+              class="btn btn-primary"
+              id="simpanDokumenButton"
+            >
+              Simpan
+            </button>
+
+          </div>
+
+
+        </form>
+
+      </div>
+
+
+    </div>
+
+  </div>
+
+
+  <script src="/dokumen.js"></script>
+
+  <script src="/layout.js"></script>
+
+  <script src="/sidebar.js"></script>
+
+
+</body>
+
+</html>

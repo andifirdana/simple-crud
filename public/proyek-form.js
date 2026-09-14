@@ -1,7 +1,7 @@
 const form = document.getElementById("proyekForm");
 
 const kategoriSelect =
-  document.getElementById("kategori_produk_id");
+  document.getElementById("kategori_produk_ids");
 
 const jenisSelect =
   document.getElementById("jenis_proyek");
@@ -127,12 +127,161 @@ async function loadMaster() {
 
 
 // ======================================================
+// MODE NILAI
+// SEMUA NILAI PADA FORM TAMBAH PROYEK = NOMINAL RUPIAH
+// ======================================================
+
+function updateModeNilai() {
+
+  // ====================================================
+  // NILAI KLIEN
+  // ====================================================
+
+  const klienFields = [
+    {
+      id: "nilai_submit_klien",
+      label: "Nilai Submit"
+    },
+    {
+      id: "nilai_nego_1_klien",
+      label: "Nego 1"
+    },
+    {
+      id: "nilai_nego_2_klien",
+      label: "Nego 2"
+    },
+    {
+      id: "nilai_nego_3_klien",
+      label: "Nego 3"
+    }
+  ];
+
+  klienFields.forEach(field => {
+
+    const input =
+      document.getElementById(
+        field.id
+      );
+
+    if (!input) return;
+
+    const formGroup =
+      input.closest(
+        ".form-group"
+      );
+
+    const label =
+      formGroup?.querySelector(
+        "label"
+      );
+
+    if (label) {
+      label.textContent =
+        `${field.label} (Rp)`;
+    }
+
+    input.placeholder =
+      "Masukkan nominal";
+
+    input.removeAttribute(
+      "max"
+    );
+
+    input.min = "0";
+    input.step = "1";
+
+  });
+
+
+  // ====================================================
+  // NILAI PARTNER
+  // ====================================================
+
+  document
+    .querySelectorAll(
+      ".partner-card"
+    )
+    .forEach(card => {
+
+      const fields = [
+        {
+          selector:
+            ".partner_nilai_submit",
+          label:
+            "Nilai Submit"
+        },
+        {
+          selector:
+            ".partner_nego_1",
+          label:
+            "Nego 1"
+        },
+        {
+          selector:
+            ".partner_nego_2",
+          label:
+            "Nego 2"
+        },
+        {
+          selector:
+            ".partner_nego_3",
+          label:
+            "Nego 3"
+        }
+      ];
+
+      fields.forEach(field => {
+
+        const input =
+          card.querySelector(
+            field.selector
+          );
+
+        if (!input) return;
+
+        const formGroup =
+          input.closest(
+            ".form-group"
+          );
+
+        const label =
+          formGroup?.querySelector(
+            "label"
+          );
+
+        if (label) {
+          label.textContent =
+            `${field.label} (Rp)`;
+        }
+
+        input.placeholder =
+          "Masukkan nominal";
+
+        input.removeAttribute(
+          "max"
+        );
+
+        input.min = "0";
+        input.step = "1";
+
+      });
+
+    });
+
+}
+
+// ======================================================
 // JENIS PROYEK
 // ======================================================
 
 jenisSelect.addEventListener(
   "change",
   () => {
+
+    // ==================================================
+    // SUB JENIS PROYEK
+    // Hanya muncul untuk Reguler/SLA
+    // ==================================================
 
     if (
       jenisSelect.value === "Reguler/SLA"
@@ -152,9 +301,11 @@ jenisSelect.addEventListener(
 
     }
 
+    // Nilai Submit & Nego tetap Rupiah
+    updateModeNilai();
+
   }
 );
-
 
 // ======================================================
 // PIC BERDASARKAN KATEGORI
@@ -164,60 +315,81 @@ kategoriSelect.addEventListener(
   "change",
   async () => {
 
-    const kategoriId =
-      kategoriSelect.value;
+    const kategoriIds =
+      Array.from(
+        kategoriSelect.selectedOptions
+      )
+      .map(
+        option => option.value
+      )
+      .filter(Boolean);
 
     picContainer.innerHTML = "";
 
-
-    if (!kategoriId) {
-
+    if (kategoriIds.length === 0) {
       picContainer.textContent =
         "Pilih kategori terlebih dahulu.";
 
       return;
-
     }
-
 
     try {
 
-      const response =
-        await fetch(
-          `/api/proyek/kategori/${kategoriId}/pic`
-        );
+      const semuaPic = [];
 
-      const data =
-        await response.json();
+      for (const kategoriId of kategoriIds) {
 
+        const response =
+          await fetch(
+            `/api/proyek/kategori/${kategoriId}/pic`
+          );
 
-      if (!response.ok) {
+        const data =
+          await response.json();
 
-        throw new Error(
-          data.error ||
-          "Gagal mengambil PIC"
-        );
+        if (!response.ok) {
+          throw new Error(
+            data.error ||
+            "Gagal mengambil PIC"
+          );
+        }
+
+        if (Array.isArray(data)) {
+          semuaPic.push(...data);
+        }
 
       }
 
+      // Hilangkan PIC duplikat
+      const picUnik =
+        Array.from(
+          new Map(
+            semuaPic.map(
+              pic => [
+                String(pic.id),
+                pic
+              ]
+            )
+          ).values()
+        );
 
-      if (data.length === 0) {
+      if (picUnik.length === 0) {
 
         picContainer.innerHTML = `
           <span style="color:#b45309">
-            Belum ada PIC pada kategori ini.
+            Belum ada PIC pada kategori yang dipilih.
           </span>
         `;
 
         return;
-
       }
 
-
-      data.forEach(pic => {
+      picUnik.forEach(pic => {
 
         const item =
-          document.createElement("label");
+          document.createElement(
+            "label"
+          );
 
         item.className =
           "pic-item";
@@ -225,21 +397,25 @@ kategoriSelect.addEventListener(
         item.innerHTML = `
           <input
             type="checkbox"
-            name="pic"
+            name="pic_ids"
             value="${pic.id}"
-            checked
           >
 
           <span>
-            <strong>${escapeHtml(pic.nama)}</strong>
-            — ${escapeHtml(pic.jabatan)}
+            ${pic.nama}
+            ${
+              pic.jabatan
+                ? `- ${pic.jabatan}`
+                : ""
+            }
           </span>
         `;
 
-        picContainer.appendChild(item);
+        picContainer.appendChild(
+          item
+        );
 
       });
-
 
     } catch (error) {
 
@@ -250,7 +426,7 @@ kategoriSelect.addEventListener(
 
       picContainer.innerHTML = `
         <span style="color:#dc2626">
-          Gagal mengambil data PIC.
+          Gagal mengambil PIC.
         </span>
       `;
 
@@ -258,7 +434,6 @@ kategoriSelect.addEventListener(
 
   }
 );
-
 
 // ======================================================
 // ESCAPE HTML
@@ -651,6 +826,7 @@ function addPartner() {
 
 
   updatePartnerNumbers();
+  updateModeNilai();
 
 }
 
@@ -1002,7 +1178,6 @@ form.addEventListener(
       return;
     }
 
-
     // ================================
     // PIC
     // ================================
@@ -1040,10 +1215,12 @@ form.addEventListener(
 
     const payload = {
 
-      kategori_produk_id:
-        Number(
-          kategoriSelect.value
-        ),
+      kategori_produk_ids:
+          Array.from(
+            kategoriSelect.selectedOptions
+          ).map(
+            option => Number(option.value)
+          ),
 
       jenis_proyek:
         jenisSelect.value,

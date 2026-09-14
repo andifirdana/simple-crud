@@ -30,22 +30,15 @@
       color: #1f2937;
     }
 
-   .task-page {
+    .task-page {
       margin-left: 260px;
-
       width: calc(100% - 260px);
-
       min-width: 0;
-
       padding: 32px;
-
       box-sizing: border-box;
-}
+    }
 
     .task-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       margin-bottom: 24px;
     }
 
@@ -59,62 +52,301 @@
       color: #6b7280;
     }
 
+    /* =====================================================
+       FORM TASK
+    ===================================================== */
+
+    .task-form-card {
+      background: white;
+
+      border:
+        1px solid #e5e7eb;
+
+      border-radius: 16px;
+
+      padding: 24px;
+
+      margin-bottom: 24px;
+
+      box-sizing: border-box;
+    }
+
+    .task-form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      margin-bottom: 20px;
+    }
+
+    .task-form-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .task-form-grid {
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          3,
+          minmax(0, 1fr)
+        );
+
+      gap: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 0;
+    }
+
+    .form-group.full {
+      grid-column:
+        1 / -1;
+    }
+
+    .form-group.span-2 {
+      grid-column:
+        span 2;
+    }
+
+    .form-group label {
+      display: block;
+
+      margin-bottom: 7px;
+
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+
+      width: 100%;
+
+      box-sizing: border-box;
+
+      padding: 11px;
+
+      border:
+        1px solid #d1d5db;
+
+      border-radius: 9px;
+
+      font: inherit;
+
+      background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+
+      outline: none;
+
+      border-color: #6366f1;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(
+          99,
+          102,
+          241,
+          0.12
+        );
+    }
+
+    .form-group textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .readonly {
+      background:
+        #f9fafb !important;
+
+      color: #6b7280;
+    }
+
+    .form-actions {
+      display: flex;
+
+      justify-content:
+        flex-end;
+
+      gap: 10px;
+
+      margin-top: 20px;
+    }
+
     .btn-primary {
       border: 0;
-      padding: 12px 18px;
-      border-radius: 10px;
+
+      padding: 11px 18px;
+
+      border-radius: 9px;
+
       font-weight: 600;
+
       cursor: pointer;
+
       background: #4f46e5;
       color: white;
     }
 
+    .btn-secondary {
+      border:
+        1px solid #d1d5db;
+
+      padding: 10px 16px;
+
+      border-radius: 9px;
+
+      font-weight: 600;
+
+      cursor: pointer;
+
+      background: white;
+
+      color: #374151;
+    }
+
+    /* =====================================================
+       TABLE HEADER + FILTER
+    ===================================================== */
+
     .task-card {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
 
-  background: white;
+      background: white;
 
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+      border:
+        1px solid #e5e7eb;
 
-  overflow: hidden;
+      border-radius: 16px;
 
-  box-sizing: border-box;
-}
+      overflow: hidden;
 
-.task-table-wrapper {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+      box-sizing: border-box;
+    }
 
-  overflow-x: auto;
-  overflow-y: hidden;
+    .task-card-header {
 
-  box-sizing: border-box;
-}
+      display: flex;
+
+      justify-content:
+        space-between;
+
+      align-items: center;
+
+      gap: 16px;
+
+      padding: 18px 20px;
+
+      border-bottom:
+        1px solid #e5e7eb;
+    }
+
+    .task-card-title h2 {
+      margin: 0 0 4px;
+
+      font-size: 18px;
+    }
+
+    .task-card-title p {
+      margin: 0;
+
+      color: #6b7280;
+
+      font-size: 13px;
+    }
+
+    .task-filter {
+      width: 320px;
+      max-width: 100%;
+    }
+
+    .task-filter input {
+      width: 100%;
+
+      box-sizing: border-box;
+
+      padding: 10px 12px;
+
+      border:
+        1px solid #d1d5db;
+
+      border-radius: 9px;
+
+      font: inherit;
+    }
+
+    .task-filter input:focus {
+      outline: none;
+
+      border-color: #6366f1;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(
+          99,
+          102,
+          241,
+          0.12
+        );
+    }
+
+    /* =====================================================
+       TABLE
+    ===================================================== */
+
+    .task-table-wrapper {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+
+      overflow-x: auto;
+      overflow-y: hidden;
+
+      box-sizing: border-box;
+    }
 
     table {
       width: 100%;
+
       border-collapse: collapse;
-      min-width: 1500px;
+
+      min-width: 1800px;
     }
 
     th {
       text-align: left;
+
       padding: 15px;
+
       font-size: 12px;
+
       color: #6b7280;
+
       background: #f9fafb;
-      border-bottom: 1px solid #e5e7eb;
+
+      border-bottom:
+        1px solid #e5e7eb;
+
       white-space: nowrap;
     }
 
     td {
       padding: 15px;
-      border-bottom: 1px solid #f0f1f3;
+
+      border-bottom:
+        1px solid #f0f1f3;
+
       vertical-align: top;
+
       font-size: 14px;
     }
 
@@ -123,6 +355,7 @@
       min-width: 250px;
 
       white-space: normal;
+
       line-height: 1.5;
     }
 
@@ -131,13 +364,36 @@
       min-width: 180px;
     }
 
-    .status {
-      padding: 6px 10px;
-      border-radius: 20px;
-      font-size: 12px;
+    .status-select {
+      width: 105px;
+      min-width: 105px;
+
+      height: 30px;
+
+      padding:
+        4px 22px
+        4px 9px;
+
+      border: none;
+      outline: none;
+
+      border-radius: 16px;
+
+      font-size: 11px;
+
       font-weight: 600;
-      display: inline-block;
-      white-space: nowrap;
+
+      cursor: pointer;
+
+      box-sizing:
+        border-box;
+    }
+
+    th:nth-child(8),
+    td:nth-child(8) {
+      width: 115px;
+      min-width: 115px;
+      max-width: 115px;
     }
 
     .status-not-started {
@@ -159,6 +415,10 @@
       background: #dcfce7;
       color: #166534;
     }
+    .status-urgent {
+  background: #fee2e2;
+  color: #b91c1c;
+}
 
     .action-buttons {
       display: flex;
@@ -167,9 +427,13 @@
 
     .btn-edit,
     .btn-delete {
+
       border: 0;
+
       padding: 7px 10px;
+
       border-radius: 7px;
+
       cursor: pointer;
     }
 
@@ -183,144 +447,201 @@
       color: #dc2626;
     }
 
-    .modal {
-      display: none;
-
-      position: fixed;
-      inset: 0;
-
-      background:
-        rgba(17, 24, 39, 0.55);
-
-      align-items: center;
-      justify-content: center;
-
-      padding: 20px;
-
-      z-index: 999;
+    .task-table-wrapper::-webkit-scrollbar {
+      height: 7px;
     }
 
-    .modal.active {
-      display: flex;
+    .task-table-wrapper::-webkit-scrollbar-track {
+      background: #f8fafc;
     }
 
-    .modal-content {
-      width: 100%;
-      max-width: 650px;
-      max-height: 90vh;
-
-      overflow-y: auto;
-
-      background: white;
-
-      padding: 26px;
-
-      border-radius: 16px;
+    .task-table-wrapper::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
     }
 
-    .modal-content h2 {
-      margin-top: 0;
+    @media (
+      max-width: 1000px
+    ) {
+
+      .task-form-grid {
+        grid-template-columns:
+          repeat(
+            2,
+            minmax(0, 1fr)
+          );
+      }
+
     }
 
-    .form-group {
-      margin-bottom: 16px;
+    @media (
+      max-width: 700px
+    ) {
+
+      .task-form-grid {
+        grid-template-columns:
+          1fr;
+      }
+
+      .form-group.full,
+      .form-group.span-2 {
+        grid-column: auto;
+      }
+
+      .task-card-header {
+        flex-direction:
+          column;
+
+        align-items:
+          stretch;
+      }
+
+      .task-filter {
+        width: 100%;
+      }
+
     }
 
-    .form-group label {
-      display: block;
-      margin-bottom: 7px;
-      font-size: 13px;
-      font-weight: 600;
-    }
+  /* =====================================================
+   CHECKBOX OPTION
+  ===================================================== */
 
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
+.task-options {
+  grid-column: 1 / -1;
 
-      width: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 
-      box-sizing: border-box;
+  gap: 12px;
 
-      padding: 11px;
+  padding: 14px 16px;
 
-      border:
-        1px solid #d1d5db;
+  background: #f8fafc;
 
-      border-radius: 9px;
+  border:
+    1px solid #e5e7eb;
 
-      font: inherit;
-    }
+  border-radius: 10px;
+}
 
-    .form-group textarea {
-      min-height: 150px;
-      resize: vertical;
-    }
+.task-option {
+  display: inline-flex;
+  align-items: center;
 
-    .form-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
+  gap: 8px;
 
-    .status-select {
-  width: 105px;
-  min-width: 105px;
+  padding: 8px 12px;
 
-  height: 30px;
+  border:
+    1px solid #e5e7eb;
 
-  padding: 4px 22px 4px 9px;
+  border-radius: 8px;
 
-  border: none;
-  outline: none;
-  border-radius: 16px;
-
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
+  background: white;
 
   cursor: pointer;
 
-  box-sizing: border-box;
+  font-size: 13px;
+  font-weight: 600;
+
+  user-select: none;
 }
 
-th:nth-child(6),
-td:nth-child(6) {
-  width: 115px;
-  min-width: 115px;
-  max-width: 115px;
+.task-option input {
+  width: auto !important;
+  margin: 0;
 }
 
-.status-not-started {
-  background: #f3f4f6;
-  color: #4b5563;
+.task-option.urgent {
+  color: #b91c1c;
+
+  background: #fff7f7;
+
+  border-color: #fecaca;
 }
 
-.status-on-progress {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
 
-.status-hold {
-  background: #fef3c7;
-  color: #92400e;
-}
+/* =====================================================
+   SUB FORM
+===================================================== */
 
-.status-done {
-  background: #dcfce7;
-  color: #166534;
-}
+.task-sub-form {
+  grid-column: 1 / -1;
 
-.task-table-wrapper::-webkit-scrollbar {
-  height: 7px;
-}
+  padding: 18px;
 
-.task-table-wrapper::-webkit-scrollbar-track {
+  border:
+    1px solid #e5e7eb;
+
+  border-radius: 12px;
+
   background: #f8fafc;
 }
 
-.task-table-wrapper::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 999px;
+.task-sub-form-title {
+  margin-bottom: 16px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  color: #374151;
+}
+
+.task-sub-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap: 16px;
+}
+
+.task-document-grid {
+  display: grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap: 16px;
+}
+
+
+/* =====================================================
+   RESPONSIVE SUB FORM
+===================================================== */
+
+@media (max-width: 900px) {
+
+  .task-sub-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+}
+
+@media (max-width: 650px) {
+
+  .task-sub-grid,
+  .task-document-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .task-options {
+    flex-direction:
+      column;
+
+    align-items:
+      stretch;
+  }
+
 }
 
   </style>
@@ -330,102 +651,607 @@ td:nth-child(6) {
 
 <body>
 
-  <!-- =====================
-         SIDEBAR
-    ====================== -->
 
-    <aside class="sidebar">
+  <!-- SIDEBAR -->
 
-      <div class="logo">
-        Portopro
-      </div>
-      <div class="sidebar-user">
-        <strong id="userNama">User</strong>
-      </div>
-      <div class="sidebar-user">
-        <span id="userRole">PIC</span>
-      </div>
+  <div id="sidebarContainer"></div>
 
-      <div class="menu">
-
-        <div class="menu-title">
-          Overview
-        </div>
-
-        <a
-          href="/dashboard.html"
-          
-        >
-          Dashboard
-        </a>
-
-        <a href="/proyek.html">
-          Proyek
-        </a>
-
-        <a href="/task.html"
-        class="active">
-          Task List
-        </a>
-
-
-        <div class="menu-title">
-          Master Data
-        </div>
-
-        <a href="/index.html">
-          Master Klien
-        </a>
-
-        <a href="/partner.html">
-          Master Partner
-        </a>
-
-        <a href="/pic.html">
-          Master PIC
-        </a>
-
-        <a href="/kategori.html">
-          Master Kategori
-        </a>
-
-      </div>
-      <button
-        type="button"
-        id="logoutButton"
-      >
-        Logout
-      </button>
-
-    </aside>
 
   <div class="task-page">
 
 
+    <!-- HEADER -->
+
     <div class="task-header">
 
-      <div>
+      <h1>
+        Task List
+      </h1>
 
-        <h1>Task List</h1>
-
-        <p>
-          Kelola aktivitas dan target pekerjaan proyek.
-        </p>
-
-      </div>
-
-
-      <button
-        id="tambahTaskButton"
-        class="btn-primary"
-      >
-        + Tambah Task
-      </button>
+      <p>
+        Kelola aktivitas dan target
+        pekerjaan proyek.
+      </p>
 
     </div>
 
 
+    <!-- =====================================================
+     FORM TAMBAH / EDIT TASK
+====================================================== -->
+
+<div
+  class="task-form-card"
+  id="taskFormCard"
+>
+
+  <div class="task-form-header">
+
+    <div>
+
+      <h2 id="formTitle">
+        Tambah Task
+      </h2>
+
+    </div>
+
+  </div>
+
+
+  <form id="taskForm">
+
+
+    <input
+      type="hidden"
+      id="taskId"
+    >
+
+
+    <div class="task-form-grid">
+
+
+      <!-- =================================================
+           PROYEK
+      ================================================== -->
+
+      <div class="form-group">
+
+        <label>
+          Nama Proyek
+        </label>
+
+        <select
+          id="proyekId"
+          required
+        >
+
+          <option value="">
+            Pilih Proyek
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- =================================================
+           KATEGORI
+      ================================================== -->
+
+      <div class="form-group">
+
+        <label>
+          Kategori
+        </label>
+
+        <input
+          id="kategori"
+          class="readonly"
+          type="text"
+          readonly
+        >
+
+      </div>
+
+
+      <!-- =================================================
+           TARGET DATE
+      ================================================== -->
+
+      <div class="form-group">
+
+        <label>
+          Target Date
+        </label>
+
+        <input
+          id="targetDate"
+          type="date"
+        >
+
+      </div>
+
+
+      <!-- =================================================
+           TASK
+      ================================================== -->
+
+      <div
+        class="
+          form-group
+          span-2
+        "
+      >
+
+        <label>
+          Task
+        </label>
+
+        <input
+          id="task"
+          type="text"
+          required
+          placeholder="Masukkan task..."
+        >
+
+      </div>
+
+
+      <!-- =================================================
+           LINK
+      ================================================== -->
+
+      <div class="form-group">
+
+        <label>
+          Link
+        </label>
+
+        <input
+          id="link"
+          type="url"
+          placeholder="https://..."
+        >
+
+      </div>
+
+
+      <!-- =================================================
+           CATATAN
+      ================================================== -->
+
+      <div
+        class="
+          form-group
+          full
+        "
+      >
+
+        <label>
+          Catatan
+        </label>
+
+        <textarea
+          id="catatan"
+          placeholder="Tuliskan catatan pekerjaan..."
+        ></textarea>
+
+      </div>
+
+
+      <!-- =================================================
+           PILIHAN TASK
+      ================================================== -->
+
+      <div class="task-options">
+
+
+        <!-- DOKUMEN -->
+
+        <label class="task-option">
+
+          <input
+            type="checkbox"
+            id="adaDokumen"
+          >
+
+          Dokumen
+
+        </label>
+
+
+        <!-- URGENT -->
+
+        <label
+          class="
+            task-option
+            urgent
+          "
+        >
+
+          <input
+            type="checkbox"
+            id="urgentTask"
+          >
+
+          Urgent
+
+        </label>
+
+
+        <!-- PEMBAYARAN -->
+
+        <label class="task-option">
+
+          <input
+            type="checkbox"
+            id="adaPembayaran"
+          >
+
+          Tambah Pembayaran / Termin
+
+        </label>
+
+
+      </div>
+
+
+      <!-- =================================================
+           DETAIL DOKUMEN
+      ================================================== -->
+
+      <div
+        id="dokumenGroup"
+        class="task-sub-form"
+        style="display:none;"
+      >
+
+        <div class="task-sub-form-title">
+          Dokumen
+        </div>
+
+
+        <div class="task-document-grid">
+
+
+          <div class="form-group">
+
+            <label>
+              Kode Dokumen
+            </label>
+
+            <select id="masterDokumenId">
+
+              <option value="">
+                Pilih Dokumen
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label>
+              Nomor Dokumen
+            </label>
+
+            <input
+              id="nomorDokumen"
+              type="text"
+              placeholder="Contoh: 012/FSD/MTM/IX/2026"
+            >
+
+          </div>
+
+
+        </div>
+
+      </div>
+
+
+      <!-- =================================================
+           DETAIL PEMBAYARAN
+      ================================================== -->
+
+      <div
+        id="pembayaranGroup"
+        class="task-sub-form"
+        style="display:none;"
+      >
+
+        <div class="task-sub-form-title">
+          Tambah Termin Pembayaran
+        </div>
+
+
+        <div class="task-sub-grid">
+
+
+          <!-- JENIS -->
+
+          <div class="form-group">
+
+            <label>
+              Tambah Termin Untuk
+            </label>
+
+            <select id="jenisPembayaran">
+
+              <option value="">
+                Pilih
+              </option>
+
+              <option value="klien">
+                Klien
+              </option>
+
+              <option value="partner">
+                Partner
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <!-- TARGET -->
+
+          <div class="form-group">
+
+            <label id="labelTargetPembayaran">
+              Klien / Partner
+            </label>
+
+            <select id="targetPembayaran">
+
+              <option value="">
+                Pilih terlebih dahulu
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <!-- NAMA TERMIN -->
+
+          <div class="form-group">
+
+            <label>
+              Nama Termin
+            </label>
+
+            <input
+              id="namaTerminTask"
+              type="text"
+              placeholder="Contoh: Termin 1"
+            >
+
+          </div>
+
+
+          <!-- PERSENTASE -->
+
+          <div
+            class="form-group"
+            id="terminPersentaseGroup"
+          >
+
+            <label>
+              Persentase (%)
+            </label>
+
+            <input
+              id="persentaseTerminTask"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              placeholder="0"
+            >
+
+          </div>
+
+
+          <!-- NOMINAL -->
+
+          <div
+            class="form-group"
+            id="terminNominalGroup"
+            style="display:none;"
+          >
+
+            <label>
+              Nominal
+            </label>
+
+            <input
+              id="nominalTerminTask"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="0"
+            >
+
+          </div>
+
+
+          <!-- STATUS PEMBAYARAN -->
+
+          <div class="form-group">
+
+            <label>
+              Status Pembayaran
+            </label>
+
+            <select id="statusPembayaranTask">
+
+              <option value="Belum Dibayar">
+                Belum Dibayar
+              </option>
+
+              <option value="Dibayar">
+                Dibayar
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <!-- JATUH TEMPO -->
+
+          <div class="form-group">
+
+            <label>
+              Tanggal Jatuh Tempo
+            </label>
+
+            <input
+              id="jatuhTempoTerminTask"
+              type="date"
+            >
+
+          </div>
+
+
+          <!-- TANGGAL BAYAR -->
+
+          <div class="form-group">
+
+            <label>
+              Tanggal Bayar
+            </label>
+
+            <input
+              id="tanggalBayarTerminTask"
+              type="date"
+            >
+
+          </div>
+
+
+        </div>
+
+      </div>
+
+
+      <!-- =================================================
+           STATUS
+           HANYA MUNCUL SAAT EDIT
+      ================================================== -->
+
+      <div
+        class="form-group"
+        id="statusGroup"
+        style="display:none;"
+      >
+
+        <label>
+          Status
+        </label>
+
+        <select id="status">
+
+          <option value="Not Started">
+            Not Started
+          </option>
+
+          <option value="On Progress">
+            On Progress
+          </option>
+
+          <option value="Hold">
+            Hold
+          </option>
+
+          <option value="Urgent">
+            Urgent
+          </option>
+
+          <option value="Done">
+            Done
+          </option>
+
+        </select>
+
+      </div>
+
+
+    </div>
+
+
+    <!-- =================================================
+         ACTION
+    ================================================== -->
+
+    <div class="form-actions">
+
+
+      <button
+        type="button"
+        id="batalButton"
+        class="btn-secondary"
+        style="display:none;"
+      >
+        Batal Edit
+      </button>
+
+
+      <button
+        type="submit"
+        id="simpanTaskButton"
+        class="btn-primary"
+      >
+        Simpan Task
+      </button>
+
+
+    </div>
+
+
+  </form>
+
+</div>
+    <!-- =====================================================
+         TABLE
+    ====================================================== -->
+
     <div class="task-card">
+
+
+      <div class="task-card-header">
+
+
+        <div class="task-card-title">
+
+          <h2>
+            Daftar Task
+          </h2>
+
+          <p>
+            Seluruh task proyek.
+          </p>
+
+        </div>
+
+
+        <div class="task-filter">
+
+          <input
+            type="search"
+            id="searchProyek"
+            placeholder="Cari nama proyek..."
+            autocomplete="off"
+          >
+
+        </div>
+
+
+      </div>
+
 
       <div class="task-table-wrapper">
 
@@ -440,6 +1266,8 @@ td:nth-child(6) {
               <th>Task</th>
               <th>Catatan</th>
               <th>Link</th>
+              <th>Dokumen</th>
+              <th>Nomor Dokumen</th>
               <th>Status</th>
               <th>Tanggal Mulai</th>
               <th>Target Date</th>
@@ -455,9 +1283,11 @@ td:nth-child(6) {
           <tbody id="taskTableBody">
 
             <tr>
-              <td colspan="11">
+
+              <td colspan="13">
                 Memuat task...
               </td>
+
             </tr>
 
           </tbody>
@@ -468,168 +1298,14 @@ td:nth-child(6) {
 
     </div>
 
-  </div>
-
-
-  <!-- MODAL -->
-
-  <div
-    id="taskModal"
-    class="modal"
-  >
-
-    <div class="modal-content">
-
-      <h2 id="modalTitle">
-        Tambah Task
-      </h2>
-
-
-      <form id="taskForm">
-
-        <input
-          type="hidden"
-          id="taskId"
-        >
-
-
-        <div class="form-group">
-
-          <label>Nama Proyek</label>
-
-          <select
-            id="proyekId"
-            required
-          >
-            <option value="">
-              Pilih Proyek
-            </option>
-          </select>
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>Kategori</label>
-
-          <input
-            id="kategori"
-            type="text"
-            readonly
-          >
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>Task</label>
-
-          <input
-            id="task"
-            type="text"
-            required
-          >
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>Catatan</label>
-
-          <textarea
-            id="catatan"
-            placeholder="Tuliskan catatan pekerjaan secara lengkap..."
-          ></textarea>
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>Link</label>
-
-          <input
-            id="link"
-            type="url"
-            placeholder="https://..."
-          >
-
-        </div>
-
-
-        <div
-          class="form-group"
-          id="statusGroup"
-        >
-
-          <label>Status</label>
-
-          <select id="status">
-
-            <option value="Not Started">
-              Not Started
-            </option>
-
-            <option value="On Progress">
-              On Progress
-            </option>
-
-            <option value="Hold">
-              Hold
-            </option>
-
-            <option value="Done">
-              Done
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>Target Date</label>
-
-          <input
-            id="targetDate"
-            type="date"
-          >
-
-        </div>
-
-
-        <div class="form-actions">
-
-          <button
-            type="button"
-            id="batalButton"
-          >
-            Batal
-          </button>
-
-          <button
-            type="submit"
-            class="btn-primary"
-          >
-            Simpan
-          </button>
-
-        </div>
-
-      </form>
-
-    </div>
 
   </div>
 
 
+  <script src="/layout.js"></script>
+  <script src="/sidebar.js"></script>
   <script src="/task.js"></script>
 
 </body>
-
 
 </html>

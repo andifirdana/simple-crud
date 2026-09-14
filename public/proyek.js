@@ -1,29 +1,57 @@
+// ======================================================
+// GLOBAL DATA
+// ======================================================
+
 let allProyek = [];
 
+let currentPage = 1;
+
+const itemsPerPage = 10;
+
+
+// ======================================================
+// ELEMENT
+// ======================================================
+
 const proyekTable =
-  document.getElementById("proyekTable");
+  document.getElementById(
+    "proyekTable"
+  );
+
 
 const searchInput =
-  document.getElementById("searchInput");
+  document.getElementById(
+    "searchInput"
+  );
+
 
 const kategoriFilter =
-  document.getElementById("kategoriFilter");
+  document.getElementById(
+    "kategoriFilter"
+  );
+
 
 const jenisFilter =
-  document.getElementById("jenisFilter");
+  document.getElementById(
+    "jenisFilter"
+  );
+
 
 const statusFilter =
-  document.getElementById("statusFilter");
+  document.getElementById(
+    "statusFilter"
+  );
 
 
-// ==========================================
+// ======================================================
 // FORMAT RUPIAH
-// ==========================================
+// ======================================================
 
 function formatRupiah(value) {
 
   const number =
     Number(value || 0);
+
 
   return new Intl.NumberFormat(
     "id-ID",
@@ -37,13 +65,16 @@ function formatRupiah(value) {
 }
 
 
-// ==========================================
+// ======================================================
 // FORMAT TANGGAL
-// ==========================================
+// ======================================================
 
 function formatTanggal(value) {
 
-  if (!value) return "-";
+  if (!value) {
+    return "-";
+  }
+
 
   return new Intl.DateTimeFormat(
     "id-ID",
@@ -52,37 +83,95 @@ function formatTanggal(value) {
       month: "short",
       year: "numeric"
     }
-  ).format(new Date(value));
+  ).format(
+    new Date(value)
+  );
 
 }
 
 
-// ==========================================
+// ======================================================
 // ESCAPE HTML
-// ==========================================
+// ======================================================
 
 function escapeHTML(value) {
 
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(
+    value ?? ""
+  )
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
 
 }
 
 
-// ==========================================
+// ======================================================
+// AMBIL LIST KATEGORI
+// ======================================================
+
+function getKategoriList(item) {
+
+  if (
+    Array.isArray(
+      item.nama_kategori_produk_list
+    ) &&
+    item.nama_kategori_produk_list
+      .length > 0
+  ) {
+
+    return item
+      .nama_kategori_produk_list
+      .filter(Boolean);
+
+  }
+
+
+  if (
+    item.nama_kategori_produk
+  ) {
+
+    return [
+      item.nama_kategori_produk
+    ];
+
+  }
+
+
+  return [];
+
+}
+
+
+// ======================================================
 // LOAD PROYEK
-// ==========================================
+// ======================================================
 
 async function loadProyek() {
 
   try {
 
     const response =
-      await fetch("/api/proyek");
+      await fetch(
+        "/api/proyek"
+      );
 
 
     const contentType =
@@ -100,6 +189,7 @@ async function loadProyek() {
 
       const text =
         await response.text();
+
 
       throw new Error(
         `Server bukan JSON: ${text}`
@@ -122,12 +212,20 @@ async function loadProyek() {
     }
 
 
-    allProyek = result;
+    allProyek =
+      Array.isArray(result)
+        ? result
+        : [];
 
 
     buildKategoriFilter();
 
+
     updateSummary();
+
+
+    currentPage = 1;
+
 
     applyFilter();
 
@@ -145,7 +243,7 @@ async function loadProyek() {
       <tr>
 
         <td
-          colspan="9"
+          colspan="12"
           class="empty-state"
         >
 
@@ -162,9 +260,9 @@ async function loadProyek() {
 }
 
 
-// ==========================================
-// FILTER KATEGORI
-// ==========================================
+// ======================================================
+// BUILD FILTER KATEGORI
+// ======================================================
 
 function buildKategoriFilter() {
 
@@ -175,47 +273,76 @@ function buildKategoriFilter() {
   const kategori =
     [
       ...new Set(
-        allProyek
-          .map(
-            item =>
-              item.nama_kategori_produk
-          )
-          .filter(Boolean)
+
+        allProyek.flatMap(
+          item =>
+            getKategoriList(item)
+        )
+
       )
     ]
-    .sort();
+      .filter(Boolean)
+      .sort(
+        (a, b) =>
+          String(a)
+            .localeCompare(
+              String(b),
+              "id"
+            )
+      );
 
 
   kategoriFilter.innerHTML = `
+
     <option value="">
       Semua Kategori
     </option>
+
   `;
 
 
-  kategori.forEach(item => {
+  kategori.forEach(
+    item => {
 
-    const option =
-      document.createElement("option");
-
-    option.value = item;
-
-    option.textContent = item;
-
-    kategoriFilter.appendChild(option);
-
-  });
+      const option =
+        document.createElement(
+          "option"
+        );
 
 
-  kategoriFilter.value =
-    currentValue;
+      option.value =
+        item;
+
+
+      option.textContent =
+        item;
+
+
+      kategoriFilter.appendChild(
+        option
+      );
+
+    }
+  );
+
+
+  if (
+    kategori.includes(
+      currentValue
+    )
+  ) {
+
+    kategoriFilter.value =
+      currentValue;
+
+  }
 
 }
 
 
-// ==========================================
+// ======================================================
 // SUMMARY
-// ==========================================
+// ======================================================
 
 function updateSummary() {
 
@@ -226,54 +353,184 @@ function updateSummary() {
   const aktif =
     allProyek.filter(
       item =>
-        item.status_final === "Aktif"
+        item.status_final ===
+        "Aktif"
     ).length;
 
 
   const done =
     allProyek.filter(
       item =>
-        item.status_final === "Done"
+        item.status_final ===
+        "Done"
     ).length;
 
 
   const totalNilai =
     allProyek.reduce(
-      (total, item) =>
+      (
+        total,
+        item
+      ) =>
         total +
         Number(
-          item.nilai_final_klien || 0
+          item.nilai_final_klien ||
+          0
         ),
       0
     );
 
 
-  document
-    .getElementById("totalProyek")
-    .textContent = total;
+  const totalProyekElement =
+    document.getElementById(
+      "totalProyek"
+    );
 
 
-  document
-    .getElementById("totalAktif")
-    .textContent = aktif;
+  const totalAktifElement =
+    document.getElementById(
+      "totalAktif"
+    );
 
 
-  document
-    .getElementById("totalDone")
-    .textContent = done;
+  const totalDoneElement =
+    document.getElementById(
+      "totalDone"
+    );
 
 
-  document
-    .getElementById("totalNilai")
-    .textContent =
-      formatRupiah(totalNilai);
+  const totalNilaiElement =
+    document.getElementById(
+      "totalNilai"
+    );
+
+
+  if (totalProyekElement) {
+
+    totalProyekElement.textContent =
+      total;
+
+  }
+
+
+  if (totalAktifElement) {
+
+    totalAktifElement.textContent =
+      aktif;
+
+  }
+
+
+  if (totalDoneElement) {
+
+    totalDoneElement.textContent =
+      done;
+
+  }
+
+
+  if (totalNilaiElement) {
+
+    totalNilaiElement.textContent =
+      formatRupiah(
+        totalNilai
+      );
+
+  }
 
 }
 
 
-// ==========================================
+// ======================================================
+// PAGINATION
+// ======================================================
+
+function renderProyekPagination(
+  data
+) {
+
+  const totalPages =
+    Math.ceil(
+      data.length /
+      itemsPerPage
+    );
+
+
+  if (
+    totalPages === 0
+  ) {
+
+    currentPage = 1;
+
+  }
+
+
+  if (
+    totalPages > 0 &&
+    currentPage > totalPages
+  ) {
+
+    currentPage =
+      totalPages;
+
+  }
+
+
+  const start =
+    (
+      currentPage - 1
+    ) *
+    itemsPerPage;
+
+
+  const end =
+    start +
+    itemsPerPage;
+
+
+  const pageData =
+    data.slice(
+      start,
+      end
+    );
+
+
+  renderTable(
+    pageData
+  );
+
+
+  createPagination({
+
+    containerId:
+      "pagination",
+
+    currentPage,
+
+    totalItems:
+      data.length,
+
+    itemsPerPage,
+
+    onPageChange:
+      page => {
+
+        currentPage =
+          page;
+
+
+        applyFilter();
+
+      }
+
+  });
+
+}
+
+
+// ======================================================
 // FILTER
-// ==========================================
+// ======================================================
 
 function applyFilter() {
 
@@ -297,254 +554,390 @@ function applyFilter() {
 
 
   const filtered =
-    allProyek.filter(item => {
+    allProyek.filter(
+      item => {
 
-      const text = `
-        ${item.nama_proyek || ""}
-        ${item.perusahaan_klien || ""}
-        ${item.nama_kategori_produk || ""}
-        ${item.jenis_proyek || ""}
-        ${item.sub_jenis_proyek || ""}
-      `.toLowerCase();
+        const kategoriList =
+          getKategoriList(
+            item
+          );
 
 
-      const matchSearch =
-        !search ||
-        text.includes(search);
+        const kategoriText =
+          kategoriList
+            .join(" ");
 
 
-      const matchKategori =
-        !kategori ||
-        item.nama_kategori_produk ===
-          kategori;
+        const text = `
+
+          ${item.nama_proyek || ""}
+
+          ${item.perusahaan_klien || ""}
+
+          ${kategoriText}
+
+          ${item.jenis_proyek || ""}
+
+          ${item.sub_jenis_proyek || ""}
+
+          ${item.nama_partner || ""}
+
+          ${item.status_final || ""}
+
+        `.toLowerCase();
 
 
-      const matchJenis =
-        !jenis ||
-        item.jenis_proyek === jenis;
+        const matchSearch =
+          !search ||
+          text.includes(
+            search
+          );
 
 
-      const matchStatus =
-        !status ||
-        item.status_final === status;
+        const matchKategori =
+          !kategori ||
+          kategoriList.includes(
+            kategori
+          );
 
 
-      return (
-        matchSearch &&
-        matchKategori &&
-        matchJenis &&
-        matchStatus
-      );
-
-    });
+        const matchJenis =
+          !jenis ||
+          item.jenis_proyek ===
+            jenis;
 
 
-  renderTable(filtered);
+        const matchStatus =
+          !status ||
+          item.status_final ===
+            status;
+
+
+        return (
+          matchSearch &&
+          matchKategori &&
+          matchJenis &&
+          matchStatus
+        );
+
+      }
+    );
+
+
+  renderProyekPagination(
+    filtered
+  );
 
 }
 
 
-// ==========================================
+// ======================================================
 // RENDER TABLE
-// ==========================================
+// ======================================================
 
 function renderTable(data) {
 
-  proyekTable.innerHTML = "";
+  proyekTable.innerHTML =
+    "";
 
 
-  if (data.length === 0) {
+  if (
+    data.length === 0
+  ) {
 
     proyekTable.innerHTML = `
 
       <tr>
 
         <td
-          colspan="9"
+          colspan="12"
           class="empty-state"
         >
+
           Belum ada proyek yang sesuai.
+
         </td>
 
       </tr>
 
     `;
 
+
     return;
 
   }
 
 
-  data.forEach(item => {
+  data.forEach(
+    item => {
 
-    const row =
-      document.createElement("tr");
-
-
-    const statusClass =
-      item.status_final === "Done"
-        ? "badge-done"
-        : item.status_final === "Cancel"
-          ? "badge-cancel"
-          : "badge-aktif";
+      const row =
+        document.createElement(
+          "tr"
+        );
 
 
-    const jenisText =
-      item.sub_jenis_proyek
-        ? `
+      const statusClass =
+        item.status_final ===
+        "Done"
+          ? "badge-done"
+
+          : item.status_final ===
+            "Cancel"
+            ? "badge-cancel"
+
+            : "badge-aktif";
+
+
+      const jenisText =
+        item.sub_jenis_proyek
+          ? `
+
+              ${escapeHTML(
+                item.jenis_proyek ||
+                "-"
+              )}
+
+              <div
+                class="sub-text"
+              >
+
+                ${escapeHTML(
+                  item.sub_jenis_proyek
+                )}
+
+              </div>
+
+            `
+
+          : escapeHTML(
+              item.jenis_proyek ||
+              "-"
+            );
+
+
+      const kategoriList =
+        getKategoriList(
+          item
+        );
+
+
+      const kategoriText =
+        kategoriList.length > 0
+          ? kategoriList
+              .map(
+                escapeHTML
+              )
+              .join(", ")
+          : "-";
+
+
+      row.innerHTML = `
+
+        <td>
+
           ${escapeHTML(
-            item.jenis_proyek
+            item.id
           )}
 
-          <div class="sub-text">
+        </td>
+
+
+        <td>
+
+          <div
+            class="project-name"
+          >
+
             ${escapeHTML(
-              item.sub_jenis_proyek
+              item.nama_proyek ||
+              "-"
             )}
+
           </div>
-        `
-        : escapeHTML(
-            item.jenis_proyek || "-"
-          );
+
+        </td>
 
 
-    row.innerHTML = `
+        <td>
 
-      <td>
-        ${item.id}
-      </td>
+          ${kategoriText}
+
+        </td>
 
 
-      <td>
+        <td>
 
-        <div class="project-name">
+          ${jenisText}
+
+        </td>
+
+
+        <td>
 
           ${escapeHTML(
-            item.nama_proyek
+            item.perusahaan_klien ||
+            "-"
           )}
 
-        </div>
-
-      </td>
+        </td>
 
 
-      <td>
-
-        ${escapeHTML(
-          item.nama_kategori_produk ||
-          "-"
-        )}
-
-      </td>
-
-
-      <td>
-        ${jenisText}
-      </td>
-
-
-      <td>
-
-        ${escapeHTML(
-          item.perusahaan_klien ||
-          "-"
-        )}
-
-      </td>
-
-
-      <td class="money">
-
-        ${formatRupiah(
-          item.nilai_final_klien
-        )}
-
-      </td>
-
-      <td>
-        ${item.nama_partner || "-"}
-      </td>
-
-      <td class="money">
-         ${formatRupiah(item.nilai_partner || 0)}
-      </td>
-      
-      <td class="money">
-      ${formatRupiah(item.margin || 0)}
-      </td>
-
-        <span
-          class="badge ${statusClass}"
+        <td
+          class="money"
         >
 
-          ${escapeHTML(
-            item.status_final
+          ${formatRupiah(
+            item.nilai_final_klien
           )}
 
-        </span>
-
-      </td>
+        </td>
 
 
-      <td>
+        <td>
 
-        ${formatTanggal(
-          item.created_at
-        )}
+          ${escapeHTML(
+            item.nama_partner ||
+            "-"
+          )}
 
-      </td>
+        </td>
 
 
-      <td>
+        <td
+          class="money"
+        >
 
-        <div class="action-buttons">
+          ${formatRupiah(
+            item.nilai_partner ||
+            0
+          )}
 
-          <a
-            class="btn btn-secondary"
-            href="/detail-proyek.html?id=${item.id}"
+        </td>
+
+
+        <td
+          class="money"
+        >
+
+          ${formatRupiah(
+            item.margin ||
+            0
+          )}
+
+        </td>
+
+
+        <td>
+
+          <span
+            class="
+              badge
+              ${statusClass}
+            "
           >
-            Detail
-          </a>
 
-        </div>
+            ${escapeHTML(
+              item.status_final ||
+              "-"
+            )}
 
-      </td>
+          </span>
 
-    `;
+        </td>
 
 
-    proyekTable.appendChild(row);
+        <td>
 
-  });
+          ${formatTanggal(
+            item.created_at
+          )}
+
+        </td>
+
+
+        <td>
+
+          <div
+            class="action-buttons"
+          >
+
+            <a
+              class="
+                btn
+                btn-secondary
+              "
+              href="/detail-proyek.html?id=${encodeURIComponent(
+                item.id
+              )}"
+            >
+
+              Detail
+
+            </a>
+
+          </div>
+
+        </td>
+
+      `;
+
+
+      proyekTable.appendChild(
+        row
+      );
+
+    }
+  );
 
 }
 
 
-// ==========================================
+// ======================================================
+// RESET PAGE + FILTER
+// ======================================================
+
+function resetPageAndFilter() {
+
+  currentPage = 1;
+
+
+  applyFilter();
+
+}
+
+
+// ======================================================
 // EVENT FILTER
-// ==========================================
+// ======================================================
 
 searchInput.addEventListener(
   "input",
-  applyFilter
+  resetPageAndFilter
 );
 
 
 kategoriFilter.addEventListener(
   "change",
-  applyFilter
+  resetPageAndFilter
 );
 
 
 jenisFilter.addEventListener(
   "change",
-  applyFilter
+  resetPageAndFilter
 );
 
 
 statusFilter.addEventListener(
   "change",
-  applyFilter
+  resetPageAndFilter
 );
+
+
+// ======================================================
+// LOAD PROJECT TASK
+// ======================================================
 
 async function loadProjectTask() {
 
@@ -553,8 +946,11 @@ async function loadProjectTask() {
       "projectTaskBody"
     );
 
+
   if (!projectTaskBody) {
+
     return;
+
   }
 
 
@@ -563,22 +959,30 @@ async function loadProjectTask() {
       window.location.search
     );
 
+
   const proyekId =
     params.get("id");
 
 
   if (!proyekId) {
 
-    projectTaskBody.innerHTML =
-      `
+    projectTaskBody.innerHTML = `
+
       <tr>
+
         <td colspan="8">
+
           Proyek tidak ditemukan.
+
         </td>
+
       </tr>
-      `;
+
+    `;
+
 
     return;
+
   }
 
 
@@ -604,11 +1008,14 @@ async function loadProjectTask() {
     }
 
 
-    if (data.length === 0) {
+    if (
+      data.length === 0
+    ) {
 
-      projectTaskBody.innerHTML =
-        `
+      projectTaskBody.innerHTML = `
+
         <tr>
+
           <td
             colspan="8"
             style="
@@ -617,10 +1024,15 @@ async function loadProjectTask() {
               color:#64748b;
             "
           >
+
             Belum ada task pada proyek ini.
+
           </td>
+
         </tr>
-        `;
+
+      `;
+
 
       return;
 
@@ -633,83 +1045,133 @@ async function loadProjectTask() {
 
           const statusClass =
             String(
-              item.status || ""
+              item.status ||
+              ""
             )
               .toLowerCase()
-              .replaceAll(" ", "-");
+              .replaceAll(
+                " ",
+                "-"
+              );
 
 
           return `
+
             <tr>
 
               <td>
-                <div class="task-pic-name">
-                  ${item.nama_pic || "-"}
+
+                <div
+                  class="task-pic-name"
+                >
+
+                  ${escapeHTML(
+                    item.nama_pic ||
+                    "-"
+                  )}
+
                 </div>
+
               </td>
 
 
               <td>
+
                 <strong>
-                  ${item.task || "-"}
+
+                  ${escapeHTML(
+                    item.task ||
+                    "-"
+                  )}
+
                 </strong>
+
               </td>
 
 
               <td>
+
                 <div
                   class="task-note-preview"
-                  title="${item.catatan || ""}"
+                  title="${escapeHTML(
+                    item.catatan ||
+                    ""
+                  )}"
                 >
-                  ${item.catatan || "-"}
+
+                  ${escapeHTML(
+                    item.catatan ||
+                    "-"
+                  )}
+
                 </div>
+
               </td>
 
 
               <td>
+
                 <span
                   class="
                     task-status
-                    task-status-${statusClass}
+                    task-status-${escapeHTML(
+                      statusClass
+                    )}
                   "
                 >
-                  ${item.status || "-"}
+
+                  ${escapeHTML(
+                    item.status ||
+                    "-"
+                  )}
+
                 </span>
+
               </td>
 
 
               <td>
+
                 ${formatProjectTaskDate(
                   item.tanggal_mulai
                 )}
+
               </td>
 
 
               <td>
+
                 ${formatProjectTaskDate(
                   item.target_date
                 )}
+
               </td>
 
 
               <td>
+
                 ${formatProjectTaskDate(
                   item.tanggal_selesai
                 )}
+
               </td>
 
 
               <td>
+
                 ${formatProjectTaskDateTime(
                   item.created_at
                 )}
+
               </td>
 
             </tr>
+
           `;
 
         }
-      ).join("");
+      )
+      .join("");
 
 
   } catch (error) {
@@ -720,26 +1182,43 @@ async function loadProjectTask() {
     );
 
 
-    projectTaskBody.innerHTML =
-      `
+    projectTaskBody.innerHTML = `
+
       <tr>
+
         <td colspan="8">
+
           Gagal mengambil task.
+
         </td>
+
       </tr>
-      `;
+
+    `;
 
   }
 
 }
 
-function formatProjectTaskDate(value) {
+
+// ======================================================
+// FORMAT PROJECT TASK DATE
+// ======================================================
+
+function formatProjectTaskDate(
+  value
+) {
 
   if (!value) {
+
     return "-";
+
   }
 
-  return new Date(value)
+
+  return new Date(
+    value
+  )
     .toLocaleDateString(
       "id-ID",
       {
@@ -752,13 +1231,24 @@ function formatProjectTaskDate(value) {
 }
 
 
-function formatProjectTaskDateTime(value) {
+// ======================================================
+// FORMAT PROJECT TASK DATE TIME
+// ======================================================
+
+function formatProjectTaskDateTime(
+  value
+) {
 
   if (!value) {
+
     return "-";
+
   }
 
-  return new Date(value)
+
+  return new Date(
+    value
+  )
     .toLocaleString(
       "id-ID",
       {
@@ -771,6 +1261,7 @@ function formatProjectTaskDateTime(value) {
     );
 
 }
+
 
 // ======================================================
 // LOGOUT
@@ -794,6 +1285,7 @@ async function logout() {
       const result =
         await response.json();
 
+
       throw new Error(
         result.error ||
         "Gagal logout"
@@ -813,6 +1305,7 @@ async function logout() {
       error
     );
 
+
     alert(
       "Gagal logout"
     );
@@ -822,8 +1315,8 @@ async function logout() {
 }
 
 
-// ==========================================
+// ======================================================
 // START
-// ==========================================
+// ======================================================
 
 loadProyek();
