@@ -17,7 +17,6 @@
     href="/style.css"
   >
 
-
   <style>
 
     * {
@@ -35,12 +34,9 @@
         sans-serif;
 
       background: #f5f7fb;
-
       color: #1f2937;
-
       overflow-x: hidden;
     }
-
 
 
     /* =====================================================
@@ -51,30 +47,20 @@
       min-height: 100vh;
     }
 
-
     .main-content {
       margin-left: 260px;
-
       width: calc(100% - 260px);
-
       min-width: 0;
-
       padding: 0;
-
       box-sizing: border-box;
     }
 
-
     .project-form-page {
       width: 100%;
-
       max-width: 1500px;
-
       margin: 0 auto;
-
       padding: 32px;
     }
-
 
 
     /* =====================================================
@@ -83,70 +69,44 @@
 
     .page-header {
       display: flex;
-
       justify-content: space-between;
-
       align-items: center;
-
       gap: 20px;
-
       margin-bottom: 24px;
     }
 
-
     .page-header h1 {
       margin: 0 0 6px;
-
       color: #0f172a;
-
       font-size: 27px;
-
       font-weight: 750;
-
       letter-spacing: -0.5px;
     }
 
-
     .page-header p {
       margin: 0;
-
       color: #64748b;
-
       font-size: 14px;
     }
 
-
     .back-link {
       display: inline-flex;
-
       align-items: center;
-
       justify-content: center;
-
       min-height: 36px;
-
       padding: 9px 14px;
-
       border-radius: 8px;
-
       background: #eef2ff;
-
       color: #4338ca;
-
       font-size: 12px;
-
       font-weight: 600;
-
       text-decoration: none;
-
       white-space: nowrap;
     }
-
 
     .back-link:hover {
       background: #e0e7ff;
     }
-
 
 
     /* =====================================================
@@ -155,55 +115,38 @@
 
     .project-card {
       width: 100%;
-
       min-width: 0;
-
       margin-bottom: 24px;
-
       background: #ffffff;
-
       border: 1px solid #e5e7eb;
-
       border-radius: 14px;
-
       overflow: hidden;
 
       box-shadow:
-        0 1px 2px rgba(15,23,42,0.03);
+        0 1px 2px rgba(15, 23, 42, 0.03);
     }
-
 
     .card-header {
       padding: 18px 20px;
-
       border-bottom: 1px solid #f1f5f9;
     }
 
-
     .card-header h2 {
       margin: 0 0 5px;
-
       color: #0f172a;
-
       font-size: 15px;
-
       font-weight: 700;
     }
 
-
     .card-header p {
       margin: 0;
-
       color: #64748b;
-
       font-size: 12px;
     }
-
 
     .card-body {
       padding: 20px;
     }
-
 
 
     /* =====================================================
@@ -214,74 +157,65 @@
       display: grid;
 
       grid-template-columns:
-        repeat(3, minmax(0,1fr));
+        repeat(3, minmax(0, 1fr));
 
       gap: 16px;
     }
-
 
     .form-group {
       min-width: 0;
     }
 
-
     .form-group.full {
       grid-column: 1 / -1;
     }
 
-
     .form-group label {
       display: block;
-
       margin-bottom: 7px;
-
       color: #475569;
-
       font-size: 12px;
-
       font-weight: 650;
     }
 
+    .form-group small {
+      display: block;
+      margin-top: 6px;
+      color: #64748b;
+      font-size: 11px;
+    }
 
     input,
     select,
     textarea {
       width: 100%;
-
       min-height: 40px;
-
       padding: 9px 11px;
-
       border: 1px solid #d1d5db;
-
       border-radius: 8px;
-
       background: #ffffff;
-
       color: #334155;
-
       font-family: inherit;
-
       font-size: 13px;
-
       outline: none;
-
       transition: 0.2s;
     }
 
+    input[readonly] {
+      background: #f8fafc;
+      color: #64748b;
+      cursor: not-allowed;
+    }
 
     input::placeholder,
     textarea::placeholder {
       color: #9ca3af;
     }
 
-
     textarea {
       min-height: 95px;
-
       resize: vertical;
     }
-
 
     input:focus,
     select:focus,
@@ -290,9 +224,46 @@
 
       box-shadow:
         0 0 0 3px
-        rgba(99,102,241,0.08);
+        rgba(99, 102, 241, 0.08);
     }
 
+
+    /* =====================================================
+       CATEGORY CHIP
+    ===================================================== */
+
+    .category-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border: 1px solid #c7d2fe;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4338ca;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .category-chip button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: #c7d2fe;
+      color: #3730a3;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .category-chip button:hover {
+      background: #a5b4fc;
+    }
 
 
     /* =====================================================
@@ -303,67 +274,41 @@
       display: grid;
 
       grid-template-columns:
-        repeat(3, minmax(0,1fr));
+        repeat(3, minmax(0, 1fr));
 
       gap: 7px;
-
       padding: 10px;
-
       max-height: 180px;
-
       overflow-y: auto;
-
       border: 1px solid #e5e7eb;
-
       border-radius: 9px;
-
       background: #f8fafc;
-
       color: #64748b;
-
       font-size: 12px;
     }
 
-
     .pic-item {
       display: flex;
-
       align-items: center;
-
       gap: 6px;
-
       min-width: 0;
-
       padding: 6px 8px;
-
       background: #ffffff;
-
       border: 1px solid #e5e7eb;
-
       border-radius: 7px;
-
       color: #334155;
-
       font-size: 11px;
-
       cursor: pointer;
     }
 
-
     .pic-item input[type="checkbox"] {
       width: 12px !important;
-
       height: 12px !important;
-
       min-width: 12px;
-
       min-height: 12px;
-
       margin: 0;
-
       padding: 0;
     }
-
 
 
     /* =====================================================
@@ -372,38 +317,25 @@
 
     .partner-card {
       margin-bottom: 14px;
-
       padding: 16px;
-
       background: #f8fafc;
-
       border: 1px solid #e5e7eb;
-
       border-radius: 10px;
     }
 
-
     .partner-header {
       display: flex;
-
       justify-content: space-between;
-
       align-items: center;
-
       gap: 12px;
-
       margin-bottom: 14px;
     }
 
-
     .partner-header h3 {
       margin: 0;
-
       color: #334155;
-
       font-size: 14px;
     }
-
 
 
     /* =====================================================
@@ -412,70 +344,52 @@
 
     .btn {
       display: inline-flex;
-
       align-items: center;
-
       justify-content: center;
-
       min-height: 36px;
-
       padding: 9px 14px;
-
       border: none;
-
       border-radius: 8px;
-
       font-family: inherit;
-
       font-size: 12px;
-
       font-weight: 600;
-
       cursor: pointer;
-
       text-decoration: none;
-
       white-space: nowrap;
-
       transition: 0.2s;
     }
 
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
 
     .btn-primary {
       background: #4f46e5;
-
       color: #ffffff;
     }
 
-
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
       background: #4338ca;
     }
 
-
     .btn-secondary {
       background: #eef2ff;
-
       color: #4338ca;
     }
 
-
-    .btn-secondary:hover {
+    .btn-secondary:hover:not(:disabled) {
       background: #e0e7ff;
     }
 
-
     .btn-danger {
       background: #fef2f2;
-
       color: #dc2626;
     }
 
-
-    .btn-danger:hover {
+    .btn-danger:hover:not(:disabled) {
       background: #fee2e2;
     }
-
 
 
     /* =====================================================
@@ -484,18 +398,12 @@
 
     .actions {
       display: flex;
-
       justify-content: flex-end;
-
       align-items: center;
-
       gap: 8px;
-
       margin-top: 8px;
-
       margin-bottom: 40px;
     }
-
 
 
     /* =====================================================
@@ -507,7 +415,6 @@
     }
 
 
-
     /* =====================================================
        RESPONSIVE
     ===================================================== */
@@ -516,40 +423,33 @@
 
       .form-grid {
         grid-template-columns:
-          repeat(2, minmax(0,1fr));
+          repeat(2, minmax(0, 1fr));
       }
-
 
       .pic-container {
         grid-template-columns:
-          repeat(2, minmax(0,1fr));
+          repeat(2, minmax(0, 1fr));
       }
 
     }
-
 
     @media (max-width: 768px) {
 
       .main-content {
         margin-left: 0;
-
         width: 100%;
       }
-
 
       .project-form-page {
         padding: 20px;
       }
 
-
       .page-header {
         flex-direction: column;
-
         align-items: flex-start;
       }
 
     }
-
 
     @media (max-width: 600px) {
 
@@ -557,11 +457,9 @@
         grid-template-columns: 1fr;
       }
 
-
       .pic-container {
         grid-template-columns: 1fr;
       }
-
 
       .page-header h1 {
         font-size: 23px;
@@ -574,19 +472,17 @@
 </head>
 
 
-
 <body>
 
 
 <div class="app-layout">
 
 
-   <!-- =====================================================
+  <!-- =====================================================
        SIDEBAR
   ====================================================== -->
 
- <div id="sidebarContainer"></div>
-
+  <div id="sidebarContainer"></div>
 
 
   <!-- =====================================================
@@ -597,7 +493,6 @@
 
 
     <div class="project-form-page">
-
 
 
       <!-- =================================================
@@ -631,9 +526,7 @@
       </div>
 
 
-
       <form id="proyekForm">
-
 
 
         <!-- =================================================
@@ -656,39 +549,68 @@
           </div>
 
 
-
           <div class="card-body">
 
 
             <div class="form-grid">
 
 
-
-              <!-- KATEGORI -->
+              <!-- =========================================
+                   KATEGORI
+              ========================================== -->
 
               <div class="form-group">
 
                 <label for="kategori_produk_id">
-                  Kategori
+                  Kategori *
                 </label>
 
-                <select
-                    id="kategori_produk_id"
-                    multiple
-                    required
-                    size="5"
-                  >
+                <div
+                  style="
+                    display: flex;
+                    gap: 8px;
+                    align-items: center;
+                  "
+                >
+
+                  <select id="kategori_produk_id">
+
+                    <option value="">
+                      Pilih Kategori
+                    </option>
+
                   </select>
 
-                  <small>
-                    Bisa memilih lebih dari satu kategori.
-                  </small>
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    id="tambahKategori"
+                  >
+                    + Tambah
+                  </button>
+
+                </div>
+
+                <div
+                  id="kategoriTerpilih"
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    margin-top: 10px;
+                  "
+                ></div>
+
+                <small>
+                  Bisa menambahkan lebih dari satu kategori.
+                </small>
 
               </div>
 
 
-
-              <!-- JENIS PROYEK -->
+              <!-- =========================================
+                   JENIS PROYEK
+              ========================================== -->
 
               <div class="form-group">
 
@@ -705,25 +627,14 @@
                     Pilih Jenis
                   </option>
 
-                  <option value="Reguler/SLA">
-                    Reguler/SLA
-                  </option>
-
-                  <option value="Sewa">
-                    Sewa
-                  </option>
-
-                  <option value="Transaksi">
-                    Transaksi
-                  </option>
-
                 </select>
 
               </div>
 
 
-
-              <!-- SUB JENIS -->
+              <!-- =========================================
+                   SUB JENIS
+              ========================================== -->
 
               <div
                 class="form-group hidden"
@@ -740,29 +651,14 @@
                     Pilih Sub Jenis
                   </option>
 
-                  <option value="Lisensi">
-                    Lisensi
-                  </option>
-
-                  <option value="Pengembangan Aplikasi">
-                    Pengembangan Aplikasi
-                  </option>
-
-                  <option value="PNMDigi">
-                    PNMDigi
-                  </option>
-
-                  <option value="SLA/AMC/ATS">
-                    SLA/AMC/ATS
-                  </option>
-
                 </select>
 
               </div>
 
 
-
-              <!-- NAMA PROYEK -->
+              <!-- =========================================
+                   NAMA PROYEK
+              ========================================== -->
 
               <div class="form-group full">
 
@@ -780,8 +676,9 @@
               </div>
 
 
-
-              <!-- DESKRIPSI -->
+              <!-- =========================================
+                   DESKRIPSI
+              ========================================== -->
 
               <div class="form-group full">
 
@@ -797,8 +694,9 @@
               </div>
 
 
-
-              <!-- PIC -->
+              <!-- =========================================
+                   PIC
+              ========================================== -->
 
               <div class="form-group full">
 
@@ -816,8 +714,9 @@
               </div>
 
 
-
-              <!-- STATUS FINAL -->
+              <!-- =========================================
+                   STATUS FINAL
+              ========================================== -->
 
               <div class="form-group">
 
@@ -827,16 +726,8 @@
 
                 <select id="status_final">
 
-                  <option value="Aktif">
-                    Aktif
-                  </option>
-
-                  <option value="Done">
-                    Done
-                  </option>
-
-                  <option value="Cancel">
-                    Cancel
+                  <option value="">
+                    Pilih Status Final
                   </option>
 
                 </select>
@@ -851,7 +742,6 @@
 
 
         </div>
-
 
 
         <!-- =================================================
@@ -874,15 +764,15 @@
           </div>
 
 
-
           <div class="card-body">
 
 
             <div class="form-grid">
 
 
-
-              <!-- KLIEN -->
+              <!-- =========================================
+                   KLIEN
+              ========================================== -->
 
               <div class="form-group">
 
@@ -901,8 +791,9 @@
               </div>
 
 
-
-              <!-- TANGGAL MULAI -->
+              <!-- =========================================
+                   TANGGAL MULAI
+              ========================================== -->
 
               <div class="form-group">
 
@@ -918,8 +809,9 @@
               </div>
 
 
-
-              <!-- TANGGAL AKHIR -->
+              <!-- =========================================
+                   TANGGAL AKHIR
+              ========================================== -->
 
               <div class="form-group">
 
@@ -935,29 +827,137 @@
               </div>
 
 
-
-              <!-- NILAI SUBMIT -->
-
-                <div class="form-group">
-
-                  <label for="nilai_submit_klien">
-                    Nilai Submit
-                  </label>
-
-                  <input
-                    type="number"
-                    id="nilai_submit_klien"
-                    min="0"
-                    step="1"
-                    placeholder="0"
-                  >
-
-                </div>
-
-
-              <!-- NEGO 1 -->
+              <!-- =========================================
+                   MODEL PEMBAYARAN
+              ========================================== -->
 
               <div class="form-group">
+
+                <label for="model_pembayaran_klien">
+                  Model Pembayaran
+                </label>
+
+                <select id="model_pembayaran_klien">
+
+                  <option value="">
+                    Pilih Model Pembayaran
+                  </option>
+
+                  <option value="Tahunan">
+                    Tahunan
+                  </option>
+
+                  <option value="Bulanan">
+                    Bulanan
+                  </option>
+
+                  <option value="Termin">
+                    Termin
+                  </option>
+
+                  <option value="One Time Charge">
+                    One Time Charge
+                  </option>
+
+                </select>
+
+              </div>
+
+
+              <!-- =========================================
+                   JUMLAH BULAN
+              ========================================== -->
+
+              <div class="form-group">
+
+                <label for="jumlah_bulan_klien">
+                  Durasi Bulan
+                </label>
+
+                <input
+                  type="number"
+                  id="jumlah_bulan_klien"
+                  readonly
+                  placeholder="Otomatis"
+                >
+
+              </div>
+
+
+              <!-- =========================================
+                   JUMLAH HARI
+              ========================================== -->
+
+              <div class="form-group">
+
+                <label for="jumlah_hari_klien">
+                  Sisa Hari
+                </label>
+
+                <input
+                  type="number"
+                  id="jumlah_hari_klien"
+                  readonly
+                  placeholder="Otomatis"
+                >
+
+                <small>
+                  Dihitung otomatis dari tanggal mulai sampai tanggal akhir.
+                </small>
+
+              </div>
+
+
+              <!-- =========================================
+                   NILAI SUBMIT
+              ========================================== -->
+
+              <div class="form-group">
+
+                <label for="nilai_submit_klien">
+                  Nilai Submit
+                </label>
+
+                <input
+                  type="number"
+                  id="nilai_submit_klien"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                >
+
+              </div>
+
+
+              <!-- =========================================
+                   TAMBAH NEGO
+              ========================================== -->
+
+              <div class="form-group">
+
+                <label>
+                  Negosiasi
+                </label>
+
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  id="tambahNegoKlien"
+                >
+                  + Tambah Nego
+                </button>
+
+              </div>
+
+
+              <!-- =========================================
+                   NEGO 1
+              ========================================== -->
+
+              <div
+                class="form-group hidden nego-klien-field"
+                data-nego-index="1"
+              >
 
                 <label for="nilai_nego_1_klien">
                   Nego 1
@@ -966,6 +966,7 @@
                 <input
                   type="number"
                   min="0"
+                  step="1"
                   id="nilai_nego_1_klien"
                   placeholder="0"
                 >
@@ -973,10 +974,14 @@
               </div>
 
 
+              <!-- =========================================
+                   NEGO 2
+              ========================================== -->
 
-              <!-- NEGO 2 -->
-
-              <div class="form-group">
+              <div
+                class="form-group hidden nego-klien-field"
+                data-nego-index="2"
+              >
 
                 <label for="nilai_nego_2_klien">
                   Nego 2
@@ -985,6 +990,7 @@
                 <input
                   type="number"
                   min="0"
+                  step="1"
                   id="nilai_nego_2_klien"
                   placeholder="0"
                 >
@@ -992,10 +998,14 @@
               </div>
 
 
+              <!-- =========================================
+                   NEGO 3
+              ========================================== -->
 
-              <!-- NEGO 3 -->
-
-              <div class="form-group">
+              <div
+                class="form-group hidden nego-klien-field"
+                data-nego-index="3"
+              >
 
                 <label for="nilai_nego_3_klien">
                   Nego 3
@@ -1004,6 +1014,7 @@
                 <input
                   type="number"
                   min="0"
+                  step="1"
                   id="nilai_nego_3_klien"
                   placeholder="0"
                 >
@@ -1011,8 +1022,9 @@
               </div>
 
 
-
-              <!-- STATUS PENGADAAN -->
+              <!-- =========================================
+                   STATUS PENGADAAN
+              ========================================== -->
 
               <div class="form-group">
 
@@ -1026,33 +1038,14 @@
                     Pilih Status
                   </option>
 
-                  <option value="Pipeline">
-                    Pipeline
-                  </option>
-
-                  <option value="Submit Penawaran">
-                    Submit Penawaran
-                  </option>
-
-                  <option value="Submit Pengadaan">
-                    Submit Pengadaan
-                  </option>
-
-                  <option value="Kontrak">
-                    Kontrak
-                  </option>
-
-                  <option value="Aktif">
-                    Aktif
-                  </option>
-
                 </select>
 
               </div>
 
 
-
-              <!-- STATUS TEKNIS -->
+              <!-- =========================================
+                   STATUS TEKNIS
+              ========================================== -->
 
               <div class="form-group">
 
@@ -1066,24 +1059,25 @@
                     Pilih Status
                   </option>
 
-                  <option value="Gather Requirement">
-                    Gather Requirement
-                  </option>
+                </select>
 
-                  <option value="Development">
-                    Development
-                  </option>
+              </div>
 
-                  <option value="Testing">
-                    Testing
-                  </option>
 
-                  <option value="Done">
-                    Done
-                  </option>
+              <!-- =========================================
+                   STATUS ADMINISTRASI
+              ========================================== -->
 
-                  <option value="Bug Fixing">
-                    Bug Fixing
+              <div class="form-group">
+
+                <label for="status_administrasi_klien">
+                  Status Administrasi
+                </label>
+
+                <select id="status_administrasi_klien">
+
+                  <option value="">
+                    Pilih Status
                   </option>
 
                 </select>
@@ -1098,7 +1092,6 @@
 
 
         </div>
-
 
 
         <!-- =================================================
@@ -1121,7 +1114,6 @@
           </div>
 
 
-
           <div class="card-body">
 
 
@@ -1141,7 +1133,6 @@
 
 
         </div>
-
 
 
         <!-- =================================================
@@ -1175,16 +1166,12 @@
 
 
     </div>
-    <!-- /project-form-page -->
 
 
   </main>
-  <!-- /main-content -->
 
 
 </div>
-<!-- /app-layout -->
-
 
 
 <!-- =====================================================
@@ -1194,9 +1181,8 @@
 <script src="/proyek-form.js"></script>
 
 
-
 <!-- =====================================================
-     SIDEBAR USER + LOGOUT
+     SIDEBAR USER DAN LOGOUT
 ====================================================== -->
 
 <script>
@@ -1226,7 +1212,8 @@
 
 
       const user =
-        data.user || data;
+        data.user ||
+        data;
 
 
       const userNama =
@@ -1244,6 +1231,7 @@
       if (userNama) {
 
         userNama.textContent =
+
           user.nama ||
           user.name ||
           user.email ||
@@ -1255,6 +1243,7 @@
       if (userRole) {
 
         userRole.textContent =
+
           user.role ||
           user.jabatan ||
           "PIC";
@@ -1274,7 +1263,6 @@
   }
 
 
-
   const logoutButton =
     document.getElementById(
       "logoutButton"
@@ -1291,10 +1279,13 @@
 
           const response =
             await fetch(
+
               "/api/logout",
+
               {
                 method: "POST"
               }
+
             );
 
 
@@ -1331,16 +1322,18 @@
   }
 
 
-
   loadSidebarUser();
 
 </script>
 
- <!-- =====================================================
-     USER SIDEBAR + LOGOUT
+
+<!-- =====================================================
+     LAYOUT DAN SIDEBAR
 ====================================================== -->
+
 <script src="/layout.js"></script>
 <script src="/sidebar.js"></script>
+
 
 </body>
 

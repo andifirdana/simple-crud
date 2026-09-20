@@ -9,6 +9,61 @@ const formTitle = document.getElementById("formTitle");
 let allPartners = [];
 let editId = null;
 
+let currentPage = 1;
+
+const itemsPerPage = 10;
+
+
+function renderKategoriPagination(
+  data
+) {
+
+  const start =
+    (currentPage - 1) *
+    itemsPerPage;
+
+  const end =
+    start +
+    itemsPerPage;
+
+
+  const pageData =
+    data.slice(
+      start,
+      end
+    );
+
+
+  tampilkanPartner(pageData);
+
+
+  createPagination({
+
+    containerId:
+      "pagination",
+
+    currentPage,
+
+    totalItems:
+      data.length,
+
+    itemsPerPage,
+
+    onPageChange:
+      page => {
+
+        currentPage =
+          page;
+
+        applySearch();
+
+      }
+
+  });
+
+}
+
+
 
 // =========================
 // FORMAT TANGGAL
@@ -93,6 +148,9 @@ async function loadPartners() {
   }
 
 }
+
+
+// ========================================
 
 
 // =========================
@@ -608,16 +666,6 @@ function applySearch() {
       .trim();
 
 
-  if (!keyword) {
-
-    tampilkanPartner(
-      allPartners
-    );
-
-    return;
-  }
-
-
   const hasil =
     allPartners.filter(
       (partner) => {
@@ -684,7 +732,7 @@ function applySearch() {
     );
 
 
-  tampilkanPartner(
+  renderKategoriPagination(
     hasil
   );
 
@@ -699,8 +747,15 @@ searchInput.addEventListener(
   applySearch
 );
 
+// ========================================
+// START
+// ========================================
 
-// =========================
-// LOAD AWAL
-// =========================
-loadPartners();
+async function start() {
+
+  await loadPartners();
+
+}
+
+
+start();

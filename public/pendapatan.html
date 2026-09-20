@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="id">
 
@@ -22,245 +21,548 @@
 
     body {
       margin: 0;
-      font-family:
-        Inter,
-        Arial,
-        sans-serif;
-
       background: #f5f7fb;
       color: #1f2937;
+      font-family: Inter, Arial, sans-serif;
     }
 
-
-    /* =====================================================
-       MAIN PAGE
-    ====================================================== */
-
-    .report-page {
-      margin-left: 260px;
-
+    .pendapatan-page {
       width: calc(100% - 260px);
-
-      min-width: 0;
-
+      min-height: 100vh;
+      margin-left: 260px;
       padding: 32px;
-
       box-sizing: border-box;
     }
 
+    .pendapatan-content {
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
 
-    /* =====================================================
-       PAGE HEADER
-    ====================================================== */
 
-    .page-header {
+    /* HEADER */
+
+    .pendapatan-header {
       margin-bottom: 24px;
     }
 
-    .page-header h1 {
+    .pendapatan-header h1 {
       margin: 0 0 6px;
-
+      color: #111827;
       font-size: 30px;
-      font-weight: 700;
+      font-weight: 800;
+      letter-spacing: -0.6px;
     }
 
-    .page-header p {
+    .pendapatan-header p {
       margin: 0;
-
       color: #6b7280;
       font-size: 14px;
     }
 
 
-    /* =====================================================
-       FILTER
-    ====================================================== */
+    /* SUMMARY */
 
-    .filter-card {
-      width: 100%;
+    .pendapatan-summary {
+      display: grid;
+      grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .summary-card {
+      position: relative;
+      overflow: hidden;
 
       padding: 20px;
 
-      margin-bottom: 24px;
-
       background: #ffffff;
-
       border: 1px solid #e5e7eb;
-      border-radius: 16px;
+      border-radius: 14px;
 
-      box-sizing: border-box;
+      box-shadow:
+        0 3px 12px
+        rgba(15, 23, 42, 0.04);
     }
 
-    .filter-group {
-      display: flex;
+    .summary-card::before {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
 
-      align-items: center;
+      height: 4px;
 
-      gap: 12px;
+      background: #4f46e5;
 
-      flex-wrap: wrap;
+      content: "";
     }
 
-    .filter-group label {
-      font-size: 13px;
-      font-weight: 600;
-
-      color: #374151;
+    .summary-card:nth-child(2)::before {
+      background: #2563eb;
     }
 
-    .filter-group select {
-      min-width: 140px;
-
-      padding: 10px 12px;
-
-      border: 1px solid #d1d5db;
-      border-radius: 9px;
-
-      background: #ffffff;
-
-      font: inherit;
-
-      outline: none;
+    .summary-card:nth-child(3)::before {
+      background: #16a34a;
     }
 
-    .filter-group select:focus {
-      border-color: #4f46e5;
+    .summary-label {
+      display: block;
+      margin-bottom: 8px;
+
+      color: #6b7280;
+      font-size: 12px;
+      font-weight: 700;
+
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .summary-value {
+      color: #111827;
+      font-size: 23px;
+      font-weight: 800;
     }
 
 
-    /* =====================================================
-       REPORT SECTION
-    ====================================================== */
+    /* ======================================================
+   FILTER PENDAPATAN - SATU BARIS
+====================================================== */
 
-    .report-section {
-      width: 100%;
+.filter-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 14px;
 
-      margin-bottom: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
 
-      background: #ffffff;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
 
-      border: 1px solid #e5e7eb;
-      border-radius: 16px;
 
+/* Semua input dan select */
+
+.filter-card input,
+.filter-card select {
+  flex: 0 0 170px;
+  width: 170px;
+  min-width: 170px;
+  height: 42px;
+  padding: 8px 11px;
+
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+
+  box-sizing: border-box;
+  color: #374151;
+  font: inherit;
+  font-size: 12px;
+}
+
+
+/* Kolom pencarian dibuat lebih lebar */
+
+#searchPendapatan {
+  flex: 1 1 280px;
+  width: auto;
+  min-width: 240px;
+}
+
+
+/* Dropdown tahun lebih kecil */
+
+#filterTahunPendapatan {
+  flex-basis: 130px;
+  width: 130px;
+  min-width: 130px;
+}
+
+
+/* Jenis proyek */
+
+#filterJenisPendapatan {
+  flex-basis: 170px;
+  width: 170px;
+  min-width: 170px;
+}
+
+
+/* Status pengadaan dan teknis */
+
+#filterStatusPengadaanPendapatan,
+#filterStatusTeknisPendapatan {
+  flex-basis: 185px;
+  width: 185px;
+  min-width: 185px;
+}
+
+
+/* Tombol reset */
+
+#resetPendapatanFilter {
+  flex: 0 0 auto;
+  height: 42px;
+  min-width: 80px;
+  padding: 0 16px;
+
+  background: #f8fafc;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#resetPendapatanFilter:hover {
+  color: #4338ca;
+  background: #eef2ff;
+  border-color: #a5b4fc;
+}
+
+
+/* Fokus input */
+
+.filter-card input:focus,
+.filter-card select:focus {
+  outline: none;
+  border-color: #818cf8;
+  box-shadow:
+    0 0 0 3px
+    rgba(99, 102, 241, 0.12);
+}
+
+
+/* Layar kecil tetap satu baris dan dapat digeser */
+
+@media (max-width: 1100px) {
+  .filter-card {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 15px;
+  }
+
+  #searchPendapatan {
+    flex: 0 0 260px;
+    width: 260px;
+  }
+}
+
+    /* GROUP JENIS */
+
+    .jenis-group {
       overflow: hidden;
 
-      box-sizing: border-box;
+      margin-bottom: 22px;
+
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+
+      box-shadow:
+        0 5px 18px
+        rgba(15, 23, 42, 0.04);
     }
 
-    .report-header {
+    .jenis-header {
       display: flex;
-
       align-items: center;
-
       justify-content: space-between;
+      gap: 15px;
 
       padding: 18px 20px;
 
-      border-bottom: 1px solid #e5e7eb;
-
-      background: #ffffff;
+      color: #ffffff;
+      background: #111827;
     }
 
-    .report-header h2 {
-      margin: 0;
+    .jenis-title {
+      font-size: 17px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
 
-      font-size: 18px;
+    .jenis-total {
+      font-size: 14px;
       font-weight: 700;
-
-      color: #111827;
+      white-space: nowrap;
     }
 
 
-    /* =====================================================
-       TABLE
-    ====================================================== */
+    /* SUB JENIS */
+
+    .subjenis-group {
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .subjenis-group:last-child {
+      border-bottom: none;
+    }
+
+    .subjenis-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+
+      padding: 14px 20px;
+
+      background: #f8fafc;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .subjenis-title {
+      color: #334155;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .subjenis-total {
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+
+    /* KATEGORI */
+
+    .kategori-group {
+      overflow: hidden;
+
+      margin: 14px;
+
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+    }
+
+    .kategori-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+
+      padding: 13px 16px;
+
+      color: #3730a3;
+      background: #eef2ff;
+    }
+
+    .kategori-title {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .kategori-total {
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+
+    /* TABLE */
 
     .table-wrapper {
       width: 100%;
-
-      min-width: 0;
-
       overflow-x: auto;
-      overflow-y: hidden;
-
-      box-sizing: border-box;
     }
 
     .pendapatan-table {
       width: 100%;
-
-      min-width: 1200px;
-
+      min-width: 1450px;
       border-collapse: collapse;
     }
 
     .pendapatan-table th {
-      padding: 14px 16px;
+      padding: 12px 14px;
 
-      text-align: left;
-
-      font-size: 12px;
-      font-weight: 600;
-
-      color: #6b7280;
-
+      color: #64748b;
       background: #f9fafb;
-
       border-bottom: 1px solid #e5e7eb;
+
+      font-size: 11px;
+      font-weight: 700;
+      text-align: left;
+      text-transform: uppercase;
 
       white-space: nowrap;
     }
 
     .pendapatan-table td {
-      padding: 16px;
-
-      font-size: 14px;
+      padding: 14px;
 
       color: #374151;
+      border-bottom: 1px solid #f1f5f9;
 
-      border-bottom: 1px solid #f0f1f3;
+      font-size: 12px;
+      vertical-align: middle;
+    }
 
-      white-space: nowrap;
+    .pendapatan-table tbody tr:hover {
+      background: #fafafa;
     }
 
     .pendapatan-table tbody tr:last-child td {
       border-bottom: none;
     }
 
-
-    /* =====================================================
-       SCROLLBAR
-    ====================================================== */
-
-    .table-wrapper::-webkit-scrollbar {
-      height: 7px;
+    .proyek-name {
+      min-width: 190px;
+      color: #111827;
+      font-weight: 700;
     }
 
-    .table-wrapper::-webkit-scrollbar-track {
-      background: #f8fafc;
+    .proyek-link {
+      color: #4338ca;
+      font-weight: 700;
+      text-decoration: none;
     }
 
-    .table-wrapper::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
+    .proyek-link:hover {
+      text-decoration: underline;
+    }
 
+    .nilai {
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .nilai-pendapatan {
+      color: #166534;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+
+    /* BADGE */
+
+    .badge {
+      display: inline-flex;
+      padding: 5px 9px;
+
+      color: #4338ca;
+      background: #eef2ff;
       border-radius: 999px;
+
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-dibayar {
+      color: #166534;
+      background: #dcfce7;
     }
 
 
-    /* =====================================================
-       RESPONSIVE
-    ====================================================== */
+    /* EMPTY */
+
+    .empty-state {
+      padding: 50px 20px;
+
+      color: #9ca3af;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+
+      text-align: center;
+    }
+
+
+    /* PAGINATION */
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+
+      margin-top: 20px;
+      padding: 15px 18px;
+
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 13px;
+    }
+
+    .pagination-info {
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .pagination-buttons {
+      display: flex;
+      gap: 7px;
+    }
+
+    .page-button {
+      min-width: 38px;
+      height: 38px;
+      padding: 0 10px;
+
+      color: #334155;
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
+      border-radius: 9px;
+
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .page-button.active {
+      color: #ffffff;
+      background: #4f46e5;
+      border-color: #4f46e5;
+    }
+
+    .page-button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+
+    /* RESPONSIVE */
 
     @media (max-width: 900px) {
-
-      .report-page {
-        margin-left: 0;
-
+      .pendapatan-page {
         width: 100%;
-
+        margin-left: 0;
         padding: 20px;
       }
 
+      .pendapatan-summary {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 650px) {
+      .jenis-header,
+      .subjenis-header,
+      .kategori-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .pagination {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .pagination-buttons {
+        justify-content: center;
+      }
     }
 
   </style>
@@ -270,260 +572,193 @@
 
 <body>
 
+  <div class="app-layout">
 
-  <!-- =====================================================
-       SIDEBAR
-  ====================================================== -->
+    <!-- SIDEBAR -->
 
-  <div id="sidebarContainer"></div>
-
+    <div id="sidebarContainer"></div>
 
 
-  <!-- =====================================================
-       MAIN CONTENT
-  ====================================================== -->
+    <!-- MAIN CONTENT -->
 
-  <main class="report-page">
+    <main class="pendapatan-page">
 
-
-    <!-- PAGE HEADER -->
-
-    <div class="page-header">
-
-      <h1>
-        Pendapatan
-      </h1>
-
-      <p>
-        Monitoring pendapatan reguler, sewa, dan transaksi.
-      </p>
-
-    </div>
+      <div class="pendapatan-content">
 
 
+        <!-- HEADER -->
 
-    <!-- =====================================================
-         FILTER
-    ====================================================== -->
+        <div class="pendapatan-header">
 
-    <div class="filter-card">
+          <h1>
+            Pendapatan
+          </h1>
 
-      <div class="filter-group">
+          <p>
+            Realisasi pendapatan berdasarkan jenis proyek,
+            sub jenis proyek, kategori, dan termin Klien
+            yang sudah dibayar.
+          </p>
 
-        <label for="filterTahun">
-          Tahun
-        </label>
+        </div>
 
-        <select id="filterTahun">
 
-          <option value="">
-            Pilih Tahun
-          </option>
+        <!-- SUMMARY -->
 
-        </select>
+        <section class="pendapatan-summary">
+
+          <div class="summary-card">
+
+            <span class="summary-label">
+              Total Pendapatan
+            </span>
+
+            <span
+              class="summary-value"
+              id="totalPendapatan"
+            >
+              Rp 0
+            </span>
+
+          </div>
+
+
+          <div class="summary-card">
+
+            <span class="summary-label">
+              Jumlah Proyek
+            </span>
+
+            <span
+              class="summary-value"
+              id="jumlahProyekPendapatan"
+            >
+              0
+            </span>
+
+          </div>
+
+
+          <div class="summary-card">
+
+            <span class="summary-label">
+              Termin Dibayar
+            </span>
+
+            <span
+              class="summary-value"
+              id="jumlahTerminDibayar"
+            >
+              0
+            </span>
+
+          </div>
+
+        </section>
+
+
+        <!-- FILTER -->
+
+        <section class="filter-card">
+
+          <input
+            type="search"
+            id="searchPendapatan"
+            placeholder="Cari proyek, klien, kategori atau termin..."
+          >
+
+
+          <select id="filterTahunPendapatan">
+
+            <option value="">
+              Semua Tahun
+            </option>
+
+          </select>
+
+
+          <select id="filterJenisPendapatan">
+
+            <option value="">
+              Semua Jenis Proyek
+            </option>
+
+          </select>
+
+
+          <select id="filterStatusPengadaanPendapatan">
+
+            <option value="">
+              Semua Status Pengadaan
+            </option>
+
+          </select>
+
+
+          <select id="filterStatusTeknisPendapatan">
+
+            <option value="">
+              Semua Status Teknis
+            </option>
+
+          </select>
+
+
+          <button
+            type="button"
+            class="filter-reset"
+            id="resetPendapatanFilter"
+          >
+            Reset
+          </button>
+
+        </section>
+
+
+        <!-- GROUPING -->
+
+        <div id="pendapatanGroup">
+
+          <div class="empty-state">
+            Memuat data pendapatan...
+          </div>
+
+        </div>
+
+
+        <!-- PAGINATION -->
+
+        <div
+          class="pagination"
+          id="pendapatanPagination"
+          style="display:none;"
+        >
+
+          <div
+            class="pagination-info"
+            id="pendapatanPaginationInfo"
+          >
+            -
+          </div>
+
+          <div
+            class="pagination-buttons"
+            id="pendapatanPaginationButtons"
+          ></div>
+
+        </div>
 
       </div>
 
-    </div>
+    </main>
 
+  </div>
 
-
-    <!-- =====================================================
-         REGULER
-    ====================================================== -->
-
-    <section class="report-section">
-
-      <div class="report-header">
-
-        <h2>
-          Reguler
-        </h2>
-
-      </div>
-
-
-      <div class="table-wrapper">
-
-        <table class="pendapatan-table">
-
-          <thead>
-
-            <tr>
-
-              <th>Januari</th>
-              <th>Februari</th>
-              <th>Maret</th>
-              <th>April</th>
-              <th>Mei</th>
-              <th>Juni</th>
-              <th>Juli</th>
-              <th>Agustus</th>
-              <th>September</th>
-              <th>Oktober</th>
-              <th>November</th>
-              <th>Desember</th>
-
-            </tr>
-
-          </thead>
-
-
-          <tbody>
-
-            <tr id="regulerRow">
-
-              <td colspan="12">
-                Memuat data...
-              </td>
-
-            </tr>
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         SEWA
-    ====================================================== -->
-
-    <section class="report-section">
-
-      <div class="report-header">
-
-        <h2>
-          Sewa
-        </h2>
-
-      </div>
-
-
-      <div class="table-wrapper">
-
-        <table class="pendapatan-table">
-
-          <thead>
-
-            <tr>
-
-              <th>Januari</th>
-              <th>Februari</th>
-              <th>Maret</th>
-              <th>April</th>
-              <th>Mei</th>
-              <th>Juni</th>
-              <th>Juli</th>
-              <th>Agustus</th>
-              <th>September</th>
-              <th>Oktober</th>
-              <th>November</th>
-              <th>Desember</th>
-
-            </tr>
-
-          </thead>
-
-
-          <tbody>
-
-            <tr id="sewaRow">
-
-              <td colspan="12">
-                Memuat data...
-              </td>
-
-            </tr>
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         TRANSAKSI
-    ====================================================== -->
-
-    <section class="report-section">
-
-      <div class="report-header">
-
-        <h2>
-          Transaksi
-        </h2>
-
-      </div>
-
-
-      <div class="table-wrapper">
-
-        <table class="pendapatan-table">
-
-          <thead>
-
-            <tr>
-
-              <th>Januari</th>
-              <th>Februari</th>
-              <th>Maret</th>
-              <th>April</th>
-              <th>Mei</th>
-              <th>Juni</th>
-              <th>Juli</th>
-              <th>Agustus</th>
-              <th>September</th>
-              <th>Oktober</th>
-              <th>November</th>
-              <th>Desember</th>
-
-            </tr>
-
-          </thead>
-
-
-          <tbody>
-
-            <tr id="transaksiRow">
-
-              <td colspan="12">
-                Memuat data...
-              </td>
-
-            </tr>
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </section>
-
-
-  </main>
-
-
-
-  <!-- =====================================================
-       SCRIPT
-  ====================================================== -->
 
   <script src="/layout.js"></script>
-
+  <script src="/sidebar.js"></script>
   <script src="/pendapatan.js"></script>
-
 
 </body>
 
 </html>
-```

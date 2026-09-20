@@ -1,451 +1,57 @@
-const form = document.getElementById("proyekForm");
+const $ = id =>
+  document.getElementById(id);
+
+const form =
+  $("proyekForm");
 
 const kategoriSelect =
-  document.getElementById("kategori_produk_ids");
+  $("kategori_produk_id");
+
+const kategoriTerpilih =
+  $("kategoriTerpilih");
 
 const jenisSelect =
-  document.getElementById("jenis_proyek");
-
-const subJenisGroup =
-  document.getElementById("subJenisGroup");
+  $("jenis_proyek");
 
 const subJenisSelect =
-  document.getElementById("sub_jenis_proyek");
+  $("sub_jenis_proyek");
+
+const subJenisGroup =
+  $("subJenisGroup");
 
 const klienSelect =
-  document.getElementById("klien_id");
+  $("klien_id");
 
 const picContainer =
-  document.getElementById("picContainer");
+  $("picContainer");
 
 const partnerContainer =
-  document.getElementById("partnerContainer");
-
-const addPartnerButton =
-  document.getElementById("addPartnerButton");
+  $("partnerContainer");
 
 const saveButton =
-  document.getElementById("saveButton");
+  $("saveButton");
 
 
 let masterPartner = [];
 
+let selectedKategori =
+  new Map();
 
-// ======================================================
-// LOAD MASTER DATA
-// ======================================================
+let statusOptions = {
+  pengadaan: [],
+  teknis: [],
+  administrasi: [],
+  final: []
+};
 
-async function loadMaster() {
 
-  try {
-
-    const [
-      kategoriResponse,
-      klienResponse,
-      partnerResponse
-    ] = await Promise.all([
-      fetch("/api/proyek/kategori"),
-      fetch("/api/proyek/klien"),
-      fetch("/api/proyek/partner")
-    ]);
-
-
-    if (
-      !kategoriResponse.ok ||
-      !klienResponse.ok ||
-      !partnerResponse.ok
-    ) {
-      throw new Error(
-        "Gagal mengambil master data"
-      );
-    }
-
-
-    const kategori =
-      await kategoriResponse.json();
-
-    const klien =
-      await klienResponse.json();
-
-    masterPartner =
-      await partnerResponse.json();
-
-
-    // ================================
-    // KATEGORI
-    // ================================
-
-    kategori.forEach(item => {
-
-      const option =
-        document.createElement("option");
-
-      option.value = item.id;
-
-      option.textContent =
-        item.nama_kategori_produk;
-
-      kategoriSelect.appendChild(option);
-
-    });
-
-
-    // ================================
-    // KLIEN
-    // ================================
-
-    klien.forEach(item => {
-
-      const option =
-        document.createElement("option");
-
-      option.value = item.id;
-
-      option.textContent = item.inisial
-  ? `${item.perusahaan_klien} (${item.inisial})`
-  : item.perusahaan_klien;
-
-      klienSelect.appendChild(option);
-
-    });
-
-
-  } catch (error) {
-
-    console.error(
-      "ERROR LOAD MASTER:",
-      error
-    );
-
-    alert(
-      "Gagal mengambil master data proyek."
-    );
-
-  }
-
-}
-
-
-// ======================================================
-// MODE NILAI
-// SEMUA NILAI PADA FORM TAMBAH PROYEK = NOMINAL RUPIAH
-// ======================================================
-
-function updateModeNilai() {
-
-  // ====================================================
-  // NILAI KLIEN
-  // ====================================================
-
-  const klienFields = [
-    {
-      id: "nilai_submit_klien",
-      label: "Nilai Submit"
-    },
-    {
-      id: "nilai_nego_1_klien",
-      label: "Nego 1"
-    },
-    {
-      id: "nilai_nego_2_klien",
-      label: "Nego 2"
-    },
-    {
-      id: "nilai_nego_3_klien",
-      label: "Nego 3"
-    }
-  ];
-
-  klienFields.forEach(field => {
-
-    const input =
-      document.getElementById(
-        field.id
-      );
-
-    if (!input) return;
-
-    const formGroup =
-      input.closest(
-        ".form-group"
-      );
-
-    const label =
-      formGroup?.querySelector(
-        "label"
-      );
-
-    if (label) {
-      label.textContent =
-        `${field.label} (Rp)`;
-    }
-
-    input.placeholder =
-      "Masukkan nominal";
-
-    input.removeAttribute(
-      "max"
-    );
-
-    input.min = "0";
-    input.step = "1";
-
-  });
-
-
-  // ====================================================
-  // NILAI PARTNER
-  // ====================================================
-
-  document
-    .querySelectorAll(
-      ".partner-card"
-    )
-    .forEach(card => {
-
-      const fields = [
-        {
-          selector:
-            ".partner_nilai_submit",
-          label:
-            "Nilai Submit"
-        },
-        {
-          selector:
-            ".partner_nego_1",
-          label:
-            "Nego 1"
-        },
-        {
-          selector:
-            ".partner_nego_2",
-          label:
-            "Nego 2"
-        },
-        {
-          selector:
-            ".partner_nego_3",
-          label:
-            "Nego 3"
-        }
-      ];
-
-      fields.forEach(field => {
-
-        const input =
-          card.querySelector(
-            field.selector
-          );
-
-        if (!input) return;
-
-        const formGroup =
-          input.closest(
-            ".form-group"
-          );
-
-        const label =
-          formGroup?.querySelector(
-            "label"
-          );
-
-        if (label) {
-          label.textContent =
-            `${field.label} (Rp)`;
-        }
-
-        input.placeholder =
-          "Masukkan nominal";
-
-        input.removeAttribute(
-          "max"
-        );
-
-        input.min = "0";
-        input.step = "1";
-
-      });
-
-    });
-
-}
-
-// ======================================================
-// JENIS PROYEK
-// ======================================================
-
-jenisSelect.addEventListener(
-  "change",
-  () => {
-
-    // ==================================================
-    // SUB JENIS PROYEK
-    // Hanya muncul untuk Reguler/SLA
-    // ==================================================
-
-    if (
-      jenisSelect.value === "Reguler/SLA"
-    ) {
-
-      subJenisGroup.classList.remove(
-        "hidden"
-      );
-
-    } else {
-
-      subJenisGroup.classList.add(
-        "hidden"
-      );
-
-      subJenisSelect.value = "";
-
-    }
-
-    // Nilai Submit & Nego tetap Rupiah
-    updateModeNilai();
-
-  }
-);
-
-// ======================================================
-// PIC BERDASARKAN KATEGORI
-// ======================================================
-
-kategoriSelect.addEventListener(
-  "change",
-  async () => {
-
-    const kategoriIds =
-      Array.from(
-        kategoriSelect.selectedOptions
-      )
-      .map(
-        option => option.value
-      )
-      .filter(Boolean);
-
-    picContainer.innerHTML = "";
-
-    if (kategoriIds.length === 0) {
-      picContainer.textContent =
-        "Pilih kategori terlebih dahulu.";
-
-      return;
-    }
-
-    try {
-
-      const semuaPic = [];
-
-      for (const kategoriId of kategoriIds) {
-
-        const response =
-          await fetch(
-            `/api/proyek/kategori/${kategoriId}/pic`
-          );
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.error ||
-            "Gagal mengambil PIC"
-          );
-        }
-
-        if (Array.isArray(data)) {
-          semuaPic.push(...data);
-        }
-
-      }
-
-      // Hilangkan PIC duplikat
-      const picUnik =
-        Array.from(
-          new Map(
-            semuaPic.map(
-              pic => [
-                String(pic.id),
-                pic
-              ]
-            )
-          ).values()
-        );
-
-      if (picUnik.length === 0) {
-
-        picContainer.innerHTML = `
-          <span style="color:#b45309">
-            Belum ada PIC pada kategori yang dipilih.
-          </span>
-        `;
-
-        return;
-      }
-
-      picUnik.forEach(pic => {
-
-        const item =
-          document.createElement(
-            "label"
-          );
-
-        item.className =
-          "pic-item";
-
-        item.innerHTML = `
-          <input
-            type="checkbox"
-            name="pic_ids"
-            value="${pic.id}"
-          >
-
-          <span>
-            ${pic.nama}
-            ${
-              pic.jabatan
-                ? `- ${pic.jabatan}`
-                : ""
-            }
-          </span>
-        `;
-
-        picContainer.appendChild(
-          item
-        );
-
-      });
-
-    } catch (error) {
-
-      console.error(
-        "ERROR LOAD PIC:",
-        error
-      );
-
-      picContainer.innerHTML = `
-        <span style="color:#dc2626">
-          Gagal mengambil PIC.
-        </span>
-      `;
-
-    }
-
-  }
-);
-
-// ======================================================
+// =====================================================
 // ESCAPE HTML
-// ======================================================
+// =====================================================
 
 function escapeHtml(value) {
 
-  if (value === null || value === undefined) {
-    return "";
-  }
-
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -455,107 +61,851 @@ function escapeHtml(value) {
 }
 
 
-// ======================================================
-// UPDATE NOMOR PARTNER
-// ======================================================
+// =====================================================
+// FETCH JSON
+// =====================================================
 
-function updatePartnerNumbers() {
+async function getJson(url) {
 
-  const cards =
-    partnerContainer.querySelectorAll(
-      ".partner-card"
+  const response =
+    await fetch(url);
+
+  const data =
+    await response
+      .json()
+      .catch(() => ({}));
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      data.error ||
+      `Gagal mengambil ${url}`
     );
 
-  cards.forEach((card, index) => {
+  }
 
-    const title =
-      card.querySelector(
-        ".partner-title"
-      );
 
-    if (title) {
-
-      title.textContent =
-        `Partner ${index + 1}`;
-
-    }
-
-  });
+  return data;
 
 }
 
 
-// ======================================================
-// CEK PARTNER DUPLIKAT
-// ======================================================
+// =====================================================
+// ISI DROPDOWN
+// =====================================================
 
-function checkDuplicatePartner() {
+function fillSelect(
+  select,
+  rows,
+  valueKey,
+  labelKey,
+  placeholder
+) {
 
-  const selects =
-    partnerContainer.querySelectorAll(
-      ".partner_id"
-    );
-
-  const selectedValues = [];
-
-
-  selects.forEach(select => {
-
-    if (select.value) {
-
-      selectedValues.push(
-        select.value
-      );
-
-    }
-
-  });
-
-
-  const duplicates =
-    selectedValues.filter(
-      (value, index, array) =>
-        array.indexOf(value) !== index
-    );
-
-
-  return duplicates.length > 0;
-
-}
-
-
-// ======================================================
-// TAMBAH PARTNER
-// ======================================================
-
-function addPartner() {
-
-  const wrapper =
-    document.createElement("div");
-
-  wrapper.className =
-    "partner-card";
-
-
-  let options = `
+  select.innerHTML = `
     <option value="">
-      Pilih Partner
+      ${escapeHtml(placeholder)}
     </option>
   `;
 
 
-  masterPartner.forEach(item => {
+  rows.forEach(row => {
 
-    options += `
-      <option value="${item.id}">
-        ${escapeHtml(item.nama_partner)}
-      </option>
-    `;
+    const option =
+      document.createElement(
+        "option"
+      );
+
+
+    option.value =
+      row[valueKey];
+
+    option.textContent =
+      row[labelKey];
+
+
+    if (row.id != null) {
+
+      option.dataset.id =
+        row.id;
+
+    }
+
+
+    select.appendChild(
+      option
+    );
 
   });
 
+}
 
-  wrapper.innerHTML = `
+
+// =====================================================
+// OPTION STATUS
+// =====================================================
+
+function statusHtml(flag) {
+
+  return `
+    <option value="">
+      Pilih Status
+    </option>
+  ` +
+
+  statusOptions[flag]
+    .map(row => `
+
+      <option
+        value="${escapeHtml(row.deskripsi)}"
+        data-id="${row.id}"
+      >
+        ${escapeHtml(row.deskripsi)}
+      </option>
+
+    `)
+    .join("");
+
+}
+
+
+// =====================================================
+// LOAD MASTER DATA
+// =====================================================
+
+async function loadMaster() {
+
+  try {
+
+    const [
+      kategori,
+      jenis,
+      klien,
+      partner,
+      statuses
+    ] = await Promise.all([
+
+      getJson(
+        "/api/proyek/kategori"
+      ),
+
+      getJson(
+        "/api/proyek/jenis"
+      ),
+
+      getJson(
+        "/api/proyek/klien"
+      ),
+
+      getJson(
+        "/api/proyek/partner"
+      ),
+
+      getJson(
+        "/api/proyek/status"
+      )
+
+    ]);
+
+
+    // ===============================================
+    // KATEGORI AKTIF
+    // ===============================================
+
+    fillSelect(
+      kategoriSelect,
+      kategori,
+      "id",
+      "nama_kategori_produk",
+      "Pilih Kategori"
+    );
+
+
+    // ===============================================
+    // JENIS PROYEK AKTIF
+    // ===============================================
+
+    fillSelect(
+      jenisSelect,
+      jenis,
+      "id",
+      "name",
+      "Pilih Jenis"
+    );
+
+
+    // ===============================================
+    // KLIEN
+    // ===============================================
+
+    fillSelect(
+      klienSelect,
+      klien,
+      "id",
+      "perusahaan_klien",
+      "Pilih Klien"
+    );
+
+
+    // ===============================================
+    // PARTNER
+    // ===============================================
+
+    masterPartner =
+      partner;
+
+
+    // ===============================================
+    // KELOMPOKKAN STATUS BERDASARKAN FLAG
+    // ===============================================
+
+    Object
+      .keys(statusOptions)
+      .forEach(flag => {
+
+        statusOptions[flag] =
+          statuses.filter(row =>
+
+            String(
+              row.flag
+            ).toLowerCase() === flag
+
+          );
+
+      });
+
+
+    $("status_pengadaan_klien")
+      .innerHTML =
+        statusHtml(
+          "pengadaan"
+        );
+
+
+    $("status_teknis_klien")
+      .innerHTML =
+        statusHtml(
+          "teknis"
+        );
+
+
+    $("status_administrasi_klien")
+      .innerHTML =
+        statusHtml(
+          "administrasi"
+        );
+
+
+    $("status_final")
+      .innerHTML =
+        statusHtml("final")
+          .replace(
+            "Pilih Status",
+            "Pilih Status Final"
+          );
+
+
+  } catch (error) {
+
+    console.error(
+      "ERROR LOAD MASTER:",
+      error
+    );
+
+
+    alert(
+      "Gagal mengambil master data proyek:\n" +
+      error.message
+    );
+
+  }
+
+}
+
+
+// =====================================================
+// TAMBAH KATEGORI
+// =====================================================
+
+$("tambahKategori")
+  .addEventListener(
+    "click",
+    async () => {
+
+      const option =
+        kategoriSelect
+          .selectedOptions[0];
+
+
+      if (!option?.value) {
+
+        alert(
+          "Pilih kategori terlebih dahulu."
+        );
+
+        return;
+
+      }
+
+
+      selectedKategori.set(
+
+        String(option.value),
+
+        option
+          .textContent
+          .trim()
+
+      );
+
+
+      kategoriSelect.value =
+        "";
+
+
+      renderKategori();
+
+      await loadPic();
+
+    }
+  );
+
+
+// =====================================================
+// TAMPILKAN KATEGORI TERPILIH
+// =====================================================
+
+function renderKategori() {
+
+  kategoriTerpilih.innerHTML =
+    "";
+
+
+  selectedKategori.forEach(
+    (label, id) => {
+
+      const chip =
+        document.createElement(
+          "span"
+        );
+
+
+      chip.className =
+        "category-chip";
+
+
+      chip.innerHTML = `
+
+        ${escapeHtml(label)}
+
+        <button
+          type="button"
+          aria-label="Hapus kategori"
+        >
+          &times;
+        </button>
+
+      `;
+
+
+      chip
+        .querySelector("button")
+        .addEventListener(
+          "click",
+          async () => {
+
+            selectedKategori.delete(
+              id
+            );
+
+            renderKategori();
+
+            await loadPic();
+
+          }
+        );
+
+
+      kategoriTerpilih
+        .appendChild(chip);
+
+    }
+  );
+
+}
+
+
+// =====================================================
+// LOAD PIC BERDASARKAN KATEGORI
+// =====================================================
+
+async function loadPic() {
+
+  picContainer.innerHTML =
+    "";
+
+
+  if (!selectedKategori.size) {
+
+    picContainer.textContent =
+      "Pilih kategori terlebih dahulu.";
+
+    return;
+
+  }
+
+
+  try {
+
+    const groups =
+      await Promise.all(
+
+        [
+          ...selectedKategori.keys()
+        ].map(id =>
+
+          getJson(
+            `/api/proyek/kategori/${id}/pic`
+          )
+
+        )
+
+      );
+
+
+    const unique =
+      new Map(
+
+        groups
+          .flat()
+          .map(pic => [
+
+            String(pic.id),
+
+            pic
+
+          ])
+
+      );
+
+
+    if (!unique.size) {
+
+      picContainer.textContent =
+        "Belum ada PIC pada kategori yang dipilih.";
+
+      return;
+
+    }
+
+
+    unique.forEach(pic => {
+
+      const label =
+        document.createElement(
+          "label"
+        );
+
+
+      label.className =
+        "pic-item";
+
+
+      label.innerHTML = `
+
+        <input
+          type="checkbox"
+          name="pic_ids"
+          value="${pic.id}"
+        >
+
+        <span>
+
+          ${escapeHtml(pic.nama)}
+
+          ${
+            pic.jabatan
+              ? ` - ${escapeHtml(pic.jabatan)}`
+              : ""
+          }
+
+        </span>
+
+      `;
+
+
+      picContainer.appendChild(
+        label
+      );
+
+    });
+
+
+  } catch (error) {
+
+    picContainer.textContent =
+      "Gagal mengambil PIC.";
+
+
+    console.error(
+      "ERROR LOAD PIC:",
+      error
+    );
+
+  }
+
+}
+
+
+// =====================================================
+// SUB JENIS BERDASARKAN JENIS
+// =====================================================
+
+jenisSelect.addEventListener(
+  "change",
+  async () => {
+
+    subJenisSelect.innerHTML = `
+      <option value="">
+        Pilih Sub Jenis
+      </option>
+    `;
+
+
+    subJenisGroup.classList.add(
+      "hidden"
+    );
+
+
+    if (!jenisSelect.value) {
+
+      return;
+
+    }
+
+
+    try {
+
+      const rows =
+        await getJson(
+
+          "/api/proyek/sub-jenis" +
+          `?jenis_id=${encodeURIComponent(
+            jenisSelect.value
+          )}`
+
+        );
+
+
+      if (rows.length) {
+
+        fillSelect(
+
+          subJenisSelect,
+
+          rows,
+
+          "id",
+
+          "name",
+
+          "Pilih Sub Jenis"
+
+        );
+
+
+        subJenisGroup
+          .classList
+          .remove(
+            "hidden"
+          );
+
+      }
+
+
+    } catch (error) {
+
+      console.error(
+        "ERROR LOAD SUB JENIS:",
+        error
+      );
+
+
+      alert(
+        error.message
+      );
+
+    }
+
+  }
+);
+
+
+// =====================================================
+// TAMBAH NEGO KLIEN
+// =====================================================
+
+let negoKlienTerlihat =
+  0;
+
+
+$("tambahNegoKlien")
+  .addEventListener(
+    "click",
+    () => {
+
+      if (
+        negoKlienTerlihat >= 3
+      ) {
+
+        return;
+
+      }
+
+
+      negoKlienTerlihat +=
+        1;
+
+
+      const field =
+        document.querySelector(
+
+          `.nego-klien-field[data-nego-index="${negoKlienTerlihat}"]`
+
+        );
+
+
+      if (field) {
+
+        field.classList.remove(
+          "hidden"
+        );
+
+      }
+
+
+      if (
+        negoKlienTerlihat === 3
+      ) {
+
+        $("tambahNegoKlien")
+          .disabled =
+            true;
+
+      }
+
+    }
+  );
+
+
+// =====================================================
+// HITUNG DURASI BULAN DAN HARI
+// =====================================================
+
+function calculateDuration(
+  startValue,
+  endValue
+) {
+
+  if (
+    !startValue ||
+    !endValue
+  ) {
+
+    return {
+      months: null,
+      days: null
+    };
+
+  }
+
+
+  const start =
+    new Date(
+      `${startValue}T00:00:00`
+    );
+
+
+  const end =
+    new Date(
+      `${endValue}T00:00:00`
+    );
+
+
+  if (end < start) {
+
+    return {
+      months: null,
+      days: null
+    };
+
+  }
+
+
+  let months =
+
+    (
+      end.getFullYear() -
+      start.getFullYear()
+    ) * 12 +
+
+    end.getMonth() -
+
+    start.getMonth();
+
+
+  const anchor =
+    new Date(start);
+
+
+  anchor.setMonth(
+
+    anchor.getMonth() +
+    months
+
+  );
+
+
+  if (anchor > end) {
+
+    months -= 1;
+
+
+    anchor.setTime(
+      start.getTime()
+    );
+
+
+    anchor.setMonth(
+
+      anchor.getMonth() +
+      months
+
+    );
+
+  }
+
+
+  const days =
+    Math.round(
+
+      (
+        end -
+        anchor
+      ) /
+
+      86400000
+
+    );
+
+
+  return {
+    months,
+    days
+  };
+
+}
+
+
+// =====================================================
+// DURASI KLIEN
+// =====================================================
+
+function updateClientDuration() {
+
+  const duration =
+    calculateDuration(
+
+      $("tanggal_mulai_klien")
+        .value,
+
+      $("tanggal_akhir_klien")
+        .value
+
+    );
+
+
+  $("jumlah_bulan_klien")
+    .value =
+      duration.months ?? "";
+
+
+  $("jumlah_hari_klien")
+    .value =
+      duration.days ?? "";
+
+}
+
+
+$("tanggal_mulai_klien")
+  .addEventListener(
+    "change",
+    updateClientDuration
+  );
+
+
+$("tanggal_akhir_klien")
+  .addEventListener(
+    "change",
+    updateClientDuration
+  );
+
+
+// =====================================================
+// OPTION PARTNER
+// =====================================================
+
+function partnerOptions() {
+
+  return `
+
+    <option value="">
+      Pilih Partner
+    </option>
+
+  ` +
+
+  masterPartner
+    .map(row => `
+
+      <option value="${row.id}">
+        ${escapeHtml(row.nama_partner)}
+      </option>
+
+    `)
+    .join("");
+
+}
+
+
+// =====================================================
+// TAMBAH PARTNER
+// =====================================================
+
+// =====================================================
+// TAMBAH PARTNER
+// =====================================================
+
+function addPartner() {
+
+  const card =
+    document.createElement(
+      "div"
+    );
+
+
+  card.className =
+    "partner-card";
+
+
+  // Menyimpan jumlah kolom nego
+  // yang sudah ditampilkan.
+  card.dataset.negoTerlihat =
+    "0";
+
+
+  card.innerHTML = `
 
     <div class="partner-header">
 
@@ -576,23 +926,31 @@ function addPartner() {
     <div class="form-grid">
 
 
+      <!-- PARTNER -->
+
       <div class="form-group">
 
-        <label>Partner *</label>
+        <label>
+          Partner *
+        </label>
 
         <select
           class="partner_id"
           required
         >
-          ${options}
+          ${partnerOptions()}
         </select>
 
       </div>
 
 
+      <!-- TANGGAL MULAI -->
+
       <div class="form-group">
 
-        <label>Tanggal Mulai</label>
+        <label>
+          Tanggal Mulai
+        </label>
 
         <input
           type="date"
@@ -602,9 +960,13 @@ function addPartner() {
       </div>
 
 
+      <!-- TANGGAL AKHIR -->
+
       <div class="form-group">
 
-        <label>Tanggal Akhir</label>
+        <label>
+          Tanggal Akhir
+        </label>
 
         <input
           type="date"
@@ -614,92 +976,34 @@ function addPartner() {
       </div>
 
 
-      <div class="form-group">
-
-        <label>Nilai Submit</label>
-
-        <input
-          type="number"
-          min="0"
-          class="partner_nilai_submit"
-          placeholder="0"
-        >
-
-      </div>
-
+      <!-- MODEL PEMBAYARAN -->
 
       <div class="form-group">
 
-        <label>Nego 1</label>
+        <label>
+          Model Pembayaran
+        </label>
 
-        <input
-          type="number"
-          min="0"
-          class="partner_nego_1"
-          placeholder="0"
-        >
-
-      </div>
-
-
-      <div class="form-group">
-
-        <label>Nego 2</label>
-
-        <input
-          type="number"
-          min="0"
-          class="partner_nego_2"
-          placeholder="0"
-        >
-
-      </div>
-
-
-      <div class="form-group">
-
-        <label>Nego 3</label>
-
-        <input
-          type="number"
-          min="0"
-          class="partner_nego_3"
-          placeholder="0"
-        >
-
-      </div>
-
-
-      <div class="form-group">
-
-        <label>Status Pengadaan</label>
-
-        <select
-          class="partner_status_pengadaan"
-        >
+        <select class="partner_model_pembayaran">
 
           <option value="">
-            Pilih Status
+            Pilih Model Pembayaran
           </option>
 
-          <option value="Pipeline">
-            Pipeline
+          <option value="Tahunan">
+            Tahunan
           </option>
 
-          <option value="Submit Penawaran">
-            Submit Penawaran
+          <option value="Bulanan">
+            Bulanan
           </option>
 
-          <option value="Submit Pengadaan">
-            Submit Pengadaan
+          <option value="Termin">
+            Termin
           </option>
 
-          <option value="Kontrak">
-            Kontrak
-          </option>
-
-          <option value="Aktif">
-            Aktif
+          <option value="One Time Charge">
+            One Time Charge
           </option>
 
         </select>
@@ -707,38 +1011,214 @@ function addPartner() {
       </div>
 
 
+      <!-- DURASI BULAN -->
+
       <div class="form-group">
 
-        <label>Status Teknis</label>
+        <label>
+          Durasi Bulan
+        </label>
+
+        <input
+          type="number"
+          class="partner_jumlah_bulan"
+          readonly
+          placeholder="Otomatis"
+        >
+
+      </div>
+
+
+      <!-- SISA HARI -->
+
+      <div class="form-group">
+
+        <label>
+          Sisa Hari
+        </label>
+
+        <input
+          type="number"
+          class="partner_jumlah_hari"
+          readonly
+          placeholder="Otomatis"
+        >
+
+      </div>
+
+
+      <!-- NILAI SUBMIT -->
+
+      <div class="form-group">
+
+        <label>
+          Nilai Submit (Rp)
+        </label>
+
+        <input
+          type="number"
+          min="0"
+          step="1"
+          class="partner_nilai_submit"
+          placeholder="0"
+        >
+
+      </div>
+
+
+      <!-- TOMBOL TAMBAH NEGO -->
+
+      <div class="form-group">
+
+        <label>
+          Negosiasi
+        </label>
+
+        <button
+          type="button"
+          class="btn btn-secondary tambahNegoPartner"
+        >
+          + Tambah Nego
+        </button>
+
+      </div>
+
+
+      <!--
+        Spacer supaya susunan grid tetap rapi
+        karena menggunakan tiga kolom.
+      -->
+
+      <div
+        class="form-group partner-nego-spacer"
+        aria-hidden="true"
+      ></div>
+
+
+      <!-- NEGO 1 -->
+
+      <div
+        class="
+          form-group
+          hidden
+          partner-nego-field
+        "
+        data-nego-index="1"
+      >
+
+        <label>
+          Nego 1 (Rp)
+        </label>
+
+        <input
+          type="number"
+          min="0"
+          step="1"
+          class="partner_nego_1"
+          placeholder="0"
+        >
+
+      </div>
+
+
+      <!-- NEGO 2 -->
+
+      <div
+        class="
+          form-group
+          hidden
+          partner-nego-field
+        "
+        data-nego-index="2"
+      >
+
+        <label>
+          Nego 2 (Rp)
+        </label>
+
+        <input
+          type="number"
+          min="0"
+          step="1"
+          class="partner_nego_2"
+          placeholder="0"
+        >
+
+      </div>
+
+
+      <!-- NEGO 3 -->
+
+      <div
+        class="
+          form-group
+          hidden
+          partner-nego-field
+        "
+        data-nego-index="3"
+      >
+
+        <label>
+          Nego 3 (Rp)
+        </label>
+
+        <input
+          type="number"
+          min="0"
+          step="1"
+          class="partner_nego_3"
+          placeholder="0"
+        >
+
+      </div>
+
+
+      <!-- STATUS PENGADAAN -->
+
+      <div class="form-group">
+
+        <label>
+          Status Pengadaan
+        </label>
+
+        <select
+          class="partner_status_pengadaan"
+        >
+          ${statusHtml("pengadaan")}
+        </select>
+
+      </div>
+
+
+      <!-- STATUS TEKNIS -->
+
+      <div class="form-group">
+
+        <label>
+          Status Teknis
+        </label>
 
         <select
           class="partner_status_teknis"
         >
+          ${statusHtml("teknis")}
+        </select>
 
-          <option value="">
-            Pilih Status
-          </option>
+      </div>
 
-          <option value="Gather Requirement">
-            Gather Requirement
-          </option>
 
-          <option value="Development">
-            Development
-          </option>
+      <!-- STATUS ADMINISTRASI -->
 
-          <option value="Testing">
-            Testing
-          </option>
+      <div class="form-group">
 
-          <option value="Done">
-            Done
-          </option>
+        <label>
+          Status Administrasi
+        </label>
 
-          <option value="Bug Fixing">
-            Bug Fixing
-          </option>
-
+        <select
+          class="partner_status_administrasi"
+        >
+          ${statusHtml("administrasi")}
         </select>
 
       </div>
@@ -749,70 +1229,173 @@ function addPartner() {
   `;
 
 
-  // ================================
-  // HAPUS PARTNER
-  // ================================
+  // ===================================================
+  // MASUKKAN CARD KE CONTAINER
+  // ===================================================
 
-  wrapper
-    .querySelector(".removePartner")
-    .addEventListener(
-      "click",
-      () => {
-
-        wrapper.remove();
-
-        updatePartnerNumbers();
-
-      }
-    );
+  partnerContainer.appendChild(
+    card
+  );
 
 
-  // ================================
-  // VALIDASI DUPLIKAT SAAT DIPILIH
-  // ================================
+  // ===================================================
+  // ELEMENT DALAM CARD PARTNER
+  // ===================================================
 
   const partnerSelect =
-    wrapper.querySelector(
+    card.querySelector(
       ".partner_id"
     );
 
 
-  partnerSelect.addEventListener(
-    "change",
+  const tanggalMulai =
+    card.querySelector(
+      ".partner_tanggal_mulai"
+    );
+
+
+  const tanggalAkhir =
+    card.querySelector(
+      ".partner_tanggal_akhir"
+    );
+
+
+  const jumlahBulan =
+    card.querySelector(
+      ".partner_jumlah_bulan"
+    );
+
+
+  const jumlahHari =
+    card.querySelector(
+      ".partner_jumlah_hari"
+    );
+
+
+  const tambahNegoButton =
+    card.querySelector(
+      ".tambahNegoPartner"
+    );
+
+
+  const removeButton =
+    card.querySelector(
+      ".removePartner"
+    );
+
+
+  // ===================================================
+  // HITUNG DURASI PARTNER
+  // ===================================================
+
+  const updateDuration =
     () => {
 
+      const duration =
+        calculateDuration(
+          tanggalMulai.value,
+          tanggalAkhir.value
+        );
+
+
+      jumlahBulan.value =
+        duration.months ?? "";
+
+
+      jumlahHari.value =
+        duration.days ?? "";
+
+    };
+
+
+  tanggalMulai.addEventListener(
+    "change",
+    updateDuration
+  );
+
+
+  tanggalAkhir.addEventListener(
+    "change",
+    updateDuration
+  );
+
+
+  // ===================================================
+  // TAMBAH NEGO PARTNER
+  // ===================================================
+
+  tambahNegoButton.addEventListener(
+    "click",
+    () => {
+
+      let negoTerlihat =
+        Number(
+          card.dataset.negoTerlihat ||
+          0
+        );
+
+
       if (
-        !partnerSelect.value
+        negoTerlihat >= 3
       ) {
+
         return;
+
       }
 
 
-      const allSelects =
-        Array.from(
-          partnerContainer.querySelectorAll(
-            ".partner_id"
-          )
+      negoTerlihat +=
+        1;
+
+
+      const negoField =
+        card.querySelector(
+
+          `.partner-nego-field[data-nego-index="${negoTerlihat}"]`
+
         );
 
 
-      const samePartner =
-        allSelects.filter(
-          select =>
-            select.value ===
-            partnerSelect.value
+      if (negoField) {
+
+        negoField.classList.remove(
+          "hidden"
         );
 
 
+        const negoInput =
+          negoField.querySelector(
+            "input"
+          );
+
+
+        if (negoInput) {
+
+          negoInput.focus();
+
+        }
+
+      }
+
+
+      card.dataset.negoTerlihat =
+        String(
+          negoTerlihat
+        );
+
+
+      // Setelah Nego 3 muncul,
+      // tombol dinonaktifkan.
       if (
-        samePartner.length > 1
+        negoTerlihat >= 3
       ) {
 
-        alert(
-          "Partner tersebut sudah dipilih. Pilih partner lain."
-        );
+        tambahNegoButton.disabled =
+          true;
 
-        partnerSelect.value = "";
+
+        tambahNegoButton.textContent =
+          "Maksimal 3 Nego";
 
       }
 
@@ -820,30 +1403,86 @@ function addPartner() {
   );
 
 
-  partnerContainer.appendChild(
-    wrapper
+  // ===================================================
+  // CEK PARTNER DUPLIKAT SAAT DIPILIH
+  // ===================================================
+
+  partnerSelect.addEventListener(
+    "change",
+    () => {
+
+      if (!partnerSelect.value) {
+        return;
+      }
+
+
+      const pilihanPartner =
+        [
+
+          ...partnerContainer.querySelectorAll(
+            ".partner_id"
+          )
+
+        ].filter(
+          select =>
+            select.value ===
+            partnerSelect.value
+        );
+
+
+      if (
+        pilihanPartner.length > 1
+      ) {
+
+        alert(
+          "Partner tersebut sudah dipilih. Pilih partner lain."
+        );
+
+
+        partnerSelect.value =
+          "";
+
+      }
+
+    }
   );
 
 
+  // ===================================================
+  // HAPUS PARTNER
+  // ===================================================
+
+  removeButton.addEventListener(
+    "click",
+    () => {
+
+      card.remove();
+
+      updatePartnerNumbers();
+
+    }
+  );
+
+
+  // ===================================================
+  // PERBARUI NOMOR PARTNER
+  // ===================================================
+
   updatePartnerNumbers();
-  updateModeNilai();
 
 }
 
 
-// ======================================================
-// BUTTON TAMBAH PARTNER
-// ======================================================
-
-addPartnerButton.addEventListener(
-  "click",
-  addPartner
-);
+$("addPartnerButton")
+  .addEventListener(
+    "click",
+    addPartner
+  );
 
 
-// ======================================================
-// HELPER NUMBER
-// ======================================================
+// =====================================================
+// KONVERSI ANGKA
+// =====================================================
 
 function numberOrNull(value) {
 
@@ -852,11 +1491,15 @@ function numberOrNull(value) {
     value === null ||
     value === undefined
   ) {
+
     return null;
+
   }
+
 
   const number =
     Number(value);
+
 
   return Number.isNaN(number)
     ? null
@@ -865,180 +1508,158 @@ function numberOrNull(value) {
 }
 
 
-// ======================================================
+// =====================================================
 // AMBIL DATA PARTNER
-// ======================================================
+// =====================================================
 
 function getPartners() {
 
-  const result = [];
+  return [
 
-  const cards =
-    document.querySelectorAll(
+    ...document.querySelectorAll(
       ".partner-card"
-    );
+    )
 
+  ]
 
-  cards.forEach(card => {
+    .filter(card =>
 
-    const partnerId =
       card.querySelector(
         ".partner_id"
-      ).value;
+      ).value
 
+    )
 
-    if (!partnerId) {
-      return;
-    }
-
-
-    result.push({
+    .map(card => ({
 
       partner_id:
-        Number(partnerId),
+        Number(
 
-      nilai_submit:
-        numberOrNull(
           card.querySelector(
-            ".partner_nilai_submit"
+            ".partner_id"
           ).value
-        ) ?? 0,
 
-      nilai_nego_1:
-        numberOrNull(
-          card.querySelector(
-            ".partner_nego_1"
-          ).value
-        ),
-
-      nilai_nego_2:
-        numberOrNull(
-          card.querySelector(
-            ".partner_nego_2"
-          ).value
-        ),
-
-      nilai_nego_3:
-        numberOrNull(
-          card.querySelector(
-            ".partner_nego_3"
-          ).value
         ),
 
       tanggal_mulai:
+
         card.querySelector(
           ".partner_tanggal_mulai"
         ).value || null,
 
       tanggal_akhir:
+
         card.querySelector(
           ".partner_tanggal_akhir"
         ).value || null,
 
+      model_pembayaran:
+
+        card.querySelector(
+          ".partner_model_pembayaran"
+        ).value || null,
+
+      jumlah_bulan:
+
+        numberOrNull(
+
+          card.querySelector(
+            ".partner_jumlah_bulan"
+          ).value
+
+        ),
+
+      jumlah_hari:
+
+        numberOrNull(
+
+          card.querySelector(
+            ".partner_jumlah_hari"
+          ).value
+
+        ),
+
+      nilai_submit:
+
+        numberOrNull(
+
+          card.querySelector(
+            ".partner_nilai_submit"
+          ).value
+
+        ) ?? 0,
+
+      nilai_nego_1:
+
+        numberOrNull(
+
+          card.querySelector(
+            ".partner_nego_1"
+          ).value
+
+        ),
+
+      nilai_nego_2:
+
+        numberOrNull(
+
+          card.querySelector(
+            ".partner_nego_2"
+          ).value
+
+        ),
+
+      nilai_nego_3:
+
+        numberOrNull(
+
+          card.querySelector(
+            ".partner_nego_3"
+          ).value
+
+        ),
+
       status_pengadaan:
+
         card.querySelector(
           ".partner_status_pengadaan"
         ).value || null,
 
       status_teknis:
+
         card.querySelector(
           ".partner_status_teknis"
+        ).value || null,
+
+      status_administrasi:
+
+        card.querySelector(
+          ".partner_status_administrasi"
         ).value || null
 
-    });
-
-  });
-
-
-  return result;
+    }));
 
 }
 
 
-// ======================================================
-// VALIDASI PARTNER
-// ======================================================
+// =====================================================
+// VALIDASI TANGGAL
+// =====================================================
 
-function validatePartners() {
-
-  const cards =
-    Array.from(
-      partnerContainer.querySelectorAll(
-        ".partner-card"
-      )
-    );
-
-
-  for (
-    let index = 0;
-    index < cards.length;
-    index++
-  ) {
-
-    const card =
-      cards[index];
-
-    const partnerId =
-      card.querySelector(
-        ".partner_id"
-      ).value;
-
-
-    if (!partnerId) {
-
-      alert(
-        `Partner ${index + 1} belum dipilih.`
-      );
-
-      card
-        .querySelector(".partner_id")
-        .focus();
-
-      return false;
-
-    }
-
-
-    const tanggalMulai =
-      card.querySelector(
-        ".partner_tanggal_mulai"
-      ).value;
-
-    const tanggalAkhir =
-      card.querySelector(
-        ".partner_tanggal_akhir"
-      ).value;
-
-
-    if (
-      tanggalMulai &&
-      tanggalAkhir &&
-      tanggalAkhir < tanggalMulai
-    ) {
-
-      alert(
-        `Tanggal akhir Partner ${index + 1} tidak boleh sebelum tanggal mulai.`
-      );
-
-      card
-        .querySelector(
-          ".partner_tanggal_akhir"
-        )
-        .focus();
-
-      return false;
-
-    }
-
-  }
-
+function validateDates(
+  label,
+  start,
+  end
+) {
 
   if (
-    checkDuplicatePartner()
+    start &&
+    end &&
+    end < start
   ) {
 
     alert(
-      "Terdapat partner yang dipilih lebih dari satu kali."
+      `Tanggal akhir ${label} tidak boleh sebelum tanggal mulai.`
     );
 
     return false;
@@ -1051,52 +1672,9 @@ function validatePartners() {
 }
 
 
-// ======================================================
-// VALIDASI KLIEN
-// ======================================================
-
-function validateKlien() {
-
-  const tanggalMulai =
-    document.getElementById(
-      "tanggal_mulai_klien"
-    ).value;
-
-  const tanggalAkhir =
-    document.getElementById(
-      "tanggal_akhir_klien"
-    ).value;
-
-
-  if (
-    tanggalMulai &&
-    tanggalAkhir &&
-    tanggalAkhir < tanggalMulai
-  ) {
-
-    alert(
-      "Tanggal akhir klien tidak boleh sebelum tanggal mulai."
-    );
-
-    document
-      .getElementById(
-        "tanggal_akhir_klien"
-      )
-      .focus();
-
-    return false;
-
-  }
-
-
-  return true;
-
-}
-
-
-// ======================================================
+// =====================================================
 // SIMPAN PROYEK
-// ======================================================
+// =====================================================
 
 form.addEventListener(
   "submit",
@@ -1105,28 +1683,26 @@ form.addEventListener(
     event.preventDefault();
 
 
-    // ================================
-    // VALIDASI
-    // ================================
+    // ===============================================
+    // VALIDASI KATEGORI
+    // ===============================================
 
-    if (
-      !kategoriSelect.value
-    ) {
+    if (!selectedKategori.size) {
 
       alert(
-        "Kategori proyek wajib dipilih."
+        "Kategori proyek wajib dipilih lalu klik + Tambah."
       );
-
-      kategoriSelect.focus();
 
       return;
 
     }
 
 
-    if (
-      !jenisSelect.value
-    ) {
+    // ===============================================
+    // VALIDASI JENIS
+    // ===============================================
+
+    if (!jenisSelect.value) {
 
       alert(
         "Jenis proyek wajib dipilih."
@@ -1139,11 +1715,12 @@ form.addEventListener(
     }
 
 
+    // ===============================================
+    // VALIDASI NAMA PROYEK
+    // ===============================================
+
     const namaProyek =
-      document
-        .getElementById(
-          "nama_proyek"
-        )
+      $("nama_proyek")
         .value
         .trim();
 
@@ -1154,168 +1731,332 @@ form.addEventListener(
         "Nama proyek wajib diisi."
       );
 
-      document
-        .getElementById(
-          "nama_proyek"
-        )
-        .focus();
+      $("nama_proyek").focus();
 
       return;
 
     }
 
+
+    // ===============================================
+    // VALIDASI TANGGAL KLIEN
+    // ===============================================
 
     if (
-      !validateKlien()
-    ) {
-      return;
-    }
+      !validateDates(
 
+        "klien",
 
-    if (
-      !validatePartners()
-    ) {
-      return;
-    }
+        $("tanggal_mulai_klien")
+          .value,
 
-    // ================================
-    // PIC
-    // ================================
+        $("tanggal_akhir_klien")
+          .value
 
-    const picIds =
-      Array.from(
-        document.querySelectorAll(
-          'input[name="pic"]:checked'
-        )
       )
-        .map(item =>
-          Number(item.value)
+    ) {
+
+      return;
+
+    }
+
+
+    // ===============================================
+    // VALIDASI PARTNER
+    // ===============================================
+
+    const partnerCards = [
+
+      ...document.querySelectorAll(
+        ".partner-card"
+      )
+
+    ];
+
+
+    for (
+      let index = 0;
+      index < partnerCards.length;
+      index++
+    ) {
+
+      const card =
+        partnerCards[index];
+
+
+      const partnerId =
+        card.querySelector(
+          ".partner_id"
+        ).value;
+
+
+      if (!partnerId) {
+
+        alert(
+          `Partner ${index + 1} belum dipilih.`
+        );
+
+        return;
+
+      }
+
+
+      const validDate =
+        validateDates(
+
+          `Partner ${index + 1}`,
+
+          card.querySelector(
+            ".partner_tanggal_mulai"
+          ).value,
+
+          card.querySelector(
+            ".partner_tanggal_akhir"
+          ).value
+
         );
 
 
-    // ================================
-    // HELPER VALUE
-    // ================================
+      if (!validDate) {
 
-    const valueOrNull = id => {
+        return;
 
-      const value =
-        document
-          .getElementById(id)
-          .value;
+      }
 
-      return numberOrNull(value);
-
-    };
+    }
 
 
-    // ================================
+    // ===============================================
+    // CEK PARTNER DUPLIKAT
+    // ===============================================
+
+    const partnerIds =
+      [
+
+        ...document.querySelectorAll(
+          ".partner_id"
+        )
+
+      ]
+
+        .map(item =>
+          item.value
+        )
+
+        .filter(Boolean);
+
+
+    if (
+      new Set(partnerIds).size !==
+      partnerIds.length
+    ) {
+
+      alert(
+        "Partner tidak boleh dipilih lebih dari satu kali."
+      );
+
+      return;
+
+    }
+
+
+    // ===============================================
+    // DATA STATUS YANG DIPILIH
+    // ===============================================
+
+    const statusFinalOption =
+      $("status_final")
+        .selectedOptions[0];
+
+
+    // ===============================================
     // PAYLOAD
-    // ================================
+    // ===============================================
 
     const payload = {
 
       kategori_produk_ids:
-          Array.from(
-            kategoriSelect.selectedOptions
-          ).map(
-            option => Number(option.value)
-          ),
+
+        [
+          ...selectedKategori.keys()
+        ].map(Number),
+
 
       jenis_proyek:
-        jenisSelect.value,
+
+        jenisSelect
+          .selectedOptions[0]
+          ?.textContent
+          ?.trim() || null,
+
+
+      jenis_proyek_id:
+
+        numberOrNull(
+          jenisSelect.value
+        ),
+
 
       sub_jenis_proyek:
-        subJenisSelect.value ||
-        null,
+
+        subJenisSelect.value
+
+          ? subJenisSelect
+              .selectedOptions[0]
+              ?.textContent
+              ?.trim()
+
+          : null,
+
+
+      sub_jenis_proyek_id:
+
+        numberOrNull(
+          subJenisSelect.value
+        ),
+
 
       nama_proyek:
+
         namaProyek,
 
+
       deskripsi:
-        document
-          .getElementById(
-            "deskripsi"
-          )
+
+        $("deskripsi")
           .value
           .trim() || null,
 
+
       status_final:
-        document
-          .getElementById(
-            "status_final"
-          )
-          .value,
+
+        $("status_final")
+          .value || null,
+
+
+      status_final_id:
+
+        numberOrNull(
+          statusFinalOption
+            ?.dataset
+            ?.id
+        ),
+
 
       pic_ids:
-        picIds,
+
+        [
+
+          ...document.querySelectorAll(
+            'input[name="pic_ids"]:checked'
+          )
+
+        ].map(item =>
+          Number(item.value)
+        ),
 
 
-      // ==============================
+      // =============================================
       // KLIEN
-      // ==============================
+      // =============================================
 
       klien_id:
-        klienSelect.value
-          ? Number(
-              klienSelect.value
-            )
-          : null,
+
+        numberOrNull(
+          klienSelect.value
+        ),
+
 
       nilai_submit_klien:
-        valueOrNull(
-          "nilai_submit_klien"
+
+        numberOrNull(
+          $("nilai_submit_klien")
+            .value
         ),
+
 
       nilai_nego_1_klien:
-        valueOrNull(
-          "nilai_nego_1_klien"
+
+        numberOrNull(
+          $("nilai_nego_1_klien")
+            .value
         ),
+
 
       nilai_nego_2_klien:
-        valueOrNull(
-          "nilai_nego_2_klien"
+
+        numberOrNull(
+          $("nilai_nego_2_klien")
+            .value
         ),
+
 
       nilai_nego_3_klien:
-        valueOrNull(
-          "nilai_nego_3_klien"
+
+        numberOrNull(
+          $("nilai_nego_3_klien")
+            .value
         ),
 
+
       tanggal_mulai_klien:
-        document
-          .getElementById(
-            "tanggal_mulai_klien"
-          )
+
+        $("tanggal_mulai_klien")
           .value || null,
+
 
       tanggal_akhir_klien:
-        document
-          .getElementById(
-            "tanggal_akhir_klien"
-          )
+
+        $("tanggal_akhir_klien")
           .value || null,
+
+
+      model_pembayaran_klien:
+
+        $("model_pembayaran_klien")
+          .value || null,
+
+
+      jumlah_bulan_klien:
+
+        numberOrNull(
+          $("jumlah_bulan_klien")
+            .value
+        ),
+
+
+      jumlah_hari_klien:
+
+        numberOrNull(
+          $("jumlah_hari_klien")
+            .value
+        ),
+
 
       status_pengadaan_klien:
-        document
-          .getElementById(
-            "status_pengadaan_klien"
-          )
+
+        $("status_pengadaan_klien")
           .value || null,
+
 
       status_teknis_klien:
-        document
-          .getElementById(
-            "status_teknis_klien"
-          )
+
+        $("status_teknis_klien")
           .value || null,
 
 
-      // ==============================
-      // MULTI PARTNER
-      // ==============================
+      status_administrasi_klien:
+
+        $("status_administrasi_klien")
+          .value || null,
+
+
+      // =============================================
+      // PARTNER
+      // =============================================
 
       partners:
+
         getPartners()
 
     };
@@ -1327,14 +2068,15 @@ form.addEventListener(
     );
 
 
-    // ================================
-    // SIMPAN KE SERVER
-    // ================================
+    // ===============================================
+    // KIRIM KE SERVER
+    // ===============================================
 
     try {
 
       saveButton.disabled =
         true;
+
 
       saveButton.textContent =
         "Menyimpan...";
@@ -1342,64 +2084,47 @@ form.addEventListener(
 
       const response =
         await fetch(
+
           "/api/proyek",
+
           {
-            method: "POST",
+
+            method:
+              "POST",
 
             headers: {
+
               "Content-Type":
                 "application/json"
+
             },
 
             body:
               JSON.stringify(
                 payload
               )
+
           }
+
         );
-
-
-      const contentType =
-        response.headers.get(
-          "content-type"
-        );
-
-
-      if (
-        !contentType ||
-        !contentType.includes(
-          "application/json"
-        )
-      ) {
-
-        const text =
-          await response.text();
-
-        throw new Error(
-          `Server bukan JSON (${response.status}): ${text}`
-        );
-
-      }
 
 
       const result =
-        await response.json();
+        await response
+          .json()
+          .catch(() => ({}));
 
 
       if (!response.ok) {
 
         throw new Error(
+
           result.error ||
           "Gagal menyimpan proyek"
+
         );
 
       }
-
-
-      console.log(
-        "HASIL SIMPAN:",
-        result
-      );
 
 
       alert(
@@ -1420,8 +2145,10 @@ form.addEventListener(
 
 
       alert(
+
         "Gagal menyimpan proyek:\n" +
         error.message
+
       );
 
 
@@ -1429,6 +2156,7 @@ form.addEventListener(
 
       saveButton.disabled =
         false;
+
 
       saveButton.textContent =
         "Simpan Proyek";
@@ -1439,8 +2167,8 @@ form.addEventListener(
 );
 
 
-// ======================================================
-// START
-// ======================================================
+// =====================================================
+// MULAI LOAD DATA
+// =====================================================
 
 loadMaster();

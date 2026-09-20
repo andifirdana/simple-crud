@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Timeline - Portopro</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+  <style>
+    /* =====================================================
+       PAGE
+    ===================================================== */
+
+    body {
+      margin: 0;
+      background: #f5f7fb;
+      color: #1f2937;
+      overflow-x: hidden;
+    }
+
+    .main-content {
+      width: calc(100% - 260px);
+      min-height: 100vh;
+      margin-left: 260px;
+      padding: 32px;
+      box-sizing: border-box;
+    }
+
+    .timeline-page {
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+
+    .page-header h1 {
+      margin: 0 0 7px;
+      color: #0f172a;
+      font-size: 29px;
+      font-weight: 800;
+      letter-spacing: -0.7px;
+    }
+
+    .page-header p {
+      margin: 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+
+    /* =====================================================
+       FILTER
+    ===================================================== */
+
+    .filter-card {
+      display: grid;
+      grid-template-columns:
+        minmax(250px, 1fr)
+        minmax(210px, 280px)
+        auto;
+      gap: 13px;
+
+      margin-bottom: 22px;
+      padding: 18px;
+
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 15px;
+
+      box-shadow:
+        0 4px 16px
+        rgba(15, 23, 42, 0.04);
+    }
+
+    .filter-field label {
+      display: block;
+      margin-bottom: 7px;
+
+      color: #475569;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .filter-field input,
+    .filter-field select {
+      width: 100%;
+      min-height: 44px;
+
+      padding: 10px 13px;
+
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
+      border-radius: 10px;
+
+      box-sizing: border-box;
+
+      color: #1e293b;
+      font: inherit;
+
+      outline: none;
+    }
+
+    .filter-field input:focus,
+    .filter-field select:focus {
+      border-color: #818cf8;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(99, 102, 241, 0.12);
+    }
+
+    .filter-reset {
+      align-self: end;
+
+      min-height: 44px;
+      padding: 0 17px;
+
+      background: #f8fafc;
+      border: 1px solid #dbe2ea;
+      border-radius: 10px;
+
+      color: #475569;
+      font-weight: 700;
+
+      cursor: pointer;
+    }
+
+    .filter-reset:hover {
+      color: #4338ca;
+      background: #eef2ff;
+      border-color: #a5b4fc;
+    }
+
+
+    /* =====================================================
+       EMPTY STATE
+    ===================================================== */
+
+    .empty-state {
+      padding: 55px 25px;
+
+      background: #ffffff;
+      border: 1px dashed #cbd5e1;
+      border-radius: 15px;
+
+      color: #64748b;
+      text-align: center;
+    }
+
+
+    /* =====================================================
+       GROUP JENIS PROYEK
+    ===================================================== */
+
+    .timeline-type-group {
+      overflow: hidden;
+
+      margin-bottom: 25px;
+
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
+      border-radius: 18px;
+
+      box-shadow:
+        0 5px 18px
+        rgba(15, 23, 42, 0.05);
+    }
+
+    .timeline-type-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+
+      padding: 23px 26px;
+
+      color: #ffffff;
+      background: #111827;
+
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .timeline-type-header div:last-child {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: none;
+      white-space: nowrap;
+    }
+
+
+    /* =====================================================
+       GROUP SUB PROYEK
+    ===================================================== */
+
+    .timeline-sub-group {
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .timeline-sub-group:last-child {
+      border-bottom: none;
+    }
+
+    .timeline-sub-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+
+      padding: 17px 26px;
+
+      color: #475569;
+      background: #f8fafc;
+      border-bottom: 1px solid #e5e7eb;
+
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .timeline-sub-header div:last-child {
+      color: #64748b;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+
+    /* =====================================================
+       GROUP KATEGORI
+    ===================================================== */
+
+    .timeline-category-list {
+      display: grid;
+      gap: 18px;
+      padding: 20px;
+    }
+
+    .timeline-category-card {
+      overflow: hidden;
+
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
+      border-radius: 14px;
+    }
+
+    .timeline-category-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+
+      padding: 14px 18px;
+
+      color: #3730a3;
+      background: #eef2ff;
+
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .timeline-category-header div:last-child {
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+
+    /* =====================================================
+       TABLE
+    ===================================================== */
+
+    .timeline-table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .timeline-detail-table {
+      width: 100%;
+      min-width: 1250px;
+      border-collapse: collapse;
+    }
+
+    .timeline-detail-table th {
+      padding: 13px 14px;
+
+      color: #64748b;
+      background: #f8fafc;
+      border-bottom: 1px solid #e5e7eb;
+
+      font-size: 10px;
+      font-weight: 750;
+      text-align: left;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+
+    .timeline-detail-table td {
+      padding: 15px 14px;
+
+      color: #334155;
+      background: #ffffff;
+      border-bottom: 1px solid #eef2f7;
+
+      font-size: 12px;
+      line-height: 1.5;
+      vertical-align: middle;
+    }
+
+    .timeline-detail-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .timeline-detail-table tbody tr:hover td {
+      background: #fafbff;
+    }
+
+    .project-cell {
+      min-width: 190px;
+
+      color: #0f172a !important;
+      font-weight: 750;
+    }
+
+    .description-cell {
+      min-width: 250px;
+      max-width: 380px;
+
+      color: #0f172a !important;
+      font-weight: 600;
+
+      white-space: normal;
+    }
+
+    .project-link {
+      color: #4f46e5;
+      font-weight: 750;
+      text-decoration: none;
+    }
+
+    .project-link:hover {
+      text-decoration: underline;
+    }
+
+
+    /* =====================================================
+       EXPIRY
+    ===================================================== */
+
+    .expiry-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 6px 10px;
+      border-radius: 999px;
+
+      font-size: 10px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .expiry-safe {
+      color: #166534;
+      background: #dcfce7;
+    }
+
+    .expiry-warning {
+      color: #854d0e;
+      background: #fef3c7;
+    }
+
+    .expiry-expired {
+      color: #991b1b;
+      background: #fee2e2;
+    }
+
+
+    /* =====================================================
+       STATUS
+    ===================================================== */
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 6px 10px;
+      border-radius: 999px;
+
+      font-size: 10px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .status-aktif {
+      color: #166534;
+      background: #dcfce7;
+    }
+
+    .status-berakhir {
+      color: #991b1b;
+      background: #fee2e2;
+    }
+
+    .status-diperpanjang {
+      color: #4338ca;
+      background: #e0e7ff;
+    }
+
+
+    /* =====================================================
+       ACTION
+    ===================================================== */
+
+    .detail-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      min-height: 34px;
+      padding: 0 12px;
+
+      color: #4338ca;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+
+      font-size: 11px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .detail-button:hover {
+      color: #ffffff;
+      background: #4f46e5;
+      border-color: #4f46e5;
+    }
+
+
+    /* =====================================================
+       PAGINATION
+    ===================================================== */
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+
+      margin-top: 20px;
+      padding: 15px 18px;
+
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 13px;
+    }
+
+    .pagination-info {
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .pagination-buttons {
+      display: flex;
+      gap: 7px;
+    }
+
+    .page-button {
+      min-width: 38px;
+      height: 38px;
+      padding: 0 10px;
+
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
+      border-radius: 9px;
+
+      color: #334155;
+      font-weight: 700;
+
+      cursor: pointer;
+    }
+
+    .page-button:hover:not(:disabled) {
+      color: #4338ca;
+      background: #eef2ff;
+      border-color: #a5b4fc;
+    }
+
+    .page-button.active {
+      color: #ffffff;
+      background: #4f46e5;
+      border-color: #4f46e5;
+    }
+
+    .page-button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+
+    @media (max-width: 900px) {
+      .filter-card {
+        grid-template-columns: 1fr;
+      }
+
+      .main-content {
+        width: 100%;
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .timeline-type-header,
+      .timeline-sub-header,
+      .timeline-category-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .timeline-type-header {
+        padding: 19px;
+      }
+
+      .timeline-category-list {
+        padding: 13px;
+      }
+
+      .pagination {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .pagination-buttons {
+        justify-content: center;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+
+    <div id="sidebarContainer"></div>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="main-content">
+
+      <div class="timeline-page">
+
+        <!-- HEADER -->
+
+        <div class="page-header">
+
+          <h1>
+            Timeline
+          </h1>
+
+          <p>
+            Monitoring periode dan masa berakhir proyek.
+          </p>
+
+        </div>
+
+
+        <!-- FILTER -->
+
+        <div class="filter-card">
+
+          <div class="filter-field">
+
+            <label for="timelineSearch">
+              Cari Deskripsi / Proyek
+            </label>
+
+            <input
+              type="search"
+              id="timelineSearch"
+              placeholder="Masukkan deskripsi atau nama proyek..."
+            >
+
+          </div>
+
+
+          <div class="filter-field">
+
+            <label for="filterBerakhir">
+              Berakhir Pada
+            </label>
+
+            <select id="filterBerakhir">
+
+              <option value="">
+                Semua Periode
+              </option>
+
+              <option value="1">
+                1 Bulan
+              </option>
+
+              <option value="3">
+                3 Bulan
+              </option>
+
+              <option value="6">
+                6 Bulan
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="filter-reset"
+            id="resetTimelineFilter"
+          >
+            Reset
+          </button>
+
+        </div>
+
+
+        <!-- GROUPED TIMELINE -->
+
+        <div id="timelineGroupedContainer">
+
+          <div class="empty-state">
+            Memuat Timeline...
+          </div>
+
+        </div>
+
+
+        <!-- PAGINATION -->
+
+        <div
+          class="pagination"
+          id="timelinePagination"
+          style="display:none;"
+        >
+
+          <div
+            class="pagination-info"
+            id="timelinePaginationInfo"
+          >
+            -
+          </div>
+
+          <div
+            class="pagination-buttons"
+            id="timelinePaginationButtons"
+          ></div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+
+  <script src="/layout.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/timeline.js"></script>
+
+</body>
+
+</html>

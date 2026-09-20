@@ -11,6 +11,8 @@ let activePartnerId = null;
 let activePartnerDokumenId = null;
 let modeTerminKlien = null;
 let editKategoriDipilih = [];
+let activePartnerDokumenUploadId =
+  null;
 
 
 
@@ -34,6 +36,22 @@ function rupiah(value) {
 
 }
 
+function angka(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return 0;
+  }
+
+  const hasil =
+    Number(value);
+
+  return Number.isFinite(hasil)
+    ? hasil
+    : 0;
+}
 
 function tanggal(value) {
 
@@ -97,6 +115,19 @@ function tanggalInput(value) {
   return `${tahun}-${bulan}-${hari}`;
 }
 
+// ======================================================
+// ESCAPE HTML
+// Mencegah teks dari API dianggap sebagai tag HTML
+// ======================================================
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 // =====================================================
 // EDIT KATEGORI
 // ======================================================
@@ -214,7 +245,7 @@ function renderEditKategori() {
 
 document.getElementById(
   "tambahEditKategori"
-).addEventListener(
+    ).addEventListener(
   "click",
   () => {
 
@@ -284,89 +315,66 @@ document.getElementById(
   }
 );
 
-
 // ======================================================
-// LOAD DETAIL
+// LOAD DETAIL PROYEK
 // ======================================================
 
 async function loadDetail() {
-
-  if (!proyekId) {
-
-    alert("ID proyek tidak ditemukan.");
-
-    window.location.href =
-      "/proyek.html";
-
-    return;
-  }
-
-
   try {
+    if (!proyekId) {
+      throw new Error(
+        "ID proyek tidak ditemukan pada URL"
+      );
+    }
 
     const response =
       await fetch(
         `/api/proyek/${proyekId}/detail`
       );
 
-
     const result =
       await response.json();
 
-
     if (!response.ok) {
-
       throw new Error(
         result.error ||
         "Gagal mengambil detail proyek"
       );
-
     }
 
+    // Simpan seluruh response
+    detailData =
+      result;
 
-    detailData = result;
+    console.log(
+      "DETAIL PROYEK:",
+      detailData
+    );
 
-
-    // Ambil mode termin klien sebelum render
-    if (
-      detailData?.klien?.proyek_klien_id
-    ) {
-
-      try {
-
-        await loadModeTerminKlien();
-
-      } catch (error) {
-
-        console.error(
-          "ERROR LOAD MODE TERMIN KLIEN:",
-          error
-        );
-
-        modeTerminKlien = null;
-
-      }
-
-    }
-
-
-  renderDetail();
-
-
+    // Render seluruh detail
+    renderDetail();
 
   } catch (error) {
-
     console.error(
       "ERROR DETAIL:",
       error
     );
 
-    alert(error.message);
+    const container =
+      document.getElementById(
+        "detailContainer"
+      );
 
+    if (container) {
+      container.innerHTML = `
+        <div class="empty-state">
+          Gagal mengambil detail proyek:
+          ${error.message}
+        </div>
+      `;
+    }
   }
-
 }
-
 
 // ======================================================
 // RENDER
@@ -405,128 +413,351 @@ document.getElementById(
 
 
 // ======================================================
-// SUMMARY NILAI PROYEK
+// SUMMARY NILAI DAN PEMBAYARAN
 // ======================================================
 
 const jenisProyek =
-  detailData?.proyek?.jenis_proyek || "";
+  String(
+    detailData?.proyek?.jenis_proyek ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+
+const terminKlien =
+  Array.isArray(klien?.termin)
+    ? klien.termin
+    : [];
+
+
+const daftarPartner =
+  Array.isArray(partners)
+    ? partners
+    : [];
 
 
 // ======================================================
-// KHUSUS TRANSAKSI
+// CEK STATUS SUDAH DIBAYAR
 // ======================================================
 
-if (jenisProyek === "Transaksi") {
+function statusSudahDibayar(status) {
+  const statusNormal =
+    String(status || "")
+      .trim()
+      .toLowerCase();
 
-  // TOTAL TERMIN KLIEN
-  const nilaiKlienTransaksi =
-    (detailData?.klien?.termin || [])
-      .reduce(
-        (total, item) =>
-          total + Number(item.nominal || 0),
-        0
+  return (
+    statusNormal === "dibayar" ||
+    statusNormal === "sudah dibayar" ||
+    statusNormal === "lunas" ||
+    statusNormal === "paid"
+  );
+}
+
+
+// ======================================================
+// HITUNG NILAI NOMINAL TERMIN
+// ======================================================
+
+function hitungNominalTermin(
+  termin,
+  nilaiAcuan
+) {
+  const nominal =
+    angka(termin?.nominal);
+
+  // Jika nominal termin tersedia,
+  // gunakan nominal langsung
+  if (nominal > 0) {
+    return nominal;
+  }
+
+  const persentase =
+    angka(termin?.persentase);
+
+  // Jika nominal kosong tetapi persentase tersedia,
+  // hitung dari nilai final
+  if (
+    persentase > 0 &&
+    nilaiAcuan > 0
+  ) {
+    return (
+      nilaiAcuan *
+      persentase /
+      100
+    );
+  }
+
+  return 0;
+}
+
+
+// ======================================================
+// NILAI FINAL KLIEN
+// ======================================================
+
+const nilaiKlienDariData =
+  angka(summary?.nilai_klien) ||
+  angka(summary?.nilai_final_klien) ||
+  nilaiTerakhir(klien);
+
+
+// Untuk proyek Transaksi,
+// nilai klien bisa berasal dari total termin
+const totalSeluruhTerminKlien =
+  terminKlien.reduce(
+    (total, item) => {
+      return (
+        total +
+        angka(item.nominal)
+      );
+    },
+    0
+  );
+
+
+const nilaiKlien =
+  jenisProyek === "transaksi" &&
+  totalSeluruhTerminKlien > 0
+    ? totalSeluruhTerminKlien
+    : nilaiKlienDariData;
+
+
+// ======================================================
+// NILAI FINAL PARTNER
+// ======================================================
+
+const nilaiPartnerDariData =
+  daftarPartner.reduce(
+    (total, partner) => {
+      return (
+        total +
+        nilaiTerakhir(partner)
+      );
+    },
+    0
+  );
+
+
+const totalSeluruhTerminPartner =
+  daftarPartner.reduce(
+    (totalPartner, partner) => {
+      const terminPartner =
+        Array.isArray(partner.termin)
+          ? partner.termin
+          : [];
+
+      const totalTermin =
+        terminPartner.reduce(
+          (subtotal, item) => {
+            return (
+              subtotal +
+              angka(item.nominal)
+            );
+          },
+          0
+        );
+
+      return (
+        totalPartner +
+        totalTermin
+      );
+    },
+    0
+  );
+
+
+const nilaiPartner =
+  jenisProyek === "transaksi" &&
+  totalSeluruhTerminPartner > 0
+    ? totalSeluruhTerminPartner
+    : (
+        angka(
+          summary?.nilai_partner
+        ) ||
+        angka(
+          summary?.nilai_final_partner
+        ) ||
+        nilaiPartnerDariData
       );
 
 
-  // TOTAL TERMIN SELURUH PARTNER
-  const nilaiPartnerTransaksi =
-    (detailData?.partners || [])
-      .reduce(
-        (totalPartner, partner) => {
+// ======================================================
+// DIBAYAR KLIEN
+// ======================================================
 
-          const totalTerminPartner =
-            (partner.termin || [])
-              .reduce(
-                (total, item) =>
-                  total + Number(item.nominal || 0),
-                0
+const dibayarKlien =
+  terminKlien
+    .filter(item =>
+      statusSudahDibayar(
+        item.status_pembayaran
+      )
+    )
+    .reduce(
+      (total, item) => {
+        return (
+          total +
+          hitungNominalTermin(
+            item,
+            nilaiKlien
+          )
+        );
+      },
+      0
+    );
+
+
+// ======================================================
+// BELUM DIBAYAR KLIEN
+// ======================================================
+
+const belumDibayarKlien =
+  Math.max(
+    nilaiKlien -
+    dibayarKlien,
+    0
+  );
+
+
+// ======================================================
+// DIBAYAR PARTNER
+// ======================================================
+
+const dibayarPartner =
+  daftarPartner.reduce(
+    (totalPartner, partner) => {
+      const nilaiFinalPartner =
+        nilaiTerakhir(partner);
+
+      const terminPartner =
+        Array.isArray(partner.termin)
+          ? partner.termin
+          : [];
+
+      const terminSudahDibayar =
+        terminPartner
+          .filter(item =>
+            statusSudahDibayar(
+              item.status_pembayaran
+            )
+          )
+          .reduce(
+            (subtotal, item) => {
+              return (
+                subtotal +
+                hitungNominalTermin(
+                  item,
+                  nilaiFinalPartner
+                )
               );
-
-          return (
-            totalPartner +
-            totalTerminPartner
+            },
+            0
           );
 
-        },
-        0
+      return (
+        totalPartner +
+        terminSudahDibayar
       );
-
-
-  // MARGIN
-  const marginTransaksi =
-    nilaiKlienTransaksi -
-    nilaiPartnerTransaksi;
-
-
-  // MARGIN %
-  const marginPersenTransaksi =
-    nilaiKlienTransaksi > 0
-      ? (
-          marginTransaksi /
-          nilaiKlienTransaksi
-        ) * 100
-      : 0;
-
-
-  document.getElementById(
-    "nilaiKlien"
-  ).textContent =
-    rupiah(nilaiKlienTransaksi);
-
-
-  document.getElementById(
-    "nilaiPartner"
-  ).textContent =
-    rupiah(nilaiPartnerTransaksi);
-
-
-  document.getElementById(
-    "margin"
-  ).textContent =
-    rupiah(marginTransaksi);
-
-
-  document.getElementById(
-    "marginPersen"
-  ).textContent =
-    `${marginPersenTransaksi.toFixed(2)}%`;
-
-}
+    },
+    0
+  );
 
 
 // ======================================================
-// REGULER/SLA DAN SEWA
+// BELUM DIBAYAR PARTNER
 // ======================================================
 
-else {
-
-  document.getElementById(
-    "nilaiKlien"
-  ).textContent =
-    rupiah(summary.nilai_klien);
-
-
-  document.getElementById(
-    "nilaiPartner"
-  ).textContent =
-    rupiah(summary.nilai_partner);
+const belumDibayarPartner =
+  Math.max(
+    nilaiPartner -
+    dibayarPartner,
+    0
+  );
 
 
-  document.getElementById(
-    "margin"
-  ).textContent =
-    rupiah(summary.margin);
+// ======================================================
+// MARGIN
+// ======================================================
+
+const marginNominal =
+  nilaiKlien -
+  nilaiPartner;
 
 
-  document.getElementById(
-    "marginPersen"
-  ).textContent =
-    `${Number(
-      summary.margin_persen || 0
-    ).toFixed(2)}%`;
+const marginPersenNilai =
+  nilaiKlien > 0
+    ? (
+        marginNominal /
+        nilaiKlien
+      ) * 100
+    : 0;
 
-}
 
+// ======================================================
+// TAMPILKAN KE CARD
+// ======================================================
+
+const ringkasanNilai = {
+  nilaiKlien:
+    rupiah(nilaiKlien),
+
+  nilaiPartner:
+    rupiah(nilaiPartner),
+
+  margin:
+    rupiah(marginNominal),
+
+  marginPersen:
+    `${marginPersenNilai.toFixed(2)}%`,
+
+  dibayarKlien:
+    rupiah(dibayarKlien),
+
+  belumDibayarKlien:
+    rupiah(belumDibayarKlien),
+
+  dibayarPartner:
+    rupiah(dibayarPartner),
+
+  belumDibayarPartner:
+    rupiah(belumDibayarPartner)
+};
+
+
+Object.entries(
+  ringkasanNilai
+).forEach(
+  ([id, value]) => {
+    const element =
+      document.getElementById(id);
+
+    if (element) {
+      element.textContent =
+        value;
+    }
+  }
+);
+
+
+console.log(
+  "RINGKASAN PEMBAYARAN:",
+  {
+    nilaiKlien,
+    dibayarKlien,
+    belumDibayarKlien,
+
+    nilaiPartner,
+    dibayarPartner,
+    belumDibayarPartner,
+
+    marginNominal,
+    marginPersenNilai,
+
+    terminKlien,
+    daftarPartner
+  }
+);
   
 
   // PROYEK
@@ -637,22 +868,196 @@ function renderPIC(pic) {
 
 }
 
-
 // ======================================================
 // KLIEN
 // ======================================================
+function nilaiTerakhir(data = {}) {
+  const kandidat = [
+    data.nilai_final,
+    data.nilai_final_klien,
+    data.nilai_final_partner,
+    data.nilai_nego_3,
+    data.nilai_nego_2,
+    data.nilai_nego_1,
+    data.nilai_submit
+  ];
 
-function renderKlien(klien) {
+  for (const value of kandidat) {
+    const nominal = Number(value);
 
-  const container =
-    document.getElementById(
-      "klienInfo"
+    if (
+      Number.isFinite(nominal) &&
+      nominal > 0
+    ) {
+      return nominal;
+    }
+  }
+
+  return 0;
+}
+
+function selisihTanggal(mulai, akhir) {
+  if (!mulai || !akhir) {
+    return "-";
+  }
+
+  const start = new Date(mulai);
+  const end = new Date(akhir);
+
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end < start
+  ) {
+    return "-";
+  }
+
+  let tahun =
+    end.getUTCFullYear() -
+    start.getUTCFullYear();
+
+  let bulan =
+    end.getUTCMonth() -
+    start.getUTCMonth();
+
+  let hari =
+    end.getUTCDate() -
+    start.getUTCDate();
+
+  if (hari < 0) {
+    bulan -= 1;
+
+    hari += new Date(
+      Date.UTC(
+        end.getUTCFullYear(),
+        end.getUTCMonth(),
+        0
+      )
+    ).getUTCDate();
+  }
+
+  if (bulan < 0) {
+    tahun -= 1;
+    bulan += 12;
+  }
+
+  const hasil = [];
+
+  // Tidak ditampilkan jika 0
+  if (tahun > 0) {
+    hasil.push(
+      `${tahun} tahun`
+    );
+  }
+
+  // Tidak ditampilkan jika 0
+  if (bulan > 0) {
+    hasil.push(
+      `${bulan} bulan`
+    );
+  }
+
+  // Hari tetap ditampilkan jika tahun dan bulan 0
+  if (
+    hari > 0 ||
+    hasil.length === 0
+  ) {
+    hasil.push(
+      `${hari} hari`
+    );
+  }
+
+  return hasil.join(" ");
+}
+
+function berakhirDalam(tanggalAkhir) {
+  if (!tanggalAkhir) {
+    return {
+      text: "-",
+      className: "contract-expiry-warning"
+    };
+  }
+
+  const sekarang = new Date();
+
+  const hariIni = new Date(
+    Date.UTC(
+      sekarang.getFullYear(),
+      sekarang.getMonth(),
+      sekarang.getDate()
+    )
+  );
+
+  const akhirAsli =
+    new Date(tanggalAkhir);
+
+  if (
+    Number.isNaN(
+      akhirAsli.getTime()
+    )
+  ) {
+    return {
+      text: "-",
+      className: "contract-expiry-warning"
+    };
+  }
+
+  const akhir = new Date(
+    Date.UTC(
+      akhirAsli.getUTCFullYear(),
+      akhirAsli.getUTCMonth(),
+      akhirAsli.getUTCDate()
+    )
+  );
+
+  const selisihHari =
+    Math.ceil(
+      (
+        akhir.getTime() -
+        hariIni.getTime()
+      ) /
+      (
+        1000 *
+        60 *
+        60 *
+        24
+      )
     );
 
-  if (!container) return;
+  if (selisihHari < 0) {
+    return {
+      text: "Kontrak telah berakhir",
+      className:
+        "contract-expiry-expired"
+    };
+  }
+
+  const text =
+    selisihTanggal(
+      hariIni,
+      akhir
+    );
+
+  return {
+    text,
+
+    // Kurang dari 3 bulan atau 90 hari = kuning
+    className:
+      selisihHari < 90
+        ? "contract-expiry-warning"
+        : "contract-expiry-safe"
+  };
+}
+
+function renderKlien(klien) {
+  const container =
+    document.getElementById("klienInfo");
+
+  if (!container) {
+    return;
+  }
 
   if (!klien) {
-
     container.innerHTML = `
       <div class="empty">
         Belum ada klien.
@@ -662,20 +1067,51 @@ function renderKlien(klien) {
     return;
   }
 
-  container.innerHTML = `
+  const nilaiSubmit =
+    Number(
+      nilaiSubmitKlienTampil(klien) || 0
+    );
 
-    <div class="grid">
+  const nilaiFinal =
+    nilaiTerakhir(klien);
 
-      <div class="info">
-        <div class="label">
-          Perusahaan
-        </div>
+  const bisnisPerformance =
+    nilaiSubmit > 0
+      ? (
+          (
+            nilaiSubmit -
+            nilaiFinal
+          ) /
+          nilaiSubmit
+        ) * 100
+      : 0;
 
-        <div class="value">
-          ${klien.perusahaan_klien || "-"}
-        </div>
-      </div>
+  const informasiBerakhir =
+  berakhirDalam(
+    klien.tanggal_akhir
+  );
 
+  
+ container.innerHTML = `
+
+  <div
+    class="
+      contract-expiry
+      ${informasiBerakhir.className}
+    "
+  >
+
+    <div class="contract-expiry-label">
+      Berakhir Dalam
+    </div>
+
+    <div class="contract-expiry-value">
+      ${informasiBerakhir.text}
+    </div>
+
+  </div>
+
+  <div class="grid">
 
       <div class="info">
         <div class="label">
@@ -687,7 +1123,6 @@ function renderKlien(klien) {
         </div>
       </div>
 
-
       <div class="info">
         <div class="label">
           Tanggal Akhir
@@ -698,6 +1133,32 @@ function renderKlien(klien) {
         </div>
       </div>
 
+      <div class="info">
+        <div class="label">
+          Durasi
+        </div>
+
+        <div class="value">
+          ${selisihTanggal(
+            klien.tanggal_mulai,
+            klien.tanggal_akhir
+          )}
+        </div>
+      </div>
+
+      <div class="info">
+        <div class="label">
+          Model Pembayaran
+        </div>
+
+        <div class="value">
+          ${
+            klien.model_pembayaran ||
+            klien.metode_pembayaran ||
+            "-"
+          }
+        </div>
+      </div>
 
       <div class="info">
         <div class="label">
@@ -705,12 +1166,9 @@ function renderKlien(klien) {
         </div>
 
         <div class="value">
-          ${rupiah(
-            nilaiSubmitKlienTampil(klien)
-          )}
+          ${rupiah(nilaiSubmit)}
         </div>
       </div>
-
 
       <div class="info">
         <div class="label">
@@ -718,12 +1176,19 @@ function renderKlien(klien) {
         </div>
 
         <div class="value">
-          ${rupiah(
-            klien.nilai_final
-          )}
+          ${rupiah(nilaiFinal)}
         </div>
       </div>
 
+      <div class="info">
+        <div class="label">
+          Bisnis Performance
+        </div>
+
+        <div class="value">
+          ${bisnisPerformance.toFixed(2)}%
+        </div>
+      </div>
 
       <div class="info">
         <div class="label">
@@ -734,7 +1199,6 @@ function renderKlien(klien) {
           ${klien.status_pengadaan || "-"}
         </div>
       </div>
-
 
       <div class="info">
         <div class="label">
@@ -747,90 +1211,82 @@ function renderKlien(klien) {
       </div>
 
     </div>
-
   `;
-
 }
 
 // ======================================================
-// LOAD MODE TERMIN KLIEN
+// FLOW PERSENTASE DAN NOMINAL TERMIN
 // ======================================================
 
-async function loadModeTerminKlien() {
-
-  const proyekKlienId =
-    detailData?.klien?.proyek_klien_id;
+let inputTerminTerakhir =
+  null;
 
 
-  if (!proyekKlienId) {
+// ======================================================
+// AMBIL NILAI FINAL ASLI
+// Tidak menggunakan total termin.
+// ======================================================
 
-    modeTerminKlien = null;
+function ambilNilaiFinal(data) {
+  if (!data) return 0;
 
-    throw new Error(
-      "Data proyek klien tidak ditemukan."
-    );
+  const daftarNilai = [
+    data.nilai_nego_3,
+    data.nilai_nego_2,
+    data.nilai_nego_1,
+    data.nilai_submit
+  ];
 
+  for (
+    const nilai of daftarNilai
+  ) {
+    const angka =
+      Number(nilai || 0);
+
+    if (angka > 0) {
+      return angka;
+    }
   }
 
-
-  const response =
-    await fetch(
-      `/api/proyek/klien/${proyekKlienId}/termin-mode`
-    );
+  return 0;
+}
 
 
-  const data =
-    await response.json();
+// ======================================================
+// AMBIL DATA KLIEN ATAU PARTNER AKTIF
+// ======================================================
 
-
-  if (!response.ok) {
-
-    throw new Error(
-      data.error ||
-      "Gagal mengambil mode termin klien"
-    );
-
+function getDataTerminAktif() {
+  if (activePartnerId) {
+    return (
+      detailData?.partners || []
+    ).find(item =>
+      Number(
+        item.proyek_partner_id
+      ) ===
+      Number(activePartnerId)
+    ) || null;
   }
 
+  return detailData?.klien || null;
+}
 
-  modeTerminKlien =
-    data.mode_termin;
+// ======================================================
+// NILAI FINAL TERMIN AKTIF
+// ======================================================
 
-
-  console.log(
-    "MODE TERMIN KLIEN:",
-    data
+function getNilaiFinalTerminAktif() {
+  return ambilNilaiFinal(
+    getDataTerminAktif()
   );
-
-
-  return modeTerminKlien;
 }
 
 
 // ======================================================
-// CEK MODE NOMINAL KLIEN
+// ATUR INPUT PERSENTASE DAN NOMINAL
 // ======================================================
 
-function isTerminKlienNominal() {
-
-  return (
-    modeTerminKlien === "nominal"
-  );
-
-}
-
-// ======================================================
-// UPDATE TAMPILAN MODAL TERMIN
-// ======================================================
-function updateTerminModalMode(
-  mode = null
-) {
-
- const nominalMode =
-  activePartnerId
-    ? isTerminNominal()
-    : isTerminKlienNominal();
-
+function aturInputTermin() {
   const persentaseGroup =
     document.getElementById(
       "persentaseTerminGroup"
@@ -851,53 +1307,168 @@ function updateTerminModalMode(
       "nominalTermin"
     );
 
+  const nilaiFinal =
+    getNilaiFinalTerminAktif();
 
-  if (nominalMode) {
 
-    if (persentaseGroup) {
-      persentaseGroup.style.display =
-        "none";
-    }
-
-    if (nominalGroup) {
-      nominalGroup.style.display =
-        "";
-    }
-
-    if (persentaseInput) {
-      persentaseInput.required =
-        false;
-    }
-
-    if (nominalInput) {
-      nominalInput.required =
-        true;
-    }
-
-  } else {
-
-    if (persentaseGroup) {
-      persentaseGroup.style.display =
-        "";
-    }
-
-    if (nominalGroup) {
-      nominalGroup.style.display =
-        "none";
-    }
-
-    if (persentaseInput) {
-      persentaseInput.required =
-        true;
-    }
-
-    if (nominalInput) {
-      nominalInput.required =
-        false;
-    }
-
+  // Selalu munculkan kedua input
+  if (persentaseGroup) {
+    persentaseGroup.style.display =
+      "";
   }
 
+  if (nominalGroup) {
+    nominalGroup.style.display =
+      "";
+  }
+
+  if (!persentaseInput) return;
+  if (!nominalInput) return;
+
+
+  nominalInput.disabled =
+    false;
+
+  nominalInput.required =
+    true;
+
+
+  // Nilai final tersedia
+  if (nilaiFinal > 0) {
+    persentaseInput.disabled =
+      false;
+
+    persentaseInput.required =
+      true;
+
+    persentaseInput.placeholder =
+      "Isi persentase";
+
+    nominalInput.placeholder =
+      "Isi nominal";
+
+  } else {
+    // Nilai final belum ada:
+    // hanya nominal yang dapat diisi
+    persentaseInput.disabled =
+      true;
+
+    persentaseInput.required =
+      false;
+
+    persentaseInput.value =
+      "";
+
+    persentaseInput.placeholder =
+      "Otomatis";
+
+    nominalInput.placeholder =
+      "Isi nominal termin";
+  }
+}
+
+
+// ======================================================
+// PERHITUNGAN OTOMATIS INPUT
+// ======================================================
+
+const persentaseTerminInput =
+  document.getElementById(
+    "persentaseTermin"
+  );
+
+const nominalTerminInput =
+  document.getElementById(
+    "nominalTermin"
+  );
+
+
+if (
+  persentaseTerminInput &&
+  nominalTerminInput
+) {
+  // Persentase → Nominal
+  persentaseTerminInput.addEventListener(
+    "input",
+    () => {
+      const nilaiFinal =
+        getNilaiFinalTerminAktif();
+
+      if (nilaiFinal <= 0) {
+        persentaseTerminInput.value =
+          "";
+
+        return;
+      }
+
+      inputTerminTerakhir =
+        "persentase";
+
+      const persentase =
+        Number(
+          persentaseTerminInput.value ||
+          0
+        );
+
+      if (
+        !Number.isFinite(
+          persentase
+        ) ||
+        persentase <= 0
+      ) {
+        nominalTerminInput.value =
+          "";
+
+        return;
+      }
+
+      const nominal =
+        nilaiFinal *
+        persentase /
+        100;
+
+      nominalTerminInput.value =
+        nominal.toFixed(2);
+    }
+  );
+
+
+  // Nominal → Persentase
+  nominalTerminInput.addEventListener(
+    "input",
+    () => {
+      inputTerminTerakhir =
+        "nominal";
+
+      const nilaiFinal =
+        getNilaiFinalTerminAktif();
+
+      const nominal =
+        Number(
+          nominalTerminInput.value ||
+          0
+        );
+
+      if (
+        nilaiFinal <= 0 ||
+        !Number.isFinite(nominal) ||
+        nominal <= 0
+      ) {
+        persentaseTerminInput.value =
+          "";
+
+        return;
+      }
+
+      const persentase =
+        nominal /
+        nilaiFinal *
+        100;
+
+      persentaseTerminInput.value =
+        persentase.toFixed(2);
+    }
+  );
 }
 
 // ======================================================
@@ -957,248 +1528,188 @@ function nilaiSubmitKlienTampil(klien) {
 // ======================================================
 
 function renderTermin(klien) {
-
   const tbody =
     document.getElementById(
       "terminTable"
     );
 
-
   if (!tbody) return;
 
 
-  const nominalMode =
-  activePartnerId
-    ? isTerminNominal()
-    : isTerminKlienNominal();
+  const termin =
+    Array.isArray(klien?.termin)
+      ? klien.termin
+      : [];
 
 
-  // ===============================
-  // BELUM ADA TERMIN
-  // ===============================
-
-  if (
-    !klien ||
-    !Array.isArray(klien.termin) ||
-    klien.termin.length === 0
-  ) {
-
+  if (termin.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7">
+        <td colspan="8">
           Belum ada termin pembayaran.
         </td>
       </tr>
     `;
-
 
     const totalTermin =
       document.getElementById(
         "totalTermin"
       );
 
-
     if (totalTermin) {
-
       totalTermin.textContent =
-        nominalMode
-          ? rupiah(0)
-          : "0%";
-
+        "0.00%";
     }
-
-
-    const progress =
-      document.getElementById(
-        "terminProgress"
-      );
-
-
-    if (progress) {
-      progress.style.width = "0%";
-    }
-
 
     return;
   }
 
 
-  const nilaiFinal =
-    Number(
-      klien.nilai_final || 0
+  // Nilai final dari submit/nego
+  const nilaiFinalAsli =
+    ambilNilaiFinal(klien);
+
+
+  // Total nominal seluruh termin
+  const totalNominal =
+    termin.reduce(
+      (total, item) =>
+        total +
+        Number(
+          item.nominal || 0
+        ),
+      0
     );
 
 
-  let totalPersen = 0;
-  let totalNominal = 0;
+  /*
+   * Jika nilai final asli tidak ada,
+   * nilai final = total nominal termin.
+   */
+  const nilaiFinalEfektif =
+    nilaiFinalAsli > 0
+      ? nilaiFinalAsli
+      : totalNominal;
+
+
+  let totalPersentase =
+    0;
 
 
   tbody.innerHTML =
-    klien.termin
-      .map(item => {
+    termin.map(item => {
+      let nominal =
+        Number(
+          item.nominal || 0
+        );
 
-        let persen =
-          Number(
-            item.persentase || 0
-          );
-
-
-        let nominal =
-          Number(
-            item.nominal || 0
-          );
+      let persentase =
+        Number(
+          item.persentase || 0
+        );
 
 
-        // ==========================
-        // REGULER / SLA
-        // ==========================
-
-        if (!nominalMode) {
-
-          nominal =
-            nilaiFinal *
-            persen /
-            100;
-
-        }
-
-
-        totalPersen += persen;
-        totalNominal += nominal;
+      // Jika nominal belum dikirim API
+      if (
+        nominal <= 0 &&
+        persentase > 0 &&
+        nilaiFinalEfektif > 0
+      ) {
+        nominal =
+          nilaiFinalEfektif *
+          persentase /
+          100;
+      }
 
 
-        return `
-
-          <tr>
-
-            <td>
-              ${item.nama_termin || "-"}
-            </td>
-
-
-            <td>
-              ${
-                nominalMode
-                  ? "-"
-                  : `${persen.toFixed(2)}%`
-              }
-            </td>
+      // Jika persentase belum dikirim API
+      if (
+        persentase <= 0 &&
+        nominal > 0 &&
+        nilaiFinalEfektif > 0
+      ) {
+        persentase =
+          nominal /
+          nilaiFinalEfektif *
+          100;
+      }
 
 
-            <td>
-              ${rupiah(nominal)}
-            </td>
+      totalPersentase +=
+        persentase;
 
 
-            <td>
-              ${item.status_pembayaran || "-"}
-            </td>
+      return `
+        <tr>
 
+          <td>
+            ${item.nama_termin || "-"}
+          </td>
 
-            <td>
-              ${tanggal(
-                item.tanggal_jatuh_tempo
-              )}
-            </td>
+          <td>
+            ${persentase.toFixed(2)}%
+          </td>
 
+          <td>
+            ${rupiah(nominal)}
+          </td>
 
-            <td>
-              ${tanggal(
-                item.tanggal_bayar
-              )}
-            </td>
+          <td>
+            ${item.status_pembayaran || "-"}
+          </td>
 
+          <td>
+            ${tanggal(
+              item.tanggal_jatuh_tempo
+            )}
+          </td>
 
-            <td>
+          <td>
+            ${tanggal(
+              item.tanggal_bayar
+            )}
+          </td>
 
-              <button
-                class="btn-secondary"
-                onclick="editTerminKlien(${item.id})"
-              >
-                Edit
-              </button>
+          <td>
+            ${item.syarat_pembayaran || "-"}
+          </td>
 
+          <td>
 
-              <button
-                class="btn-danger"
-                onclick="hapusTermin(${item.id})"
-              >
-                Hapus
-              </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              onclick="editTerminKlien(${item.id})"
+            >
+              Edit
+            </button>
 
-            </td>
+            <button
+              type="button"
+              class="btn-danger"
+              onclick="hapusTermin(${item.id})"
+            >
+              Hapus
+            </button>
 
-          </tr>
+          </td>
 
-        `;
+        </tr>
+      `;
+    }).join("");
 
-      })
-      .join("");
-
-
-  // ===============================
-  // TOTAL
-  // ===============================
 
   const totalTermin =
     document.getElementById(
       "totalTermin"
     );
 
-
   if (totalTermin) {
-
     totalTermin.textContent =
-      nominalMode
-        ? rupiah(totalNominal)
-        : `${totalPersen.toFixed(2)}%`;
-
+      `${totalPersentase.toFixed(2)}%`;
+  }
   }
 
-
-  // ===============================
-  // PROGRESS
-  // ===============================
-
-  let progressValue = 0;
-
-
-  if (nominalMode) {
-
-    if (nilaiFinal > 0) {
-
-      progressValue =
-        totalNominal /
-        nilaiFinal *
-        100;
-
-    }
-
-  } else {
-
-    progressValue =
-      totalPersen;
-
-  }
-
-
-  const progress =
-    document.getElementById(
-      "terminProgress"
-    );
-
-
-  if (progress) {
-
-    progress.style.width =
-      `${Math.min(
-        progressValue,
-        100
-      )}%`;
-
-  }
-
-}
 
 
 // ======================================================
@@ -1253,7 +1764,9 @@ if (tambahTerminButton) {
       ).textContent =
         "Tambah Termin Klien";
 
-      updateTerminModalMode();
+      inputTerminTerakhir =
+        null;
+      aturInputTermin();
 
       terminModal.classList.add(
         "show"
@@ -1274,25 +1787,24 @@ const batalTermin =
     "batalTermin"
   );
 
+  if (batalTermin) {
 
-if (batalTermin) {
+    batalTermin.addEventListener(
+      "click",
+      () => {
 
-  batalTermin.addEventListener(
-    "click",
-    () => {
-
-      terminModal.classList.remove(
-        "show"
-      );
+        terminModal.classList.remove(
+          "show"
+        );
 
 
-      activePartnerId = null;
-      activePartnerTerminId = null;
+        activePartnerId = null;
+        activePartnerTerminId = null;
 
-    }
-  );
+      }
+    );
 
-}
+  }
 
 
 // ======================================================
@@ -1312,51 +1824,61 @@ document.getElementById(
       document.getElementById(
         "terminId"
       ).value;
+const nilaiFinal =
+  getNilaiFinalTerminAktif();
 
+const persentaseInput =
+  document.getElementById(
+    "persentaseTermin"
+  );
 
-   const nominalMode =
-  activePartnerId
-    ? isTerminNominal()
-    : isTerminKlienNominal();
+const nominalInput =
+  document.getElementById(
+    "nominalTermin"
+  );
 
+const persenValue =
+  persentaseInput.value === ""
+    ? null
+    : Number(
+        persentaseInput.value
+      );
 
-    const persenValue =
-      Number(
-        document.getElementById(
-          "persentaseTermin"
-        ).value || 0
+const nominalValue =
+  nominalInput.value === ""
+    ? null
+    : Number(
+        nominalInput.value
       );
 
 
-    const nominalValue =
-      Number(
-        document.getElementById(
-          "nominalTermin"
-        ).value || 0
-      );
-
-
- const payload = {
-
+const payload = {
   nama_termin:
     document.getElementById(
       "namaTermin"
     ).value.trim(),
 
   persentase:
-    nominalMode
-      ? null
-      : persenValue,
+    nilaiFinal > 0
+      ? persenValue
+      : null,
 
   nominal:
-    nominalMode
-      ? nominalValue
-      : null,
+    nominalValue,
+
+  input_terakhir:
+    nilaiFinal > 0
+      ? (
+          inputTerminTerakhir ||
+          "persentase"
+        )
+      : "nominal",
 
   status_pembayaran:
     document.getElementById(
       "statusPembayaran"
-    ).value,
+    ).value ||
+    "Belum Dibayar",
 
   tanggal_jatuh_tempo:
     document.getElementById(
@@ -1366,76 +1888,70 @@ document.getElementById(
   tanggal_bayar:
     document.getElementById(
       "tanggalBayar"
-    ).value || null
+    ).value || null,
 
+  syarat_pembayaran:
+    document.getElementById(
+      "syaratPembayaran"
+    ).value.trim() || null
 };
 
 
-    // ======================================================
-    // VALIDASI NAMA TERMIN
-    // ======================================================
-
-    if (!payload.nama_termin) {
-
-      alert(
-        "Nama termin wajib diisi."
-      );
-
-      document.getElementById(
-        "namaTermin"
-      ).focus();
-
-      return;
-    }
+console.log(
+  "PAYLOAD TERMIN:",
+  payload
+);
 
 
-    // ======================================================
-    // VALIDASI NILAI TERMIN
-    // ======================================================
+if (!payload.nama_termin) {
+  alert(
+    "Nama termin wajib diisi."
+  );
 
-    if (nominalMode) {
+  document.getElementById(
+    "namaTermin"
+  ).focus();
 
-      // SEWA / TRANSAKSI
+  return;
+}
 
-      if (
-        !payload.nominal ||
-        payload.nominal <= 0
-      ) {
 
-        alert(
-          "Nominal termin harus lebih dari Rp 0."
-        );
+if (
+  payload.nominal === null ||
+  !Number.isFinite(
+    payload.nominal
+  ) ||
+  payload.nominal <= 0
+) {
+  alert(
+    "Nominal termin harus lebih dari Rp 0."
+  );
 
-        document.getElementById(
-          "nominalTermin"
-        ).focus();
+  nominalInput.focus();
 
-        return;
-      }
+  return;
+}
 
-    } else {
 
-      // REGULER / SLA
+if (
+  nilaiFinal > 0 &&
+  (
+    payload.persentase === null ||
+    !Number.isFinite(
+      payload.persentase
+    ) ||
+    payload.persentase <= 0 ||
+    payload.persentase > 100
+  )
+) {
+  alert(
+    "Persentase harus lebih dari 0 dan maksimal 100%."
+  );
 
-      if (
-        !payload.persentase ||
-        payload.persentase <= 0 ||
-        payload.persentase > 100
-      ) {
+  persentaseInput.focus();
 
-        alert(
-          "Persentase harus lebih dari 0 dan maksimal 100."
-        );
-
-        document.getElementById(
-          "persentaseTermin"
-        ).focus();
-
-        return;
-      }
-
-    }
-
+  return;
+}
 
     let url;
     let method;
@@ -1522,8 +2038,6 @@ document.getElementById(
         }
       );
 
-console.log("MODE TERMIN KLIEN:", modeTerminKlien);
-console.log("NOMINAL MODE:", nominalMode);
 console.log("PAYLOAD TERMIN:", payload);
 console.log(
   "PAYLOAD TERMIN JSON:",
@@ -1599,8 +2113,7 @@ console.log(
 // ======================================================
 
 window.editTerminKlien =
- async function (id) {
-
+  function (id) {
     const termin =
       detailData?.klien?.termin?.find(
         item =>
@@ -1608,92 +2121,56 @@ window.editTerminKlien =
           Number(id)
       );
 
-
     if (!termin) {
-
       alert(
         "Termin klien tidak ditemukan."
       );
 
       return;
-
     }
 
 
-    // Pastikan mode KLIEN
-    activePartnerId = null;
-    activePartnerTerminId = null;
+    activePartnerId =
+      null;
+
+    activePartnerTerminId =
+      null;
+
+    inputTerminTerakhir =
+      ambilNilaiFinal(
+        detailData?.klien
+      ) > 0
+        ? "persentase"
+        : "nominal";
 
 
-    // ID TERMIN
     document.getElementById(
       "terminId"
     ).value =
       termin.id;
 
 
-    // NAMA TERMIN
     document.getElementById(
       "namaTermin"
     ).value =
       termin.nama_termin || "";
 
 
-    // Ambil mode termin KLIEN dari backend
-try {
-
-  const mode =
-    await loadModeTerminKlien();
-
-  updateTerminModalMode(
-    mode
-  );
-
-} catch (error) {
-
-  console.error(
-    "ERROR MODE TERMIN KLIEN:",
-    error
-  );
-
-  alert(
-    error.message
-  );
-
-  return;
-
-}
+    aturInputTermin();
 
 
-const nominalMode =
-  isTerminKlienNominal();
-
-
-    // REGULER / SLA
     document.getElementById(
       "persentaseTermin"
     ).value =
-      nominalMode
-        ? ""
-        : (
-            termin.persentase ??
-            ""
-          );
+      termin.persentase ?? "";
 
 
-    // SEWA / TRANSAKSI
     document.getElementById(
       "nominalTermin"
     ).value =
-      nominalMode
-        ? (
-            termin.nominal ??
-            ""
-          )
-        : "";
+      termin.nominal ?? "";
 
 
-    // STATUS PEMBAYARAN
     document.getElementById(
       "statusPembayaran"
     ).value =
@@ -1701,7 +2178,6 @@ const nominalMode =
       "Belum Dibayar";
 
 
-    // JATUH TEMPO
     document.getElementById(
       "tanggalJatuhTempo"
     ).value =
@@ -1710,7 +2186,6 @@ const nominalMode =
       );
 
 
-    // TANGGAL BAYAR
     document.getElementById(
       "tanggalBayar"
     ).value =
@@ -1719,18 +2194,22 @@ const nominalMode =
       );
 
 
-    // JUDUL MODAL
+    document.getElementById(
+      "syaratPembayaran"
+    ).value =
+      termin.syarat_pembayaran ||
+      "";
+
+
     document.getElementById(
       "terminModalTitle"
     ).textContent =
       "Edit Termin Klien";
 
 
-    // BUKA MODAL
     terminModal.classList.add(
       "show"
     );
-
   };
 
 // ======================================================
@@ -1791,182 +2270,1001 @@ async function hapusTerminPartner(id) {
 
 
 // ======================================================
+// TIMELINE PROYEK
+// ======================================================
+
+let timelineData = [];
+
+const timelineModal =
+  document.getElementById(
+    "timelineModal"
+  );
+
+const timelineForm =
+  document.getElementById(
+    "timelineForm"
+  );
+
+
+// ======================================================
+// HITUNG SELISIH HARI
+// ======================================================
+
+function selisihHariTimeline(
+  tanggalAwal,
+  tanggalAkhir
+) {
+  if (
+    !tanggalAwal ||
+    !tanggalAkhir
+  ) {
+    return null;
+  }
+
+  const awal =
+    new Date(
+      `${tanggalAwal}T00:00:00`
+    );
+
+  const akhir =
+    new Date(
+      `${tanggalAkhir}T00:00:00`
+    );
+
+  if (
+    Number.isNaN(awal.getTime()) ||
+    Number.isNaN(akhir.getTime())
+  ) {
+    return null;
+  }
+
+  return Math.ceil(
+    (
+      akhir.getTime() -
+      awal.getTime()
+    ) /
+    86400000
+  );
+}
+
+
+// ======================================================
+// DURASI DAN BERAKHIR DALAM
+// ======================================================
+
+function updatePerhitunganTimeline() {
+  const mulai =
+    document.getElementById(
+      "timelineTanggalMulai"
+    ).value;
+
+  const akhir =
+    document.getElementById(
+      "timelineTanggalAkhir"
+    ).value;
+
+  const durasiElement =
+    document.getElementById(
+      "timelineDurasi"
+    );
+
+  const berakhirElement =
+    document.getElementById(
+      "timelineBerakhirDalam"
+    );
+
+  const durasi =
+    selisihHariTimeline(
+      mulai,
+      akhir
+    );
+
+  durasiElement.value =
+    durasi !== null &&
+    durasi >= 0
+      ? `${durasi} hari`
+      : "-";
+
+  if (!akhir) {
+    berakhirElement.value = "-";
+    return;
+  }
+
+  const hariIni =
+    new Date();
+
+  const hariIniString = [
+    hariIni.getFullYear(),
+    String(
+      hariIni.getMonth() + 1
+    ).padStart(2, "0"),
+    String(
+      hariIni.getDate()
+    ).padStart(2, "0")
+  ].join("-");
+
+  const sisaHari =
+    selisihHariTimeline(
+      hariIniString,
+      akhir
+    );
+
+  if (sisaHari === null) {
+    berakhirElement.value = "-";
+  } else if (sisaHari < 0) {
+    berakhirElement.value =
+      `Berakhir ${Math.abs(sisaHari)} hari lalu`;
+  } else if (sisaHari === 0) {
+    berakhirElement.value =
+      "Berakhir hari ini";
+  } else {
+    berakhirElement.value =
+      `${sisaHari} hari lagi`;
+  }
+}
+
+
+[
+  "timelineTanggalMulai",
+  "timelineTanggalAkhir"
+].forEach(id => {
+  document.getElementById(id)
+    ?.addEventListener(
+      "change",
+      updatePerhitunganTimeline
+    );
+});
+
+
+// ======================================================
+// LOAD TIMELINE
+// ======================================================
+
+async function loadTimeline() {
+  try {
+    const response =
+      await fetch(
+        `/api/proyek/${proyekId}/timeline`
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Gagal mengambil Timeline"
+      );
+    }
+
+    timelineData =
+      Array.isArray(result)
+        ? result
+        : [];
+
+    renderTimeline();
+
+  } catch (error) {
+    console.error(
+      "ERROR LOAD TIMELINE:",
+      error
+    );
+  }
+}
+
+
+// ======================================================
+// RENDER TIMELINE
+// ======================================================
+
+function renderTimeline() {
+  const container =
+    document.getElementById(
+      "timelineContainer"
+    );
+
+  if (!container) {
+    return;
+  }
+
+  // Listing hanya muncul jika ada Timeline
+  if (
+    !Array.isArray(timelineData) ||
+    timelineData.length === 0
+  ) {
+    container.style.display =
+      "none";
+
+    container.innerHTML = "";
+
+    return;
+  }
+
+  container.style.display =
+    "block";
+
+  const sekarang =
+    new Date();
+
+  const hariIni = [
+    sekarang.getFullYear(),
+
+    String(
+      sekarang.getMonth() + 1
+    ).padStart(2, "0"),
+
+    String(
+      sekarang.getDate()
+    ).padStart(2, "0")
+  ].join("-");
+
+  container.innerHTML = `
+    <div class="table-wrapper">
+
+      <table class="timeline-table">
+
+        <thead>
+          <tr>
+            <th>Deskripsi</th>
+            <th>Tanggal Mulai</th>
+            <th>Tanggal Akhir</th>
+            <th>Durasi</th>
+           <th>Berakhir Dalam</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          ${timelineData
+            .map(item => {
+              const tanggalMulai =
+                tanggalInput(
+                  item.tanggal_mulai
+                );
+
+              const tanggalAkhir =
+                tanggalInput(
+                  item.tanggal_akhir
+                );
+
+              const durasi =
+                selisihHariTimeline(
+                  tanggalMulai,
+                  tanggalAkhir
+                );
+
+              const sisaHari =
+                selisihHariTimeline(
+                  hariIni,
+                  tanggalAkhir
+                );
+
+              const status =
+                String(
+                  item.status ||
+                  "Aktif"
+                ).trim();
+
+              const statusClass =
+                status
+                  .toLowerCase()
+                  .replaceAll(
+                    " ",
+                    "-"
+                  );
+
+              let durasiTampil = "-";
+              let berakhirDalam = "-";
+              let berakhirClass = "";
+
+              if (
+                durasi !== null &&
+                durasi >= 0
+              ) {
+                durasiTampil =
+                  `${durasi} hari`;
+              }
+
+              if (sisaHari !== null) {
+                if (sisaHari < 0) {
+                  berakhirDalam =
+                    `Berakhir ${Math.abs(
+                      sisaHari
+                    )} hari lalu`;
+
+                  berakhirClass =
+                    "timeline-expired";
+
+                } else if (
+                  sisaHari === 0
+                ) {
+                  berakhirDalam =
+                    "Berakhir hari ini";
+
+                  berakhirClass =
+                    "timeline-ending";
+
+                } else {
+                  berakhirDalam =
+                    `${sisaHari} hari lagi`;
+
+                  berakhirClass =
+                    sisaHari <= 90
+                      ? "timeline-ending"
+                      : "timeline-safe";
+                }
+              }
+
+              return `
+                <tr>
+
+                  <td class="timeline-description-cell">
+                    ${escapeHtml(
+                      item.deskripsi ||
+                      "-"
+                    )}
+                  </td>
+
+                  <td>
+                    ${tanggal(
+                      item.tanggal_mulai
+                    )}
+                  </td>
+
+                  <td>
+                    ${tanggal(
+                      item.tanggal_akhir
+                    )}
+                  </td>
+
+                  <td>
+                    ${durasiTampil}
+                  </td>
+
+                  <td>
+                    <span
+                      class="
+                        timeline-expiry-text
+                        ${berakhirClass}
+                      "
+                    >
+                      ${berakhirDalam}
+                    </span>
+                  </td>
+
+                  <td>
+                  <span
+                    class="
+                      timeline-status
+                      timeline-status-${statusClass}
+                    "
+                  >
+                    ${escapeHtml(status)}
+                  </span>
+                </td>
+
+                  <td>
+                    <div class="action-buttons">
+
+                      <button
+                        type="button"
+                        class="btn btn-secondary"
+                        onclick="
+                          editTimeline(
+                            ${Number(item.id)}
+                          )
+                        "
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        class="btn btn-danger"
+                        onclick="
+                          hapusTimeline(
+                            ${Number(item.id)}
+                          )
+                        "
+                      >
+                        Hapus
+                      </button>
+
+                    </div>
+                  </td>
+
+                </tr>
+              `;
+            })
+            .join("")}
+
+        </tbody>
+
+      </table>
+
+    </div>
+  `;
+}
+
+// ======================================================
+// BUKA TAMBAH TIMELINE
+// ======================================================
+
+document.getElementById(
+  "tambahTimelineButton"
+)?.addEventListener(
+  "click",
+  () => {
+    timelineForm.reset();
+
+    document.getElementById(
+      "timelineId"
+    ).value = "";
+
+    document.getElementById(
+      "timelineModalTitle"
+    ).textContent =
+      "Tambah Timeline";
+
+    updatePerhitunganTimeline();
+
+    timelineModal.classList.add(
+      "show"
+    );
+  }
+);
+
+
+// ======================================================
+// EDIT TIMELINE
+// ======================================================
+
+function editTimeline(id) {
+  const item =
+    timelineData.find(
+      timeline =>
+        Number(timeline.id) ===
+        Number(id)
+    );
+
+  if (!item) {
+    alert(
+      "Timeline tidak ditemukan"
+    );
+
+    return;
+  }
+
+  document.getElementById(
+    "timelineId"
+  ).value =
+    item.id;
+
+  document.getElementById(
+    "timelineDeskripsi"
+  ).value =
+    item.deskripsi || "";
+
+  document.getElementById(
+    "timelineTanggalMulai"
+  ).value =
+    tanggalInput(
+      item.tanggal_mulai
+    );
+
+  document.getElementById(
+    "timelineTanggalAkhir"
+  ).value =
+    tanggalInput(
+      item.tanggal_akhir
+    );
+
+  document.getElementById(
+    "timelineStatus"
+  ).value =
+    item.status || "Aktif";
+
+  document.getElementById(
+    "timelineModalTitle"
+  ).textContent =
+    "Edit Timeline";
+
+  updatePerhitunganTimeline();
+
+  timelineModal.classList.add(
+    "show"
+  );
+}
+
+
+// ======================================================
+// SIMPAN TIMELINE
+// ======================================================
+
+timelineForm?.addEventListener(
+  "submit",
+  async event => {
+    event.preventDefault();
+
+    const timelineId =
+      document.getElementById(
+        "timelineId"
+      ).value;
+
+    const payload = {
+      deskripsi:
+        document.getElementById(
+          "timelineDeskripsi"
+        ).value.trim(),
+
+      tanggal_mulai:
+        document.getElementById(
+          "timelineTanggalMulai"
+        ).value,
+
+      tanggal_akhir:
+        document.getElementById(
+          "timelineTanggalAkhir"
+        ).value,
+
+      status:
+        document.getElementById(
+          "timelineStatus"
+        ).value
+    };
+
+    if (
+      payload.tanggal_akhir <
+      payload.tanggal_mulai
+    ) {
+      alert(
+        "Tanggal akhir tidak boleh sebelum tanggal mulai"
+      );
+
+      return;
+    }
+
+    const url =
+      timelineId
+        ? `/api/proyek/timeline/${timelineId}`
+        : `/api/proyek/${proyekId}/timeline`;
+
+    const method =
+      timelineId
+        ? "PUT"
+        : "POST";
+
+    try {
+      const response =
+        await fetch(
+          url,
+          {
+            method,
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify(payload)
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+          "Gagal menyimpan Timeline"
+        );
+      }
+
+      timelineModal.classList.remove(
+        "show"
+      );
+
+      await loadTimeline();
+
+    } catch (error) {
+      console.error(
+        "ERROR SIMPAN TIMELINE:",
+        error
+      );
+
+      alert(error.message);
+    }
+  }
+);
+
+
+// ======================================================
+// HAPUS TIMELINE
+// ======================================================
+
+async function hapusTimeline(id) {
+  if (
+    !confirm(
+      "Hapus Timeline ini?"
+    )
+  ) {
+    return;
+  }
+
+  try {
+    const response =
+      await fetch(
+        `/api/proyek/timeline/${id}`,
+        {
+          method: "DELETE"
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Gagal menghapus Timeline"
+      );
+    }
+
+    await loadTimeline();
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+
+// ======================================================
+// TUTUP MODAL TIMELINE
+// ======================================================
+
+document.getElementById(
+  "batalTimeline"
+)?.addEventListener(
+  "click",
+  () => {
+    timelineModal.classList.remove(
+      "show"
+    );
+  }
+);
+
+// ======================================================
+// SELECT DOK FROM MASTER DOKUMEN
+// ======================================================
+async function loadMasterDokumen() {
+  const select =
+    document.getElementById(
+      "namaDokumen"
+    );
+
+  if (!select) {
+    return;
+  }
+
+  select.innerHTML = `
+    <option value="">
+      Memuat dokumen...
+    </option>
+  `;
+
+  select.disabled = true;
+
+  try {
+    const response =
+      await fetch(
+        "/api/master-dokumen"
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+        "Gagal mengambil master dokumen"
+      );
+    }
+
+    if (!Array.isArray(data)) {
+      throw new Error(
+        "Format master dokumen tidak valid"
+      );
+    }
+
+    select.innerHTML = `
+      <option value="">
+        Pilih Kode Dokumen
+      </option>
+    `;
+
+    data.forEach(item => {
+  const kode =
+    String(
+      item.kode_dokumen ||
+      item.kode ||
+      item.name ||
+      ""
+    ).trim();
+
+  const deskripsi =
+    String(
+      item.deskripsi ||
+      item.nama_dokumen ||
+      item.nama ||
+      ""
+    ).trim();
+
+  if (!kode) {
+    return;
+  }
+
+  const option =
+    document.createElement(
+      "option"
+    );
+
+  // Yang dikirim dan disimpan ke database
+  option.value =
+    kode;
+
+  // Yang ditampilkan pada dropdown
+  option.textContent =
+    deskripsi
+      ? `${kode} - ${deskripsi}`
+      : kode;
+
+  option.dataset.id =
+    item.id || "";
+
+  option.dataset.deskripsi =
+    deskripsi;
+
+  select.appendChild(
+    option
+  );
+});
+
+  } catch (error) {
+    console.error(
+      "ERROR MASTER DOKUMEN:",
+      error
+    );
+
+    select.innerHTML = `
+      <option value="">
+        Gagal memuat dokumen
+      </option>
+    `;
+
+    alert(error.message);
+
+  } finally {
+    select.disabled = false;
+  }
+}
+
+// ======================================================
 // DOKUMEN PARTNER
 // ======================================================
 
-function renderDokumenPartner(dokumen) {
-
+function renderDokumenPartner(
+  dokumen = []
+) {
   if (
-    !dokumen ||
+    !Array.isArray(dokumen) ||
     dokumen.length === 0
   ) {
-
     return `
       <div class="empty">
         Belum ada dokumen partner.
       </div>
     `;
-
   }
 
+  return dokumen
+    .map(item => {
+      const checked =
+        item.is_checked === true;
 
-  return dokumen.map(item => {
+      const ukuranFile =
+        Number(
+          item.ukuran_file || 0
+        );
 
-    const checked =
-      item.is_checked === true;
+      const ukuranTampil =
+        ukuranFile >=
+        1024 * 1024
+          ? `${(
+              ukuranFile /
+              (1024 * 1024)
+            ).toFixed(2)} MB`
+          : ukuranFile > 0
+            ? `${(
+                ukuranFile / 1024
+              ).toFixed(1)} KB`
+            : "";
 
-
-    return `
-
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        padding:12px 0;
-        border-bottom:1px solid #e5e7eb;
-      ">
-
-        <div style="
-          display:flex;
-          align-items:center;
-          gap:10px;
-        ">
-
-          <input
-            type="checkbox"
-
-            ${checked
-              ? "checked"
-              : ""
-            }
-
-            onchange="
-              toggleDokumenPartner(
-                ${item.id},
-                this.checked
-              )
-            "
-
-            style="
-              width:auto;
-              transform:scale(1.2);
-            "
-          >
-
-
-          <div>
-
-            <strong>
-              ${item.nama_dokumen}
-            </strong>
-
-            <div class="label">
+      const informasiFile =
+        item.path_file
+          ? `
+            <div style="
+              margin-top:10px;
+              color:#64748b;
+              font-size:13px;
+            ">
+              📎
+              ${
+                escapeHtml(
+                  item.nama_file_asli ||
+                  "Dokumen"
+                )
+              }
 
               ${
-                checked
-                  ? "Selesai • " +
-                    formatTanggalWaktu(
-                      item.checked_at
-                    )
-                  : "Belum selesai"
+                ukuranTampil
+                  ? ` • ${ukuranTampil}`
+                  : ""
               }
+            </div>
+          `
+          : `
+            <div style="
+              margin-top:10px;
+              color:#94a3b8;
+              font-size:13px;
+            ">
+              Belum ada file
+            </div>
+          `;
+
+      const tombolFile =
+        item.path_file
+          ? `
+            <a
+              href="${escapeHtml(
+                item.path_file
+              )}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-file btn-lihat-file"
+            >
+              Lihat
+            </a>
+
+            <a
+              href="${escapeHtml(
+                item.path_file
+              )}"
+              download
+              class="btn-file btn-unduh-file"
+            >
+              Unduh
+            </a>
+          `
+          : "";
+
+      return `
+        <div class="dokumen-item">
+
+          <div class="dokumen-info">
+
+            <input
+              type="checkbox"
+              class="dokumen-check"
+              ${checked ? "checked" : ""}
+              onchange="
+                toggleDokumenPartner(
+                  ${Number(item.id)},
+                  this.checked
+                )
+              "
+            >
+
+            <div class="dokumen-detail">
+
+              <strong>
+                ${
+                  escapeHtml(
+                    item.nama_dokumen ||
+                    "-"
+                  )
+                }
+              </strong>
+
+              <div class="label">
+                No. Dokumen:
+                ${
+                  escapeHtml(
+                    item.nomor_dokumen ||
+                    "-"
+                  )
+                }
+              </div>
+
+              <div class="label">
+                ${
+                  checked
+                    ? `Selesai • ${
+                        formatTanggalWaktu(
+                          item.checked_at
+                        )
+                      }`
+                    : "Belum selesai"
+                }
+              </div>
+
+              ${informasiFile}
 
             </div>
 
           </div>
 
+          <div class="dokumen-action">
+
+            ${tombolFile}
+
+            <button
+              type="button"
+              class="btn-danger"
+              onclick="
+                hapusDokumenPartner(
+                  ${Number(item.id)}
+                )
+              "
+            >
+              Hapus
+            </button>
+
+          </div>
+
         </div>
-
-
-        <button
-          class="btn-danger"
-          onclick="
-            hapusDokumenPartner(${item.id})
-          ">
-          Hapus
-        </button>
-
-      </div>
-
-    `;
-
-  }).join("");
-
+      `;
+    })
+    .join("");
 }
-
 
 async function tambahDokumenPartner(
   proyekPartnerId
 ) {
-
-  const nama =
-    prompt(
-      "Nama dokumen partner:"
+  if (!proyekPartnerId) {
+    alert(
+      "ID partner proyek tidak ditemukan."
     );
-
-
-  if (
-    !nama ||
-    !nama.trim()
-  ) {
 
     return;
-
   }
 
+  activePartnerDokumenUploadId =
+    Number(proyekPartnerId);
 
-  try {
+  document.getElementById(
+    "dokumenForm"
+  )?.reset();
 
-    const response =
-      await fetch(
-        `/api/proyek/partner/${proyekPartnerId}/dokumen`,
-        {
-          method: "POST",
+  await loadMasterDokumen();
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body:
-            JSON.stringify({
-              nama_dokumen:
-                nama.trim()
-            })
-        }
-      );
-
-
-    const result =
-      await response.json();
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        result.error ||
-        "Gagal menambahkan dokumen partner"
-      );
-
-    }
-
-
-    await loadDetail();
-
-
-  } catch (error) {
-
-    console.error(
-      "ERROR TAMBAH DOKUMEN PARTNER:",
-      error
+  const title =
+    document.getElementById(
+      "dokumenModalTitle"
     );
 
-    alert(error.message);
-
+  if (title) {
+    title.textContent =
+      "Tambah Dokumen Partner";
   }
 
+  dokumenModal.classList.add(
+    "show"
+  );
 }
-
 
 async function toggleDokumenPartner(
   id,
@@ -2084,17 +3382,14 @@ async function hapusDokumenPartner(id) {
 // ======================================================
 
 function editTerminPartner(id) {
-
-  // Cari termin dari seluruh partner
   let terminDitemukan = null;
   let partnerDitemukan = null;
 
   const partners =
     detailData?.partners || [];
 
-
+  // Cari termin dari seluruh partner
   for (const partner of partners) {
-
     const termin =
       (partner.termin || []).find(
         item =>
@@ -2102,9 +3397,7 @@ function editTerminPartner(id) {
           Number(id)
       );
 
-
     if (termin) {
-
       terminDitemukan =
         termin;
 
@@ -2112,33 +3405,25 @@ function editTerminPartner(id) {
         partner;
 
       break;
-
     }
-
   }
-
 
   if (
     !terminDitemukan ||
     !partnerDitemukan
   ) {
-
     alert(
       "Termin partner tidak ditemukan."
     );
 
     return;
-
   }
 
-
-  // ======================================================
-  // SET MODE PARTNER
-  // ======================================================
-
+  // Tentukan partner dan termin aktif
   activePartnerId =
     Number(
-      partnerDitemukan.proyek_partner_id
+      partnerDitemukan
+        .proyek_partner_id
     );
 
   activePartnerTerminId =
@@ -2146,96 +3431,97 @@ function editTerminPartner(id) {
       terminDitemukan.id
     );
 
+  // Tentukan input yang memiliki data
+  if (
+    Number(
+      terminDitemukan.persentase
+    ) > 0
+  ) {
+    inputTerminTerakhir =
+      "persentase";
+  } else {
+    inputTerminTerakhir =
+      "nominal";
+  }
 
-  // ID termin pada hidden input
+  // Hidden ID
   document.getElementById(
     "terminId"
   ).value =
     terminDitemukan.id;
 
-
-  // ======================================================
-  // ISI FORM
-  // ======================================================
-
+  // Nama termin
   document.getElementById(
     "namaTermin"
   ).value =
-    terminDitemukan.nama_termin || "";
+    terminDitemukan.nama_termin ||
+    "";
 
+  // Atur kondisi input terlebih dahulu
+  aturInputTermin();
 
- const nominalMode =
-  activePartnerId
-    ? isTerminNominal()
-    : isTerminKlienNominal();
-
-
+  // Persentase
   document.getElementById(
     "persentaseTermin"
   ).value =
-    nominalMode
-      ? ""
-      : (
-          terminDitemukan.persentase ??
-          ""
-        );
+    terminDitemukan.persentase ??
+    "";
 
-
+  // Nominal
   document.getElementById(
     "nominalTermin"
   ).value =
-    nominalMode
-      ? (
-          terminDitemukan.nominal ??
-          ""
-        )
-      : "";
+    terminDitemukan.nominal ??
+    "";
 
-
+  // Status pembayaran
   document.getElementById(
     "statusPembayaran"
   ).value =
-    terminDitemukan.status_pembayaran ||
-    "";
+    terminDitemukan
+      .status_pembayaran ||
+    "Belum Dibayar";
 
-
+  // Tanggal jatuh tempo
   document.getElementById(
     "tanggalJatuhTempo"
   ).value =
     tanggalInput(
-      terminDitemukan.tanggal_jatuh_tempo
+      terminDitemukan
+        .tanggal_jatuh_tempo
     );
 
-
+  // Tanggal bayar
   document.getElementById(
     "tanggalBayar"
   ).value =
     tanggalInput(
-      terminDitemukan.tanggal_bayar
+      terminDitemukan
+        .tanggal_bayar
     );
 
+  // Syarat pembayaran
+  document.getElementById(
+    "syaratPembayaran"
+  ).value =
+    terminDitemukan
+      .syarat_pembayaran ||
+    "";
 
-  // ======================================================
-  // ATUR MODAL
-  // ======================================================
-
+  // Judul modal
   document.getElementById(
     "terminModalTitle"
   ).textContent =
     `Edit Termin Partner - ${
-      partnerDitemukan.nama_partner || ""
+      partnerDitemukan.nama_partner ||
+      ""
     }`;
 
-
-  updateTerminModalMode();
-
-
+  // Buka modal
   terminModal.classList.add(
     "show"
   );
-
 }
-
 
 // ======================================================
 // DELETE TERMIN
@@ -2288,25 +3574,26 @@ async function hapusTermin(id) {
 
 }
 
-
 // ======================================================
 // DOKUMEN
 // ======================================================
 
 function renderDokumen(klien) {
-
   const container =
     document.getElementById(
       "dokumenContainer"
     );
 
+  if (!container) return;
+
+  const daftarDokumen =
+    Array.isArray(klien?.dokumen)
+      ? klien.dokumen
+      : [];
 
   if (
-    !klien ||
-    !klien.dokumen ||
-    klien.dokumen.length === 0
+    daftarDokumen.length === 0
   ) {
-
     container.innerHTML = `
       <div class="empty">
         Belum ada dokumen.
@@ -2316,97 +3603,140 @@ function renderDokumen(klien) {
     return;
   }
 
-
   container.innerHTML =
-    klien.dokumen.map(item => {
+    daftarDokumen
+      .map(item => {
+        const checked =
+          item.is_checked === true;
 
-      const checked =
-        item.is_checked === true;
+        const ukuranFile =
+          Number(
+            item.ukuran_file || 0
+          );
 
+        const ukuranTampil =
+          ukuranFile >=
+          1024 * 1024
+            ? `${(
+                ukuranFile /
+                (1024 * 1024)
+              ).toFixed(2)} MB`
+            : ukuranFile > 0
+              ? `${(
+                  ukuranFile / 1024
+                ).toFixed(1)} KB`
+              : "";
 
-      return `
-
-        <div style="
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          padding:12px 0;
-          border-bottom:1px solid #e5e7eb;
-        ">
-
-          <div style="
-            display:flex;
-            align-items:center;
-            gap:10px;
-          ">
-
-            <input
-              type="checkbox"
-
-              ${checked
-                ? "checked"
-                : ""
-              }
-
-              onchange="
-                toggleDokumen(
-                  ${item.id},
-                  this.checked
-                )
-              "
-
-              style="
-                width:auto;
-                transform:scale(1.2);
-              "
-            >
-
-
-            <div>
-
-              <strong>
-                ${item.nama_dokumen}
-              </strong>
-
-              <div class="label">
-                No. Dokumen:
-                ${item.nomor_dokumen || "-"}
-              </div>
-
-              <div class="label">
-
+        const informasiFile =
+          item.path_file
+            ? `
+              <div style="
+                margin-top:10px;
+                color:#64748b;
+                font-size:13px;
+              ">
+                📎
+                ${item.nama_file_asli || "Dokumen"}
                 ${
-                  checked
-                    ? "Selesai • " +
-                      formatTanggalWaktu(
-                        item.checked_at
-                      )
-                    : "Belum selesai"
+                  ukuranTampil
+                    ? ` • ${ukuranTampil}`
+                    : ""
                 }
-
               </div>
+            `
+            : `
+              <div style="
+                margin-top:10px;
+                color:#94a3b8;
+                font-size:13px;
+              ">
+                Belum ada file
+              </div>
+            `;
 
+        const tombolFile =
+          item.path_file
+            ? `
+              <a
+                href="${item.path_file}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn-file btn-lihat-file"
+              >
+                Lihat
+              </a>
+
+              <a
+                href="${item.path_file}"
+                download
+                class="btn-file btn-unduh-file"
+              >
+                Unduh
+              </a>
+            `
+            : "";
+
+        return `
+          <div class="dokumen-item">
+            <div class="dokumen-info">
+              <input
+                type="checkbox"
+                class="dokumen-check"
+                ${checked ? "checked" : ""}
+                onchange="
+                  toggleDokumen(
+                    ${item.id},
+                    this.checked
+                  )
+                "
+              >
+
+              <div class="dokumen-detail">
+                <strong>
+                  ${item.nama_dokumen}
+                </strong>
+
+                <div class="label">
+                  No. Dokumen:
+                  ${item.nomor_dokumen || "-"}
+                </div>
+
+                <div class="label">
+                  ${
+                    checked
+                      ? `Selesai • ${
+                          formatTanggalWaktu(
+                            item.checked_at
+                          )
+                        }`
+                      : "Belum selesai"
+                  }
+                </div>
+
+                ${informasiFile}
+              </div>
             </div>
 
+            <div class="dokumen-action">
+              ${tombolFile}
+
+              <button
+                type="button"
+                class="btn-danger"
+                onclick="
+                  hapusDokumen(
+                    ${item.id}
+                  )
+                "
+              >
+                Hapus
+              </button>
+            </div>
           </div>
-
-
-          <button
-            class="btn-danger"
-            onclick="
-              hapusDokumen(${item.id})
-            ">
-            Hapus
-          </button>
-
-        </div>
-
-      `;
-
-    }).join("");
-
+        `;
+      })
+      .join("");
 }
-
 
 // ======================================================
 // DOKUMEN KLIEN
@@ -2417,154 +3747,250 @@ const dokumenModal =
     "dokumenModal"
   );
 // ======================================================
-// BUKA MODAL
+// BUKA MODAL DOKUMEN
 // ======================================================
+const tambahDokumenButton =
+  document.getElementById(
+    "tambahDokumenButton"
+  );
 
-document.getElementById(
-  "tambahDokumenButton"
-).addEventListener(
-  "click",
-  () => {
-
-    if (!detailData.klien) {
-
-      alert(
-        "Proyek belum memiliki klien."
-      );
-
-      return;
-    }
-
-
-    document.getElementById(
-      "dokumenForm"
-    ).reset();
-
-
-    dokumenModal.classList.add(
-      "show"
-    );
-
-  }
-);
-
-
-// ======================================================
-// TUTUP MODAL
-// ======================================================
-
-document.getElementById(
-  "batalDokumen"
-).addEventListener(
-  "click",
-  () => {
-
-    dokumenModal.classList.remove(
-      "show"
-    );
-
-  }
-);
-
-
-// ======================================================
-// SIMPAN DOKUMEN
-// ======================================================
-
-document.getElementById(
-  "dokumenForm"
-).addEventListener(
-  "submit",
-  async event => {
-
-    event.preventDefault();
-
-
-    const namaDokumen =
-      document.getElementById(
-        "namaDokumen"
-      ).value.trim();
-
-
-    const nomorDokumen =
-      document.getElementById(
-        "nomorDokumen"
-      ).value.trim();
-
-
-    if (!namaDokumen) {
-
-      alert(
-        "Nama dokumen wajib diisi."
-      );
-
-      return;
-    }
-
-
-    try {
-
-      const response =
-        await fetch(
-          `/api/proyek/klien/${detailData.klien.proyek_klien_id}/dokumen`,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body:
-              JSON.stringify({
-
-                nama_dokumen:
-                  namaDokumen,
-
-                nomor_dokumen:
-                  nomorDokumen || null
-
-              })
-          }
+if (tambahDokumenButton) {
+  tambahDokumenButton.addEventListener(
+    "click",
+    async () => {
+      if (!detailData?.klien) {
+        alert(
+          "Proyek belum memiliki klien."
         );
 
-
-      const result =
-        await response.json();
-
-
-      if (!response.ok) {
-
-        throw new Error(
-          result.error ||
-          "Gagal menambahkan dokumen"
-        );
-
+        return;
       }
 
+      activePartnerDokumenUploadId =
+        null;
 
+      document.getElementById(
+        "dokumenForm"
+      )?.reset();
+
+      await loadMasterDokumen();
+
+      document.getElementById(
+        "dokumenModalTitle"
+      ).textContent =
+        "Tambah Dokumen Klien";
+
+      dokumenModal.classList.add(
+        "show"
+      );
+    }
+  );
+}
+
+// ======================================================
+// TUTUP MODAL DOKUMEN
+// ======================================================
+const batalDokumen =
+  document.getElementById(
+    "batalDokumen"
+  );
+
+if (batalDokumen) {
+  batalDokumen.addEventListener(
+    "click",
+    () => {
       dokumenModal.classList.remove(
         "show"
       );
 
+      document.getElementById(
+        "dokumenForm"
+      )?.reset();
 
-      await loadDetail();
+      activePartnerDokumenUploadId =
+        null;
+    }
+  );
+}
+// ======================================================
+// SIMPAN DOKUMEN
+// ======================================================
+const dokumenForm =
+  document.getElementById(
+    "dokumenForm"
+  );
 
+if (dokumenForm) {
+  dokumenForm.addEventListener(
+    "submit",
+    async event => {
+      event.preventDefault();
 
-    } catch (error) {
+      const namaDokumen =
+        document.getElementById(
+          "namaDokumen"
+        ).value.trim();
 
-      console.error(
-        "ERROR TAMBAH DOKUMEN:",
-        error
+      const nomorDokumen =
+        document.getElementById(
+          "nomorDokumen"
+        ).value.trim();
+
+      const fileInput =
+        document.getElementById(
+          "fileDokumen"
+        );
+
+      const fileDokumen =
+        fileInput?.files?.[0];
+
+      if (!namaDokumen) {
+        alert(
+          "Nama dokumen wajib diisi."
+        );
+
+        document.getElementById(
+          "namaDokumen"
+        ).focus();
+
+        return;
+      }
+
+      if (
+          fileDokumen &&
+          fileDokumen.size >
+          10 * 1024 * 1024
+        ) {
+        alert(
+          "Ukuran file maksimal 10 MB."
+        );
+
+        return;
+      }
+
+      const formData =
+        new FormData();
+
+      formData.append(
+        "nama_dokumen",
+        namaDokumen
       );
 
-      alert(error.message);
+      formData.append(
+        "nomor_dokumen",
+        nomorDokumen
+      );
 
+      if (fileDokumen) {
+        formData.append(
+          "file_dokumen",
+          fileDokumen
+        );
+      }
+
+      // Tentukan endpoint berdasarkan mode modal
+      const isDokumenPartner =
+        activePartnerDokumenUploadId !==
+        null;
+
+      let url;
+
+      if (isDokumenPartner) {
+        url =
+          `/api/proyek/partner/${activePartnerDokumenUploadId}/dokumen`;
+      } else {
+        const proyekKlienId =
+          detailData?.klien
+            ?.proyek_klien_id;
+
+        if (!proyekKlienId) {
+          alert(
+            "Data proyek klien tidak ditemukan."
+          );
+
+          return;
+        }
+
+        url =
+          `/api/proyek/klien/${proyekKlienId}/dokumen`;
+      }
+
+      const tombolSimpan =
+        dokumenForm.querySelector(
+          'button[type="submit"]'
+        );
+
+      try {
+        if (tombolSimpan) {
+          tombolSimpan.disabled =
+            true;
+
+          tombolSimpan.textContent =
+            "Mengunggah...";
+        }
+
+        const response =
+          await fetch(
+            url,
+            {
+              method: "POST",
+              body: formData
+            }
+          );
+
+        const contentType =
+          response.headers.get(
+            "content-type"
+          ) || "";
+
+        const result =
+          contentType.includes(
+            "application/json"
+          )
+            ? await response.json()
+            : {
+                error:
+                  await response.text()
+              };
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+            "Gagal mengunggah dokumen"
+          );
+        }
+
+        dokumenModal.classList.remove(
+          "show"
+        );
+
+        dokumenForm.reset();
+
+        activePartnerDokumenUploadId =
+          null;
+
+        await loadDetail();
+
+      } catch (error) {
+        console.error(
+          "ERROR UPLOAD DOKUMEN:",
+          error
+        );
+
+        alert(error.message);
+
+      } finally {
+        if (tombolSimpan) {
+          tombolSimpan.disabled =
+            false;
+
+          tombolSimpan.textContent =
+            "Simpan";
+        }
+      }
     }
-
-  }
-);
-
+  );
+}
 
 // ======================================================
 // CHECK / UNCHECK
@@ -2693,23 +4119,24 @@ function formatTanggalWaktu(value) {
 
 }
 
-
 // ======================================================
 // PARTNER
 // ======================================================
 
 function renderPartner(partners) {
-
   const container =
     document.getElementById(
       "partnerContainer"
     );
 
+  if (!container) {
+    return;
+  }
+
   if (
-    !partners ||
+    !Array.isArray(partners) ||
     partners.length === 0
   ) {
-
     container.innerHTML = `
       <div class="empty">
         Belum ada partner.
@@ -2719,372 +4146,282 @@ function renderPartner(partners) {
     return;
   }
 
-
-  const nominalMode =
-  activePartnerId
-    ? isTerminNominal()
-    : isTerminKlienNominal();
-
-
   container.innerHTML =
-    partners.map(
-      (item, index) => {
-
-        const termin =
-          Array.isArray(item.termin)
-            ? item.termin
-            : [];
-
-        const dokumen =
-          Array.isArray(item.dokumen)
-            ? item.dokumen
-            : [];
-
-        const nilaiFinal =
+    partners
+      .map((item, index) => {
+        const nilaiSubmitPartner =
           Number(
-            item.nilai_final || 0
+            item.nilai_submit || 0
           );
 
+        const nilaiFinalPartner =
+          nilaiTerakhir(item);
 
-        const totalTermin =
-          termin.reduce(
-            (total, t) => {
+        const bisnisPerformance =
+          nilaiSubmitPartner > 0
+            ? (
+                (
+                  nilaiSubmitPartner -
+                  nilaiFinalPartner
+                ) /
+                nilaiSubmitPartner
+              ) * 100
+            : 0;
 
-              if (nominalMode) {
-
-                return (
-                  total +
-                  Number(
-                    t.nominal || 0
-                  )
-                );
-
-              }
-
-              return (
-                total +
-                Number(
-                  t.persentase || 0
-                )
-              );
-
-            },
-            0
+        const informasiBerakhir =
+          berakhirDalam(
+            item.tanggal_akhir
           );
-
+        
+        const terminHtml =
+          renderTerminPartner(
+            item.termin || [],
+            nilaiFinalPartner
+          );
 
         return `
-
-          <div style="
-            border:1px solid #e5e7eb;
-            border-radius:12px;
-            margin-bottom:24px;
-            overflow:hidden;
-            background:white;
-          ">
-
-            <div style="
-              padding:16px 20px;
-              background:#f9fafb;
-              border-bottom:1px solid #e5e7eb;
-            ">
-
-              <div class="label">
-                PARTNER ${index + 1}
+          <div class="partner-detail-card">
+            <div class="partner-detail-header">
+              <div>
+                <div class="partner-name">
+                  ${
+                    item.nama_partner ||
+                    item.inisial ||
+                    "-"
+                  }
+                </div>
               </div>
-
-              <div style="
-                font-size:18px;
-                font-weight:700;
-                margin-top:4px;
-              ">
-                ${item.nama_partner || "-"}
-              </div>
-
             </div>
 
+            <div
+              class="
+                contract-expiry
+                ${informasiBerakhir.className}
+              "
+            >
+              <div class="contract-expiry-label">
+                Berakhir Dalam
+              </div>
 
-            <div style="padding:20px;">
+              <div class="contract-expiry-value">
+                ${informasiBerakhir.text}
+              </div>
+            </div>
 
-              <div class="grid">
+            <div class="grid">
+              <div class="info">
+                <div class="label">
+                  Tanggal Mulai
+                </div>
 
-                <div class="info">
-
-                  <div class="label">
-                    Tanggal Mulai
-                  </div>
-
-                  <div class="value">
-                    ${tanggal(
+                <div class="value">
+                  ${
+                    tanggal(
                       item.tanggal_mulai
-                    )}
-                  </div>
+                    )
+                  }
+                </div>
+              </div>
 
+              <div class="info">
+                <div class="label">
+                  Tanggal Akhir
                 </div>
 
-
-                <div class="info">
-
-                  <div class="label">
-                    Tanggal Akhir
-                  </div>
-
-                  <div class="value">
-                    ${tanggal(
+                <div class="value">
+                  ${
+                    tanggal(
                       item.tanggal_akhir
-                    )}
-                  </div>
-
+                    )
+                  }
                 </div>
-
-
-                <div class="info">
-
-                  <div class="label">
-                    Nilai Submit
-                  </div>
-
-                  <div class="value">
-                 ${rupiah(
-                    nilaiSubmitPartnerTampil(item)
-                  )}
-                  </div>
-
-                </div>
-
-
-                <div class="info">
-
-                  <div class="label">
-                    Nego 1
-                  </div>
-
-                  <div class="value">
-                    ${rupiah(
-                      item.nilai_nego_1
-                    )}
-                  </div>
-
-                </div>
-
-
-                <div class="info">
-
-                  <div class="label">
-                    Nego 2
-                  </div>
-
-                  <div class="value">
-                    ${rupiah(
-                      item.nilai_nego_2
-                    )}
-                  </div>
-
-                </div>
-
-
-                <div class="info">
-
-                  <div class="label">
-                    Nego 3
-                  </div>
-
-                  <div class="value">
-                    ${rupiah(
-                      item.nilai_nego_3
-                    )}
-                  </div>
-
-                </div>
-
-
-                <div class="info">
-
-                  <div class="label">
-                    Nilai Final
-                  </div>
-
-                  <div class="value">
-                    ${rupiah(
-                      nilaiFinal
-                    )}
-                  </div>
-
-                </div>
-
-
-                <div class="info">
-
-                  <div class="label">
-                    Status Pengadaan
-                  </div>
-
-                  <div class="value">
-                    ${
-                      item.status_pengadaan ||
-                      "-"
-                    }
-                  </div>
-
-                </div>
-
-
-                <div class="info">
-
-                  <div class="label">
-                    Status Teknis
-                  </div>
-
-                  <div class="value">
-                    ${
-                      item.status_teknis ||
-                      "-"
-                    }
-                  </div>
-
-                </div>
-
               </div>
 
-
-              <div style="
-                margin-top:24px;
-                border-top:1px solid #e5e7eb;
-                padding-top:20px;
-              ">
-
-                <div style="
-                  display:flex;
-                  justify-content:space-between;
-                  align-items:center;
-                  margin-bottom:12px;
-                ">
-
-                  <strong>
-                    Termin Pembayaran
-                  </strong>
-
-                  <button
-                    type="button"
-                    class="btn-secondary"
-                    onclick="tambahTerminPartner(${item.proyek_partner_id})"
-                  >
-                    + Tambah Termin
-                  </button>
-
+              <div class="info">
+                <div class="label">
+                  Durasi
                 </div>
 
-
-                <div style="
-                  margin-bottom:12px;
-                  font-size:13px;
-                ">
-
-                  Total Termin:
-
-                  <strong>
-                    ${
-                      nominalMode
-                        ? rupiah(totalTermin)
-                        : `${totalTermin.toFixed(2)}%`
-                    }
-                  </strong>
-
+                <div class="value">
+                  ${
+                    selisihTanggal(
+                      item.tanggal_mulai,
+                      item.tanggal_akhir
+                    )
+                  }
                 </div>
-
-
-                ${renderTerminPartner(
-                  termin,
-                  nilaiFinal
-                )}
-
               </div>
 
-
-              <div style="
-                margin-top:24px;
-                border-top:1px solid #e5e7eb;
-                padding-top:20px;
-              ">
-
-                <div style="
-                  display:flex;
-                  justify-content:space-between;
-                  align-items:center;
-                  margin-bottom:12px;
-                ">
-
-                  <strong>
-                    Dokumen
-                  </strong>
-
-                  <button
-                    type="button"
-                    class="btn-secondary"
-                    onclick="tambahDokumenPartner(${item.proyek_partner_id})"
-                  >
-                    + Tambah Dokumen
-                  </button>
-
+              <div class="info">
+                <div class="label">
+                  Model Pembayaran
                 </div>
 
-
-                ${renderDokumenPartner(
-                  dokumen
-                )}
-
+                <div class="value">
+                  ${
+                    item.model_pembayaran ||
+                    item.metode_pembayaran ||
+                    "-"
+                  }
+                </div>
               </div>
 
+              <div class="info">
+                <div class="label">
+                  Nilai Submit
+                </div>
+
+                <div class="value">
+                  ${
+                    rupiah(
+                      nilaiSubmitPartner
+                    )
+                  }
+                </div>
+              </div>
+
+              <div class="info">
+                <div class="label">
+                  Nilai Final
+                </div>
+
+                <div class="value">
+                  ${
+                    rupiah(
+                      nilaiFinalPartner
+                    )
+                  }
+                </div>
+              </div>
+
+              <div class="info">
+                <div class="label">
+                  Bisnis Performance
+                </div>
+
+                <div class="value">
+                  ${
+                    bisnisPerformance
+                      .toFixed(2)
+                  }%
+                </div>
+              </div>
+
+              <div class="info">
+                <div class="label">
+                  Status Pengadaan
+                </div>
+
+                <div class="value">
+                  ${
+                    item.status_pengadaan ||
+                    "-"
+                  }
+                </div>
+              </div>
+
+              <div class="info">
+                <div class="label">
+                  Status Teknis
+                </div>
+
+                <div class="value">
+                  ${
+                    item.status_teknis ||
+                    "-"
+                  }
+                </div>
+              </div>
             </div>
 
+            <div class="partner-sub-section">
+              <div class="partner-sub-header">
+                <div>
+                  <div class="partner-sub-title">
+                    Termin Pembayaran
+                  </div>
+
+                  <div class="partner-sub-description">
+                    Termin pembayaran partner
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="
+                    tambahTerminPartner(
+                      ${item.proyek_partner_id}
+                    )
+                  "
+                >
+                  + Tambah Termin
+                </button>
+              </div>
+
+              ${terminHtml}
+            </div>
+
+            <div class="partner-sub-section">
+              <div class="partner-sub-header">
+                <div>
+                  <div class="partner-sub-title">
+                    Dokumen Partner
+                  </div>
+
+                  <div class="partner-sub-description">
+                    Dokumen kontrak dan administrasi partner
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="
+                    tambahDokumenPartner(
+                      ${item.proyek_partner_id}
+                    )
+                  "
+                >
+                  + Tambah Dokumen
+                </button>
+              </div>
+
+              ${
+                renderDokumenPartner(
+                  item.dokumen || []
+                )
+              }
+            </div>
           </div>
-
         `;
-
-      }
-    ).join("");
-
+      })
+      .join("");
 }
-
-
 
 // ======================================================
 // TERMIN PARTNER
 // ======================================================
 
 function renderTerminPartner(
-  termin,
-  nilaiFinal
+  termin = [],
+  nilaiFinal = 0
 ) {
-
-  if (
-    !termin ||
-    termin.length === 0
-  ) {
-
+  if (!Array.isArray(termin) || termin.length === 0) {
     return `
-      <div class="empty">
-        Belum ada termin partner.
+      <div class="empty-state">
+        Belum ada termin pembayaran partner.
       </div>
     `;
-
   }
 
-
- const nominalMode =
-  activePartnerId
-    ? isTerminNominal()
-    : isTerminKlienNominal();
-
+  const finalValue =
+    Number(nilaiFinal) || 0;
 
   return `
-
-    <div style="overflow-x:auto;">
-
-      <table style="width:100%;">
-
+    <div class="table-wrapper">
+      <table>
         <thead>
-
           <tr>
             <th>Termin</th>
             <th>Persentase</th>
@@ -3092,235 +4429,539 @@ function renderTerminPartner(
             <th>Status</th>
             <th>Jatuh Tempo</th>
             <th>Tanggal Bayar</th>
+            <th>Syarat Pembayaran</th>
             <th>Aksi</th>
           </tr>
-
         </thead>
 
-
         <tbody>
-
           ${termin.map(item => {
+            let persentase =
+              Number(item.persentase);
 
-            const persen =
-              Number(
-                item.persentase || 0
-              );
+            let nominal =
+              Number(item.nominal);
 
+            if (
+              (!Number.isFinite(nominal) ||
+                nominal <= 0) &&
+              Number.isFinite(persentase) &&
+              persentase > 0 &&
+              finalValue > 0
+            ) {
+              nominal =
+                finalValue *
+                persentase /
+                100;
+            }
 
-            const nominal =
-              nominalMode
-                ? Number(
-                    item.nominal || 0
-                  )
-                : (
-                    Number(
-                      nilaiFinal || 0
-                    ) *
-                    persen /
-                    100
-                  );
+            if (
+              (!Number.isFinite(persentase) ||
+                persentase <= 0) &&
+              Number.isFinite(nominal) &&
+              nominal > 0 &&
+              finalValue > 0
+            ) {
+              persentase =
+                nominal /
+                finalValue *
+                100;
+            }
 
+            const status =
+              item.status_pembayaran ||
+              "Belum Dibayar";
+
+            const statusClass =
+              status === "Dibayar"
+                ? "status-dibayar"
+                : status === "Proses"
+                ? "status-proses"
+                : "status-belum-dibayar";
 
             return `
-
               <tr>
-
                 <td>
-                  ${item.nama_termin || "-"}
+                  ${escapeHtml(
+                    item.nama_termin || "-"
+                  )}
                 </td>
-
 
                 <td>
                   ${
-                    nominalMode
-                      ? "-"
-                      : `${persen.toFixed(2)}%`
+                    Number.isFinite(persentase) &&
+                    persentase > 0
+                      ? `${persentase.toFixed(2)}%`
+                      : "-"
                   }
                 </td>
 
-
                 <td>
-                  ${rupiah(nominal)}
+                  ${
+                    Number.isFinite(nominal) &&
+                    nominal > 0
+                      ? rupiah(nominal)
+                      : "Rp 0"
+                  }
                 </td>
 
-
                 <td>
-                  ${item.status_pembayaran || "-"}
+                  <span class="status-badge ${statusClass}">
+                    ${escapeHtml(status)}
+                  </span>
                 </td>
 
-
                 <td>
-                  ${tanggal(
+                  ${
                     item.tanggal_jatuh_tempo
-                  )}
+                      ? tanggal(
+                      item.tanggal_jatuh_tempo
+                    )
+                      : "-"
+                  }
                 </td>
 
-
                 <td>
-                  ${tanggal(
+                  ${
                     item.tanggal_bayar
+                      ? tanggal(
+                          item.tanggal_bayar
+                        )
+                      : "-"
+                  }
+                </td>
+
+                <td>
+                  ${escapeHtml(
+                    item.syarat_pembayaran ||
+                    "-"
                   )}
                 </td>
 
-
                 <td>
+                  <div class="action-buttons">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      onclick="editTerminPartner(${Number(
+                        item.id
+                      )})"
+                    >
+                      Edit
+                    </button>
 
-                  <button
-                    type="button"
-                    class="btn-secondary"
-                    onclick="editTerminPartner(${item.id})"
-                  >
-                    Edit
-                  </button>
-
-
-                  <button
-                    type="button"
-                    class="btn-danger"
-                    onclick="hapusTerminPartner(${item.id})"
-                  >
-                    Hapus
-                  </button>
-
+                    <button
+                      type="button"
+                      class="btn btn-danger"
+                      onclick="hapusTerminPartner(${Number(
+                        item.id
+                      )})"
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </td>
-
               </tr>
-
             `;
-
           }).join("")}
-
         </tbody>
-
       </table>
-
     </div>
-
   `;
-
+  return html;
 }
 
 // ======================================================
 // EDIT INFORMASI PROYEK
 // ======================================================
 
-document.getElementById(
-  "editProyekButton"
-).addEventListener(
-  "click",
-  async () => {
+// ======================================================
+// HELPER SELECT OPTION BERDASARKAN ID ATAU NAMA
+// ======================================================
+function pilihOption(selectElement, id, nama) {
+  if (!selectElement) return false;
 
-    // NAMA PROYEK
-    document.getElementById(
-      "editNamaProyek"
-    ).value =
-      detailData.proyek.nama_proyek || "";
+  const nilaiId =
+    id !== null &&
+    id !== undefined
+      ? String(id)
+      : "";
 
-// =========================================
-// KATEGORI
-// =========================================
+  const nilaiNama =
+    String(nama || "")
+      .trim()
+      .toLowerCase();
 
-await loadKategoriEdit();
+  const optionDitemukan =
+    Array.from(selectElement.options).find(option => {
+      const optionValue =
+        String(option.value || "").trim();
 
-editKategoriDipilih = [];
+      const optionText =
+        String(option.textContent || "")
+          .trim()
+          .toLowerCase();
 
-const kategoriIds =
-  Array.isArray(
-    detailData.proyek.kategori_produk_ids
-  )
-    ? detailData.proyek.kategori_produk_ids
-        .map(Number)
-    : [
-        Number(
-          detailData.proyek.kategori_produk_id
-        )
-      ];
-
-const selectKategori =
-  document.getElementById(
-    "editKategoriSelect"
-  );
-
-kategoriIds.forEach(id => {
-
-  if (!id) return;
-
-  const option =
-    Array.from(
-      selectKategori.options
-    ).find(
-      item =>
-        Number(item.value) === id
-    );
-
-  if (option) {
-
-    editKategoriDipilih.push({
-      id,
-      nama:
-        option.textContent.trim()
+      return (
+        (nilaiId && optionValue === nilaiId) ||
+        (nilaiNama && optionText === nilaiNama)
+      );
     });
 
+  if (!optionDitemukan) {
+    selectElement.value = "";
+    return false;
   }
 
-});
+  selectElement.value =
+    optionDitemukan.value;
 
-renderEditKategori();
-
-
-    // JENIS PROYEK
+  return true;
+}
+// ======================================================
+// LOAD JENIS PROYEK AKTIF
+// ======================================================
+async function loadJenisProyekEdit() {
+  const select =
     document.getElementById(
       "editJenisProyek"
-    ).value =
-      detailData.proyek.jenis_proyek || "";
+    );
 
+  select.innerHTML = `
+    <option value="">
+      Pilih Jenis Proyek
+    </option>
+  `;
 
-    // SUB JENIS
+  const response =
+    await fetch(
+      "/api/proyek/jenis"
+    );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      "Gagal mengambil jenis proyek"
+    );
+  }
+
+  data.forEach(item => {
+    const option =
+      document.createElement("option");
+
+    option.value = item.id;
+    option.textContent =
+      item.name ||
+      item.nama ||
+      item.jenis_proyek;
+
+    select.appendChild(option);
+  });
+}
+
+// ======================================================
+// LOAD SUB JENIS PROYEK AKTIF
+// ======================================================
+async function loadSubJenisProyekEdit(
+  jenisId
+) {
+  const select =
     document.getElementById(
       "editSubJenisProyek"
-    ).value =
-      detailData.proyek.sub_jenis_proyek || "";
+    );
 
+  select.innerHTML = `
+    <option value="">
+      Pilih Sub Jenis Proyek
+    </option>
+  `;
 
-    // STATUS
+  if (!jenisId) return;
+
+  const response =
+    await fetch(
+      `/api/proyek/sub-jenis?jenis_id=${encodeURIComponent(
+        jenisId
+      )}`
+    );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      "Gagal mengambil sub jenis proyek"
+    );
+  }
+
+  data.forEach(item => {
+    const option =
+      document.createElement("option");
+
+    option.value = item.id;
+    option.textContent =
+      item.name ||
+      item.nama ||
+      item.sub_jenis_proyek;
+
+    select.appendChild(option);
+  });
+}
+
+// ======================================================
+// LOAD STATUS FINAL AKTIF
+// ======================================================
+async function loadStatusFinalEdit() {
+  const select =
     document.getElementById(
       "editStatusFinal"
-    ).value =
-      detailData.proyek.status_final || "Aktif";
+    );
 
+  select.innerHTML = `
+    <option value="">
+      Pilih Status
+    </option>
+  `;
 
-    // DESKRIPSI
-    document.getElementById(
-      "editDeskripsi"
-    ).value =
-      detailData.proyek.deskripsi || "";
+  const response =
+    await fetch(
+      "/api/proyek/status?flag=final"
+    );
 
+  const data =
+    await response.json();
 
-    // BUKA MODAL
-    document.getElementById(
-      "editProyekModal"
-    ).classList.add("show");
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      "Gagal mengambil status final"
+    );
+  }
 
+  data.forEach(item => {
+    const option =
+      document.createElement("option");
+
+    /*
+     * Jika kolom proyek masih menyimpan nama status,
+     * option.value akan memakai deskripsi.
+     *
+     * Jika PUT API sudah memakai status_final_id,
+     * ubah menjadi: option.value = item.id;
+     */
+    option.value =
+      item.deskripsi ||
+      item.name ||
+      item.nama;
+
+    option.dataset.id = item.id;
+
+    option.textContent =
+      item.deskripsi ||
+      item.name ||
+      item.nama;
+
+    select.appendChild(option);
+  });
+}
+
+// ======================================================
+// EVENT PERUBAHAN JENIS PROYEK
+// ======================================================
+const editJenisProyek =
+  document.getElementById(
+    "editJenisProyek"
+  );
+
+editJenisProyek.addEventListener(
+  "change",
+  async function () {
+    try {
+      await loadSubJenisProyekEdit(
+        this.value
+      );
+    } catch (error) {
+      console.error(
+        "ERROR LOAD SUB JENIS:",
+        error
+      );
+    }
   }
 );
 
-
-if (batalEditProyek) {
-
-  batalEditProyek.addEventListener(
-    "click",
-    () => {
-
-      editProyekModal.classList.remove(
-        "show"
-      );
-
-    }
+// ======================================================
+// BUKA MODAL EDIT INFORMASI PROYEK
+// ======================================================
+const editProyekButton =
+  document.getElementById(
+    "editProyekButton"
   );
 
-}
+editProyekButton.addEventListener(
+  "click",
+  async () => {
+    const proyek =
+      detailData?.proyek;
 
+    if (!proyek) {
+      alert(
+        "Data proyek belum tersedia"
+      );
+      return;
+    }
+
+    try {
+      // ================================================
+      // FIELD BIASA
+      // ================================================
+      document.getElementById(
+        "editNamaProyek"
+      ).value =
+        proyek.nama_proyek || "";
+
+      document.getElementById(
+        "editDeskripsi"
+      ).value =
+        proyek.deskripsi || "";
+
+
+      // ================================================
+      // KATEGORI
+      // ================================================
+      await loadKategoriEdit();
+
+      editKategoriDipilih = [];
+
+      let kategoriIds = [];
+
+      if (
+        Array.isArray(
+          proyek.kategori_produk_ids
+        )
+      ) {
+        kategoriIds =
+          proyek.kategori_produk_ids
+            .map(Number)
+            .filter(Boolean);
+      } else if (
+        proyek.kategori_produk_id
+      ) {
+        kategoriIds = [
+          Number(
+            proyek.kategori_produk_id
+          )
+        ];
+      }
+
+      const selectKategori =
+        document.getElementById(
+          "editKategoriSelect"
+        );
+
+      kategoriIds.forEach(id => {
+        const option =
+          Array.from(
+            selectKategori.options
+          ).find(item =>
+            Number(item.value) === id
+          );
+
+        if (!option) return;
+
+        editKategoriDipilih.push({
+          id,
+          nama:
+            option.textContent.trim()
+        });
+      });
+
+      renderEditKategori();
+
+
+      // ================================================
+      // LOAD JENIS DAN STATUS TERLEBIH DAHULU
+      // ================================================
+      await Promise.all([
+        loadJenisProyekEdit(),
+        loadStatusFinalEdit()
+      ]);
+
+
+      // ================================================
+      // PILIH JENIS PROYEK
+      // ================================================
+      const selectJenis =
+        document.getElementById(
+          "editJenisProyek"
+        );
+
+      pilihOption(
+        selectJenis,
+        proyek.jenis_proyek_id,
+        proyek.jenis_proyek
+      );
+
+      const jenisIdTerpilih =
+        selectJenis.value;
+
+
+      // ================================================
+      // LOAD DAN PILIH SUB JENIS
+      // ================================================
+      await loadSubJenisProyekEdit(
+        jenisIdTerpilih
+      );
+
+      const selectSubJenis =
+        document.getElementById(
+          "editSubJenisProyek"
+        );
+
+      pilihOption(
+        selectSubJenis,
+        proyek.sub_jenis_proyek_id,
+        proyek.sub_jenis_proyek
+      );
+
+
+      // ================================================
+      // PILIH STATUS FINAL
+      // ================================================
+      const selectStatus =
+        document.getElementById(
+          "editStatusFinal"
+        );
+
+      pilihOption(
+        selectStatus,
+        proyek.status_final_id,
+        proyek.status_final
+      );
+
+
+      // ================================================
+      // BUKA MODAL SETELAH SEMUA NILAI SELESAI
+      // ================================================
+      document.getElementById(
+        "editProyekModal"
+      ).classList.add("show");
+
+    } catch (error) {
+      console.error(
+        "ERROR BUKA EDIT PROYEK:",
+        error
+      );
+
+      alert(
+        `Gagal membuka edit proyek: ${error.message}`
+      );
+    }
+  }
+);
 
 // ======================================================
 // TOTAL TERMIN TRANSAKSI
@@ -3506,7 +5147,6 @@ if (batalEditPic) {
 }
 
 
-
 // ======================================================
 // EDIT KLIEN
 // ======================================================
@@ -3532,148 +5172,587 @@ const batalEditKlien =
   );
 
 
-if (editKlienButton) {
+// ======================================================
+// PILIH OPTION BERDASARKAN ID ATAU DESKRIPSI
+// ======================================================
 
+function pilihStatusEdit(
+  select,
+  statusId,
+  statusNama
+) {
+  if (!select) return false;
+
+  const targetId =
+    statusId !== null &&
+    statusId !== undefined
+      ? String(statusId).trim()
+      : "";
+
+  const targetNama =
+    String(statusNama || "")
+      .trim()
+      .toLowerCase();
+
+  const optionDitemukan =
+    Array.from(
+      select.options
+    ).find(option => {
+      const optionId =
+        String(
+          option.dataset.id || ""
+        ).trim();
+
+      const optionValue =
+        String(option.value || "")
+          .trim()
+          .toLowerCase();
+
+      const optionText =
+        String(
+          option.textContent || ""
+        )
+          .trim()
+          .toLowerCase();
+
+      return (
+        (
+          targetId &&
+          optionId === targetId
+        ) ||
+        (
+          targetNama &&
+          (
+            optionValue === targetNama ||
+            optionText === targetNama
+          )
+        )
+      );
+    });
+
+  if (optionDitemukan) {
+    select.value =
+      optionDitemukan.value;
+
+    return true;
+  }
+
+  /*
+   * Jika status tersimpan tetapi tidak ada
+   * di master status aktif, tampilkan tetap.
+   */
+  if (statusNama) {
+    const optionLama =
+      document.createElement(
+        "option"
+      );
+
+    optionLama.value =
+      String(statusNama).trim();
+
+    optionLama.textContent =
+      `${String(statusNama).trim()} (Tidak Aktif)`;
+
+    optionLama.dataset.legacy =
+      "true";
+
+    select.appendChild(
+      optionLama
+    );
+
+    select.value =
+      optionLama.value;
+
+    return true;
+  }
+
+  select.value = "";
+
+  return false;
+}
+
+// ======================================================
+// PILIH OPTION BIASA BERDASARKAN VALUE ATAU TEXT
+// ======================================================
+
+function pilihSelectBerdasarkanNama(
+  select,
+  nilai
+) {
+  if (!select) return false;
+
+  const target =
+    String(nilai || "")
+      .trim()
+      .toLowerCase();
+
+  if (!target) {
+    select.value = "";
+    return false;
+  }
+
+  const optionDitemukan =
+    Array.from(
+      select.options
+    ).find(option => {
+      const optionValue =
+        String(option.value || "")
+          .trim()
+          .toLowerCase();
+
+      const optionText =
+        String(
+          option.textContent || ""
+        )
+          .trim()
+          .toLowerCase();
+
+      return (
+        optionValue === target ||
+        optionText === target
+      );
+    });
+
+  if (optionDitemukan) {
+    select.value =
+      optionDitemukan.value;
+
+    return true;
+  }
+
+  select.value = "";
+
+  return false;
+}
+
+
+// ======================================================
+// LOAD STATUS PENGADAAN DAN STATUS TEKNIS
+// ======================================================
+
+async function loadStatusEditKlien() {
+  const statusPengadaanSelect =
+    document.getElementById(
+      "editStatusPengadaanKlien"
+    );
+
+  const statusTeknisSelect =
+    document.getElementById(
+      "editStatusTeknisKlien"
+    );
+
+  if (
+    !statusPengadaanSelect ||
+    !statusTeknisSelect
+  ) {
+    throw new Error(
+      "Dropdown status klien tidak ditemukan"
+    );
+  }
+
+  statusPengadaanSelect.innerHTML = `
+    <option value="">
+      Memuat status...
+    </option>
+  `;
+
+  statusTeknisSelect.innerHTML = `
+    <option value="">
+      Memuat status...
+    </option>
+  `;
+
+  const response =
+    await fetch(
+      "/api/proyek/status"
+    );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      "Gagal mengambil status proyek"
+    );
+  }
+
+  if (!Array.isArray(data)) {
+    throw new Error(
+      "Format data status tidak valid"
+    );
+  }
+
+
+  // ====================================================
+  // FILTER STATUS PENGADAAN
+  // ====================================================
+
+  const statusPengadaan =
+    data.filter(item =>
+      String(item.flag || "")
+        .trim()
+        .toLowerCase() ===
+      "pengadaan"
+    );
+
+
+  // ====================================================
+  // FILTER STATUS TEKNIS
+  // ====================================================
+
+  const statusTeknis =
+    data.filter(item =>
+      String(item.flag || "")
+        .trim()
+        .toLowerCase() ===
+      "teknis"
+    );
+
+
+  // ====================================================
+  // ISI STATUS PENGADAAN
+  // ====================================================
+
+  statusPengadaanSelect.innerHTML = `
+    <option value="">
+      Pilih Status Pengadaan
+    </option>
+  `;
+
+  statusPengadaan.forEach(item => {
+    const deskripsi =
+      String(
+        item.deskripsi || ""
+      ).trim();
+
+    if (!deskripsi) return;
+
+    const option =
+      document.createElement(
+        "option"
+      );
+
+    option.value =
+      deskripsi;
+
+    option.textContent =
+      deskripsi;
+
+    option.dataset.id =
+      item.id;
+
+    statusPengadaanSelect.appendChild(
+      option
+    );
+  });
+
+
+  // ====================================================
+  // ISI STATUS TEKNIS
+  // ====================================================
+
+  statusTeknisSelect.innerHTML = `
+    <option value="">
+      Pilih Status Teknis
+    </option>
+  `;
+
+  statusTeknis.forEach(item => {
+    const deskripsi =
+      String(
+        item.deskripsi || ""
+      ).trim();
+
+    if (!deskripsi) return;
+
+    const option =
+      document.createElement(
+        "option"
+      );
+
+    option.value =
+      deskripsi;
+
+    option.textContent =
+      deskripsi;
+
+    option.dataset.id =
+      item.id;
+
+    statusTeknisSelect.appendChild(
+      option
+    );
+  });
+
+
+  console.log(
+    "MASTER STATUS EDIT KLIEN:",
+    {
+      pengadaan:
+        statusPengadaan,
+
+      teknis:
+        statusTeknis
+    }
+  );
+}
+
+// ======================================================
+// LOAD MASTER KLIEN
+// ======================================================
+
+async function loadMasterKlienEdit() {
+  const response =
+    await fetch(
+      "/api/proyek/klien"
+    );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      "Gagal mengambil master klien"
+    );
+  }
+
+  if (!Array.isArray(data)) {
+    throw new Error(
+      "Format data master klien tidak valid"
+    );
+  }
+
+  editKlienId.innerHTML = `
+    <option value="">
+      Pilih Klien
+    </option>
+  `;
+
+  data.forEach(item => {
+    const option =
+      document.createElement(
+        "option"
+      );
+
+    option.value =
+      item.id;
+
+    option.textContent =
+      item.perusahaan_klien;
+
+    editKlienId.appendChild(
+      option
+    );
+  });
+}
+
+// ======================================================
+// BUKA MODAL EDIT KLIEN
+// ======================================================
+
+if (editKlienButton) {
   editKlienButton.addEventListener(
     "click",
     async () => {
-
       try {
+        const klien =
+          detailData?.klien;
 
-        const response =
-          await fetch(
-            "/api/proyek/klien"
-          );
-
-        const masterKlien =
-          await response.json();
-
-
-        if (!response.ok) {
-
+        if (!klien) {
           throw new Error(
-            masterKlien.error ||
-            "Gagal mengambil klien"
+            "Data klien proyek tidak ditemukan"
           );
-
         }
 
 
-        editKlienId.innerHTML = `
-          <option value="">
-            Pilih Klien
-          </option>
+        // ==============================================
+        // LOAD MASTER KLIEN DAN STATUS
+        // ==============================================
 
-          ${masterKlien.map(item => `
-            <option value="${item.id}">
-              ${item.perusahaan_klien}
-            </option>
-          `).join("")}
-        `;
+        await Promise.all([
+          loadMasterKlienEdit(),
+          loadStatusEditKlien()
+        ]);
 
 
-        const klien =
-          detailData.klien;
+        // ==============================================
+        // ISI KLIEN
+        // ==============================================
+
+        editKlienId.value =
+          String(
+            klien.klien_id || ""
+          );
 
 
-        if (klien) {
+        // ==============================================
+        // ISI NILAI SUBMIT DAN NEGO
+        // ==============================================
 
-          editKlienId.value =
-            klien.klien_id || "";
+        document.getElementById(
+          "editNilaiSubmitKlien"
+        ).value =
+          klien.nilai_submit ?? "";
+
+        document.getElementById(
+          "editNilaiNego1Klien"
+        ).value =
+          klien.nilai_nego_1 ?? "";
+
+        document.getElementById(
+          "editNilaiNego2Klien"
+        ).value =
+          klien.nilai_nego_2 ?? "";
+
+        document.getElementById(
+          "editNilaiNego3Klien"
+        ).value =
+          klien.nilai_nego_3 ?? "";
 
 
+        // ==============================================
+        // ISI TANGGAL
+        // ==============================================
+
+        document.getElementById(
+          "editTanggalMulaiKlien"
+        ).value =
+          tanggalInput(
+            klien.tanggal_mulai
+          );
+
+        document.getElementById(
+          "editTanggalAkhirKlien"
+        ).value =
+          tanggalInput(
+            klien.tanggal_akhir
+          );
+
+
+        // ==============================================
+        // ISI MODEL PEMBAYARAN
+        // ==============================================
+
+        const modelPembayaranSelect =
           document.getElementById(
-            "editNilaiSubmitKlien"
-          ).value =
-            klien.nilai_submit ?? "";
+            "editModelPembayaranKlien"
+          );
+
+        pilihSelectBerdasarkanNama(
+          modelPembayaranSelect,
+
+          klien.model_pembayaran ||
+          klien.metode_pembayaran
+        );
 
 
-          document.getElementById(
-            "editNilaiNego1Klien"
-          ).value =
-            klien.nilai_nego_1 ?? "";
+        // ==============================================
+        // ISI STATUS PENGADAAN
+        // ==============================================
 
-
-          document.getElementById(
-            "editNilaiNego2Klien"
-          ).value =
-            klien.nilai_nego_2 ?? "";
-
-
-          document.getElementById(
-            "editNilaiNego3Klien"
-          ).value =
-            klien.nilai_nego_3 ?? "";
-
-
-          document.getElementById(
-            "editTanggalMulaiKlien"
-          ).value =
-            tanggalInput(
-              klien.tanggal_mulai
-            );
-
-
-          document.getElementById(
-            "editTanggalAkhirKlien"
-          ).value =
-            tanggalInput(
-              klien.tanggal_akhir
-            );
-
-
+        const statusPengadaanSelect =
           document.getElementById(
             "editStatusPengadaanKlien"
-          ).value =
-            klien.status_pengadaan || "";
+          );
+
+        /*
+         * Parameter kedua adalah ID.
+         * Parameter ketiga adalah nama/deskripsi.
+         */
+        pilihStatusEdit(
+          statusPengadaanSelect,
+
+          klien.status_pengadaan_id ||
+          null,
+
+          klien.status_pengadaan
+        );
 
 
+        // ==============================================
+        // ISI STATUS TEKNIS
+        // ==============================================
+
+        const statusTeknisSelect =
           document.getElementById(
             "editStatusTeknisKlien"
-          ).value =
-            klien.status_teknis || "";
+          );
 
-        }
+        pilihStatusEdit(
+          statusTeknisSelect,
 
+          klien.status_teknis_id ||
+          null,
+
+          klien.status_teknis
+        );
+
+
+        // ==============================================
+        // DEBUG
+        // ==============================================
+
+        console.log(
+          "DATA EDIT KLIEN:",
+          {
+            klien_id:
+              klien.klien_id,
+
+            model_pembayaran:
+              klien.model_pembayaran,
+
+            status_pengadaan:
+              klien.status_pengadaan,
+
+            status_pengadaan_terpilih:
+              statusPengadaanSelect.value,
+
+            status_teknis:
+              klien.status_teknis,
+
+            status_teknis_terpilih:
+              statusTeknisSelect.value
+          }
+        );
+
+
+        // ==============================================
+        // BUKA MODAL
+        // ==============================================
 
         editKlienModal.classList.add(
           "show"
         );
 
-
       } catch (error) {
-
         console.error(
-          "ERROR LOAD KLIEN:",
+          "ERROR LOAD EDIT KLIEN:",
           error
         );
 
-        alert(error.message);
-
+        alert(
+          `Gagal membuka edit klien: ${error.message}`
+        );
       }
-
     }
   );
-
 }
-
+// ======================================================
+// TOMBOL BATAL EDIT KLIEN
+// ======================================================
 
 if (batalEditKlien) {
-
   batalEditKlien.addEventListener(
     "click",
     () => {
-
       editKlienModal.classList.remove(
         "show"
       );
-
     }
   );
-
 }
-
-
 
 // ======================================================
 // KELOLA PARTNER
@@ -3703,6 +5782,112 @@ const batalEditPartner =
 let masterPartnerEdit = [];
 
 
+let masterStatusPartnerEdit = [];
+
+
+// ======================================================
+// OPTION STATUS PARTNER
+// ======================================================
+
+function statusPartnerOptions(
+  flag,
+  selectedValue = ""
+) {
+  const selected =
+    String(selectedValue || "")
+      .trim()
+      .toLowerCase();
+
+  const daftarStatus =
+    masterStatusPartnerEdit.filter(
+      item =>
+        String(item.flag || "")
+          .trim()
+          .toLowerCase() ===
+        String(flag || "")
+          .trim()
+          .toLowerCase()
+    );
+
+  return `
+    <option value="">
+      Pilih Status
+    </option>
+
+    ${daftarStatus
+      .map(item => {
+        const deskripsi =
+          item.deskripsi ||
+          item.nama ||
+          item.name ||
+          "";
+
+        const isSelected =
+          String(deskripsi)
+            .trim()
+            .toLowerCase() ===
+          selected;
+
+        return `
+          <option
+            value="${deskripsi}"
+            data-id="${item.id}"
+            ${
+              isSelected
+                ? "selected"
+                : ""
+            }
+          >
+            ${deskripsi}
+          </option>
+        `;
+      })
+      .join("")}
+  `;
+}
+
+
+// ======================================================
+// OPTION MODEL PEMBAYARAN
+// ======================================================
+
+function modelPembayaranPartnerOptions(
+  selectedValue = ""
+) {
+  const selected =
+    String(selectedValue || "")
+      .trim()
+      .toLowerCase();
+
+  const daftar = [
+    "Tahunan",
+    "Bulanan",
+    "Termin",
+    "One Time Charge"
+  ];
+
+  return `
+    <option value="">
+      Pilih Model Pembayaran
+    </option>
+
+    ${daftar
+      .map(item => `
+        <option
+          value="${item}"
+          ${
+            item.toLowerCase() ===
+            selected
+              ? "selected"
+              : ""
+          }
+        >
+          ${item}
+        </option>
+      `)
+      .join("")}
+  `;
+}
 // ======================================================
 // BUAT OPTION MASTER PARTNER
 // ======================================================
@@ -3735,7 +5920,6 @@ function partnerOptions(
 
 }
 
-
 // ======================================================
 // BUAT CARD PARTNER
 // ======================================================
@@ -3744,33 +5928,29 @@ function buatPartnerCard(
   item = {},
   index = 0
 ) {
-
   const proyekPartnerId =
     item.proyek_partner_id || "";
 
   return `
-
     <div
       class="card edit-partner-card"
       data-edit-partner="${proyekPartnerId}"
       style="
         margin-bottom:18px;
         border:1px solid #e5e7eb;
-        border-radius:12px;
-        padding:18px;
+        border-radius:16px;
+        padding:24px;
       "
     >
-
       <div
         style="
           display:flex;
           justify-content:space-between;
           align-items:center;
           gap:12px;
-          margin-bottom:16px;
+          margin-bottom:24px;
         "
       >
-
         <strong class="partner-card-title">
           Partner ${index + 1}
         </strong>
@@ -3782,9 +5962,7 @@ function buatPartnerCard(
         >
           Hapus Partner
         </button>
-
       </div>
-
 
       <input
         type="hidden"
@@ -3792,9 +5970,7 @@ function buatPartnerCard(
         value="${proyekPartnerId}"
       >
 
-
       <div class="form-group">
-
         <label>
           Partner
         </label>
@@ -3803,78 +5979,80 @@ function buatPartnerCard(
           class="edit-partner-id"
           required
         >
-          ${partnerOptions(
-            item.partner_id
-          )}
+          ${
+            partnerOptions(
+              item.partner_id
+            )
+          }
         </select>
-
       </div>
 
-
       <div class="form-grid">
-
         <div class="form-group">
-
           <label>
             Nilai Submit
           </label>
 
           <input
             type="number"
+            min="0"
+            step="any"
             class="edit-partner-submit"
-            value="${item.nilai_submit ?? ""}"
+            value="${
+              item.nilai_submit ?? ""
+            }"
           >
-
         </div>
 
-
         <div class="form-group">
-
           <label>
-            Nego 1
+            Nilai Nego 1
           </label>
 
           <input
             type="number"
+            min="0"
+            step="any"
             class="edit-partner-nego1"
-            value="${item.nilai_nego_1 ?? ""}"
+            value="${
+              item.nilai_nego_1 ?? ""
+            }"
           >
-
         </div>
 
-
         <div class="form-group">
-
           <label>
-            Nego 2
+            Nilai Nego 2
           </label>
 
           <input
             type="number"
+            min="0"
+            step="any"
             class="edit-partner-nego2"
-            value="${item.nilai_nego_2 ?? ""}"
+            value="${
+              item.nilai_nego_2 ?? ""
+            }"
           >
-
         </div>
 
-
         <div class="form-group">
-
           <label>
-            Nego 3
+            Nilai Nego 3
           </label>
 
           <input
             type="number"
+            min="0"
+            step="any"
             class="edit-partner-nego3"
-            value="${item.nilai_nego_3 ?? ""}"
+            value="${
+              item.nilai_nego_3 ?? ""
+            }"
           >
-
         </div>
 
-
         <div class="form-group">
-
           <label>
             Tanggal Mulai
           </label>
@@ -3882,16 +6060,15 @@ function buatPartnerCard(
           <input
             type="date"
             class="edit-partner-mulai"
-            value="${tanggalInput(
-              item.tanggal_mulai
-            )}"
+            value="${
+              tanggalInput(
+                item.tanggal_mulai
+              )
+            }"
           >
-
         </div>
 
-
         <div class="form-group">
-
           <label>
             Tanggal Akhir
           </label>
@@ -3899,49 +6076,70 @@ function buatPartnerCard(
           <input
             type="date"
             class="edit-partner-akhir"
-            value="${tanggalInput(
-              item.tanggal_akhir
-            )}"
+            value="${
+              tanggalInput(
+                item.tanggal_akhir
+              )
+            }"
           >
-
         </div>
 
+        <div
+          class="form-group"
+          style="grid-column:1 / -1;"
+        >
+          <label>
+            Model Pembayaran
+          </label>
+
+          <select
+            class="edit-partner-model-pembayaran"
+          >
+            ${
+              modelPembayaranPartnerOptions(
+                item.model_pembayaran ||
+                item.metode_pembayaran
+              )
+            }
+          </select>
+        </div>
 
         <div class="form-group">
-
           <label>
             Status Pengadaan
           </label>
 
-          <input
-            type="text"
+          <select
             class="edit-partner-pengadaan"
-            value="${item.status_pengadaan ?? ""}"
           >
-
+            ${
+              statusPartnerOptions(
+                "pengadaan",
+                item.status_pengadaan
+              )
+            }
+          </select>
         </div>
 
-
         <div class="form-group">
-
           <label>
             Status Teknis
           </label>
 
-          <input
-            type="text"
+          <select
             class="edit-partner-teknis"
-            value="${item.status_teknis ?? ""}"
           >
-
+            ${
+              statusPartnerOptions(
+                "teknis",
+                item.status_teknis
+              )
+            }
+          </select>
         </div>
-
       </div>
-
     </div>
-
   `;
-
 }
 
 
@@ -4011,7 +6209,6 @@ function tambahPartnerCard() {
 
 }
 
-
 // ======================================================
 // HAPUS PARTNER DARI FORM
 // ======================================================
@@ -4059,7 +6256,6 @@ function hapusPartnerCard(
 
 }
 
-
 // ======================================================
 // BUKA KELOLA PARTNER
 // ======================================================
@@ -4072,25 +6268,43 @@ if (editPartnerButton) {
 
       try {
 
-        const response =
-          await fetch(
-            "/api/proyek/partner"
-          );
+        const [
+          responsePartner,
+          responseStatus
+        ] = await Promise.all([
+          fetch("/api/proyek/partner"),
+          fetch("/api/proyek/status")
+        ]);
 
+        const dataPartner =
+          await responsePartner.json();
 
-        masterPartnerEdit =
-          await response.json();
+        const dataStatus =
+          await responseStatus.json();
 
-
-        if (!response.ok) {
-
+        if (!responsePartner.ok) {
           throw new Error(
-            masterPartnerEdit.error ||
+            dataPartner.error ||
             "Gagal mengambil master partner"
           );
-
         }
 
+        if (!responseStatus.ok) {
+          throw new Error(
+            dataStatus.error ||
+            "Gagal mengambil status proyek"
+          );
+        }
+
+        masterPartnerEdit =
+          Array.isArray(dataPartner)
+            ? dataPartner
+            : [];
+
+        masterStatusPartnerEdit =
+          Array.isArray(dataStatus)
+            ? dataStatus
+            : [];
 
         const partners =
           detailData.partners || [];
@@ -4324,6 +6538,10 @@ if (editPartnerButton) {
                         ".edit-partner-akhir"
                       ).value || null,
 
+                    model_pembayaran:
+                      card.querySelector(
+                        ".edit-partner-model-pembayaran"
+                      ).value || null,
 
                     status_pengadaan:
                       card.querySelector(
@@ -4594,11 +6812,7 @@ function tambahTerminPartner(
       "Tambah Termin Partner";
   }
 
-
-  // sesuaikan:
-  // Transaksi = nominal
-  // Reguler/SLA & Sewa = persentase
-  updateTerminModalMode();
+aturInputTermin();
 
 
   // buka modal
@@ -4663,53 +6877,133 @@ const editProyekForm =
   );
 
 if (editProyekForm) {
-
   editProyekForm.addEventListener(
     "submit",
     async event => {
-
       event.preventDefault();
+
+      // Ambil elemen dropdown
+      const jenisSelect =
+        document.getElementById(
+          "editJenisProyek"
+        );
+
+      const subJenisSelect =
+        document.getElementById(
+          "editSubJenisProyek"
+        );
+
+      const statusSelect =
+        document.getElementById(
+          "editStatusFinal"
+        );
+
+      // Validasi
+      if (
+        editKategoriDipilih.length === 0
+      ) {
+        alert(
+          "Minimal satu kategori harus dipilih"
+        );
+        return;
+      }
+
+      if (!jenisSelect.value) {
+        alert(
+          "Jenis proyek wajib dipilih"
+        );
+        return;
+      }
+
+      if (
+        !document
+          .getElementById(
+            "editNamaProyek"
+          )
+          .value.trim()
+      ) {
+        alert(
+          "Nama proyek wajib diisi"
+        );
+        return;
+      }
+
+      // Susun data yang dikirim ke server
+      const payload = {
+        kategori_produk_ids:
+          editKategoriDipilih.map(
+            item => item.id
+          ),
+
+        nama_proyek:
+          document.getElementById(
+            "editNamaProyek"
+          ).value.trim(),
+
+        jenis_proyek_id:
+          jenisSelect.value
+            ? Number(
+                jenisSelect.value
+              )
+            : null,
+
+        jenis_proyek:
+          jenisSelect
+            .selectedOptions[0]
+            ?.textContent
+            .trim() || null,
+
+        sub_jenis_proyek_id:
+          subJenisSelect.value
+            ? Number(
+                subJenisSelect.value
+              )
+            : null,
+
+        sub_jenis_proyek:
+          subJenisSelect.value
+            ? subJenisSelect
+                .selectedOptions[0]
+                ?.textContent
+                .trim()
+            : null,
+
+        status_final_id:
+          statusSelect
+            .selectedOptions[0]
+            ?.dataset.id
+            ? Number(
+                statusSelect
+                  .selectedOptions[0]
+                  .dataset.id
+              )
+            : null,
+
+        status_final:
+          statusSelect.value || null,
+
+        deskripsi:
+          document.getElementById(
+            "editDeskripsi"
+          ).value.trim()
+      };
+
       console.log(
-        "SUBMIT EDIT PROYEK MASUK"
+        "PAYLOAD EDIT PROYEK:",
+        payload
       );
 
-
-      const payload = {
-
-kategori_produk_ids:
-  editKategoriDipilih.map(
-    item => item.id
-  ),
-
-  nama_proyek:
-    document.getElementById(
-      "editNamaProyek"
-    ).value.trim(),
-
-  jenis_proyek:
-    document.getElementById(
-      "editJenisProyek"
-    ).value,
-
-  sub_jenis_proyek:
-    document.getElementById(
-      "editSubJenisProyek"
-    ).value || null,
-
-  status_final:
-    document.getElementById(
-      "editStatusFinal"
-    ).value,
-
-  deskripsi:
-    document.getElementById(
-      "editDeskripsi"
-    ).value.trim()
-
-};
-
+      const tombolSimpan =
+        editProyekForm.querySelector(
+          'button[type="submit"]'
+        );
 
       try {
+        if (tombolSimpan) {
+          tombolSimpan.disabled = true;
+          tombolSimpan.textContent =
+            "Menyimpan...";
+        }
 
         const response =
           await fetch(
@@ -4727,43 +7021,49 @@ kategori_produk_ids:
             }
           );
 
-
         const result =
           await response.json();
 
-
         if (!response.ok) {
-
           throw new Error(
             result.error ||
-            "Gagal mengubah proyek"
+            "Gagal memperbarui proyek"
           );
-
         }
 
-
-        editProyekModal.classList.remove(
-          "show"
+        alert(
+          result.message ||
+          "Proyek berhasil diperbarui"
         );
 
+        document
+          .getElementById(
+            "editProyekModal"
+          )
+          .classList.remove("show");
 
+        // Muat ulang detail proyek
         await loadDetail();
 
-
       } catch (error) {
-
         console.error(
           "ERROR UPDATE PROYEK:",
           error
         );
 
-        alert(error.message);
+        alert(
+          `Gagal menyimpan perubahan: ${error.message}`
+        );
 
+      } finally {
+        if (tombolSimpan) {
+          tombolSimpan.disabled = false;
+          tombolSimpan.textContent =
+            "Simpan Perubahan";
+        }
       }
-
     }
   );
-
 }
 
 // ======================================================
@@ -4892,63 +7192,61 @@ if (editKlienForm) {
 
 
       const payload = {
+  klien_id:
+    editKlienId.value
+      ? Number(editKlienId.value)
+      : null,
 
-        klien_id:
-          editKlienId.value
-            ? Number(
-                editKlienId.value
-              )
-            : null,
+  nilai_submit:
+    angkaAtauNull(
+      "editNilaiSubmitKlien"
+    ),
 
+  nilai_nego_1:
+    angkaAtauNull(
+      "editNilaiNego1Klien"
+    ),
 
-        nilai_submit:
-          angkaAtauNull(
-            "editNilaiSubmitKlien"
-          ),
+  nilai_nego_2:
+    angkaAtauNull(
+      "editNilaiNego2Klien"
+    ),
 
+  nilai_nego_3:
+    angkaAtauNull(
+      "editNilaiNego3Klien"
+    ),
 
-        nilai_nego_1:
-          angkaAtauNull(
-            "editNilaiNego1Klien"
-          ),
+  tanggal_mulai:
+    document.getElementById(
+      "editTanggalMulaiKlien"
+    ).value || null,
 
+  tanggal_akhir:
+    document.getElementById(
+      "editTanggalAkhirKlien"
+    ).value || null,
 
-        nilai_nego_2:
-          angkaAtauNull(
-            "editNilaiNego2Klien"
-          ),
+  model_pembayaran:
+    document.getElementById(
+      "editModelPembayaranKlien"
+    ).value || null,
 
+  status_pengadaan:
+    document.getElementById(
+      "editStatusPengadaanKlien"
+    ).value || null,
 
-        nilai_nego_3:
-          angkaAtauNull(
-            "editNilaiNego3Klien"
-          ),
+  status_teknis:
+    document.getElementById(
+      "editStatusTeknisKlien"
+    ).value || null
+};
 
-
-        tanggal_mulai:
-          document.getElementById(
-            "editTanggalMulaiKlien"
-          ).value || null,
-
-
-        tanggal_akhir:
-          document.getElementById(
-            "editTanggalAkhirKlien"
-          ).value || null,
-
-
-        status_pengadaan:
-          document.getElementById(
-            "editStatusPengadaanKlien"
-          ).value.trim() || null,
-
-
-        status_teknis:
-          document.getElementById(
-            "editStatusTeknisKlien"
-          ).value.trim() || null
-
-      };
+console.log(
+  "PAYLOAD EDIT KLIEN:",
+  payload
+);
 
 
       if (!payload.klien_id) {
@@ -5270,8 +7568,115 @@ function isTerminNominal() {
 
 }
 
+
+// ======================================================
+// MODAL RINGKASAN PEMBAYARAN
+// ======================================================
+
+const pembayaranModal =
+  document.getElementById(
+    "pembayaranModal"
+  );
+
+const bukaPembayaranButton =
+  document.getElementById(
+    "bukaPembayaranButton"
+  );
+
+const tutupPembayaranButton =
+  document.getElementById(
+    "tutupPembayaranButton"
+  );
+
+const tutupPembayaranButtonBawah =
+  document.getElementById(
+    "tutupPembayaranButtonBawah"
+  );
+
+
+function bukaModalPembayaran() {
+  if (!pembayaranModal) {
+    return;
+  }
+
+  pembayaranModal.classList.add(
+    "show"
+  );
+
+  document.body.style.overflow =
+    "hidden";
+}
+
+
+function tutupModalPembayaran() {
+  if (!pembayaranModal) {
+    return;
+  }
+
+  pembayaranModal.classList.remove(
+    "show"
+  );
+
+  document.body.style.overflow = "";
+}
+
+
+if (bukaPembayaranButton) {
+  bukaPembayaranButton.addEventListener(
+    "click",
+    bukaModalPembayaran
+  );
+}
+
+
+if (tutupPembayaranButton) {
+  tutupPembayaranButton.addEventListener(
+    "click",
+    tutupModalPembayaran
+  );
+}
+
+
+if (tutupPembayaranButtonBawah) {
+  tutupPembayaranButtonBawah
+    .addEventListener(
+      "click",
+      tutupModalPembayaran
+    );
+}
+
+
+if (pembayaranModal) {
+  pembayaranModal.addEventListener(
+    "click",
+    event => {
+      if (
+        event.target ===
+        pembayaranModal
+      ) {
+        tutupModalPembayaran();
+      }
+    }
+  );
+}
+
+document.addEventListener(
+  "keydown",
+  event => {
+    if (
+      event.key === "Escape" &&
+      pembayaranModal
+        ?.classList
+        .contains("show")
+    ) {
+      tutupModalPembayaran();
+    }
+  }
+);
+
 // ======================================================
 // START
 // ======================================================
 
 loadDetail();
+loadTimeline();

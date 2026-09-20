@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Pendapatan - Portopro</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+  <style>
+
+    body {
+      margin: 0;
+      font-family:
+        Inter,
+        Arial,
+        sans-serif;
+
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+
+
+    /* =====================================================
+       MAIN PAGE
+    ====================================================== */
+
+    .report-page {
+      margin-left: 260px;
+
+      width: calc(100% - 260px);
+
+      min-width: 0;
+
+      padding: 32px;
+
+      box-sizing: border-box;
+    }
+
+
+    /* =====================================================
+       PAGE HEADER
+    ====================================================== */
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+
+    .page-header h1 {
+      margin: 0 0 6px;
+
+      font-size: 30px;
+      font-weight: 700;
+    }
+
+    .page-header p {
+      margin: 0;
+
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+
+    /* =====================================================
+       FILTER
+    ====================================================== */
+
+    .filter-card {
+      width: 100%;
+
+      padding: 20px;
+
+      margin-bottom: 24px;
+
+      background: #ffffff;
+
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+
+      box-sizing: border-box;
+    }
+
+    .filter-group {
+      display: flex;
+
+      align-items: center;
+
+      gap: 12px;
+
+      flex-wrap: wrap;
+    }
+
+    .filter-group label {
+      font-size: 13px;
+      font-weight: 600;
+
+      color: #374151;
+    }
+
+    .filter-group select {
+      min-width: 140px;
+
+      padding: 10px 12px;
+
+      border: 1px solid #d1d5db;
+      border-radius: 9px;
+
+      background: #ffffff;
+
+      font: inherit;
+
+      outline: none;
+    }
+
+    .filter-group select:focus {
+      border-color: #4f46e5;
+    }
+
+
+    /* =====================================================
+       REPORT SECTION
+    ====================================================== */
+
+    .report-section {
+      width: 100%;
+
+      margin-bottom: 24px;
+
+      background: #ffffff;
+
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+
+      overflow: hidden;
+
+      box-sizing: border-box;
+    }
+
+    .report-header {
+      display: flex;
+
+      align-items: center;
+
+      justify-content: space-between;
+
+      padding: 18px 20px;
+
+      border-bottom: 1px solid #e5e7eb;
+
+      background: #ffffff;
+    }
+
+    .report-header h2 {
+      margin: 0;
+
+      font-size: 18px;
+      font-weight: 700;
+
+      color: #111827;
+    }
+
+
+    /* =====================================================
+       TABLE
+    ====================================================== */
+
+    .table-wrapper {
+      width: 100%;
+
+      min-width: 0;
+
+      overflow-x: auto;
+      overflow-y: hidden;
+
+      box-sizing: border-box;
+    }
+
+    .pendapatan-table {
+      width: 100%;
+
+      min-width: 1200px;
+
+      border-collapse: collapse;
+    }
+
+    .pendapatan-table th {
+      padding: 14px 16px;
+
+      text-align: left;
+
+      font-size: 12px;
+      font-weight: 600;
+
+      color: #6b7280;
+
+      background: #f9fafb;
+
+      border-bottom: 1px solid #e5e7eb;
+
+      white-space: nowrap;
+    }
+
+    .pendapatan-table td {
+      padding: 16px;
+
+      font-size: 14px;
+
+      color: #374151;
+
+      border-bottom: 1px solid #f0f1f3;
+
+      white-space: nowrap;
+    }
+
+    .pendapatan-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+
+    /* =====================================================
+       SCROLLBAR
+    ====================================================== */
+
+    .table-wrapper::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-track {
+      background: #f8fafc;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+
+      border-radius: 999px;
+    }
+
+
+    /* =====================================================
+       RESPONSIVE
+    ====================================================== */
+
+    @media (max-width: 900px) {
+
+      .report-page {
+        margin-left: 0;
+
+        width: 100%;
+
+        padding: 20px;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+  <!-- =====================================================
+       SIDEBAR
+  ====================================================== -->
+
+  <div id="sidebarContainer"></div>
+
+
+
+  <!-- =====================================================
+       MAIN CONTENT
+  ====================================================== -->
+
+  <main class="report-page">
+
+
+    <!-- PAGE HEADER -->
+
+    <div class="page-header">
+
+      <h1>
+        Pendapatan
+      </h1>
+
+      <p>
+        Monitoring pendapatan reguler, sewa, dan transaksi.
+      </p>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         FILTER
+    ====================================================== -->
+
+    <div class="filter-card">
+
+      <div class="filter-group">
+
+        <label for="filterTahun">
+          Tahun
+        </label>
+
+        <select id="filterTahun">
+
+          <option value="">
+            Pilih Tahun
+          </option>
+
+        </select>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         REGULER
+    ====================================================== -->
+
+    <section class="report-section">
+
+      <div class="report-header">
+
+        <h2>
+          Reguler
+        </h2>
+
+      </div>
+
+
+      <div class="table-wrapper">
+
+        <table class="pendapatan-table">
+
+          <thead>
+
+            <tr>
+
+              <th>Januari</th>
+              <th>Februari</th>
+              <th>Maret</th>
+              <th>April</th>
+              <th>Mei</th>
+              <th>Juni</th>
+              <th>Juli</th>
+              <th>Agustus</th>
+              <th>September</th>
+              <th>Oktober</th>
+              <th>November</th>
+              <th>Desember</th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            <tr id="regulerRow">
+
+              <td colspan="12">
+                Memuat data...
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         SEWA
+    ====================================================== -->
+
+    <section class="report-section">
+
+      <div class="report-header">
+
+        <h2>
+          Sewa
+        </h2>
+
+      </div>
+
+
+      <div class="table-wrapper">
+
+        <table class="pendapatan-table">
+
+          <thead>
+
+            <tr>
+
+              <th>Januari</th>
+              <th>Februari</th>
+              <th>Maret</th>
+              <th>April</th>
+              <th>Mei</th>
+              <th>Juni</th>
+              <th>Juli</th>
+              <th>Agustus</th>
+              <th>September</th>
+              <th>Oktober</th>
+              <th>November</th>
+              <th>Desember</th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            <tr id="sewaRow">
+
+              <td colspan="12">
+                Memuat data...
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         TRANSAKSI
+    ====================================================== -->
+
+    <section class="report-section">
+
+      <div class="report-header">
+
+        <h2>
+          Transaksi
+        </h2>
+
+      </div>
+
+
+      <div class="table-wrapper">
+
+        <table class="pendapatan-table">
+
+          <thead>
+
+            <tr>
+
+              <th>Januari</th>
+              <th>Februari</th>
+              <th>Maret</th>
+              <th>April</th>
+              <th>Mei</th>
+              <th>Juni</th>
+              <th>Juli</th>
+              <th>Agustus</th>
+              <th>September</th>
+              <th>Oktober</th>
+              <th>November</th>
+              <th>Desember</th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            <tr id="transaksiRow">
+
+              <td colspan="12">
+                Memuat data...
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+
+  </main>
+
+
+
+  <!-- =====================================================
+       SCRIPT
+  ====================================================== -->
+
+  <script src="/layout.js"></script>
+
+  <script src="/pendapatan.js"></script>
+
+
+</body>
+
+</html>
+```

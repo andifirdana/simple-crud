@@ -60,6 +60,60 @@ const simpanButton =
 
 
 let masterDokumen = [];
+let currentPage = 1;
+
+const itemsPerPage = 10;
+
+
+function renderDokumenPagination(
+  data
+) {
+
+  const start =
+    (currentPage - 1) *
+    itemsPerPage;
+
+  const end =
+    start +
+    itemsPerPage;
+
+
+  const pageData =
+    data.slice(
+      start,
+      end
+    );
+
+
+  renderDokumen(pageData);
+
+
+  createPagination({
+
+    containerId:
+      "pagination",
+
+    currentPage,
+
+    totalItems:
+      data.length,
+
+    itemsPerPage,
+
+    onPageChange:
+      page => {
+
+        currentPage =
+          page;
+
+        applySearch();
+
+      }
+
+  });
+
+}
+
 
 
 // ======================================================
@@ -219,9 +273,7 @@ async function loadDokumen() {
         : [];
 
 
-    renderDokumen(
-      masterDokumen
-    );
+    applySearch();
 
 
   } catch (error) {
@@ -384,6 +436,59 @@ function renderDokumen(data) {
 // ======================================================
 // SEARCH
 // ======================================================
+function applySearch() {
+
+  const keyword =
+    searchInput
+      .value
+      .toLowerCase()
+      .trim();
+
+
+  
+  const filtered =
+      masterDokumen.filter(
+        item => {
+
+          const flag =
+            String(
+              item.flag || ""
+            )
+              .toLowerCase();
+
+          const kode =
+            String(
+              item.kode || ""
+            )
+              .toLowerCase();
+
+          const deskripsi =
+            String(
+              item.deskripsi || ""
+            )
+              .toLowerCase();
+
+
+          return (
+            flag.includes(
+              keyword
+            ) ||
+            kode.includes(
+              keyword
+            ) ||
+            deskripsi.includes(
+              keyword
+            )
+          );
+
+        }
+      );
+
+  renderDokumenPagination(
+    filtered
+  );
+
+}
 
 searchInput.addEventListener(
   "input",
@@ -394,17 +499,6 @@ searchInput.addEventListener(
         .value
         .trim()
         .toLowerCase();
-
-
-    if (!keyword) {
-
-      renderDokumen(
-        masterDokumen
-      );
-
-      return;
-
-    }
 
 
     const filtered =
@@ -446,7 +540,7 @@ searchInput.addEventListener(
       );
 
 
-    renderDokumen(
+    renderDokumenPagination(
       filtered
     );
 
@@ -801,8 +895,26 @@ async function hapusDokumen(id) {
 }
 
 
-// ======================================================
-// START
-// ======================================================
 
-loadDokumen();
+// =========================
+// SEARCH REALTIME
+// =========================
+searchInput.addEventListener(
+  "input",
+  applySearch
+);
+
+
+
+// ========================================
+// START
+// ========================================
+
+async function start() {
+
+  await loadDokumen();
+
+}
+
+
+start();

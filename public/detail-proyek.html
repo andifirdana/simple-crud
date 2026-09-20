@@ -2,7 +2,6 @@
 <html lang="id">
 
 <head>
-
   <meta charset="UTF-8">
 
   <meta
@@ -10,7 +9,7 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Portopro</title>
+  <title>Detail Proyek - Portopro</title>
 
   <link
     rel="stylesheet"
@@ -18,99 +17,26 @@
   >
 
   <style>
-  
-
- /* ================================================
-      CSS
-  ================================================ */
-
-
-      /* =====================================================
-        PORTOPRO DETAIL LAYOUT
-      ===================================================== */
-
-  body {
-    margin: 0;
-    background: #f5f7fb;
-    color: #1f2937;
-    overflow-x: hidden;
-  }
-
-  .app-layout {
-    min-height: 100vh;
-  }
-
-  .main-content {
-    margin-left: 260px;
-    width: calc(100% - 260px);
-    max-width: calc(100% - 260px);
-    min-width: 0;
-    padding: 32px;
-    box-sizing: border-box;
-  }
-
-  .detail-page {
-    width: 100%;
-    max-width: 1500px;
-    min-width: 0;
-    margin: 0 auto;
-    box-sizing: border-box;
-  }
-
-
-  /* TASK TABLE */
-
-  .project-task-table-wrapper {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: auto;
-  }
-
-  .project-task-table {
-    width: 100%;
-    min-width: 1200px;
-    border-collapse: collapse;
-  }
-
-  .project-task-table th {
-    padding: 12px 13px;
-    background: #f8fafc;
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 700;
-    text-align: left;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .project-task-table td {
-    padding: 13px;
-    border-top: 1px solid #f1f5f9;
-    color: #334155;
-    font-size: 12px;
-    vertical-align: middle;
-  }
-
-
-  /* RESPONSIVE */
-
-  @media (max-width: 768px) {
-
-    .main-content {
-      margin-left: 0;
-      width: 100%;
-      max-width: 100%;
-      padding: 20px;
+    body {
+      margin: 0;
+      background: #f5f7fb;
+      color: #1f2937;
+      overflow-x: hidden;
     }
 
-  }
+    .app-layout {
+      min-height: 100vh;
+    }
 
-
-    /* ================================================
-       DETAIL PROYEK
-       ================================================ */
+    .main-content {
+      width: calc(100% - 260px);
+      margin-left: 260px;
+      padding: 32px;
+      box-sizing: border-box;
+    }
 
     .detail-page {
+      width: 100%;
       max-width: 1500px;
       margin: 0 auto;
     }
@@ -132,13 +58,14 @@
     .breadcrumb a {
       color: #4f46e5;
       font-weight: 600;
+      text-decoration: none;
     }
 
     .project-title {
+      margin: 0 0 6px;
       font-size: 28px;
       font-weight: 750;
       letter-spacing: -0.7px;
-      margin-bottom: 6px;
     }
 
     .project-category {
@@ -146,54 +73,337 @@
       font-size: 14px;
     }
 
+    /* =====================================================
+   TRENDY SUMMARY CARDS
+===================================================== */
 
-    /* ================================================
-       SUMMARY
-       ================================================ */
+.summary-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 28px;
+}
 
-    .summary-grid {
-      display: grid;
-      grid-template-columns:
-        repeat(4, minmax(0, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
+.summary-card {
+  --card-color: #4f46e5;
+  --card-light: #eef2ff;
+  --card-shadow: rgba(79, 70, 229, 0.16);
 
-    .summary-card {
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.04),
-        0 4px 12px rgba(15, 23, 42, 0.04);
-    }
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
 
-    .summary-label {
-      color: #64748b;
-      font-size: 12px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
+  min-width: 0;
+  min-height: 145px;
+  padding: 24px;
 
-    .summary-value {
-      color: #0f172a;
-      font-size: 21px;
-      font-weight: 750;
-    }
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(248, 250, 252, 0.95)
+    );
+
+  border:
+    1px solid
+    rgba(226, 232, 240, 0.95);
+
+  border-radius: 20px;
+
+  box-shadow:
+    0 2px 5px rgba(15, 23, 42, 0.04),
+    0 14px 35px var(--card-shadow);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
 
 
-    /* ================================================
-       SECTION CARD
-       ================================================ */
+/* WARNA BAGIAN ATAS */
+
+.summary-card::before {
+  content: "";
+
+  position: absolute;
+  z-index: -1;
+
+  top: 0;
+  right: 0;
+  left: 0;
+
+  height: 5px;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--card-color),
+      color-mix(
+        in srgb,
+        var(--card-color),
+        white 35%
+      )
+    );
+}
+
+
+/* LINGKARAN DEKORASI */
+
+.summary-card::after {
+  content: "";
+
+  position: absolute;
+  z-index: -1;
+
+  width: 130px;
+  height: 130px;
+
+  top: -65px;
+  right: -45px;
+
+  background:
+    radial-gradient(
+      circle,
+      var(--card-light) 0%,
+      rgba(255, 255, 255, 0) 70%
+    );
+
+  border-radius: 50%;
+}
+
+
+.summary-card:hover {
+  transform:
+    translateY(-5px);
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--card-color),
+      white 55%
+    );
+
+  box-shadow:
+    0 5px 12px rgba(15, 23, 42, 0.06),
+    0 20px 45px var(--card-shadow);
+}
+
+
+/* LABEL */
+
+.summary-label {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  margin-bottom: 16px;
+
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 750;
+
+  line-height: 1.4;
+
+  text-transform: uppercase;
+  letter-spacing: 0.65px;
+}
+
+
+/* TITIK ICON LABEL */
+
+.summary-label::before {
+  content: "";
+
+  flex: 0 0 auto;
+
+  width: 10px;
+  height: 10px;
+
+  background:
+    var(--card-color);
+
+  border:
+    4px solid
+    var(--card-light);
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 0 1px
+    color-mix(
+      in srgb,
+      var(--card-color),
+      white 55%
+    );
+}
+
+
+/* NILAI */
+
+.summary-value {
+  position: relative;
+
+  max-width: 100%;
+
+  color: #0f172a;
+
+  font-size:
+    clamp(
+      23px,
+      2vw,
+      32px
+    );
+
+  font-weight: 800;
+
+  line-height: 1.18;
+
+  letter-spacing: -0.8px;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* GARIS KECIL DI BAWAH NILAI */
+
+.summary-value::after {
+  content: "";
+
+  display: block;
+
+  width: 38px;
+  height: 4px;
+
+  margin-top: 17px;
+
+  background:
+    var(--card-color);
+
+  border-radius: 999px;
+
+  opacity: 0.8;
+}
+
+
+/* =====================================================
+   WARNA SETIAP CARD
+===================================================== */
+
+/* Nilai Klien */
+
+.summary-card:nth-child(1) {
+  --card-color: #4f46e5;
+  --card-light: #eef2ff;
+  --card-shadow: rgba(79, 70, 229, 0.14);
+}
+
+
+/* Nilai Partner */
+
+.summary-card:nth-child(2) {
+  --card-color: #2563eb;
+  --card-light: #dbeafe;
+  --card-shadow: rgba(37, 99, 235, 0.14);
+}
+
+
+/* Margin */
+
+.summary-card:nth-child(3) {
+  --card-color: #059669;
+  --card-light: #d1fae5;
+  --card-shadow: rgba(5, 150, 105, 0.14);
+}
+
+
+/* Margin Persen */
+
+.summary-card:nth-child(4) {
+  --card-color: #7c3aed;
+  --card-light: #ede9fe;
+  --card-shadow: rgba(124, 58, 237, 0.14);
+}
+
+
+/* Dibayar Klien */
+
+.summary-card:nth-child(5) {
+  --card-color: #16a34a;
+  --card-light: #dcfce7;
+  --card-shadow: rgba(22, 163, 74, 0.14);
+}
+
+
+/* Belum Dibayar Klien */
+
+.summary-card:nth-child(6) {
+  --card-color: #f59e0b;
+  --card-light: #fef3c7;
+  --card-shadow: rgba(245, 158, 11, 0.14);
+}
+
+
+/* Dibayar Partner */
+
+.summary-card:nth-child(7) {
+  --card-color: #0891b2;
+  --card-light: #cffafe;
+  --card-shadow: rgba(8, 145, 178, 0.14);
+}
+
+
+/* Belum Dibayar Partner */
+
+.summary-card:nth-child(8) {
+  --card-color: #ef4444;
+  --card-light: #fee2e2;
+  --card-shadow: rgba(239, 68, 68, 0.14);
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1200px) {
+  .summary-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+@media (max-width: 650px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .summary-card {
+    min-height: 125px;
+    padding: 20px;
+  }
+
+  .summary-value {
+    font-size: 25px;
+  }
+}
+
+    /* =========================
+       SECTION
+    ========================= */
 
     .project-section {
+      overflow: hidden;
+      margin-bottom: 20px;
       background: #ffffff;
       border: 1px solid #e5e7eb;
       border-radius: 16px;
-      margin-bottom: 20px;
-      overflow: hidden;
-
       box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.04),
         0 4px 12px rgba(15, 23, 42, 0.03);
@@ -204,11 +414,8 @@
       align-items: center;
       justify-content: space-between;
       gap: 15px;
-
       padding: 18px 22px;
-
-      border-bottom:
-        1px solid #eef2f7;
+      border-bottom: 1px solid #eef2f7;
     }
 
     .section-heading {
@@ -218,29 +425,24 @@
     }
 
     .section-icon {
-      width: 38px;
-      height: 38px;
-
       display: flex;
       align-items: center;
       justify-content: center;
-
-      border-radius: 10px;
-
+      width: 38px;
+      height: 38px;
       background: #eef2ff;
-
+      border-radius: 10px;
       font-size: 18px;
     }
 
     .section-heading h2 {
+      margin: 0;
       font-size: 16px;
       font-weight: 700;
-      margin: 0;
     }
 
     .section-heading p {
-      margin-top: 2px;
-
+      margin: 2px 0 0;
       color: #64748b;
       font-size: 12px;
     }
@@ -249,80 +451,56 @@
       padding: 22px;
     }
 
-
-    /* ================================================
+    /* =========================
        INFORMATION GRID
-       ================================================ */
+    ========================= */
 
     .grid {
       display: grid;
-
       grid-template-columns:
-        repeat(
-          auto-fit,
-          minmax(190px, 1fr)
-        );
-
+        repeat(auto-fit, minmax(190px, 1fr));
       gap: 14px;
     }
 
     .info {
       padding: 15px;
-
-      border:
-        1px solid #eef2f7;
-
-      border-radius: 11px;
-
       background: #f8fafc;
+      border: 1px solid #eef2f7;
+      border-radius: 11px;
     }
 
     .label {
+      margin-bottom: 5px;
       color: #64748b;
-
       font-size: 11px;
       font-weight: 600;
-
       text-transform: uppercase;
       letter-spacing: 0.4px;
-
-      margin-bottom: 5px;
     }
 
     .value {
       color: #0f172a;
-
       font-size: 14px;
       font-weight: 600;
     }
 
-
-    /* ================================================
-       ACTION BUTTON
-       ================================================ */
+    /* =========================
+       BUTTON
+    ========================= */
 
     .btn-edit {
       display: inline-flex;
       align-items: center;
       gap: 7px;
-
       min-height: 36px;
-
       padding: 7px 13px;
-
+      background: #ffffff;
       border: 1px solid #dbe2ea;
       border-radius: 9px;
-
-      background: #ffffff;
-
       color: #334155;
-
       font-size: 12px;
       font-weight: 650;
-
       cursor: pointer;
-
-      transition: 0.2s ease;
     }
 
     .btn-edit:hover {
@@ -331,28 +509,21 @@
       background: #eef2ff;
     }
 
-
-    /* ================================================
+    /* =========================
        SUB SECTION
-       ================================================ */
+    ========================= */
 
     .sub-section {
       margin-top: 24px;
-
       padding-top: 20px;
-
-      border-top:
-        1px solid #eef2f7;
+      border-top: 1px solid #eef2f7;
     }
 
     .sub-section-header {
       display: flex;
-
       align-items: center;
       justify-content: space-between;
-
       gap: 12px;
-
       margin-bottom: 15px;
     }
 
@@ -361,88 +532,120 @@
       font-weight: 700;
     }
 
-
-    /* ================================================
+    /* =========================
        PROGRESS
-       ================================================ */
+    ========================= */
 
     .progress-header {
       display: flex;
       justify-content: space-between;
-
-      color: #64748b;
-
-      font-size: 12px;
-
       margin-bottom: 8px;
+      color: #64748b;
+      font-size: 12px;
     }
 
     .progress-track {
-      height: 7px;
-
       overflow: hidden;
-
-      border-radius: 999px;
-
-      background: #e5e7eb;
-
+      height: 7px;
       margin-bottom: 18px;
+      background: #e5e7eb;
+      border-radius: 999px;
     }
 
     .progress-bar {
-      height: 100%;
-
       width: 0;
-
-      border-radius: inherit;
-
+      height: 100%;
       background: #4f46e5;
-
+      border-radius: inherit;
       transition: width 0.3s ease;
     }
 
+    .progress-card-link {
+      display: block;
+      color: inherit;
+      text-decoration: none;
+    }
 
-    /* ================================================
-       EMPTY
-       ================================================ */
+    .progress-click-card {
+      cursor: pointer;
+      border-color: #c7d2fe;
+      transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+
+    .progress-click-card:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 10px 25px rgba(79, 70, 229, 0.12);
+    }
+
+    .progress-description {
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    /* =========================
+       TABLE
+    ========================= */
+
+    .table-wrapper,
+    .project-task-table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      padding: 12px 13px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: left;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 13px;
+      border-top: 1px solid #f1f5f9;
+      color: #334155;
+      font-size: 12px;
+      vertical-align: middle;
+    }
+
+    .project-task-table {
+      min-width: 1200px;
+    }
 
     .empty {
       padding: 22px;
-
-      border:
-        1px dashed #dbe2ea;
-
-      border-radius: 10px;
-
-      color: #64748b;
-
-      text-align: center;
-
       background: #f8fafc;
+      border: 1px dashed #dbe2ea;
+      border-radius: 10px;
+      color: #64748b;
+      text-align: center;
     }
 
-
-    /* ================================================
+    /* =========================
        MODAL
-       ================================================ */
+    ========================= */
 
     .modal {
       display: none;
-
       position: fixed;
       inset: 0;
-
       z-index: 999;
-
-      padding: 20px;
-
-      background:
-        rgba(15, 23, 42, 0.55);
-
-      backdrop-filter: blur(4px);
-
       align-items: center;
       justify-content: center;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(4px);
     }
 
     .modal.show {
@@ -451,20 +654,14 @@
 
     .modal-content {
       width: min(560px, 100%);
-
       max-height: 90vh;
-
       overflow-y: auto;
-
       padding: 24px;
-
       background: #ffffff;
-
       border-radius: 16px;
-
+      box-sizing: border-box;
       box-shadow:
-        0 25px 70px
-        rgba(15, 23, 42, 0.22);
+        0 25px 70px rgba(15, 23, 42, 0.22);
     }
 
     .modal-large {
@@ -473,48 +670,74 @@
 
     .modal-header {
       display: flex;
-
-      justify-content:
-        space-between;
-
       align-items: center;
-
+      justify-content: space-between;
       margin-bottom: 20px;
     }
 
     .modal-header h3 {
+      margin: 0;
       font-size: 18px;
     }
 
     .modal-actions {
       display: flex;
-
-      justify-content:
-        flex-end;
-
+      justify-content: flex-end;
       gap: 10px;
-
       margin-top: 22px;
     }
 
+    /* =========================
+       FORM
+    ========================= */
 
-    /* ================================================
-       RESPONSIVE
-       ================================================ */
-
-    @media (max-width: 1000px) {
-
-      .summary-grid {
-        grid-template-columns:
-          repeat(2, 1fr);
-      }
-
+    .form-group {
+      margin-bottom: 16px;
     }
 
-    @media (max-width: 650px) {
+    .form-group label {
+      display: block;
+      margin-bottom: 7px;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 600;
+    }
 
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid #dbe2ea;
+      border-radius: 9px;
+      box-sizing: border-box;
+      font: inherit;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    @media (max-width: 1000px) {
       .summary-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        width: 100%;
+        margin-left: 0;
+        padding: 20px;
       }
 
       .detail-topbar {
@@ -524,47 +747,970 @@
       .section-header {
         align-items: flex-start;
       }
-
     }
 
-  </style>
+    @media (max-width: 650px) {
+      .summary-grid,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
 
+    .contract-expiry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid;
+  border-radius: 11px;
+}
+
+.contract-expiry-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.contract-expiry-value {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+/* Sisa kontrak di bawah 3 bulan */
+
+.contract-expiry-warning {
+  color: #854d0e;
+  background: #fef9c3;
+  border-color: #fde047;
+}
+
+/* Sisa kontrak 3 bulan atau lebih */
+
+.contract-expiry-safe {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+/* Kontrak sudah berakhir */
+
+.contract-expiry-expired {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+@media (max-width: 650px) {
+  .contract-expiry {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* =====================================================
+   PAYMENT ACTION
+===================================================== */
+
+.payment-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+  margin-bottom: 26px;
+}
+
+.payment-modal-button {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  min-width: 320px;
+  padding: 13px 16px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff,
+      #f8fafc
+    );
+
+  border: 1px solid #dbe2ea;
+  border-radius: 14px;
+
+  color: #1e293b;
+  cursor: pointer;
+
+  box-shadow:
+    0 3px 12px
+    rgba(15, 23, 42, 0.06);
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.payment-modal-button:hover {
+  transform: translateY(-2px);
+  border-color: #a5b4fc;
+
+  box-shadow:
+    0 10px 25px
+    rgba(79, 70, 229, 0.12);
+}
+
+.payment-modal-button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 auto;
+
+  width: 42px;
+  height: 42px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5,
+      #7c3aed
+    );
+
+  border-radius: 12px;
+
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.payment-modal-button-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.payment-modal-button-text strong {
+  font-size: 13px;
+}
+
+.payment-modal-button-text small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.payment-modal-button-arrow {
+  color: #4f46e5;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+
+/* =====================================================
+   PAYMENT MODAL
+===================================================== */
+
+.payment-modal-content {
+  width: min(760px, 100%);
+}
+
+.payment-modal-header {
+  align-items: flex-start;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.payment-modal-header h3 {
+  margin: 5px 0 4px;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.payment-modal-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.payment-modal-subtitle {
+  color: #4f46e5;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+}
+
+.modal-close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  padding: 0;
+
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  color: #64748b;
+  font-size: 25px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.modal-close-button:hover {
+  color: #dc2626;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+
+/* =====================================================
+   PAYMENT GROUP
+===================================================== */
+
+.payment-group {
+  margin-top: 22px;
+  padding: 18px;
+
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 15px;
+}
+
+.payment-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.payment-group-header h4 {
+  margin: 0 0 3px;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.payment-group-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.payment-group-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  border-radius: 11px;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.payment-group-icon.client {
+  color: #4338ca;
+  background: #e0e7ff;
+}
+
+.payment-group-icon.partner {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+
+/* =====================================================
+   PAYMENT STAT
+===================================================== */
+
+.payment-stat-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.payment-stat-card {
+  position: relative;
+  overflow: hidden;
+
+  min-width: 0;
+  padding: 17px;
+
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 13px;
+}
+
+.payment-stat-card::before {
+  content: "";
+
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+
+  width: 4px;
+}
+
+.payment-stat-card.paid::before {
+  background: #16a34a;
+}
+
+.payment-stat-card.unpaid::before {
+  background: #f59e0b;
+}
+
+.payment-stat-label {
+  margin-bottom: 9px;
+
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+}
+
+.payment-stat-value {
+  color: #0f172a;
+
+  font-size:
+    clamp(
+      18px,
+      2.2vw,
+      25px
+    );
+
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+
+  overflow-wrap: anywhere;
+}
+
+.payment-stat-status {
+  display: inline-flex;
+
+  margin-top: 12px;
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.payment-stat-card.paid
+.payment-stat-status {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.payment-stat-card.unpaid
+.payment-stat-status {
+  color: #854d0e;
+  background: #fef3c7;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 650px) {
+  .payment-action {
+    justify-content: stretch;
+  }
+
+  .payment-modal-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .payment-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =====================================================
+   PERBAIKAN KOMPOSISI SUMMARY CARD
+===================================================== */
+
+.summary-grid {
+  display: grid !important;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+}
+
+
+/* Card menggunakan susunan vertikal */
+
+.summary-grid > .summary-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+
+  min-width: 0 !important;
+  min-height: 150px !important;
+
+  padding: 22px 24px !important;
+
+  box-sizing: border-box !important;
+}
+
+
+/* Label selalu berada di atas */
+
+.summary-grid
+> .summary-card
+> .summary-label {
+  display: flex !important;
+  align-items: center !important;
+
+  width: 100% !important;
+  margin: 0 0 14px !important;
+
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+
+  white-space: nowrap !important;
+}
+
+
+/* Nominal mendapat lebar card penuh */
+
+.summary-grid
+> .summary-card
+> .summary-value {
+  display: block !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  margin: 0 !important;
+
+  color: #0f172a !important;
+
+  font-size:
+    clamp(
+      20px,
+      1.85vw,
+      31px
+    ) !important;
+
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+
+  letter-spacing: -0.9px !important;
+
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+
+  text-align: left !important;
+}
+
+
+/* Garis dekorasi di bawah nominal */
+
+.summary-grid
+> .summary-card
+> .summary-value::after {
+  content: "";
+
+  display: block;
+
+  width: 46px;
+  height: 4px;
+
+  margin-top: 18px;
+
+  background:
+    var(
+      --card-color,
+      #4f46e5
+    );
+
+  border-radius: 999px;
+}
+
+
+/* =====================================================
+   UKURAN BERDASARKAN LAYAR
+===================================================== */
+
+@media (min-width: 1600px) {
+  .summary-grid
+  > .summary-card
+  > .summary-value {
+    font-size: 31px !important;
+  }
+}
+
+
+@media (
+  min-width: 1201px
+)
+and (
+  max-width: 1599px
+) {
+  .summary-grid
+  > .summary-card
+  > .summary-value {
+    font-size: 25px !important;
+  }
+}
+
+
+@media (
+  min-width: 1001px
+)
+and (
+  max-width: 1200px
+) {
+  .summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      ) !important;
+  }
+
+  .summary-grid
+  > .summary-card
+  > .summary-value {
+    font-size: 28px !important;
+  }
+}
+
+
+@media (max-width: 650px) {
+  .summary-grid {
+    grid-template-columns:
+      1fr !important;
+  }
+
+  .summary-grid
+  > .summary-card {
+    min-height: 135px !important;
+  }
+
+  .summary-grid
+  > .summary-card
+  > .summary-value {
+    font-size: 26px !important;
+  }
+}
+
+/* =====================================================
+   TERMIN PEMBAYARAN
+   ===================================================== */
+
+.sub-section-description {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+.termin-summary {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+
+.termin-summary-item {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #f8fafc
+    );
+}
+
+
+.termin-summary-item::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: #5747e8;
+  content: "";
+}
+
+
+.termin-summary-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+
+.termin-summary-value {
+  display: block;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+
+.progress-section {
+  margin-bottom: 18px;
+}
+
+
+.termin-information {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+.termin-table {
+  width: 100%;
+  min-width: 1150px;
+  border-collapse: collapse;
+}
+
+
+.termin-table th {
+  white-space: nowrap;
+}
+
+
+.termin-table td {
+  vertical-align: middle;
+}
+
+
+.termin-table td:nth-child(7) {
+  min-width: 230px;
+  white-space: normal;
+  line-height: 1.5;
+}
+
+
+.empty-table {
+  padding: 30px !important;
+  color: #94a3b8;
+  text-align: center;
+}
+
+
+@media (max-width: 1100px) {
+  .termin-summary {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+@media (max-width: 600px) {
+  .termin-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .sub-section-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  #tambahTerminButton {
+    width: 100%;
+  }
+}
+
+.dokumen-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dokumen-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dokumen-check {
+  width: 22px;
+  height: 22px;
+  margin-top: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.dokumen-detail {
+  min-width: 0;
+}
+
+.dokumen-detail strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.dokumen-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-file {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-lihat-file {
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+}
+
+.btn-unduh-file {
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+}
+
+@media (max-width: 768px) {
+  .dokumen-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dokumen-action {
+    width: 100%;
+    padding-left: 38px;
+  }
+}
+
+.partner-detail-card {
+  padding: 26px 22px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.partner-detail-card:last-child {
+  border-bottom: none;
+}
+
+.partner-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.partner-name {
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.partner-sub-section {
+  margin-top: 30px;
+  padding-top: 26px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.partner-sub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.partner-sub-title {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.partner-sub-description {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .partner-detail-card {
+    padding: 20px 0;
+  }
+
+  .partner-sub-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* =====================================================
+   TIMELINE LISTING
+===================================================== */
+
+.timeline-table {
+  width: 100%;
+  min-width: 950px;
+  border-collapse: collapse;
+}
+
+.timeline-table th {
+  padding: 13px 14px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.timeline-table td {
+  padding: 15px 14px;
+  border-top: 1px solid #eef2f7;
+  color: #334155;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.timeline-table tbody tr:hover {
+  background: #fafbff;
+}
+
+.timeline-description-cell {
+  min-width: 280px;
+  max-width: 420px;
+  color: #0f172a !important;
+  font-weight: 650;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.timeline-expiry-text {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.timeline-safe {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.timeline-ending {
+  color: #854d0e;
+  background: #fef3c7;
+}
+
+.timeline-expired {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.timeline-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.timeline-status-aktif {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.timeline-status-berakhir {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.timeline-status-diperpanjang {
+  color: #4338ca;
+  background: #e0e7ff;
+}
+
+  </style>
 </head>
 
 <body>
+
 <div class="app-layout">
 
-   <!-- =====================================================
-       SIDEBAR
-  ====================================================== -->
- <div id="sidebarContainer"></div>
-
-  <!-- ==================================================
-       MAIN
-       ================================================== -->
+  <div id="sidebarContainer"></div>
 
   <main class="main-content">
 
     <div class="detail-page">
 
-
-      <!-- ================================================
-           HEADER
-           ================================================ -->
+      <!-- HEADER -->
 
       <div class="detail-topbar">
 
         <div>
 
           <div class="breadcrumb">
-
-            <a href="/proyek.html">
-              Proyek
-            </a>
+            <a href="/proyek.html">Proyek</a>
             / Detail Proyek
-
           </div>
-
 
           <h1
             class="project-title"
@@ -573,21 +1719,17 @@
             Memuat proyek...
           </h1>
 
-
           <div class="project-category">
 
             Kategori:
 
-            <strong
-              id="kategoriProyek"
-            >
+            <strong id="kategoriProyek">
               -
             </strong>
 
           </div>
 
         </div>
-
 
         <a
           href="/proyek.html"
@@ -599,84 +1741,114 @@
       </div>
 
 
+<!-- =====================================================
+   SUMMARY UTAMA
+===================================================== -->
 
-      <!-- ================================================
-           SUMMARY
-           ================================================ -->
+<div class="summary-grid">
 
-      <div class="summary-grid">
+  <div class="summary-card">
 
+    <div class="summary-label">
+      Nilai Klien
+    </div>
 
-        <div class="summary-card">
+    <div
+      class="summary-value"
+      id="nilaiKlien"
+    >
+      Rp 0
+    </div>
 
-          <div class="summary-label">
-            Nilai Klien
-          </div>
-
-          <div
-            class="summary-value"
-            id="nilaiKlien"
-          >
-            Rp 0
-          </div>
-
-        </div>
+  </div>
 
 
-        <div class="summary-card">
+  <div class="summary-card">
 
-          <div class="summary-label">
-            Nilai Partner
-          </div>
+    <div class="summary-label">
+      Nilai Partner
+    </div>
 
-          <div
-            class="summary-value"
-            id="nilaiPartner"
-          >
-            Rp 0
-          </div>
+    <div
+      class="summary-value"
+      id="nilaiPartner"
+    >
+      Rp 0
+    </div>
 
-        </div>
-
-
-        <div class="summary-card">
-
-          <div class="summary-label">
-            Margin
-          </div>
-
-          <div
-            class="summary-value"
-            id="margin"
-          >
-            Rp 0
-          </div>
-
-        </div>
+  </div>
 
 
-        <div class="summary-card">
+  <div class="summary-card">
 
-          <div class="summary-label">
-            Margin %
-          </div>
+    <div class="summary-label">
+      Margin
+    </div>
 
-          <div
-            class="summary-value"
-            id="marginPersen"
-          >
-            0%
-          </div>
+    <div
+      class="summary-value"
+      id="margin"
+    >
+      Rp 0
+    </div>
 
-        </div>
-
-      </div>
+  </div>
 
 
+  <div class="summary-card">
 
-      <!-- ================================================
-           INFORMASI PROYEK
-           ================================================ -->
+    <div class="summary-label">
+      Margin %
+    </div>
+
+    <div
+      class="summary-value"
+      id="marginPersen"
+    >
+      0.00%
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- TOMBOL RINGKASAN PEMBAYARAN -->
+
+<div class="payment-action">
+
+  <button
+    type="button"
+    class="payment-modal-button"
+    id="bukaPembayaranButton"
+  >
+
+    <span class="payment-modal-button-icon">
+      Rp
+    </span>
+
+    <span class="payment-modal-button-text">
+
+      <strong>
+        Ringkasan Pembayaran
+      </strong>
+
+      <small>
+        Lihat pembayaran Klien dan Partner
+      </small>
+
+    </span>
+
+    <span class="payment-modal-button-arrow">
+      →
+    </span>
+
+  </button>
+
+</div>
+
+
+      <!-- INFORMASI PROYEK -->
 
       <section class="project-section">
 
@@ -689,19 +1861,11 @@
             </div>
 
             <div>
-
-              <h2>
-                Informasi Proyek
-              </h2>
-
-              <p>
-                Informasi utama dan status proyek
-              </p>
-
+              <h2>Informasi Proyek</h2>
+              <p>Informasi utama dan status proyek</p>
             </div>
 
           </div>
-
 
           <button
             type="button"
@@ -718,103 +1882,100 @@
 
           <div class="grid">
 
-  <!-- KATEGORI -->
-<!-- KATEGORI -->
-<div class="info">
+            <div class="info">
 
-  <div class="label">
-    Kategori
-  </div>
+              <div class="label">
+                Kategori
+              </div>
 
-  <div
-    class="value"
-    id="kategoriInfoProyek"
-  >
-    -
-  </div>
+              <div
+                class="value"
+                id="kategoriInfoProyek"
+              >
+                -
+              </div>
 
-</div>
-
-  <!-- JENIS PROYEK -->
-  <div class="info">
-
-    <div class="label">
-      Jenis Proyek
-    </div>
-
-    <div
-      class="value"
-      id="jenisProyek"
-    >
-      -
-    </div>
-
-  </div>
+            </div>
 
 
-  <!-- SUB JENIS PROYEK -->
-  <div class="info">
+            <div class="info">
 
-    <div class="label">
-      Sub Jenis Proyek
-    </div>
+              <div class="label">
+                Jenis Proyek
+              </div>
 
-    <div
-      class="value"
-      id="subJenisProyek"
-    >
-      -
-    </div>
+              <div
+                class="value"
+                id="jenisProyek"
+              >
+                -
+              </div>
 
-  </div>
-
-
-  <!-- STATUS -->
-  <div class="info">
-
-    <div class="label">
-      Status
-    </div>
-
-    <div
-      class="value"
-      id="statusFinal"
-    >
-      -
-    </div>
-
-  </div>
-
-</div>
+            </div>
 
 
-<!-- DESKRIPSI -->
-<div
-  class="info"
-  style="margin-top:14px;"
->
+            <div class="info">
 
-  <div class="label">
-    Deskripsi
-  </div>
+              <div class="label">
+                Sub Jenis Proyek
+              </div>
 
-  <div
-    class="value"
-    id="deskripsi"
-    style="
-      white-space:pre-wrap;
-      font-weight:500;
-    "
-  >
-    -
-  </div>
+              <div
+                class="value"
+                id="subJenisProyek"
+              >
+                -
+              </div>
 
-</div>
+            </div>
 
 
-      <!-- ================================================
-           PIC
-           ================================================ -->
+            <div class="info">
+
+              <div class="label">
+                Status
+              </div>
+
+              <div
+                class="value"
+                id="statusFinal"
+              >
+                -
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div
+            class="info"
+            style="margin-top:14px;"
+          >
+
+            <div class="label">
+              Deskripsi
+            </div>
+
+            <div
+              class="value"
+              id="deskripsi"
+              style="
+                white-space:pre-wrap;
+                font-weight:500;
+              "
+            >
+              -
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- PIC -->
 
       <section class="project-section">
 
@@ -827,19 +1988,11 @@
             </div>
 
             <div>
-
-              <h2>
-                PIC
-              </h2>
-
-              <p>
-                Person in Charge proyek
-              </p>
-
+              <h2>PIC</h2>
+              <p>Person in Charge proyek</p>
             </div>
 
           </div>
-
 
           <button
             type="button"
@@ -850,7 +2003,6 @@
           </button>
 
         </div>
-
 
         <div
           class="section-body"
@@ -866,10 +2018,7 @@
       </section>
 
 
-
-      <!-- ================================================
-           KLIEN
-           ================================================ -->
+      <!-- KLIEN -->
 
       <section class="project-section">
 
@@ -883,9 +2032,7 @@
 
             <div>
 
-              <h2>
-                Klien
-              </h2>
+              <h2>Klien</h2>
 
               <p>
                 Kontrak, nilai dan pembayaran klien
@@ -894,7 +2041,6 @@
             </div>
 
           </div>
-
 
           <button
             type="button"
@@ -909,8 +2055,7 @@
 
         <div class="section-body">
 
-
-          <!-- INFORMASI KLIEN -->
+          <!-- Informasi Klien dibuat oleh JS -->
 
           <div id="klienInfo">
 
@@ -920,124 +2065,212 @@
 
           </div>
 
+<!-- TIMELINE PROYEK -->
+
+<div class="sub-section">
+
+  <div class="sub-section-header">
+
+    <div>
+      <div class="sub-section-title">
+        Timeline
+      </div>
+
+      <div class="sub-section-description">
+        Jadwal dan periode pelaksanaan proyek
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="btn btn-secondary"
+      id="tambahTimelineButton"
+    >
+      + Tambah Timeline
+    </button>
+
+  </div>
+
+  <div
+    id="timelineContainer"
+    style="display:none;"
+  ></div>
+
+</div>
+          
+<!-- TERMIN KLIEN -->
+<div class="sub-section">
+
+  <!-- HEADER -->
+  <div class="sub-section-header">
+
+    <div>
+      <div class="sub-section-title">
+        Termin Pembayaran
+      </div>
+
+      <div class="sub-section-description">
+        Persentase dan nominal termin dihitung otomatis berdasarkan nilai final.
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="btn btn-secondary"
+      id="tambahTerminButton"
+    >
+      + Tambah Termin
+    </button>
+
+  </div>
 
 
-          <!-- ============================================
-               TERMIN KLIEN
-               ============================================ -->
+  <!-- RINGKASAN TERMIN -->
+  <div class="termin-summary">
 
-          <div class="sub-section">
+    <div class="termin-summary-item">
 
-            <div class="sub-section-header">
+      <span class="termin-summary-label">
+        Total Persentase
+      </span>
 
-              <div class="sub-section-title">
-                Termin Pembayaran
-              </div>
+      <strong
+        class="termin-summary-value"
+        id="totalTermin"
+      >
+        0.00%
+      </strong>
 
-
-              <button
-                type="button"
-                class="btn btn-secondary"
-                id="tambahTerminButton"
-              >
-                + Tambah Termin
-              </button>
-
-            </div>
+    </div>
 
 
-            <div class="progress-header">
+    <div class="termin-summary-item">
 
-              <span>
-                Total Termin
-              </span>
+      <span class="termin-summary-label">
+        Total Nominal
+      </span>
 
-              <strong
-                id="totalTermin"
-              >
-                0%
-              </strong>
+      <strong
+        class="termin-summary-value"
+        id="totalNominalTermin"
+      >
+        Rp 0
+      </strong>
 
-            </div>
-
-
-            <div class="progress-track">
-
-              <div
-                class="progress-bar"
-                id="terminProgress"
-              >
-              </div>
-
-            </div>
+    </div>
 
 
-            <div class="table-wrapper">
+    <div class="termin-summary-item">
 
-              <table>
+      <span class="termin-summary-label">
+        Nilai Final
+      </span>
 
-                <thead>
+      <strong
+        class="termin-summary-value"
+        id="nilaiFinalTermin"
+      >
+        Rp 0
+      </strong>
 
-                  <tr>
-
-                    <th>
-                      Termin
-                    </th>
-
-                    <th>
-                      Persentase
-                    </th>
-
-                    <th>
-                      Nominal
-                    </th>
-
-                    <th>
-                      Status
-                    </th>
-
-                    <th>
-                      Jatuh Tempo
-                    </th>
-
-                    <th>
-                      Tanggal Bayar
-                    </th>
-
-                    <th>
-                      Aksi
-                    </th>
-
-                  </tr>
-
-                </thead>
+    </div>
 
 
-                <tbody
-                  id="terminTable"
-                >
+    <div class="termin-summary-item">
 
-                  <tr>
+      <span class="termin-summary-label">
+        Sisa Termin
+      </span>
 
-                    <td colspan="7">
-                      Memuat termin...
-                    </td>
+      <strong
+        class="termin-summary-value"
+        id="sisaTermin"
+      >
+        100.00%
+      </strong>
 
-                  </tr>
+    </div>
 
-                </tbody>
+  </div>
 
-              </table>
+  <!-- INFORMASI MODE TERMIN -->
+  <div
+    class="termin-information"
+    id="terminInformation"
+  >
+    Persentase dan nominal dapat diisi. Nilai lainnya akan dihitung otomatis.
+  </div>
 
-            </div>
 
-          </div>
+  <!-- TABEL TERMIN -->
+  <div class="table-wrapper">
+
+    <table class="termin-table">
+
+      <thead>
+
+        <tr>
+
+          <th>
+            Termin
+          </th>
+
+          <th>
+            Persentase
+          </th>
+
+          <th>
+            Nominal
+          </th>
+
+          <th>
+            Status
+          </th>
+
+          <th>
+            Jatuh Tempo
+          </th>
+
+          <th>
+            Tanggal Bayar
+          </th>
+
+          <th>
+            Syarat Pembayaran
+          </th>
+
+          <th>
+            Aksi
+          </th>
+
+        </tr>
+
+      </thead>
 
 
+      <tbody id="terminTable">
 
-          <!-- ============================================
-               DOKUMEN KLIEN
-               ============================================ -->
+        <tr>
+
+          <td
+            colspan="8"
+            class="empty-table"
+          >
+            Memuat termin...
+          </td>
+
+        </tr>
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+
+          <!-- DOKUMEN KLIEN -->
 
           <div class="sub-section">
 
@@ -1046,7 +2279,6 @@
               <div class="sub-section-title">
                 Dokumen Klien
               </div>
-
 
               <button
                 type="button"
@@ -1057,7 +2289,6 @@
               </button>
 
             </div>
-
 
             <div id="dokumenContainer">
 
@@ -1074,10 +2305,7 @@
       </section>
 
 
-
-      <!-- ================================================
-           PARTNER
-           ================================================ -->
+      <!-- PARTNER -->
 
       <section class="project-section">
 
@@ -1091,9 +2319,7 @@
 
             <div>
 
-              <h2>
-                Partner
-              </h2>
+              <h2>Partner</h2>
 
               <p>
                 Partner, kontrak, termin dan dokumen proyek
@@ -1102,7 +2328,6 @@
             </div>
 
           </div>
-
 
           <button
             type="button"
@@ -1114,6 +2339,7 @@
 
         </div>
 
+        <!-- Partner dibuat oleh JS -->
 
         <div
           class="section-body"
@@ -1127,82 +2353,180 @@
         </div>
 
       </section>
-      <!-- ================================================
-     TASK LIST
-     ================================================ -->
-
-<section class="project-section">
-
-  <div class="section-header">
-
-    <div class="section-heading">
-
-      <div class="section-icon">
-        ✓
-      </div>
-
-      <div>
-        <h2>Task List</h2>
-        <p>
-          Aktivitas seluruh PIC pada proyek ini
-        </p>
-      </div>
-
-    </div>
-
-  </div>
 
 
-  <div class="section-body">
+      <!-- PROGRESS REPORT -->
 
-    <div class="project-task-table-wrapper">
+      <section class="project-section">
 
-      <table class="project-task-table">
+        <div class="section-header">
 
-        <thead>
+          <div class="section-heading">
 
-          <tr>
-            <th>PIC</th>
-            <th>Task</th>
-            <th>Catatan</th>
-            <th>Link</th>
-            <th>Status</th>
-            <th>Tanggal Mulai</th>
-            <th>Target Date</th>
-            <th>Tanggal Selesai</th>
-            <th>Dibuat</th>
-          </tr>
+            <div class="section-icon">
+              📊
+            </div>
 
-        </thead>
+            <div>
+
+              <h2>
+                Progress Report
+              </h2>
+
+              <p>
+                Klik card untuk memperbarui progress proyek
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
 
 
-        <tbody id="detailProjectTaskBody">
+        <div class="section-body">
 
-          <tr>
+          <a
+            id="progressReportLink"
+            class="progress-card-link"
+            href="/update-progress.html"
+          >
 
-            <td
-              colspan="9"
-              style="
-                text-align:center;
-                color:#64748b;
-                padding:30px;
+            <div
+              class="
+                summary-card
+                progress-click-card
               "
             >
-              Memuat task...
-            </td>
 
-          </tr>
+              <div class="summary-label">
+                Persentase Progress
+              </div>
 
-        </tbody>
+              <div
+                class="summary-value"
+                id="totalProgressProyek"
+              >
+                0.00%
+              </div>
 
-      </table>
 
-    </div>
+              <div
+                class="progress-track"
+                style="margin-top:14px;"
+              >
 
-  </div>
+                <div
+                  class="progress-bar"
+                  id="progressBarProyek"
+                ></div>
 
-</section>
+              </div>
 
+
+              <div
+                class="progress-description"
+                id="progressReportInfo"
+              >
+                Klik untuk membuka laporan progress.
+              </div>
+
+            </div>
+
+          </a>
+
+        </div>
+
+      </section>
+
+
+      <!-- TASK LIST -->
+
+      <section class="project-section">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              ✓
+            </div>
+
+            <div>
+
+              <h2>
+                Task List
+              </h2>
+
+              <p>
+                Aktivitas seluruh PIC pada proyek ini
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="section-body">
+
+          <div class="project-task-table-wrapper">
+
+            <table class="project-task-table">
+
+              <thead>
+
+                <tr>
+
+                  <th>PIC</th>
+
+                  <th>Task</th>
+
+                  <th>Catatan</th>
+
+                  <th>Link</th>
+
+                  <th>Status</th>
+
+                  <th>Tanggal Mulai</th>
+
+                  <th>Target Date</th>
+
+                  <th>Tanggal Selesai</th>
+
+                  <th>Dibuat</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="detailProjectTaskBody">
+
+                <tr>
+
+                  <td
+                    colspan="9"
+                    style="
+                      text-align:center;
+                      color:#64748b;
+                      padding:30px;
+                    "
+                  >
+                    Memuat task...
+                  </td>
+
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
 
     </div>
 
@@ -1211,10 +2535,7 @@
 </div>
 
 
-
-<!-- =====================================================
-     MODAL TERMIN
-     ===================================================== -->
+<!-- MODAL TERMIN KLIEN/PARTNER -->
 
 <div
   class="modal"
@@ -1256,39 +2577,45 @@
       </div>
 
 
-    <div class="form-group" id="persentaseTerminGroup">
+      <div
+        class="form-group"
+        id="persentaseTerminGroup"
+      >
 
-  <label for="persentaseTermin">
-    Persentase
-  </label>
+        <label for="persentaseTermin">
+          Persentase
+        </label>
 
-  <input
-    type="number"
-    id="persentaseTermin"
-    min="0.01"
-    max="100"
-    step="0.01"
-    placeholder="Contoh: 30"
-  >
+        <input
+          type="number"
+          id="persentaseTermin"
+          min="0.01"
+          max="100"
+          step="0.01"
+          placeholder="Contoh: 30"
+        >
 
-</div>
+      </div>
 
 
-<div class="form-group" id="nominalTerminGroup">
+      <div
+        class="form-group"
+        id="nominalTerminGroup"
+      >
 
-  <label for="nominalTermin">
-    Nominal
-  </label>
+        <label for="nominalTermin">
+          Nominal
+        </label>
 
-  <input
-    type="number"
-    id="nominalTermin"
-    min="0"
-    step="1"
-    placeholder="Contoh: 50000000"
-  >
+        <input
+          type="number"
+          id="nominalTermin"
+          min="0"
+          step="0.01"
+          placeholder="Contoh: 50000000"
+        >
 
-</div>
+      </div>
 
 
       <div class="form-group">
@@ -1351,6 +2678,21 @@
       </div>
 
 
+      <div class="form-group">
+
+        <label for="syaratPembayaran">
+          Syarat Pembayaran
+        </label>
+
+        <textarea
+          id="syaratPembayaran"
+          rows="3"
+          placeholder="Contoh: Pembayaran setelah BAST ditandatangani"
+        ></textarea>
+
+      </div>
+
+
       <div class="modal-actions">
 
         <button
@@ -1377,10 +2719,7 @@
 </div>
 
 
-
-<!-- =====================================================
-     MODAL DOKUMEN
-     ===================================================== -->
+<!-- MODAL DOKUMEN -->
 
 <div
   class="modal"
@@ -1391,8 +2730,8 @@
 
     <div class="modal-header">
 
-      <h3>
-        Tambah Dokumen Klien
+      <h3 id="dokumenModalTitle">
+        Tambah Dokumen
       </h3>
 
     </div>
@@ -1406,12 +2745,14 @@
           Nama Dokumen
         </label>
 
-        <input
-          type="text"
-          id="namaDokumen"
-          placeholder="Contoh: Kontrak / BAST / PO"
-          required
-        >
+       <select
+            id="namaDokumen"
+            required
+          >
+            <option value="">
+              Pilih Kode Dokumen
+            </option>
+          </select>
 
       </div>
 
@@ -1430,7 +2771,23 @@
 
       </div>
 
+      <div class="form-group">
+        <label for="fileDokumen">
+          Upload Dokumen
+        </label>
 
+        <input
+          type="file"
+          id="fileDokumen"
+          name="file_dokumen"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+        >
+
+        <small class="form-hint">
+          File bersifat opsional. PDF, Word, Excel, JPG, atau PNG. Maksimal 10 MB.
+        </small>
+      </div>
+      
       <div class="modal-actions">
 
         <button
@@ -1457,10 +2814,8 @@
 </div>
 
 
+<!-- MODAL EDIT PROYEK -->
 
-<!-- =====================================================
-     MODAL EDIT INFORMASI PROYEK
-     ===================================================== -->
 <div
   class="modal"
   id="editProyekModal"
@@ -1479,11 +2834,6 @@
 
     <form id="editProyekForm">
 
-
-      <!-- =========================================
-           NAMA PROYEK
-      ========================================== -->
-
       <div class="form-group">
 
         <label for="editNamaProyek">
@@ -1498,10 +2848,6 @@
 
       </div>
 
-
-      <!-- =========================================
-           KATEGORI
-      ========================================== -->
 
       <div class="form-group">
 
@@ -1525,7 +2871,6 @@
 
           </select>
 
-
           <button
             type="button"
             id="tambahEditKategori"
@@ -1535,7 +2880,6 @@
 
         </div>
 
-
         <div
           id="editKategoriTerpilih"
           style="
@@ -1544,15 +2888,10 @@
             gap:8px;
             margin-top:10px;
           "
-        >
-        </div>
+        ></div>
 
       </div>
 
-
-      <!-- =========================================
-           JENIS & SUB JENIS PROYEK
-      ========================================== -->
 
       <div class="form-grid">
 
@@ -1568,22 +2907,6 @@
               Pilih Jenis
             </option>
 
-            <option value="Reguler/SLA">
-              Reguler/SLA
-            </option>
-
-            <option value="Sewa">
-              Sewa
-            </option>
-
-            <option value="Transaksi">
-              Transaksi
-            </option>
-
-            <option value="Project">
-              Project
-            </option>
-
           </select>
 
         </div>
@@ -1595,19 +2918,18 @@
             Sub Jenis Proyek
           </label>
 
-          <input
-            type="text"
-            id="editSubJenisProyek"
-          >
+          <select id="editSubJenisProyek">
+
+            <option value="">
+              Pilih Sub Jenis
+            </option>
+
+          </select>
 
         </div>
 
       </div>
 
-
-      <!-- =========================================
-           STATUS
-      ========================================== -->
 
       <div class="form-group">
 
@@ -1617,26 +2939,14 @@
 
         <select id="editStatusFinal">
 
-          <option value="Aktif">
-            Aktif
-          </option>
-
-          <option value="Done">
-            Done
-          </option>
-
-          <option value="Cancel">
-            Cancel
+          <option value="">
+            Pilih Status
           </option>
 
         </select>
 
       </div>
 
-
-      <!-- =========================================
-           DESKRIPSI
-      ========================================== -->
 
       <div class="form-group">
 
@@ -1652,10 +2962,6 @@
       </div>
 
 
-      <!-- =========================================
-           ACTION
-      ========================================== -->
-
       <div class="modal-actions">
 
         <button
@@ -1666,7 +2972,6 @@
           Batal
         </button>
 
-
         <button
           type="submit"
           class="btn btn-primary"
@@ -1676,16 +2981,14 @@
 
       </div>
 
-
     </form>
 
   </div>
 
 </div>
 
-<!-- =====================================================
-     MODAL EDIT PIC
-     ===================================================== -->
+
+<!-- MODAL EDIT PIC -->
 
 <div
   class="modal"
@@ -1740,10 +3043,7 @@
 </div>
 
 
-
-<!-- =====================================================
-     MODAL EDIT KLIEN
-     ===================================================== -->
+<!-- MODAL EDIT KLIEN -->
 
 <div
   class="modal"
@@ -1872,37 +3172,62 @@
       </div>
 
 
+      <div class="form-group">
+  <label for="editModelPembayaranKlien">
+    Model Pembayaran
+  </label>
+
+  <select id="editModelPembayaranKlien">
+    <option value="">
+      Pilih Model Pembayaran
+    </option>
+
+    <option value="Tahunan">
+      Tahunan
+    </option>
+
+    <option value="Bulanan">
+      Bulanan
+    </option>
+
+    <option value="Termin">
+      Termin
+    </option>
+
+    <option value="One Time Charge">
+      One Time Charge
+    </option>
+  </select>
+</div>
+
+
       <div class="form-grid">
 
-        <div class="form-group">
+  <div class="form-group">
+    <label for="editStatusPengadaanKlien">
+      Status Pengadaan
+    </label>
 
-          <label for="editStatusPengadaanKlien">
-            Status Pengadaan
-          </label>
+    <select id="editStatusPengadaanKlien">
+      <option value="">
+        Pilih Status Pengadaan
+      </option>
+    </select>
+  </div>
 
-          <input
-            type="text"
-            id="editStatusPengadaanKlien"
-          >
+  <div class="form-group">
+    <label for="editStatusTeknisKlien">
+      Status Teknis
+    </label>
 
-        </div>
+    <select id="editStatusTeknisKlien">
+      <option value="">
+        Pilih Status Teknis
+      </option>
+    </select>
+  </div>
 
-
-        <div class="form-group">
-
-          <label for="editStatusTeknisKlien">
-            Status Teknis
-          </label>
-
-          <input
-            type="text"
-            id="editStatusTeknisKlien"
-          >
-
-        </div>
-
-      </div>
-
+</div>
 
       <div class="modal-actions">
 
@@ -1930,10 +3255,7 @@
 </div>
 
 
-
-<!-- =====================================================
-     MODAL KELOLA PARTNER
-     ===================================================== -->
+<!-- MODAL KELOLA PARTNER -->
 
 <div
   class="modal"
@@ -1977,145 +3299,350 @@
 </div>
 
 
+<!-- =====================================================
+     MODAL RINGKASAN PEMBAYARAN
+===================================================== -->
+
+<div
+  class="modal"
+  id="pembayaranModal"
+>
+
+  <div class="modal-content payment-modal-content">
+
+    <div class="modal-header payment-modal-header">
+
+      <div>
+
+        <div class="payment-modal-subtitle">
+          FINANCIAL SUMMARY
+        </div>
+
+        <h3>
+          Ringkasan Pembayaran
+        </h3>
+
+        <p>
+          Informasi pembayaran Klien dan Partner
+        </p>
+
+      </div>
 
 
+      <button
+        type="button"
+        class="modal-close-button"
+        id="tutupPembayaranButton"
+        aria-label="Tutup"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <!-- PEMBAYARAN KLIEN -->
+
+    <div class="payment-group">
+
+      <div class="payment-group-header">
+
+        <div class="payment-group-icon client">
+          K
+        </div>
+
+        <div>
+
+          <h4>
+            Pembayaran Klien
+          </h4>
+
+          <p>
+            Pembayaran yang diterima dari Klien
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="payment-stat-grid">
+
+        <div class="payment-stat-card paid">
+
+          <div class="payment-stat-label">
+            Dibayar Klien
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="dibayarKlien"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Sudah diterima
+          </div>
+
+        </div>
+
+
+        <div class="payment-stat-card unpaid">
+
+          <div class="payment-stat-label">
+            Belum Dibayar Klien
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="belumDibayarKlien"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Belum diterima
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- PEMBAYARAN PARTNER -->
+
+    <div class="payment-group">
+
+      <div class="payment-group-header">
+
+        <div class="payment-group-icon partner">
+          P
+        </div>
+
+        <div>
+
+          <h4>
+            Pembayaran Partner
+          </h4>
+
+          <p>
+            Pembayaran yang dilakukan kepada Partner
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="payment-stat-grid">
+
+        <div class="payment-stat-card paid">
+
+          <div class="payment-stat-label">
+            Dibayar Partner
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="dibayarPartner"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Sudah dibayarkan
+          </div>
+
+        </div>
+
+
+        <div class="payment-stat-card unpaid">
+
+          <div class="payment-stat-label">
+            Belum Dibayar Partner
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="belumDibayarPartner"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Belum dibayarkan
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        id="tutupPembayaranButtonBawah"
+      >
+        Tutup
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- MODAL TIMELINE -->
+
+<div
+  class="modal"
+  id="timelineModal"
+>
+  <div class="modal-content">
+
+    <div class="modal-header">
+      <h3 id="timelineModalTitle">
+        Tambah Timeline
+      </h3>
+    </div>
+
+    <form id="timelineForm">
+
+      <input
+        type="hidden"
+        id="timelineId"
+      >
+
+      <div class="form-group">
+        <label for="timelineDeskripsi">
+          Deskripsi
+        </label>
+
+        <textarea
+          id="timelineDeskripsi"
+          rows="4"
+          placeholder="Masukkan deskripsi Timeline"
+          required
+        ></textarea>
+      </div>
+
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label for="timelineTanggalMulai">
+            Tanggal Mulai
+          </label>
+
+          <input
+            type="date"
+            id="timelineTanggalMulai"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="timelineTanggalAkhir">
+            Tanggal Akhir
+          </label>
+
+          <input
+            type="date"
+            id="timelineTanggalAkhir"
+            required
+          >
+        </div>
+
+      </div>
+
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label for="timelineDurasi">
+            Durasi
+          </label>
+
+          <input
+            type="text"
+            id="timelineDurasi"
+            value="-"
+            readonly
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="timelineBerakhirDalam">
+            Berakhir Dalam
+          </label>
+
+          <input
+            type="text"
+            id="timelineBerakhirDalam"
+            value="-"
+            readonly
+          >
+        </div>
+
+      </div>
+
+      <div class="form-group">
+        <label for="timelineStatus">
+          Status
+        </label>
+
+        <select
+          id="timelineStatus"
+          required
+        >
+          <option value="Aktif">
+            Aktif
+          </option>
+
+          <option value="Berakhir">
+            Berakhir
+          </option>
+
+          <option value="Diperpanjang">
+            Diperpanjang
+          </option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalTimeline"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Timeline
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+<script src="/layout.js"></script>
+<script src="/sidebar.js"></script>
 <script src="/detail-proyek.js"></script>
 
 
-<script>
-
-  async function loadSidebarUser() {
-
-    try {
-
-      const response =
-        await fetch("/api/me");
-
-
-      if (!response.ok) {
-
-        window.location.href =
-          "/login.html";
-
-        return;
-
-      }
-
-
-      const data =
-        await response.json();
-
-
-      const user =
-        data.user || data;
-
-
-      const userNama =
-        document.getElementById("userNama");
-
-
-      const userRole =
-        document.getElementById("userRole");
-
-
-      if (userNama) {
-
-        userNama.textContent =
-          user.nama ||
-          user.name ||
-          user.email ||
-          "User";
-
-      }
-
-
-      if (userRole) {
-
-        userRole.textContent =
-          user.role ||
-          user.jabatan ||
-          "PIC";
-
-      }
-
-
-    } catch (error) {
-
-      console.error(
-        "ERROR LOAD USER:",
-        error
-      );
-
-    }
-
-  }
-
-
-
-  const logoutButton =
-    document.getElementById("logoutButton");
-
-
-  if (logoutButton) {
-
-    logoutButton.addEventListener(
-      "click",
-      async () => {
-
-        try {
-
-          const response =
-            await fetch(
-              "/api/logout",
-              {
-                method: "POST"
-              }
-            );
-
-
-          if (!response.ok) {
-
-            throw new Error(
-              "Logout gagal"
-            );
-
-          }
-
-
-          window.location.href =
-            "/login.html";
-
-
-        } catch (error) {
-
-          console.error(
-            "ERROR LOGOUT:",
-            error
-          );
-
-
-          alert(
-            "Gagal logout."
-          );
-
-        }
-
-      }
-    );
-
-  }
-
-
-  loadSidebarUser();
-
-</script>
- <!-- =====================================================
-     USER SIDEBAR + LOGOUT
-====================================================== -->
-<script src="/layout.js"></script>
-<script src="/sidebar.js"></script>
-
 </body>
-
 
 </html>

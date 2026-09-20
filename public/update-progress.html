@@ -1,0 +1,2337 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Update Progress Proyek - Portopro
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+
+      background: #f4f7fb;
+
+      color: #172033;
+
+      font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+
+    /* =====================================================
+       LAYOUT
+    ===================================================== */
+
+    .main-content {
+      margin-left: 260px;
+
+      width: calc(100% - 260px);
+
+      min-height: 100vh;
+
+      padding: 28px;
+    }
+
+    .page {
+      max-width: 1800px;
+
+      margin: auto;
+    }
+
+
+    /* =====================================================
+       TOP BAR
+    ===================================================== */
+
+    .topbar {
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: center;
+
+      gap: 16px;
+
+      margin-bottom: 18px;
+    }
+
+    .topbar h1 {
+      margin: 0;
+
+      font-size: 25px;
+    }
+
+    .topbar p {
+      margin: 5px 0 0;
+
+      color: #64748b;
+
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+
+      gap: 8px;
+
+      flex-wrap: wrap;
+    }
+
+
+    /* =====================================================
+       BUTTON
+    ===================================================== */
+
+    .btn {
+      padding: 10px 15px;
+
+      border: 0;
+
+      border-radius: 9px;
+
+      font-family: inherit;
+
+      font-size: 12px;
+
+      font-weight: 600;
+
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: #1d4ed8;
+
+      color: #ffffff;
+    }
+
+    .btn-soft {
+      background: #e8efff;
+
+      color: #1d4ed8;
+    }
+
+    .btn-danger {
+      background: #fff0f0;
+
+      color: #dc2626;
+    }
+
+    .btn:hover {
+      filter: brightness(0.97);
+    }
+
+
+    /* =====================================================
+       REPORT SHEET
+    ===================================================== */
+
+    .sheet {
+      overflow: hidden;
+
+      background: #ffffff;
+
+      border: 1px solid #dfe5ee;
+
+      border-radius: 15px;
+
+      box-shadow:
+        0 6px 24px
+        rgba(15, 23, 42, 0.05);
+    }
+
+    .report-head {
+      padding: 20px 22px;
+
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .report-title {
+      margin-bottom: 18px;
+
+      padding: 10px 8px;
+
+      text-align: center;
+
+      border-top: 2px solid #2563eb;
+
+      border-bottom: 2px solid #2563eb;
+    }
+
+    .report-title h2,
+    .report-title h3 {
+      margin: 0;
+    }
+
+    .report-title h2 {
+      font-size: 17px;
+    }
+
+    .report-title h3 {
+      margin-top: 5px;
+
+      font-size: 14px;
+    }
+
+
+    /* =====================================================
+       REPORT INFORMATION
+    ===================================================== */
+
+    .meta-grid {
+      display: grid;
+
+      grid-template-columns:
+        1.4fr 0.8fr;
+
+      gap: 28px;
+    }
+
+    .meta-fields {
+      display: grid;
+
+      gap: 10px;
+    }
+
+    .field-line {
+      display: grid;
+
+      grid-template-columns:
+        90px 12px 1fr;
+
+      align-items: center;
+    }
+
+    .field-line label {
+      font-size: 13px;
+
+      font-weight: 700;
+    }
+
+    .field-line input {
+      width: 100%;
+
+      padding: 7px 4px;
+
+      border: 0;
+
+      border-bottom: 1px solid #cbd5e1;
+
+      font-family: inherit;
+
+      font-size: 13px;
+
+      outline: none;
+    }
+
+    .field-line input:focus {
+      border-color: #2563eb;
+    }
+
+    .date-side .field-line {
+      grid-template-columns:
+        70px 12px 1fr;
+    }
+
+
+    /* =====================================================
+       TABLE
+    ===================================================== */
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    .progress-table {
+      width: 100%;
+
+      min-width: 1850px;
+
+      border-collapse: separate;
+
+      border-spacing: 0;
+    }
+
+    .progress-table th,
+    .progress-table td {
+      padding: 7px;
+
+      border-right: 1px solid #cbd5e1;
+
+      border-bottom: 1px solid #cbd5e1;
+
+      vertical-align: middle;
+    }
+
+    .progress-table th {
+      background: #14558e;
+
+      color: #ffffff;
+
+      font-size: 11px;
+
+      text-align: center;
+
+      text-transform: uppercase;
+
+      white-space: nowrap;
+    }
+
+    .progress-table thead tr:first-child th {
+      font-size: 12px;
+    }
+
+    .progress-table th.group-target {
+      background: #2f761f;
+    }
+
+    .progress-table th.group-actual {
+      background: #155b98;
+    }
+
+    .progress-table th.group-contract {
+      background: #6b3aa5;
+    }
+
+    .progress-table td {
+      background: #ffffff;
+    }
+
+    .progress-table tbody tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+
+    /* =====================================================
+       TABLE INPUT
+    ===================================================== */
+
+    .progress-table input,
+    .progress-table select,
+    .progress-table textarea {
+      width: 100%;
+
+      padding: 7px;
+
+      border: 1px solid #d8dee8;
+
+      border-radius: 7px;
+
+      background: #ffffff;
+
+      font-family: inherit;
+
+      font-size: 12px;
+    }
+
+    .progress-table textarea {
+      min-height: 58px;
+
+      resize: vertical;
+    }
+
+    .progress-table input[readonly] {
+      background: #eef2f7;
+
+      color: #475569;
+    }
+
+    .status-select {
+      font-weight: 700;
+    }
+
+
+    /* =====================================================
+       COLUMN WIDTH
+    ===================================================== */
+
+    .col-no {
+      width: 52px;
+    }
+
+    .col-sub {
+      width: 70px;
+    }
+
+    .col-module {
+      width: 270px;
+    }
+
+    .col-pic {
+      width: 135px;
+    }
+
+    .col-status {
+      width: 135px;
+    }
+
+    .col-date {
+      width: 130px;
+    }
+
+    .col-small {
+      width: 85px;
+    }
+
+    .col-percent {
+      width: 145px;
+    }
+
+    .col-action {
+      width: 74px;
+    }
+
+
+    /* =====================================================
+       REMOVE ROW
+    ===================================================== */
+
+    .row-actions {
+      text-align: center;
+    }
+
+    .remove-row {
+      padding: 7px 9px;
+
+      border: 0;
+
+      border-radius: 7px;
+
+      background: #fee2e2;
+
+      color: #b91c1c;
+
+      cursor: pointer;
+    }
+
+
+    /* =====================================================
+       TABLE FOOTER
+    ===================================================== */
+
+    .table-footer {
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: center;
+
+      gap: 15px;
+
+      padding: 16px 20px;
+
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .summary {
+      display: flex;
+
+      gap: 18px;
+
+      font-size: 13px;
+    }
+
+    .summary strong {
+      color: #1d4ed8;
+    }
+
+    .formula-note {
+      padding: 12px 20px;
+
+      background: #f8fafc;
+
+      color: #64748b;
+
+      font-size: 11px;
+
+      border-top: 1px solid #e5e7eb;
+    }
+
+
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+
+    @media (max-width: 900px) {
+
+      .main-content {
+        margin-left: 0;
+
+        width: 100%;
+
+        padding: 16px;
+      }
+
+      .topbar,
+      .table-footer {
+        align-items: flex-start;
+
+        flex-direction: column;
+      }
+
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .summary {
+        flex-wrap: wrap;
+      }
+
+    }
+
+
+    /* =====================================================
+       PRINT
+    ===================================================== */
+
+    @media print {
+
+      #sidebarContainer,
+      .topbar,
+      .table-footer,
+      .formula-note,
+      .col-action,
+      .row-actions {
+        display: none !important;
+      }
+
+      .main-content {
+        margin: 0;
+
+        width: 100%;
+
+        padding: 0;
+      }
+
+      .sheet {
+        border: 0;
+
+        box-shadow: none;
+      }
+
+      .progress-table {
+        min-width: 0;
+
+        font-size: 8px;
+      }
+
+      .progress-table th,
+      .progress-table td {
+        padding: 3px;
+      }
+
+      .progress-table input,
+      .progress-table select,
+      .progress-table textarea {
+        padding: 0;
+
+        border: 0;
+
+        font-size: 8px;
+
+        appearance: none;
+      }
+
+      .report-head {
+        padding: 8px;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+  <!-- =====================================================
+       SIDEBAR
+  ====================================================== -->
+
+  <div id="sidebarContainer"></div>
+
+
+  <!-- =====================================================
+       MAIN CONTENT
+  ====================================================== -->
+
+  <main class="main-content">
+
+
+    <div class="page">
+
+
+      <!-- =================================================
+           TOP BAR
+      ================================================== -->
+
+      <div class="topbar">
+
+
+        <div>
+
+          <h1>
+            Update Progress Proyek
+          </h1>
+
+          <p>
+            Input timeline target, aktual, dan aktual berdasarkan kontrak.
+          </p>
+
+        </div>
+
+
+        <div class="actions">
+
+          <button
+            type="button"
+            class="btn btn-soft"
+            id="saveDraft"
+          >
+            Simpan Draft
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-soft"
+            id="printReport"
+          >
+            Cetak
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-primary"
+            id="submitReport"
+          >
+            Simpan Progress
+          </button>
+
+        </div>
+
+
+      </div>
+
+
+      <!-- =================================================
+           REPORT
+      ================================================== -->
+
+      <section class="sheet">
+
+
+        <!-- ===============================================
+             REPORT HEADER
+        ================================================ -->
+
+        <div class="report-head">
+
+
+          <div class="report-title">
+
+            <h2>
+              TIMELINE
+              <span id="timelineProject">
+                (NAMA PROYEK)
+              </span>
+            </h2>
+
+            <h3>
+              LAPORAN PENGEMBANGAN PROYEK
+            </h3>
+
+          </div>
+
+
+          <div class="meta-grid">
+
+
+            <div class="meta-fields">
+
+
+              <div class="field-line">
+
+                <label for="clientName">
+                  Instansi
+                </label>
+
+                <span>:</span>
+
+                <input
+                  type="text"
+                  id="clientName"
+                  placeholder="Nama klien/instansi"
+                >
+
+              </div>
+
+
+              <div class="field-line">
+
+                <label for="projectName">
+                  Pekerjaan
+                </label>
+
+                <span>:</span>
+
+                <input
+                  type="text"
+                  id="projectName"
+                  placeholder="Nama proyek"
+                >
+
+              </div>
+
+
+            </div>
+
+
+            <div class="meta-fields date-side">
+
+
+              <div class="field-line">
+
+                <label for="reportDay">
+                  Hari
+                </label>
+
+                <span>:</span>
+
+                <input
+                  type="text"
+                  id="reportDay"
+                  readonly
+                >
+
+              </div>
+
+
+              <div class="field-line">
+
+                <label for="reportDate">
+                  Tanggal
+                </label>
+
+                <span>:</span>
+
+                <input
+                  type="date"
+                  id="reportDate"
+                >
+
+              </div>
+
+
+            </div>
+
+
+          </div>
+
+
+        </div>
+
+
+        <!-- ===============================================
+             TABLE
+        ================================================ -->
+
+        <div class="table-wrap">
+
+
+          <table class="progress-table">
+
+
+            <thead>
+
+
+              <tr>
+
+                <th
+                  rowspan="2"
+                  class="col-no"
+                >
+                  No
+                </th>
+
+                <th
+                  rowspan="2"
+                  class="col-sub"
+                >
+                  Sub No
+                </th>
+
+                <th
+                  rowspan="2"
+                  class="col-module"
+                >
+                  Modul/Pekerjaan
+                </th>
+
+                <th
+                  rowspan="2"
+                  class="col-pic"
+                >
+                  PIC
+                </th>
+
+                <th
+                  rowspan="2"
+                  class="col-status"
+                >
+                  Status
+                </th>
+
+
+                <th
+                  colspan="4"
+                  class="group-target"
+                >
+                  Target
+                </th>
+
+
+                <th
+                  colspan="4"
+                  class="group-actual"
+                >
+                  Actual
+                </th>
+
+
+                <th
+                  colspan="4"
+                  class="group-contract"
+                >
+                  Actual Base on Kontrak
+                </th>
+
+
+                <th
+                  rowspan="2"
+                  class="col-percent"
+                >
+                  Presentase Actual
+                </th>
+
+
+                <th
+                  rowspan="2"
+                  class="col-percent"
+                >
+                  Presentase Actual Dalam Kontrak
+                </th>
+
+
+                <th
+                  rowspan="2"
+                  class="col-action"
+                >
+                  Aksi
+                </th>
+
+              </tr>
+
+
+              <tr>
+
+                <!-- TARGET -->
+
+                <th class="group-target col-date">
+                  Start Date
+                </th>
+
+                <th class="group-target col-date">
+                  End Date
+                </th>
+
+                <th class="group-target col-small">
+                  Durasi
+                </th>
+
+                <th class="group-target col-small">
+                  Bobot (%)
+                </th>
+
+
+                <!-- ACTUAL -->
+
+                <th class="group-actual col-date">
+                  Start Date
+                </th>
+
+                <th class="group-actual col-date">
+                  End Date
+                </th>
+
+                <th class="group-actual col-small">
+                  Durasi
+                </th>
+
+                <th class="group-actual col-small">
+                  Bobot (%)
+                </th>
+
+
+                <!-- ACTUAL BASE ON CONTRACT -->
+
+                <th class="group-contract col-date">
+                  Start Date
+                </th>
+
+                <th class="group-contract col-date">
+                  End Date
+                </th>
+
+                <th class="group-contract col-small">
+                  Durasi
+                </th>
+
+                <th class="group-contract col-small">
+                  Bobot (%)
+                </th>
+
+              </tr>
+
+
+            </thead>
+
+
+            <tbody id="progressRows"></tbody>
+
+
+          </table>
+
+
+        </div>
+
+
+        <!-- ===============================================
+             TABLE FOOTER
+        ================================================ -->
+
+        <div class="table-footer">
+
+
+          <button
+            type="button"
+            class="btn btn-soft"
+            id="addRow"
+          >
+            + Tambah Baris
+          </button>
+
+
+          <div class="summary">
+
+            <span>
+              Total Bobot Target:
+              <strong id="totalTargetWeight">
+                0.00%
+              </strong>
+            </span>
+
+            <span>
+              Total Actual:
+              <strong id="totalActual">
+                0.00%
+              </strong>
+            </span>
+
+            <span>
+              Total Kontrak:
+              <strong id="totalContract">
+                0.00%
+              </strong>
+            </span>
+
+          </div>
+
+
+        </div>
+
+
+        <div class="formula-note">
+
+          Rumus yang digunakan:
+
+          Presentase Actual =
+          (Durasi Actual ÷ Durasi Target)
+          × Bobot Actual.
+
+          Presentase Kontrak =
+          (Durasi Actual Base on Kontrak
+          ÷ Durasi Target)
+          × Bobot Kontrak.
+
+          Durasi dihitung inklusif,
+          termasuk tanggal mulai dan tanggal akhir.
+
+        </div>
+
+
+      </section>
+
+
+    </div>
+
+
+  </main>
+
+
+  <!-- =====================================================
+       TEMPLATE BARIS
+  ====================================================== -->
+
+  <template id="rowTemplate">
+
+
+    <tr>
+
+
+      <!-- NO -->
+
+      <td>
+
+        <input
+          class="row-no"
+          type="number"
+          min="1"
+          placeholder="1"
+        >
+
+      </td>
+
+
+      <!-- SUB NO -->
+
+      <td>
+
+        <input
+          class="sub-no"
+          type="text"
+          placeholder="1.1"
+        >
+
+      </td>
+
+
+      <!-- MODULE -->
+
+      <td>
+
+        <textarea
+          class="module"
+          placeholder="Nama modul atau pekerjaan"
+        ></textarea>
+
+      </td>
+
+
+      <!-- PIC -->
+
+      <td>
+
+        <input
+          class="pic"
+          type="text"
+          placeholder="PIC"
+        >
+
+      </td>
+
+
+      <!-- STATUS -->
+
+      <td>
+
+        <select class="status status-select">
+
+          <option value="">
+            Pilih
+          </option>
+
+          <option value="Not Started">
+            Not Started
+          </option>
+
+          <option value="On Progress">
+            On Progress
+          </option>
+
+          <option value="Hold">
+            Hold
+          </option>
+
+          <option value="Done">
+            Done
+          </option>
+
+          <option value="Cancel">
+            Cancel
+          </option>
+
+        </select>
+
+      </td>
+
+
+      <!-- TARGET START -->
+
+      <td>
+
+        <input
+          type="date"
+          class="target-start"
+        >
+
+      </td>
+
+
+      <!-- TARGET END -->
+
+      <td>
+
+        <input
+          type="date"
+          class="target-end"
+        >
+
+      </td>
+
+
+      <!-- TARGET DURATION -->
+
+      <td>
+
+        <input
+          type="number"
+          class="target-duration"
+          readonly
+        >
+
+      </td>
+
+
+      <!-- TARGET WEIGHT -->
+
+      <td>
+
+        <input
+          type="number"
+          class="target-weight"
+          min="0"
+          max="100"
+          step="0.01"
+          placeholder="0"
+        >
+
+      </td>
+
+
+      <!-- ACTUAL START -->
+
+      <td>
+
+        <input
+          type="date"
+          class="actual-start"
+        >
+
+      </td>
+
+
+      <!-- ACTUAL END -->
+
+      <td>
+
+        <input
+          type="date"
+          class="actual-end"
+        >
+
+      </td>
+
+
+      <!-- ACTUAL DURATION -->
+
+      <td>
+
+        <input
+          type="number"
+          class="actual-duration"
+          readonly
+        >
+
+      </td>
+
+
+      <!-- ACTUAL WEIGHT -->
+
+      <td>
+
+        <input
+          type="number"
+          class="actual-weight"
+          min="0"
+          max="100"
+          step="0.01"
+          placeholder="0"
+        >
+
+      </td>
+
+
+      <!-- CONTRACT START -->
+
+      <td>
+
+        <input
+          type="date"
+          class="contract-start"
+        >
+
+      </td>
+
+
+      <!-- CONTRACT END -->
+
+      <td>
+
+        <input
+          type="date"
+          class="contract-end"
+        >
+
+      </td>
+
+
+      <!-- CONTRACT DURATION -->
+
+      <td>
+
+        <input
+          type="number"
+          class="contract-duration"
+          readonly
+        >
+
+      </td>
+
+
+      <!-- CONTRACT WEIGHT -->
+
+      <td>
+
+        <input
+          type="number"
+          class="contract-weight"
+          min="0"
+          max="100"
+          step="0.01"
+          placeholder="0"
+        >
+
+      </td>
+
+
+      <!-- ACTUAL PERCENT -->
+
+      <td>
+
+        <input
+          class="actual-percent"
+          type="text"
+          readonly
+          value="0.00%"
+        >
+
+      </td>
+
+
+      <!-- CONTRACT PERCENT -->
+
+      <td>
+
+        <input
+          class="contract-percent"
+          type="text"
+          readonly
+          value="0.00%"
+        >
+
+      </td>
+
+
+      <!-- ACTION -->
+
+      <td class="row-actions">
+
+        <button
+          type="button"
+          class="remove-row"
+        >
+          Hapus
+        </button>
+
+      </td>
+
+
+    </tr>
+
+
+  </template>
+
+
+  <!-- =====================================================
+       LAYOUT DAN SIDEBAR
+  ====================================================== -->
+
+  <script src="/layout.js"></script>
+
+  <script src="/sidebar.js"></script>
+
+
+  <!-- =====================================================
+       UPDATE PROGRESS SCRIPT
+  ====================================================== -->
+
+  <script>
+
+    const rowsBody =
+      document.getElementById(
+        "progressRows"
+      );
+
+
+    const query =
+      (
+        root,
+        selector
+      ) =>
+        root.querySelector(
+          selector
+        );
+
+
+    const numberValue =
+      value =>
+        Number(value) || 0;
+
+
+    // ==================================================
+    // HITUNG DURASI
+    // ==================================================
+
+    function calculateDuration(
+      startValue,
+      endValue
+    ) {
+
+      if (
+        !startValue ||
+        !endValue
+      ) {
+
+        return 0;
+
+      }
+
+
+      const startDate =
+        new Date(
+          `${startValue}T00:00:00`
+        );
+
+
+      const endDate =
+        new Date(
+          `${endValue}T00:00:00`
+        );
+
+
+      if (
+        endDate < startDate
+      ) {
+
+        return 0;
+
+      }
+
+
+      return (
+
+        Math.floor(
+
+          (
+            endDate -
+            startDate
+          ) /
+
+          86400000
+
+        ) + 1
+
+      );
+
+    }
+
+
+    // ==================================================
+    // SET HARI
+    // ==================================================
+
+    function setDay() {
+
+      const dateValue =
+        document.getElementById(
+          "reportDate"
+        ).value;
+
+
+      const dayInput =
+        document.getElementById(
+          "reportDay"
+        );
+
+
+      if (!dateValue) {
+
+        dayInput.value =
+          "";
+
+        return;
+
+      }
+
+
+      dayInput.value =
+        new Intl.DateTimeFormat(
+
+          "id-ID",
+
+          {
+            weekday: "long"
+          }
+
+        ).format(
+
+          new Date(
+            `${dateValue}T00:00:00`
+          )
+
+        );
+
+    }
+
+
+    // ==================================================
+    // HITUNG SATU BARIS
+    // ==================================================
+
+    function calculateRow(row) {
+
+      const targetDuration =
+        calculateDuration(
+
+          query(
+            row,
+            ".target-start"
+          ).value,
+
+          query(
+            row,
+            ".target-end"
+          ).value
+
+        );
+
+
+      const actualDuration =
+        calculateDuration(
+
+          query(
+            row,
+            ".actual-start"
+          ).value,
+
+          query(
+            row,
+            ".actual-end"
+          ).value
+
+        );
+
+
+      const contractDuration =
+        calculateDuration(
+
+          query(
+            row,
+            ".contract-start"
+          ).value,
+
+          query(
+            row,
+            ".contract-end"
+          ).value
+
+        );
+
+
+      query(
+        row,
+        ".target-duration"
+      ).value =
+        targetDuration || "";
+
+
+      query(
+        row,
+        ".actual-duration"
+      ).value =
+        actualDuration || "";
+
+
+      query(
+        row,
+        ".contract-duration"
+      ).value =
+        contractDuration || "";
+
+
+      const actualWeight =
+        numberValue(
+
+          query(
+            row,
+            ".actual-weight"
+          ).value
+
+        );
+
+
+      const contractWeight =
+        numberValue(
+
+          query(
+            row,
+            ".contract-weight"
+          ).value
+
+        );
+
+
+      const actualPercentage =
+
+        targetDuration > 0
+
+          ? (
+              actualDuration /
+              targetDuration
+            ) * actualWeight
+
+          : 0;
+
+
+      const contractPercentage =
+
+        targetDuration > 0
+
+          ? (
+              contractDuration /
+              targetDuration
+            ) * contractWeight
+
+          : 0;
+
+
+      query(
+        row,
+        ".actual-percent"
+      ).value =
+        actualPercentage
+          .toFixed(2) +
+        "%";
+
+
+      query(
+        row,
+        ".contract-percent"
+      ).value =
+        contractPercentage
+          .toFixed(2) +
+        "%";
+
+
+      calculateSummary();
+
+    }
+
+
+    // ==================================================
+    // HITUNG SUMMARY
+    // ==================================================
+
+    function calculateSummary() {
+
+      let totalTargetWeight =
+        0;
+
+      let totalActual =
+        0;
+
+      let totalContract =
+        0;
+
+
+      [
+        ...rowsBody.rows
+      ].forEach(row => {
+
+        totalTargetWeight +=
+          numberValue(
+
+            query(
+              row,
+              ".target-weight"
+            ).value
+
+          );
+
+
+        totalActual +=
+
+          parseFloat(
+
+            query(
+              row,
+              ".actual-percent"
+            ).value
+
+          ) || 0;
+
+
+        totalContract +=
+
+          parseFloat(
+
+            query(
+              row,
+              ".contract-percent"
+            ).value
+
+          ) || 0;
+
+      });
+
+
+      document.getElementById(
+        "totalTargetWeight"
+      ).textContent =
+
+        totalTargetWeight
+          .toFixed(2) +
+        "%";
+
+
+      document.getElementById(
+        "totalActual"
+      ).textContent =
+
+        totalActual
+          .toFixed(2) +
+        "%";
+
+
+      document.getElementById(
+        "totalContract"
+      ).textContent =
+
+        totalContract
+          .toFixed(2) +
+        "%";
+
+    }
+
+
+    // ==================================================
+    // TAMBAH BARIS
+    // ==================================================
+
+    function addRow(
+      data = {}
+    ) {
+
+      const template =
+        document.getElementById(
+          "rowTemplate"
+        );
+
+
+      const row =
+        template
+          .content
+          .firstElementChild
+          .cloneNode(true);
+
+
+      const fields = [
+
+        "row-no",
+        "sub-no",
+        "module",
+        "pic",
+        "status",
+
+        "target-start",
+        "target-end",
+        "target-weight",
+
+        "actual-start",
+        "actual-end",
+        "actual-weight",
+
+        "contract-start",
+        "contract-end",
+        "contract-weight"
+
+      ];
+
+
+      fields.forEach(
+        fieldName => {
+
+          const element =
+            query(
+              row,
+              `.${fieldName}`
+            );
+
+
+          if (
+            data[fieldName] !== null &&
+            data[fieldName] !== undefined
+          ) {
+
+            element.value =
+              data[fieldName];
+
+          }
+
+        }
+      );
+
+
+      row
+        .querySelectorAll(
+          "input, select, textarea"
+        )
+        .forEach(element => {
+
+          element.addEventListener(
+            "input",
+            () => {
+
+              calculateRow(
+                row
+              );
+
+            }
+          );
+
+          element.addEventListener(
+            "change",
+            () => {
+
+              calculateRow(
+                row
+              );
+
+            }
+          );
+
+        });
+
+
+      query(
+        row,
+        ".remove-row"
+      ).addEventListener(
+        "click",
+        () => {
+
+          row.remove();
+
+          renumberRows();
+
+          calculateSummary();
+
+        }
+      );
+
+
+      rowsBody.appendChild(
+        row
+      );
+
+
+      calculateRow(
+        row
+      );
+
+
+      renumberRows();
+
+    }
+
+
+    // ==================================================
+    // NOMOR BARIS
+    // ==================================================
+
+    function renumberRows() {
+
+      [
+        ...rowsBody.rows
+      ].forEach(
+        (
+          row,
+          index
+        ) => {
+
+          const numberInput =
+            query(
+              row,
+              ".row-no"
+            );
+
+
+          if (
+            !numberInput.value
+          ) {
+
+            numberInput.value =
+              index + 1;
+
+          }
+
+        }
+      );
+
+    }
+
+
+    // ==================================================
+    // AMBIL DATA FORM
+    // ==================================================
+
+    function collectFormData() {
+
+      return {
+
+        clientName:
+
+          document.getElementById(
+            "clientName"
+          ).value,
+
+
+        projectName:
+
+          document.getElementById(
+            "projectName"
+          ).value,
+
+
+        reportDate:
+
+          document.getElementById(
+            "reportDate"
+          ).value,
+
+
+        rows:
+
+          [
+            ...rowsBody.rows
+          ].map(row => {
+
+            const item =
+              {};
+
+
+            const fields = [
+
+              "row-no",
+              "sub-no",
+              "module",
+              "pic",
+              "status",
+
+              "target-start",
+              "target-end",
+              "target-weight",
+
+              "actual-start",
+              "actual-end",
+              "actual-weight",
+
+              "contract-start",
+              "contract-end",
+              "contract-weight"
+
+            ];
+
+
+            fields.forEach(
+              fieldName => {
+
+                item[fieldName] =
+                  query(
+                    row,
+                    `.${fieldName}`
+                  ).value;
+
+              }
+            );
+
+
+            item.targetDuration =
+              query(
+                row,
+                ".target-duration"
+              ).value;
+
+
+            item.actualDuration =
+              query(
+                row,
+                ".actual-duration"
+              ).value;
+
+
+            item.contractDuration =
+              query(
+                row,
+                ".contract-duration"
+              ).value;
+
+
+            item.actualPercentage =
+              query(
+                row,
+                ".actual-percent"
+              ).value;
+
+
+            item.contractPercentage =
+              query(
+                row,
+                ".contract-percent"
+              ).value;
+
+
+            return item;
+
+          })
+
+      };
+
+    }
+
+
+    // ==================================================
+    // RESTORE DRAFT
+    // ==================================================
+
+    function restoreDraft(data) {
+
+      if (!data) {
+        return;
+      }
+
+
+      document.getElementById(
+        "clientName"
+      ).value =
+        data.clientName || "";
+
+
+      document.getElementById(
+        "projectName"
+      ).value =
+        data.projectName || "";
+
+
+      document.getElementById(
+        "reportDate"
+      ).value =
+        data.reportDate || "";
+
+
+      rowsBody.innerHTML =
+        "";
+
+
+      (
+        data.rows || []
+      ).forEach(
+        row => {
+
+          addRow(
+            row
+          );
+
+        }
+      );
+
+
+      if (
+        !data.rows ||
+        data.rows.length === 0
+      ) {
+
+        addRow();
+
+      }
+
+
+      setDay();
+
+      synchronizeProjectTitle();
+
+    }
+
+
+    // ==================================================
+    // SINKRONISASI JUDUL
+    // ==================================================
+
+    function synchronizeProjectTitle() {
+
+      const projectName =
+        document.getElementById(
+          "projectName"
+        ).value.trim();
+
+
+      document.getElementById(
+        "timelineProject"
+      ).textContent =
+
+        projectName ||
+        "(NAMA PROYEK)";
+
+    }
+
+
+    // ==================================================
+    // BUTTON TAMBAH BARIS
+    // ==================================================
+
+    document.getElementById(
+      "addRow"
+    ).addEventListener(
+      "click",
+      () => {
+
+        addRow();
+
+      }
+    );
+
+
+    // ==================================================
+    // TANGGAL LAPORAN
+    // ==================================================
+
+    document.getElementById(
+      "reportDate"
+    ).addEventListener(
+      "change",
+      setDay
+    );
+
+
+    // ==================================================
+    // NAMA PROYEK
+    // ==================================================
+
+    document.getElementById(
+      "projectName"
+    ).addEventListener(
+      "input",
+      synchronizeProjectTitle
+    );
+
+
+    // ==================================================
+    // SIMPAN DRAFT
+    // ==================================================
+
+    document.getElementById(
+      "saveDraft"
+    ).addEventListener(
+      "click",
+      () => {
+
+        const formData =
+          collectFormData();
+
+
+        localStorage.setItem(
+
+          "portopro-progress-draft",
+
+          JSON.stringify(
+            formData
+          )
+
+        );
+
+
+        alert(
+          "Draft progress berhasil disimpan di browser."
+        );
+
+      }
+    );
+
+
+    // ==================================================
+    // CETAK
+    // ==================================================
+
+    document.getElementById(
+      "printReport"
+    ).addEventListener(
+      "click",
+      () => {
+
+        window.print();
+
+      }
+    );
+
+
+    // ==================================================
+    // SIMPAN PROGRESS
+    // ==================================================
+
+    document.getElementById(
+      "submitReport"
+    ).addEventListener(
+      "click",
+      async () => {
+
+        const payload =
+          collectFormData();
+
+
+        if (
+          !payload.projectName.trim()
+        ) {
+
+          alert(
+            "Nama proyek wajib diisi."
+          );
+
+          document.getElementById(
+            "projectName"
+          ).focus();
+
+          return;
+
+        }
+
+
+        if (
+          !payload.reportDate
+        ) {
+
+          alert(
+            "Tanggal laporan wajib diisi."
+          );
+
+          document.getElementById(
+            "reportDate"
+          ).focus();
+
+          return;
+
+        }
+
+
+        if (
+          payload.rows.length === 0
+        ) {
+
+          alert(
+            "Minimal satu baris progress wajib diisi."
+          );
+
+          return;
+
+        }
+
+
+        console.log(
+          "PAYLOAD PROGRESS:",
+          payload
+        );
+
+
+        /*
+        const response =
+          await fetch(
+            "/api/progress",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify(
+                  payload
+                )
+            }
+          );
+
+
+        const result =
+          await response.json();
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            result.error ||
+            "Gagal menyimpan progress"
+          );
+
+        }
+
+
+        alert(
+          "Progress berhasil disimpan."
+        );
+        */
+
+
+        alert(
+          "Tampilan dan payload sudah siap. " +
+          "Selanjutnya hubungkan tombol ini " +
+          "ke endpoint POST /api/progress."
+        );
+
+      }
+    );
+
+
+    // ==================================================
+    // DEFAULT TANGGAL HARI INI
+    // ==================================================
+
+    const today =
+      new Date();
+
+
+    document.getElementById(
+      "reportDate"
+    ).value = [
+
+      today.getFullYear(),
+
+      String(
+        today.getMonth() + 1
+      ).padStart(
+        2,
+        "0"
+      ),
+
+      String(
+        today.getDate()
+      ).padStart(
+        2,
+        "0"
+      )
+
+    ].join("-");
+
+
+    setDay();
+
+
+    // ==================================================
+    // LOAD DRAFT ATAU BUAT BARIS BARU
+    // ==================================================
+
+    const savedDraft =
+      localStorage.getItem(
+        "portopro-progress-draft"
+      );
+
+
+    if (savedDraft) {
+
+      try {
+
+        restoreDraft(
+          JSON.parse(
+            savedDraft
+          )
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "ERROR RESTORE DRAFT:",
+          error
+        );
+
+
+        addRow();
+
+      }
+
+
+    } else {
+
+      addRow();
+
+    }
+
+  </script>
+
+
+</body>
+
+</html>
