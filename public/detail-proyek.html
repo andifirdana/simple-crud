@@ -1591,6 +1591,17 @@ and (
 /* =====================================================
    TIMELINE LISTING
 ===================================================== */
+.col-number,
+.timeline-number {
+  width: 60px;
+  min-width: 60px;
+  text-align: center !important;
+}
+
+.timeline-number {
+  color: #64748b;
+  font-weight: 700;
+}
 
 .timeline-table {
   width: 100%;
@@ -1688,6 +1699,28 @@ and (
   background: #e0e7ff;
 }
 
+.project-last-update {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.project-last-update::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px
+    rgba(34, 197, 94, 0.12);
+}
+
   </style>
 </head>
 
@@ -1728,6 +1761,13 @@ and (
             </strong>
 
           </div>
+
+          <div
+              class="project-last-update"
+              id="projectLastUpdate"
+            >
+              Terakhir diperbarui: -
+            </div>
 
         </div>
 

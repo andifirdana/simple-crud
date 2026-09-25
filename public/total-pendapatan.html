@@ -21,6 +21,7 @@
 
     body {
       margin: 0;
+
       font-family:
         Inter,
         Arial,
@@ -39,7 +40,6 @@
       margin-left: 260px;
 
       width: calc(100% - 260px);
-
       min-width: 0;
 
       padding: 32px;
@@ -61,6 +61,8 @@
 
       font-size: 30px;
       font-weight: 700;
+
+      color: #111827;
     }
 
     .page-header p {
@@ -79,7 +81,6 @@
       width: 100%;
 
       padding: 20px;
-
       margin-bottom: 24px;
 
       background: #ffffff;
@@ -120,10 +121,15 @@
       font: inherit;
 
       outline: none;
+      cursor: pointer;
     }
 
     .filter-group select:focus {
       border-color: #4f46e5;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(79, 70, 229, 0.12);
     }
 
 
@@ -150,7 +156,6 @@
       display: flex;
 
       align-items: center;
-
       justify-content: space-between;
 
       padding: 18px 20px;
@@ -176,7 +181,6 @@
 
     .table-wrapper {
       width: 100%;
-
       min-width: 0;
 
       overflow-x: auto;
@@ -188,7 +192,7 @@
     .pendapatan-table {
       width: 100%;
 
-      min-width: 1200px;
+      min-width: 1700px;
 
       border-collapse: collapse;
     }
@@ -196,7 +200,7 @@
     .pendapatan-table th {
       padding: 14px 16px;
 
-      text-align: left;
+      text-align: right;
 
       font-size: 12px;
       font-weight: 600;
@@ -210,8 +214,22 @@
       white-space: nowrap;
     }
 
+    .pendapatan-table th:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+
+      min-width: 150px;
+
+      text-align: left;
+
+      background: #f9fafb;
+    }
+
     .pendapatan-table td {
       padding: 16px;
+
+      text-align: right;
 
       font-size: 14px;
 
@@ -222,8 +240,60 @@
       white-space: nowrap;
     }
 
+    .pendapatan-table tbody tr:hover td {
+      background: #fafafa;
+    }
+
     .pendapatan-table tbody tr:last-child td {
       border-bottom: none;
+    }
+
+    .jenis-value {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+
+      min-width: 150px;
+
+      text-align: left !important;
+
+      background: #ffffff;
+    }
+
+    .total-value {
+      font-weight: 700;
+
+      color: #111827;
+
+      background: #f9fafb;
+    }
+
+    #totalPendapatanRow td {
+      font-weight: 700;
+
+      color: #111827;
+
+      background: #eef2ff;
+
+      border-top: 2px solid #c7d2fe;
+    }
+
+    #totalPendapatanRow .jenis-value {
+      background: #eef2ff;
+    }
+
+    .loading-cell {
+      text-align: center !important;
+
+      color: #6b7280 !important;
+    }
+
+    .error-cell {
+      text-align: center !important;
+
+      color: #dc2626 !important;
+
+      background: #fef2f2 !important;
     }
 
 
@@ -232,7 +302,7 @@
     ====================================================== */
 
     .table-wrapper::-webkit-scrollbar {
-      height: 7px;
+      height: 8px;
     }
 
     .table-wrapper::-webkit-scrollbar-track {
@@ -243,6 +313,10 @@
       background: #cbd5e1;
 
       border-radius: 999px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
 
 
@@ -258,6 +332,10 @@
         width: 100%;
 
         padding: 20px;
+      }
+
+      .page-header h1 {
+        font-size: 25px;
       }
 
     }
@@ -277,7 +355,6 @@
   <div id="sidebarContainer"></div>
 
 
-
   <!-- =====================================================
        MAIN CONTENT
   ====================================================== -->
@@ -294,11 +371,11 @@
       </h1>
 
       <p>
-        Monitoring pendapatan reguler, sewa, dan transaksi.
+        Monitoring pendapatan reguler, sewa, dan transaksi
+        berdasarkan bulan.
       </p>
 
     </div>
-
 
 
     <!-- =====================================================
@@ -326,9 +403,8 @@
     </div>
 
 
-
     <!-- =====================================================
-         REGULER
+         SUMMARY PENDAPATAN
     ====================================================== -->
 
     <section class="report-section">
@@ -336,7 +412,7 @@
       <div class="report-header">
 
         <h2>
-          Reguler
+          Summary Pendapatan Per Bulan
         </h2>
 
       </div>
@@ -349,6 +425,8 @@
           <thead>
 
             <tr>
+
+              <th>Jenis Proyek</th>
 
               <th>Januari</th>
               <th>Februari</th>
@@ -363,138 +441,57 @@
               <th>November</th>
               <th>Desember</th>
 
+              <th>Total</th>
+
             </tr>
 
           </thead>
 
 
-          <tbody>
+          <tbody id="pendapatanGroup">
 
             <tr id="regulerRow">
 
-              <td colspan="12">
+              <td
+                colspan="14"
+                class="loading-cell"
+              >
                 Memuat data...
               </td>
 
             </tr>
 
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         SEWA
-    ====================================================== -->
-
-    <section class="report-section">
-
-      <div class="report-header">
-
-        <h2>
-          Sewa
-        </h2>
-
-      </div>
-
-
-      <div class="table-wrapper">
-
-        <table class="pendapatan-table">
-
-          <thead>
-
-            <tr>
-
-              <th>Januari</th>
-              <th>Februari</th>
-              <th>Maret</th>
-              <th>April</th>
-              <th>Mei</th>
-              <th>Juni</th>
-              <th>Juli</th>
-              <th>Agustus</th>
-              <th>September</th>
-              <th>Oktober</th>
-              <th>November</th>
-              <th>Desember</th>
-
-            </tr>
-
-          </thead>
-
-
-          <tbody>
 
             <tr id="sewaRow">
 
-              <td colspan="12">
+              <td
+                colspan="14"
+                class="loading-cell"
+              >
                 Memuat data...
               </td>
 
             </tr>
 
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         TRANSAKSI
-    ====================================================== -->
-
-    <section class="report-section">
-
-      <div class="report-header">
-
-        <h2>
-          Transaksi
-        </h2>
-
-      </div>
-
-
-      <div class="table-wrapper">
-
-        <table class="pendapatan-table">
-
-          <thead>
-
-            <tr>
-
-              <th>Januari</th>
-              <th>Februari</th>
-              <th>Maret</th>
-              <th>April</th>
-              <th>Mei</th>
-              <th>Juni</th>
-              <th>Juli</th>
-              <th>Agustus</th>
-              <th>September</th>
-              <th>Oktober</th>
-              <th>November</th>
-              <th>Desember</th>
-
-            </tr>
-
-          </thead>
-
-
-          <tbody>
 
             <tr id="transaksiRow">
 
-              <td colspan="12">
+              <td
+                colspan="14"
+                class="loading-cell"
+              >
+                Memuat data...
+              </td>
+
+            </tr>
+
+
+            <tr id="totalPendapatanRow">
+
+              <td
+                colspan="14"
+                class="loading-cell"
+              >
                 Memuat data...
               </td>
 
@@ -512,17 +509,15 @@
   </main>
 
 
-
   <!-- =====================================================
        SCRIPT
   ====================================================== -->
 
   <script src="/layout.js"></script>
 
-  <script src="/pendapatan.js"></script>
+  <script src="/total-pendapatan.js"></script>
 
 
 </body>
 
 </html>
-```

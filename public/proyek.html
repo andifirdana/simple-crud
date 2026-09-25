@@ -465,6 +465,61 @@
 
     }
 
+/* =====================================================
+   TABLE ACTIONS
+===================================================== */
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.btn-detail,
+.btn-delete-project {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-detail {
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #dbe2ea;
+}
+
+.btn-detail:hover {
+  color: #4338ca;
+  background: #eef2ff;
+  border-color: #a5b4fc;
+}
+
+.btn-delete-project {
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.btn-delete-project:hover:not(:disabled) {
+  color: #ffffff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.btn-delete-project:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
   </style>
 
 </head>
@@ -647,7 +702,7 @@
 
 
                   <th>
-                    Detail
+                    Aksi
                   </th>
 
 

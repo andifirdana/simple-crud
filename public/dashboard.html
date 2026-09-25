@@ -2,121 +2,1548 @@
 <html lang="id">
 
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Dashboard - Portopro
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
 
 
-  <title>Dashboard - Portopro</title>
-  <link rel="stylesheet" href="/style.css">
+  <style>
+
+    :root {
+      --primary: #4f46e5;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --bg: #f5f7fb;
+      --white: #ffffff;
+      --green: #16a34a;
+      --amber: #f59e0b;
+      --red: #dc2626;
+      --blue: #2563eb;
+      --cyan: #0891b2;
+      --purple: #7c3aed;
+    }
+
+
+    * {
+      box-sizing: border-box;
+    }
+
+
+    body {
+      margin: 0;
+
+      background: var(--bg);
+      color: #1f2937;
+
+      font-family:
+        Inter,
+        Arial,
+        sans-serif;
+    }
+
+
+    /* =====================================================
+       MAIN LAYOUT
+    ====================================================== */
+
+    .main-content {
+      width: calc(100% - 260px);
+      min-height: 100vh;
+
+      margin-left: 260px;
+      padding: 30px;
+    }
+
+
+    .dashboard-page {
+      width: 100%;
+      max-width: 1800px;
+
+      margin: auto;
+    }
+
+
+    /* =====================================================
+       PAGE HEADER
+    ====================================================== */
+
+    .page-header {
+      display: flex;
+
+      align-items: flex-start;
+      justify-content: space-between;
+
+      gap: 20px;
+
+      margin-bottom: 22px;
+    }
+
+
+    .page-header h1 {
+      margin: 0 0 6px;
+
+      color: var(--ink);
+
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+
+    .page-header p {
+      margin: 0;
+
+      color: var(--muted);
+
+      font-size: 14px;
+    }
+
+
+    .last-update {
+      padding-top: 5px;
+
+      color: var(--muted);
+
+      font-size: 12px;
+
+      white-space: nowrap;
+    }
+
+
+    /* =====================================================
+       FILTER
+    ====================================================== */
+
+    .filter-card {
+      display: flex;
+
+      align-items: flex-end;
+
+      gap: 10px;
+
+      width: 100%;
+
+      margin-bottom: 20px;
+      padding: 14px;
+
+      overflow-x: auto;
+
+      background: var(--white);
+
+      border: 1px solid var(--line);
+      border-radius: 14px;
+    }
+
+
+    .filter-field {
+      flex: 0 0 155px;
+    }
+
+
+    .filter-field.search {
+      flex: 1 1 260px;
+
+      min-width: 230px;
+    }
+
+
+    .filter-field label {
+      display: block;
+
+      margin: 0 0 6px;
+
+      color: #475569;
+
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+
+    .filter-field input,
+    .filter-field select {
+      width: 100%;
+      height: 41px;
+
+      padding: 8px 10px;
+
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+
+      background: var(--white);
+
+      font-family: inherit;
+      font-size: 12px;
+
+      outline: none;
+    }
+
+
+    .filter-field input:focus,
+    .filter-field select:focus {
+      border-color: var(--primary);
+
+      box-shadow:
+        0 0 0 3px
+        rgba(79, 70, 229, 0.12);
+    }
+
+
+    .reset-button {
+      height: 41px;
+
+      padding: 0 15px;
+
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+
+      background: #eef2ff;
+      color: #4338ca;
+
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+
+    .reset-button:hover {
+      background: #e0e7ff;
+    }
+
+
+    /* =====================================================
+   TRENDY SUMMARY CARDS
+===================================================== */
+
+.summary-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(0, 1fr)
+    );
+
+  gap: 16px;
+
+  margin-bottom: 24px;
+}
+
+
+/* =====================================================
+   CARD BASE
+===================================================== */
+
+.summary-card {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+  min-height: 175px;
+
+  padding: 20px;
+
+  overflow: hidden;
+
+  isolation: isolate;
+
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f8fafc 100%
+    );
+
+  border: 1px solid
+    rgba(226, 232, 240, 0.9);
+
+  border-radius: 20px;
+
+  box-shadow:
+    0 1px 2px
+    rgba(15, 23, 42, 0.03),
+    0 8px 24px
+    rgba(15, 23, 42, 0.045);
+
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+
+/* GARIS WARNA ATAS */
+
+.summary-card::before {
+  position: absolute;
+
+  top: 0;
+  left: 20px;
+  right: 20px;
+
+  width: auto;
+  height: 4px;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(
+        --accent,
+        #4f46e5
+      ),
+      color-mix(
+        in srgb,
+        var(
+          --accent,
+          #4f46e5
+        ) 35%,
+        transparent
+      )
+    );
+
+  border-radius:
+    0
+    0
+    999px
+    999px;
+
+  content: "";
+}
+
+
+/* DEKORASI BULAT */
+
+.summary-card::after {
+  position: absolute;
+
+  top: -42px;
+  right: -38px;
+
+  z-index: -1;
+
+  width: 125px;
+  height: 125px;
+
+  background:
+    radial-gradient(
+      circle,
+      color-mix(
+        in srgb,
+        var(
+          --accent,
+          #4f46e5
+        ) 13%,
+        transparent
+      ) 0%,
+      transparent 70%
+    );
+
+  border-radius: 50%;
+
+  content: "";
+}
+
+
+/* =====================================================
+   CARD TYPOGRAPHY
+===================================================== */
+
+.summary-label {
+  display: flex;
+
+  align-items: center;
+
+  min-height: 30px;
+
+  margin-bottom: 13px;
+
+  color: #64748b;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  line-height: 1.45;
+
+  letter-spacing: 0.055em;
+
+  text-transform: uppercase;
+}
+
+
+.summary-label::before {
+  width: 8px;
+  height: 8px;
+
+  margin-right: 8px;
+
+  flex-shrink: 0;
+
+  background:
+    var(
+      --accent,
+      #4f46e5
+    );
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 0 4px
+    color-mix(
+      in srgb,
+      var(
+        --accent,
+        #4f46e5
+      ) 12%,
+      transparent
+    );
+
+  content: "";
+}
+
+
+.summary-value {
+  display: block;
+
+  color: #0f172a;
+
+  font-size: 29px;
+  font-weight: 800;
+
+  line-height: 1.1;
+
+  letter-spacing: -0.035em;
+
+  overflow-wrap: anywhere;
+}
+
+
+.summary-note {
+  display: block;
+
+  margin-top: auto;
+  padding-top: 17px;
+
+  color: #94a3b8;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  line-height: 1.4;
+}
+
+
+.summary-money {
+  display: block;
+
+  margin-top: 5px;
+
+  color:
+    var(
+      --accent,
+      #4f46e5
+    );
+
+  font-size: 14px;
+  font-weight: 800;
+
+  line-height: 1.35;
+
+  overflow-wrap: anywhere;
+}
+
+
+.finance-value {
+  color:
+    var(
+      --accent,
+      #4f46e5
+    );
+
+  font-size: 19px;
+
+  letter-spacing: -0.025em;
+}
+
+
+/* =====================================================
+   CLICKABLE CARD
+===================================================== */
+
+.clickable-card {
+  cursor: pointer;
+}
+
+
+.clickable-card:hover {
+  transform:
+    translateY(-5px);
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(
+        --accent,
+        #4f46e5
+      ) 30%,
+      #e2e8f0
+    );
+
+  box-shadow:
+    0 2px 4px
+    rgba(15, 23, 42, 0.04),
+    0 18px 38px
+    rgba(15, 23, 42, 0.1);
+}
+
+
+.clickable-card:active {
+  transform:
+    translateY(-2px)
+    scale(0.995);
+}
+
+
+.clickable-card:focus-visible {
+  border-color:
+    var(
+      --accent,
+      #4f46e5
+    );
+
+  outline: 3px solid
+    color-mix(
+      in srgb,
+      var(
+        --accent,
+        #4f46e5
+      ) 18%,
+      transparent
+    );
+}
+
+
+/* PANAH INTERAKTIF */
+
+.clickable-card .summary-note::after {
+  display: inline-block;
+
+  margin-left: 5px;
+
+  color:
+    var(
+      --accent,
+      #4f46e5
+    );
+
+  font-size: 12px;
+
+  content: "→";
+
+  transition:
+    transform 0.2s ease;
+}
+
+
+.clickable-card:hover
+.summary-note::after {
+  transform:
+    translateX(4px);
+}
+
+
+/* =====================================================
+   FINANCE CARDS
+===================================================== */
+
+.summary-card:not(
+  .clickable-card
+):not(
+  .income-card
+) {
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      color-mix(
+        in srgb,
+        var(
+          --accent,
+          #4f46e5
+        ) 4%,
+        #ffffff
+      ) 100%
+    );
+}
+
+
+/* =====================================================
+   INCOME CARD
+===================================================== */
+
+.income-card {
+  grid-column: span 2;
+
+  background:
+    linear-gradient(
+      135deg,
+      #312e81 0%,
+      #4f46e5 52%,
+      #6366f1 100%
+    );
+
+  border-color:
+    rgba(99, 102, 241, 0.4);
+
+  box-shadow:
+    0 12px 32px
+    rgba(79, 70, 229, 0.2);
+}
+
+
+.income-card::before {
+  background:
+    linear-gradient(
+      90deg,
+      #ffffff,
+      rgba(
+        255,
+        255,
+        255,
+        0.2
+      )
+    );
+}
+
+
+.income-card::after {
+  top: -70px;
+  right: -30px;
+
+  width: 210px;
+  height: 210px;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(
+        255,
+        255,
+        255,
+        0.14
+      ) 0%,
+      transparent 68%
+    );
+}
+
+
+.income-card .summary-label {
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.72
+    );
+}
+
+
+.income-card
+.summary-label::before {
+  background: #ffffff;
+
+  box-shadow:
+    0 0 0 4px
+    rgba(
+      255,
+      255,
+      255,
+      0.15
+    );
+}
+
+
+.income-card .summary-value {
+  color: #ffffff;
+
+  font-size: 25px;
+}
+
+
+.income-card .summary-note {
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.65
+    );
+}
+
+
+/* =====================================================
+   INCOME COMPARISON
+===================================================== */
+
+.income-comparison {
+  display: inline-flex;
+
+  align-items: center;
+
+  align-self: flex-start;
+
+  gap: 5px;
+
+  margin-top: auto;
+  padding: 7px 11px;
+
+  border: 1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.16
+    );
+
+  border-radius: 999px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.12
+    );
+
+  color: #ffffff;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  backdrop-filter:
+    blur(8px);
+}
+
+
+.income-comparison.up {
+  border-color:
+    rgba(
+      134,
+      239,
+      172,
+      0.35
+    );
+
+  background:
+    rgba(
+      22,
+      163,
+      74,
+      0.25
+    );
+
+  color: #dcfce7;
+}
+
+
+.income-comparison.down {
+  border-color:
+    rgba(
+      254,
+      202,
+      202,
+      0.35
+    );
+
+  background:
+    rgba(
+      220,
+      38,
+      38,
+      0.25
+    );
+
+  color: #fee2e2;
+}
+
+
+.income-comparison.same {
+  border-color:
+    rgba(
+      255,
+      255,
+      255,
+      0.16
+    );
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.12
+    );
+
+  color: #ffffff;
+}
+
+
+/* =====================================================
+   SPECIAL LATE PROJECT CARD
+===================================================== */
+
+#lateProjectCard {
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #fff7f7 100%
+    );
+}
+
+
+#lateProjectCard
+.summary-value {
+  color: #dc2626;
+}
+
+
+/* =====================================================
+   RESPONSIVE SUMMARY
+===================================================== */
+
+@media (max-width: 1450px) {
+
+  .summary-grid {
+    grid-template-columns:
+      repeat(
+        4,
+        minmax(0, 1fr)
+      );
+  }
+
+}
+
+
+@media (max-width: 1200px) {
+
+  .summary-grid {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+  }
+
+}
+
+
+@media (max-width: 900px) {
+
+  .summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+  .income-card {
+    grid-column: span 2;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-card {
+    min-height: 155px;
+  }
+
+  .income-card {
+    grid-column: span 1;
+  }
+
+  .summary-value {
+    font-size: 25px;
+  }
+
+}
+
+/* =====================================================
+   DASHBOARD CONTENT GRID
+===================================================== */
+
+.dashboard-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      12,
+      minmax(0, 1fr)
+    );
+
+  gap: 20px;
+
+  width: 100%;
+}
+
+
+/* =====================================================
+   PANEL
+===================================================== */
+
+.panel {
+  grid-column: span 6;
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #fbfcff 100%
+    );
+
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+
+  box-shadow:
+    0 1px 2px
+    rgba(15, 23, 42, 0.03),
+    0 8px 24px
+    rgba(15, 23, 42, 0.045);
+}
+
+
+.panel.full {
+  grid-column: 1 / -1;
+}
+
+
+/* =====================================================
+   PANEL HEADER
+===================================================== */
+
+.panel-header {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  min-height: 78px;
+
+  padding: 18px 20px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fcfdff 100%
+    );
+
+  border-bottom: 1px solid #eef2f7;
+}
+
+
+.panel-header > div {
+  min-width: 0;
+}
+
+
+.panel-header h2 {
+  margin: 0;
+
+  color: #0f172a;
+
+  font-size: 16px;
+  font-weight: 800;
+
+  line-height: 1.3;
+}
+
+
+.panel-header p {
+  margin: 5px 0 0;
+
+  color: #64748b;
+
+  font-size: 11px;
+
+  line-height: 1.45;
+}
+
+
+.panel-link {
+  flex-shrink: 0;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  padding: 7px 10px;
+
+  border-radius: 8px;
+
+  background: #eef2ff;
+  color: #4338ca;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-decoration: none;
+
+  white-space: nowrap;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+
+.panel-link:hover {
+  transform:
+    translateX(2px);
+
+  background: #e0e7ff;
+}
+
+
+/* =====================================================
+   PANEL BODY
+===================================================== */
+
+.panel-body {
+  min-width: 0;
+
+  padding: 20px;
+}
+
+
+/* =====================================================
+   BAR CHART
+===================================================== */
+
+.single-bar-chart {
+  display: flex;
+
+  align-items: flex-end;
+
+  gap: 8px;
+
+  width: 100%;
+  height: 260px;
+
+  padding:
+    20px
+    5px
+    0;
+}
+
+
+.chart-month {
+  display: flex;
+
+  flex: 1 1 0;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 8px;
+
+  min-width: 0;
+  height: 100%;
+}
+
+
+.chart-bar-wrapper {
+  position: relative;
+
+  display: flex;
+
+  align-items: flex-end;
+  justify-content: center;
+
+  width: 100%;
+  height: 205px;
+
+  border-bottom: 1px solid #e2e8f0;
+}
+
+
+.chart-bar-wrapper::before {
+  position: absolute;
+
+  inset: 25% 0 auto;
+
+  border-top: 1px dashed #eef2f7;
+
+  content: "";
+}
+
+
+.chart-bar-wrapper::after {
+  position: absolute;
+
+  inset: 50% 0 auto;
+
+  border-top: 1px dashed #eef2f7;
+
+  content: "";
+}
+
+
+.chart-bar {
+  position: relative;
+
+  z-index: 1;
+
+  width: min(30px, 72%);
+  min-height: 0;
+
+  border-radius:
+    7px
+    7px
+    2px
+    2px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #6366f1 0%,
+      #4f46e5 100%
+    );
+
+  box-shadow:
+    0 5px 12px
+    rgba(79, 70, 229, 0.18);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.16s ease,
+    filter 0.16s ease;
+}
+
+
+.chart-bar.partner {
+  background:
+    linear-gradient(
+      180deg,
+      #38bdf8 0%,
+      #0284c7 100%
+    );
+
+  box-shadow:
+    0 5px 12px
+    rgba(14, 165, 233, 0.18);
+}
+
+
+.chart-bar:hover {
+  transform:
+    scaleX(1.08);
+
+  filter:
+    brightness(0.95);
+}
+
+
+.chart-label {
+  color: #64748b;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+
+/* =====================================================
+   TABLE WRAPPER
+===================================================== */
+
+.table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+
+  background: #ffffff;
+}
+
+
+.table-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+
+  border-radius: 999px;
+}
+
+
+/* =====================================================
+   DASHBOARD TABLE
+===================================================== */
+
+.dashboard-table {
+  width: 100%;
+  min-width: 760px;
+
+  border-collapse: collapse;
+}
+
+
+.dashboard-table thead {
+  background: #f8fafc;
+}
+
+
+.dashboard-table th {
+  padding: 13px 15px;
+
+  background: #f8fafc;
+  color: #64748b;
+
+  border-bottom: 1px solid #e2e8f0;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.035em;
+
+  text-align: left;
+  text-transform: uppercase;
+
+  white-space: nowrap;
+}
+
+
+.dashboard-table td {
+  padding: 14px 15px;
+
+  color: #334155;
+
+  border-bottom: 1px solid #eef2f7;
+
+  font-size: 11px;
+
+  line-height: 1.45;
+
+  vertical-align: middle;
+}
+
+
+.dashboard-table tbody tr {
+  transition:
+    background 0.15s ease;
+}
+
+
+.dashboard-table tbody tr:hover td {
+  background: #fafbff;
+}
+
+
+.dashboard-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+
+/* =====================================================
+   TABLE CONTENT
+===================================================== */
+
+.money {
+  color: #0f172a;
+
+  font-weight: 800;
+
+  white-space: nowrap;
+}
+
+
+.project-link {
+  color: #4f46e5;
+
+  font-weight: 800;
+
+  text-decoration: none;
+}
+
+
+.project-link:hover {
+  color: #3730a3;
+
+  text-decoration: underline;
+}
+
+
+.days-late {
+  color: #dc2626;
+
+  font-weight: 800;
+
+  white-space: nowrap;
+}
+
+
+/* =====================================================
+   EMPTY AND LOADING
+===================================================== */
+
+.empty-state,
+.loading {
+  padding: 38px !important;
+
+  color: #94a3b8 !important;
+
+  font-size: 12px !important;
+
+  text-align: center !important;
+}
+
+
+/* =====================================================
+   BADGE
+===================================================== */
+
+.badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  white-space: nowrap;
+}
+
+
+.badge.green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+
+.badge.amber {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+
+.badge.red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+
+.badge.blue {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+
+/* =====================================================
+   DASHBOARD RESPONSIVE
+===================================================== */
+
+@media (max-width: 1100px) {
+
+  .panel {
+    grid-column: 1 / -1;
+  }
+
+}
+
+
+@media (max-width: 900px) {
+
+  .main-content {
+    width: 100%;
+
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel,
+  .panel.full {
+    grid-column: 1;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .panel-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .panel-link {
+    align-self: flex-start;
+  }
+
+  .panel-body {
+    padding: 14px;
+  }
+
+  .single-bar-chart {
+    gap: 4px;
+
+    height: 225px;
+
+    overflow-x: auto;
+  }
+
+  .chart-month {
+    flex:
+      0
+      0
+      34px;
+  }
+
+  .chart-bar-wrapper {
+    height: 175px;
+  }
+
+  .chart-bar {
+    width: 20px;
+  }
+
+}
+  </style>
 
 </head>
 
+
 <body>
 
-  <div class="layout">
 
-   <!-- =====================================================
-       SIDEBAR
-  ====================================================== -->
-
- <div id="sidebarContainer"></div>
+  <div class="app-layout">
 
 
-    <!-- =====================
-         CONTENT
-    ====================== -->
+    <!-- =================================================
+         SIDEBAR
+    ================================================== -->
 
-    <main class="content">
-
-      <div class="page-header">
-
-        <h1>Dashboard Proyek</h1>
-
-        <p>
-          Monitoring proyek, nilai kontrak,
-          pembayaran dan masa berlaku kontrak.
-        </p>
-
-      </div>
+    <div id="sidebarContainer"></div>
 
 
-      <!-- =====================
-           FILTER
-      ====================== -->
+    <!-- =================================================
+         MAIN
+    ================================================== -->
 
-      <div class="filter-card">
+    <main class="main-content">
 
-        <div class="filter-title">
-          Filter Proyek
-        </div>
 
-        <div class="filter-grid">
+      <div class="dashboard-page">
 
-          <!-- SEARCH -->
 
-          <div class="form-group">
+        <!-- =============================================
+             PAGE HEADER
+        ============================================== -->
 
-            <label>
-              Cari Proyek
+        <header class="page-header">
+
+
+          <div>
+
+            <h1>
+              Dashboard
+            </h1>
+
+            <p>
+              Ringkasan pipeline, proyek, pendapatan,
+              pembayaran, dan kontrak.
+            </p>
+
+          </div>
+
+
+          <div
+            class="last-update"
+            id="lastUpdate"
+          >
+            Memuat data...
+          </div>
+
+
+        </header>
+
+
+        <!-- =============================================
+             FILTER
+        ============================================== -->
+
+        <section class="filter-card">
+
+
+          <div class="filter-field search">
+
+            <label for="dashboardSearch">
+              Cari proyek / klien / partner
             </label>
 
             <input
-              type="text"
-              id="searchProyek"
-              class="form-control"
-              placeholder="Cari nama proyek..."
+              id="dashboardSearch"
+              type="search"
+              placeholder="Masukkan kata kunci..."
             >
 
           </div>
 
 
-          <!-- BULAN -->
+          <div class="filter-field">
 
-          <div class="form-group">
-
-            <label>
-              Bulan
-            </label>
-
-            <select
-              id="filterBulan"
-              class="form-control"
-            >
-
-              <option value="">
-                Semua Bulan
-              </option>
-
-              <option value="1">Januari</option>
-              <option value="2">Februari</option>
-              <option value="3">Maret</option>
-              <option value="4">April</option>
-              <option value="5">Mei</option>
-              <option value="6">Juni</option>
-              <option value="7">Juli</option>
-              <option value="8">Agustus</option>
-              <option value="9">September</option>
-              <option value="10">Oktober</option>
-              <option value="11">November</option>
-              <option value="12">Desember</option>
-
-            </select>
-
-          </div>
-
-
-          <!-- TAHUN -->
-
-          <div class="form-group">
-
-            <label>
+            <label for="filterTahun">
               Tahun
             </label>
 
-            <select
-              id="filterTahun"
-              class="form-control"
-            >
+            <select id="filterTahun">
 
               <option value="">
                 Semua Tahun
@@ -127,18 +1554,47 @@
           </div>
 
 
-          <!-- PIC -->
+          <div class="filter-field">
 
-          <div class="form-group">
+            <label for="filterJenis">
+              Jenis Proyek
+            </label>
 
-            <label>
+            <select id="filterJenis">
+
+              <option value="">
+                Semua Jenis
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <div class="filter-field">
+
+            <label for="filterKategori">
+              Kategori
+            </label>
+
+            <select id="filterKategori">
+
+              <option value="">
+                Semua Kategori
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <div class="filter-field">
+
+            <label for="filterPic">
               PIC
             </label>
 
-            <select
-              id="filterPic"
-              class="form-control"
-            >
+            <select id="filterPic">
 
               <option value="">
                 Semua PIC
@@ -149,408 +1605,829 @@
           </div>
 
 
+          <div class="filter-field">
+
+            <label for="filterStatus">
+              Status Final
+            </label>
+
+            <select id="filterStatus">
+
+              <option value="">
+                Semua Status
+              </option>
+
+            </select>
+
+          </div>
+
+
           <button
+            class="reset-button"
+            id="resetDashboardFilter"
             type="button"
-            class="btn-reset"
-            id="resetFilter"
           >
             Reset
           </button>
 
+
+        </section>
+
+
+        <!-- =============================================
+             SUMMARY
+        ============================================== -->
+
+        <section class="summary-grid">
+
+
+          <!-- PIPELINE -->
+
+          <article
+            class="
+              summary-card
+              clickable-card
+            "
+            style="--accent:#7c3aed"
+            data-status-pengadaan="Pipeline"
+            role="button"
+            tabindex="0"
+          >
+
+            <span class="summary-label">
+              Total Pipeline
+            </span>
+
+            <strong
+              class="summary-value"
+              id="totalPipeline"
+            >
+              0
+            </strong>
+
+            <span class="summary-note">
+              Estimasi Nilai Proyek
+            </span>
+
+            <strong
+              class="summary-money"
+              id="nilaiPipeline"
+            >
+              Rp 0
+            </strong>
+
+          </article>
+
+
+          <!-- SUBMIT PENAWARAN -->
+
+          <article
+            class="
+              summary-card
+              clickable-card
+            "
+            style="--accent:#2563eb"
+            data-status-pengadaan="Submit Penawaran"
+            role="button"
+            tabindex="0"
+          >
+
+            <span class="summary-label">
+              Total Submit Penawaran
+            </span>
+
+            <strong
+              class="summary-value"
+              id="totalSubmitPenawaran"
+            >
+              0
+            </strong>
+
+            <span class="summary-note">
+              Estimasi Nilai Proyek
+            </span>
+
+            <strong
+              class="summary-money"
+              id="nilaiSubmitPenawaran"
+            >
+              Rp 0
+            </strong>
+
+          </article>
+
+
+          <!-- SUBMIT PENGADAAN -->
+
+          <article
+            class="
+              summary-card
+              clickable-card
+            "
+            style="--accent:#0891b2"
+            data-status-pengadaan="Submit Pengadaan"
+            role="button"
+            tabindex="0"
+          >
+
+            <span class="summary-label">
+              Total Submit Pengadaan
+            </span>
+
+            <strong
+              class="summary-value"
+              id="totalSubmitPengadaan"
+            >
+              0
+            </strong>
+
+            <span class="summary-note">
+              Estimasi Nilai Proyek
+            </span>
+
+            <strong
+              class="summary-money"
+              id="nilaiSubmitPengadaan"
+            >
+              Rp 0
+            </strong>
+
+          </article>
+
+
+          <!-- KONTRAK -->
+
+          <article
+            class="
+              summary-card
+              clickable-card
+            "
+            style="--accent:#16a34a"
+            data-status-pengadaan="Kontrak"
+            role="button"
+            tabindex="0"
+          >
+
+            <span class="summary-label">
+              Total Proyek Kontrak
+            </span>
+
+            <strong
+              class="summary-value"
+              id="totalKontrak"
+            >
+              0
+            </strong>
+
+            <span class="summary-note">
+              Nilai Proyek
+            </span>
+
+            <strong
+              class="summary-money"
+              id="nilaiKontrak"
+            >
+              Rp 0
+            </strong>
+
+          </article>
+
+
+          <!-- PROYEK AKTIF -->
+
+          <article
+            class="
+              summary-card
+              clickable-card
+            "
+            style="--accent:#059669"
+            data-status-final="Aktif"
+            role="button"
+            tabindex="0"
+          >
+
+            <span class="summary-label">
+              Total Proyek Aktif
+            </span>
+
+            <strong
+              class="summary-value"
+              id="totalProyekAktif"
+            >
+              0
+            </strong>
+
+            <span class="summary-note">
+              Nilai Proyek
+            </span>
+
+            <strong
+              class="summary-money"
+              id="nilaiProyekAktif"
+            >
+              Rp 0
+            </strong>
+
+          </article>
+
+
+          <!-- PIUTANG KLIEN -->
+
+          <article
+            class="summary-card"
+            style="--accent:#f59e0b"
+          >
+
+            <span class="summary-label">
+              Piutang Klien
+            </span>
+
+            <strong
+              class="
+                summary-value
+                finance-value
+              "
+              id="piutangKlien"
+            >
+              Rp 0
+            </strong>
+
+            <span class="summary-note">
+              Belum dibayar oleh klien
+            </span>
+
+          </article>
+
+
+          <!-- DIBAYAR KLIEN -->
+
+          <article
+            class="summary-card"
+            style="--accent:#22c55e"
+          >
+
+            <span class="summary-label">
+              Sudah Dibayar oleh Klien
+            </span>
+
+            <strong
+              class="
+                summary-value
+                finance-value
+              "
+              id="dibayarKlien"
+            >
+              Rp 0
+            </strong>
+
+            <span class="summary-note">
+              Pembayaran telah diterima
+            </span>
+
+          </article>
+
+
+          <!-- HUTANG PARTNER -->
+
+          <article
+            class="summary-card"
+            style="--accent:#ef4444"
+          >
+
+            <span class="summary-label">
+              Hutang Partner
+            </span>
+
+            <strong
+              class="
+                summary-value
+                finance-value
+              "
+              id="hutangPartner"
+            >
+              Rp 0
+            </strong>
+
+            <span class="summary-note">
+              Belum dibayar ke partner
+            </span>
+
+          </article>
+
+
+          <!-- DIBAYAR PARTNER -->
+
+          <article
+            class="summary-card"
+            style="--accent:#0ea5e9"
+          >
+
+            <span class="summary-label">
+              Sudah Dibayar ke Partner
+            </span>
+
+            <strong
+              class="
+                summary-value
+                finance-value
+              "
+              id="dibayarPartner"
+            >
+              Rp 0
+            </strong>
+
+            <span class="summary-note">
+              Pembayaran partner selesai
+            </span>
+
+          </article>
+
+
+          <!-- PROYEK TERLAMBAT -->
+
+          <article
+            class="
+              summary-card
+              clickable-card
+            "
+            style="--accent:#dc2626"
+            id="lateProjectCard"
+            role="button"
+            tabindex="0"
+          >
+
+            <span class="summary-label">
+              Proyek Terlambat
+            </span>
+
+            <strong
+              class="summary-value"
+              id="totalProyekTerlambat"
+            >
+              0
+            </strong>
+
+            <span class="summary-note">
+              End date lewat dan teknis belum Done
+            </span>
+
+          </article>
+
+
+          <!-- PENDAPATAN BULAN INI -->
+
+          <article
+            class="
+              summary-card
+              income-card
+            "
+            style="--accent:#4f46e5"
+          >
+
+            <span class="summary-label">
+              Pendapatan Bulan Berjalan
+            </span>
+
+            <strong
+              class="
+                summary-value
+                finance-value
+              "
+              id="pendapatanBulanIni"
+            >
+              Rp 0
+            </strong>
+
+            <span
+              class="
+                income-comparison
+                same
+              "
+              id="pendapatanComparison"
+            >
+              Dibandingkan bulan sebelumnya
+            </span>
+
+          </article>
+
+
+        </section>
+
+
+        <!-- =============================================
+             DASHBOARD CONTENT
+        ============================================== -->
+
+        <div class="dashboard-grid">
+
+
+          <!-- GRAFIK PENDAPATAN -->
+
+          <section class="panel">
+
+
+            <div class="panel-header">
+
+              <div>
+
+                <h2>
+                  Pendapatan Tahun Berjalan
+                </h2>
+
+                <p>
+                  Pendapatan klien per bulan
+                </p>
+
+              </div>
+
+              <a
+                class="panel-link"
+                href="/pendapatan.html"
+              >
+                Detail →
+              </a>
+
+            </div>
+
+
+            <div class="panel-body">
+
+              <div
+                class="single-bar-chart"
+                id="revenueChart"
+              >
+
+                <div class="loading">
+                  Memuat grafik...
+                </div>
+
+              </div>
+
+            </div>
+
+
+          </section>
+
+
+          <!-- GRAFIK PEMBAYARAN PARTNER -->
+
+          <section class="panel">
+
+
+            <div class="panel-header">
+
+              <div>
+
+                <h2>
+                  Pembayaran Partner Tahun Berjalan
+                </h2>
+
+                <p>
+                  Pembayaran ke partner per bulan
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div class="panel-body">
+
+              <div
+                class="single-bar-chart"
+                id="partnerPaymentChart"
+              >
+
+                <div class="loading">
+                  Memuat grafik...
+                </div>
+
+              </div>
+
+            </div>
+
+
+          </section>
+
+
+          <!-- PROYEK NILAI TERTINGGI -->
+
+          <section class="panel full">
+
+
+            <div class="panel-header">
+
+              <div>
+
+                <h2>
+                  5 Proyek dengan Nilai Tertinggi
+                </h2>
+
+                <p>
+                  Berdasarkan nilai final klien
+                </p>
+
+              </div>
+
+              <a
+                class="panel-link"
+                href="/proyek.html"
+              >
+                Semua proyek →
+              </a>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table class="dashboard-table">
+
+
+                <thead>
+
+                  <tr>
+
+                    <th>No</th>
+
+                    <th>Nama Proyek</th>
+
+                    <th>Klien</th>
+
+                    <th>Status Pengadaan</th>
+
+                    <th>Status Final</th>
+
+                    <th>Nilai Proyek</th>
+
+                    <th>Aksi</th>
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody id="highestProjectTable">
+
+                  <tr>
+
+                    <td
+                      colspan="7"
+                      class="loading"
+                    >
+                      Memuat proyek...
+                    </td>
+
+                  </tr>
+
+                </tbody>
+
+
+              </table>
+
+            </div>
+
+
+          </section>
+
+
+          <!-- PROYEK TERLAMBAT -->
+
+          <section
+            class="panel full"
+            id="lateProjectSection"
+          >
+
+
+            <div class="panel-header">
+
+              <div>
+
+                <h2>
+                  Proyek Terlambat
+                </h2>
+
+                <p>
+                  End date telah berakhir dan status teknis belum Done
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table class="dashboard-table">
+
+
+                <thead>
+
+                  <tr>
+
+                    <th>Nama Proyek</th>
+
+                    <th>Klien</th>
+
+                    <th>End Date</th>
+
+                    <th>Status Teknis</th>
+
+                    <th>Keterlambatan</th>
+
+                    <th>Aksi</th>
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody id="lateProjectTable">
+
+                  <tr>
+
+                    <td
+                      colspan="6"
+                      class="loading"
+                    >
+                      Memuat proyek terlambat...
+                    </td>
+
+                  </tr>
+
+                </tbody>
+
+
+              </table>
+
+            </div>
+
+
+          </section>
+
+
+          <!-- KONTRAK KLIEN -->
+
+          <section class="panel">
+
+
+            <div class="panel-header">
+
+              <div>
+
+                <h2>
+                  Kontrak Klien Akan Jatuh Tempo
+                </h2>
+
+                <p>
+                  Lima kontrak yang berakhir dalam tiga bulan
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table class="dashboard-table">
+
+
+                <thead>
+
+                  <tr>
+
+                    <th>Proyek</th>
+
+                    <th>Klien</th>
+
+                    <th>Tanggal Akhir</th>
+
+                    <th>Sisa Hari</th>
+
+                    <th>Aksi</th>
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody id="clientContractTable">
+
+                  <tr>
+
+                    <td
+                      colspan="5"
+                      class="loading"
+                    >
+                      Memuat kontrak klien...
+                    </td>
+
+                  </tr>
+
+                </tbody>
+
+
+              </table>
+
+            </div>
+
+
+          </section>
+
+
+          <!-- KONTRAK PARTNER -->
+
+          <section class="panel">
+
+
+            <div class="panel-header">
+
+              <div>
+
+                <h2>
+                  Kontrak Partner Akan Jatuh Tempo
+                </h2>
+
+                <p>
+                  Lima kontrak yang berakhir dalam tiga bulan
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table class="dashboard-table">
+
+
+                <thead>
+
+                  <tr>
+
+                    <th>Proyek</th>
+
+                    <th>Partner</th>
+
+                    <th>Tanggal Akhir</th>
+
+                    <th>Sisa Hari</th>
+
+                    <th>Aksi</th>
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody id="partnerContractTable">
+
+                  <tr>
+
+                    <td
+                      colspan="5"
+                      class="loading"
+                    >
+                      Memuat kontrak partner...
+                    </td>
+
+                  </tr>
+
+                </tbody>
+
+
+              </table>
+
+            </div>
+
+
+          </section>
+
+
         </div>
+
 
       </div>
-
-
-      <!-- =====================================================
-     SECTION PROYEK
-     ===================================================== -->
-
-<section class="dashboard-section">
-
-  <div class="section-title">
-    <div>
-      <h2>Proyek</h2>
-      <p>Ringkasan keseluruhan proyek sesuai filter.</p>
-    </div>
-  </div>
-
-  <div class="summary-grid project-summary">
-
-    <!-- TOTAL PROYEK -->
-    <div class="summary-card">
-      <div class="summary-icon">📁</div>
-
-      <div class="summary-content">
-        <div class="summary-label">
-          Total Proyek
-        </div>
-
-        <div
-          class="summary-value"
-          id="totalProyek"
-        >
-          0
-        </div>
-
-        <div class="summary-description">
-          Proyek sesuai filter
-        </div>
-      </div>
-    </div>
-
-
-    <!-- TOTAL NILAI PROYEK -->
-    <div class="summary-card">
-      <div class="summary-icon">💼</div>
-
-      <div class="summary-content">
-        <div class="summary-label">
-          Total Nilai Proyek
-        </div>
-
-        <div
-          class="summary-value"
-          id="totalNilaiProyek"
-        >
-          Rp 0
-        </div>
-
-        <div class="summary-description">
-          Total nilai final kontrak klien
-        </div>
-      </div>
-    </div>
-
-
-    <!-- ESTIMASI PENDAPATAN -->
-    <div class="summary-card">
-      <div class="summary-icon">📈</div>
-
-      <div class="summary-content">
-        <div class="summary-label">
-          Estimasi Pendapatan
-        </div>
-
-        <div
-          class="summary-value"
-          id="estimasiPendapatan"
-        >
-          Rp 0
-        </div>
-
-        <div class="summary-description">
-          Estimasi margin proyek
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-</section>
-
-
-<!-- =====================================================
-     SECTION KLIEN & PARTNER
-===================================================== -->
-
-<section class="dashboard-section">
-
-  <div class="section-title">
-    <div>
-      <h2>Klien & Partner</h2>
-      <p>Monitoring pembayaran klien dan partner.</p>
-    </div>
-  </div>
-
-
-  <div class="summary-grid payment-summary">
-
-    <!-- DIBAYAR KLIEN -->
-    <div class="summary-card">
-      <div class="summary-icon">💰</div>
-
-      <div class="summary-content">
-        <div class="summary-label">
-        Dibayar Klien
-        </div>
-
-        <div
-          class="summary-value"
-          id="nilaiTertagihKlien"
-        >
-          Rp 0
-        </div>
-
-        <div class="summary-description">
-          Termin klien berstatus Dibayar
-        </div>
-      </div>
-    </div>
-
-
-    <!-- BELUM DIBAYAR KLIEN -->
-    <div class="summary-card">
-      <div class="summary-icon">🧾</div>
-
-      <div class="summary-content">
-        <div class="summary-label">
-      Belum Dibayar Klien
-        </div>
-
-        <div
-          class="summary-value"
-          id="nilaiBelumTertagihKlien"
-        >
-          Rp 0
-        </div>
-
-        <div class="summary-description">
-          Termin klien selain status Dibayar
-        </div>
-      </div>
-    </div>
-
-
-    <!-- DIBAYAR PARTNER -->
-    <div class="summary-card">
-      <div class="summary-icon">✅</div>
-
-      <div class="summary-content">
-        <div class="summary-label">
-          Dibayar Partner
-        </div>
-
-        <div
-          class="summary-value"
-          id="nilaiTerbayarPartner"
-        >
-          Rp 0
-        </div>
-
-        <div class="summary-description">
-          Termin partner berstatus Dibayar
-        </div>
-      </div>
-    </div>
-
-
-    <!-- BELUM DIBAYAR PARTNER -->
-    <div class="summary-card">
-      <div class="summary-icon">⌛</div>
-
-      <div class="summary-content">
-        <div class="summary-label">
-        Belum Dibayar Partner
-        </div>
-
-        <div
-          class="summary-value"
-          id="nilaiBelumTerbayarPartner"
-        >
-          Rp 0
-        </div>
-
-        <div class="summary-description">
-          Termin partner selain status Dibayar
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-</section>
-
-
-      <!-- =====================
-           DAFTAR PROYEK
-      ====================== -->
-
-      <section class="section">
-
-        <div class="section-header">
-
-          <h2>
-            Daftar Proyek
-          </h2>
-
-          <p>
-            Data proyek berdasarkan filter
-            bulan, tahun, PIC dan pencarian.
-          </p>
-
-        </div>
-
-        <div class="table-card">
-
-          <div class="table-wrapper">
-
-            <table>
-
-              <thead>
-
-                <tr>
-                  <th>No</th>
-                  <th>Nama Proyek</th>
-                  <th>Klien</th>
-                  <th>PIC</th>
-                  <th>Tanggal Mulai</th>
-                  <th>Tanggal Akhir</th>
-                  <th>Nilai Proyek</th>
-                </tr>
-
-              </thead>
-
-              <tbody id="projectTableBody">
-
-                <tr>
-                  <td
-                    colspan="7"
-                    class="empty-state"
-                  >
-                    Memuat data...
-                  </td>
-                </tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- =====================
-           KONTRAK KLIEN
-      ====================== -->
-
-      <section class="section">
-
-        <div class="section-header">
-
-          <h2>
-            Kontrak Klien Akan Jatuh Tempo
-          </h2>
-
-          <p>
-            Kontrak klien yang berakhir
-            dalam 3 bulan ke depan.
-          </p>
-
-        </div>
-
-        <div class="table-card">
-
-          <div class="table-wrapper">
-
-            <table>
-
-              <thead>
-
-                <tr>
-                  <th>Proyek</th>
-                  <th>Klien</th>
-                  <th>Tanggal Akhir</th>
-                  <th>Sisa Waktu</th>
-                  <th>Nilai Kontrak</th>
-                </tr>
-
-              </thead>
-
-              <tbody id="kontrakKlienBody">
-
-                <tr>
-                  <td
-                    colspan="5"
-                    class="empty-state"
-                  >
-                    Memuat data...
-                  </td>
-                </tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- =====================
-           KONTRAK PARTNER
-      ====================== -->
-
-      <section class="section">
-
-        <div class="section-header">
-
-          <h2>
-            Kontrak Partner Akan Jatuh Tempo
-          </h2>
-
-          <p>
-            Kontrak partner yang berakhir
-            dalam 3 bulan ke depan.
-          </p>
-
-        </div>
-
-        <div class="table-card">
-
-          <div class="table-wrapper">
-
-            <table>
-
-              <thead>
-
-                <tr>
-                  <th>Proyek</th>
-                  <th>Partner</th>
-                  <th>Tanggal Akhir</th>
-                  <th>Sisa Waktu</th>
-                  <th>Nilai Kontrak</th>
-                </tr>
-
-              </thead>
-
-              <tbody id="kontrakPartnerBody">
-
-                <tr>
-                  <td
-                    colspan="5"
-                    class="empty-state"
-                  >
-                    Memuat data...
-                  </td>
-                </tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </div>
-
-      </section>
 
 
     </main>
 
+
   </div>
 
+
   <!-- =====================================================
-     USER SIDEBAR + LOGOUT
-====================================================== -->
-<script src="/layout.js"></script>
-<script src="/sidebar.js"></script>
-<script src="/dashboard.js"></script>
+       SCRIPT
+  ====================================================== -->
+
+  <script src="/layout.js"></script>
+
+  <script src="/sidebar.js"></script>
+
+  <script src="/dashboard.js?v=2"></script>
+
 
 </body>
 

@@ -2,7 +2,6 @@
 <html lang="id">
 
 <head>
-
   <meta charset="UTF-8">
 
   <meta
@@ -10,28 +9,19 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>
-    Update Progress Proyek - Portopro
-  </title>
+  <title>Update Progress Proyek - Portopro</title>
 
-  <link
-    rel="stylesheet"
-    href="/style.css"
-  >
+  <link rel="stylesheet" href="/style.css">
 
   <style>
+    /* ========================================
+       HALAMAN
+    ======================================== */
 
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
+    .progress-page {
       margin: 0;
-
-      background: #f4f7fb;
-
+      background: #f5f7fb;
       color: #172033;
-
       font-family:
         Inter,
         -apple-system,
@@ -40,2298 +30,1158 @@
         sans-serif;
     }
 
-
-    /* =====================================================
-       LAYOUT
-    ===================================================== */
-
-    .main-content {
+    .progress-page .main-content {
       margin-left: 260px;
-
       width: calc(100% - 260px);
-
       min-height: 100vh;
-
       padding: 28px;
+      box-sizing: border-box;
     }
 
-    .page {
+    .progress-shell {
       max-width: 1800px;
-
-      margin: auto;
+      margin: 0 auto;
     }
 
+    .progress-shell * {
+      box-sizing: border-box;
+    }
 
-    /* =====================================================
-       TOP BAR
-    ===================================================== */
+    .progress-shell [hidden] {
+      display: none !important;
+    }
 
-    .topbar {
+    /* ========================================
+       HEADER
+    ======================================== */
+
+    .progress-topbar {
       display: flex;
-
-      justify-content: space-between;
-
       align-items: center;
-
-      gap: 16px;
-
-      margin-bottom: 18px;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
     }
 
-    .topbar h1 {
+    .progress-topbar h1 {
+      margin: 6px 0;
+      font-size: 26px;
+      letter-spacing: -0.6px;
+    }
+
+    .progress-topbar p {
       margin: 0;
-
-      font-size: 25px;
-    }
-
-    .topbar p {
-      margin: 5px 0 0;
-
       color: #64748b;
-
       font-size: 13px;
     }
 
-    .actions {
-      display: flex;
-
-      gap: 8px;
-
-      flex-wrap: wrap;
+    .progress-eyebrow {
+      color: #4f46e5 !important;
+      font-size: 10px !important;
+      font-weight: 800;
+      letter-spacing: 1.4px;
     }
 
+    /* ========================================
+       TOMBOL
+    ======================================== */
 
-    /* =====================================================
-       BUTTON
-    ===================================================== */
-
-    .btn {
-      padding: 10px 15px;
-
-      border: 0;
-
+    .progress-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 38px;
+      padding: 9px 13px;
+      border: 1px solid transparent;
       border-radius: 9px;
-
       font-family: inherit;
-
       font-size: 12px;
-
-      font-weight: 600;
-
+      font-weight: 650;
       cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
     }
 
-    .btn-primary {
-      background: #1d4ed8;
-
+    .progress-button.primary {
       color: #ffffff;
+      background: #4f46e5;
     }
 
-    .btn-soft {
-      background: #e8efff;
-
-      color: #1d4ed8;
+    .progress-button.secondary {
+      color: #4338ca;
+      background: #eef2ff;
+      border-color: #e0e7ff;
     }
 
-    .btn-danger {
-      background: #fff0f0;
-
-      color: #dc2626;
+    .progress-button.danger {
+      color: #b91c1c;
+      background: #fff1f2;
+      border-color: #ffe4e6;
     }
 
-    .btn:hover {
+    .progress-button:hover {
       filter: brightness(0.97);
     }
 
-
-    /* =====================================================
-       REPORT SHEET
-    ===================================================== */
-
-    .sheet {
-      overflow: hidden;
-
-      background: #ffffff;
-
-      border: 1px solid #dfe5ee;
-
-      border-radius: 15px;
-
-      box-shadow:
-        0 6px 24px
-        rgba(15, 23, 42, 0.05);
+    .progress-button:disabled,
+    fieldset:disabled .progress-button {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
 
-    .report-head {
-      padding: 20px 22px;
-
-      border-bottom: 1px solid #e5e7eb;
+    .progress-button:focus-visible,
+    .progress-table-wrap:focus-visible {
+      outline: 3px solid #a5b4fc;
+      outline-offset: 2px;
     }
 
-    .report-title {
-      margin-bottom: 18px;
+    /* ========================================
+       PESAN DAN DRAFT
+    ======================================== */
 
-      padding: 10px 8px;
-
-      text-align: center;
-
-      border-top: 2px solid #2563eb;
-
-      border-bottom: 2px solid #2563eb;
+    .progress-message {
+      margin-bottom: 14px;
+      padding: 12px 15px;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 10px;
+      font-size: 13px;
     }
 
-    .report-title h2,
-    .report-title h3 {
+    .progress-message.error {
+      color: #991b1b;
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    .progress-message.success {
+      color: #166534;
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+
+    .progress-draft {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0;
+      padding: 14px;
+      border: 1px solid #fed7aa;
+      border-radius: 10px;
+      background: #fff7ed;
+      font-size: 13px;
+    }
+
+    .progress-draft span {
+      flex: 1 1 230px;
+    }
+
+    /* ========================================
+       FORM DAN INFORMASI PROYEK
+    ======================================== */
+
+    #progressFields {
       margin: 0;
+      padding: 0;
+      border: 0;
+      min-width: 0;
     }
 
-    .report-title h2 {
-      font-size: 17px;
+    .progress-sheet {
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: 0 6px 24px rgba(15, 23, 42, 0.03);
     }
 
-    .report-title h3 {
-      margin-top: 5px;
+    .progress-report-header {
+      padding: 24px;
+      border-bottom: 1px solid #e2e8f0;
+    }
 
+    .progress-report-header h2 {
+      margin: 9px 0 20px;
+      font-size: 23px;
+      overflow-wrap: anywhere;
+    }
+
+    .progress-meta {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .progress-meta span,
+    .progress-meta label {
+      display: block;
+      margin-bottom: 8px;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .progress-meta strong {
+      display: block;
       font-size: 14px;
     }
 
-
-    /* =====================================================
-       REPORT INFORMATION
-    ===================================================== */
-
-    .meta-grid {
-      display: grid;
-
-      grid-template-columns:
-        1.4fr 0.8fr;
-
-      gap: 28px;
+    .progress-meta input {
+      max-width: 180px;
     }
 
-    .meta-fields {
-      display: grid;
+    /* ========================================
+       RINGKASAN
+    ======================================== */
 
-      gap: 10px;
+    .progress-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      padding: 20px 24px;
     }
 
-    .field-line {
-      display: grid;
+    .progress-metrics > div {
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #f8fafc;
+    }
 
-      grid-template-columns:
-        90px 12px 1fr;
+    .progress-metrics > div.actual {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+    }
 
+    .progress-metrics span,
+    .progress-metrics small {
+      display: block;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .progress-metrics strong {
+      display: block;
+      margin: 8px 0 5px;
+      color: #0f172a;
+      font-size: 25px;
+      letter-spacing: -0.7px;
+    }
+
+    .progress-metrics .actual strong {
+      color: #4338ca;
+    }
+
+    /* ========================================
+       TOOLBAR TABEL
+    ======================================== */
+
+    .progress-table-toolbar {
+      display: flex;
       align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 24px 20px;
+      font-size: 14px;
     }
 
-    .field-line label {
-      font-size: 13px;
-
-      font-weight: 700;
+    .progress-table-toolbar p {
+      margin: 6px 0 0;
+      color: #64748b;
+      font-size: 12px;
     }
 
-    .field-line input {
-      width: 100%;
+    /* ========================================
+       TABEL
+    ======================================== */
 
-      padding: 7px 4px;
-
-      border: 0;
-
-      border-bottom: 1px solid #cbd5e1;
-
-      font-family: inherit;
-
-      font-size: 13px;
-
-      outline: none;
-    }
-
-    .field-line input:focus {
-      border-color: #2563eb;
-    }
-
-    .date-side .field-line {
-      grid-template-columns:
-        70px 12px 1fr;
-    }
-
-
-    /* =====================================================
-       TABLE
-    ===================================================== */
-
-    .table-wrap {
+    .progress-table-wrap {
+      max-height: 70vh;
       overflow: auto;
     }
 
     .progress-table {
       width: 100%;
-
-      min-width: 1850px;
-
+      min-width: 1970px;
       border-collapse: separate;
-
       border-spacing: 0;
+      table-layout: auto;
     }
 
     .progress-table th,
     .progress-table td {
-      padding: 7px;
-
-      border-right: 1px solid #cbd5e1;
-
-      border-bottom: 1px solid #cbd5e1;
-
-      vertical-align: middle;
-    }
-
-    .progress-table th {
-      background: #14558e;
-
-      color: #ffffff;
-
-      font-size: 11px;
-
-      text-align: center;
-
-      text-transform: uppercase;
-
-      white-space: nowrap;
-    }
-
-    .progress-table thead tr:first-child th {
+      padding: 9px;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
       font-size: 12px;
     }
 
-    .progress-table th.group-target {
-      background: #2f761f;
+    .progress-table th {
+      background: #f1f5f9;
+      color: #334155;
+      text-align: center;
+      white-space: nowrap;
+      font-weight: 700;
     }
 
-    .progress-table th.group-actual {
-      background: #155b98;
+    .progress-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 1;
     }
 
-    .progress-table th.group-contract {
-      background: #6b3aa5;
+    .progress-table .target-heading {
+      color: #166534;
+      background: #dcfce7;
+    }
+
+    .progress-table .actual-heading {
+      color: #3730a3;
+      background: #e0e7ff;
     }
 
     .progress-table td {
       background: #ffffff;
     }
 
-    .progress-table tbody tr:nth-child(even) td {
-      background: #f8fafc;
+    .progress-table .module-row td {
+      background: #f1f5f9;
+      vertical-align: middle;
     }
 
-
-    /* =====================================================
-       TABLE INPUT
-    ===================================================== */
-
-    .progress-table input,
-    .progress-table select,
-    .progress-table textarea {
-      width: 100%;
-
-      padding: 7px;
-
-      border: 1px solid #d8dee8;
-
-      border-radius: 7px;
-
-      background: #ffffff;
-
-      font-family: inherit;
-
-      font-size: 12px;
+    .progress-module-tools {
+      display: flex;
+      align-items: center;
+      gap: 14px;
     }
 
-    .progress-table textarea {
-      min-height: 58px;
-
-      resize: vertical;
-    }
-
-    .progress-table input[readonly] {
-      background: #eef2f7;
-
-      color: #475569;
-    }
-
-    .status-select {
+    .progress-module-tools input {
+      max-width: 550px;
       font-weight: 700;
     }
 
+    /* ========================================
+       INPUT
+    ======================================== */
 
-    /* =====================================================
-       COLUMN WIDTH
-    ===================================================== */
-
-    .col-no {
-      width: 52px;
+    .progress-shell input,
+    .progress-shell select,
+    .progress-shell textarea {
+      width: 100%;
+      min-height: 36px;
+      padding: 7px 9px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      background: #ffffff;
+      color: #1e293b;
+      font-family: inherit;
+      font-size: 12px;
     }
 
-    .col-sub {
-      width: 70px;
+    .progress-shell input:focus,
+    .progress-shell select:focus,
+    .progress-shell textarea:focus {
+      outline: 2px solid #c7d2fe;
+      outline-offset: 1px;
     }
 
-    .col-module {
-      width: 270px;
+    .progress-table input[type="date"] {
+      min-width: 135px;
     }
 
-    .col-pic {
-      width: 135px;
+    .progress-table input[type="number"] {
+      min-width: 64px;
+      max-width: 85px;
     }
 
-    .col-status {
-      width: 135px;
+    .progress-table textarea {
+      min-width: 210px;
+      min-height: 62px;
+      resize: vertical;
     }
 
-    .col-date {
-      width: 130px;
+    .progress-table select {
+      min-width: 115px;
+      max-width: 220px;
     }
 
-    .col-small {
-      width: 85px;
+    .progress-table .sub-number {
+      min-width: 65px;
+      padding-top: 17px;
+      text-align: center;
+      font-weight: 700;
+      color: #64748b;
     }
 
-    .col-percent {
-      width: 145px;
+    .progress-table .computed {
+      min-width: 82px;
+      padding-top: 17px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
     }
 
-    .col-action {
-      width: 74px;
+    /* ========================================
+       STATUS OTOMATIS
+    ======================================== */
+
+    .progress-status {
+      display: inline-block;
+      padding: 7px 9px;
+      border-radius: 8px;
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 700;
     }
 
+    .progress-status.not-yet {
+      color: #475569;
+      background: #f1f5f9;
+    }
 
-    /* =====================================================
-       REMOVE ROW
-    ===================================================== */
+    .progress-status.in-progress {
+      color: #1d4ed8;
+      background: #eff6ff;
+    }
 
-    .row-actions {
+    .progress-status.done {
+      color: #166534;
+      background: #dcfce7;
+    }
+
+    .progress-status.invalid {
+      color: #b91c1c;
+      background: #fee2e2;
+    }
+
+    /* ========================================
+       CATATAN DAN PERINGATAN
+    ======================================== */
+
+    .progress-notices {
+      width: 240px;
+      color: #b45309;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .progress-notices p {
+      margin: 5px 0 0;
+    }
+
+    .progress-notices .date-error {
+      color: #b91c1c;
+    }
+
+    /* ========================================
+       TOTAL DAN FOOTER
+    ======================================== */
+
+    .progress-table tfoot td,
+    .progress-table tfoot th {
+      background: #eef2ff;
+      font-weight: 750;
       text-align: center;
     }
 
-    .remove-row {
-      padding: 7px 9px;
-
-      border: 0;
-
-      border-radius: 7px;
-
-      background: #fee2e2;
-
-      color: #b91c1c;
-
-      cursor: pointer;
-    }
-
-
-    /* =====================================================
-       TABLE FOOTER
-    ===================================================== */
-
-    .table-footer {
-      display: flex;
-
-      justify-content: space-between;
-
-      align-items: center;
-
-      gap: 15px;
-
-      padding: 16px 20px;
-
-      border-top: 1px solid #e5e7eb;
-    }
-
-    .summary {
-      display: flex;
-
-      gap: 18px;
-
-      font-size: 13px;
-    }
-
-    .summary strong {
-      color: #1d4ed8;
-    }
-
-    .formula-note {
-      padding: 12px 20px;
-
-      background: #f8fafc;
-
+    .progress-empty {
+      padding: 28px !important;
+      text-align: center;
       color: #64748b;
-
-      font-size: 11px;
-
-      border-top: 1px solid #e5e7eb;
     }
 
+    .progress-formula {
+      margin: 0;
+      padding: 12px 24px 0;
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.6;
+    }
 
-    /* =====================================================
+    .progress-savebar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 22px 24px;
+    }
+
+    .progress-savebar span {
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .progress-savebar > div {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .progress-print-value {
+      display: none;
+    }
+
+    /* ========================================
        RESPONSIVE
-    ===================================================== */
+    ======================================== */
 
     @media (max-width: 900px) {
-
-      .main-content {
+      .progress-page .main-content {
         margin-left: 0;
-
         width: 100%;
-
-        padding: 16px;
+        padding: 18px;
       }
 
-      .topbar,
-      .table-footer {
+      .progress-topbar,
+      .progress-savebar,
+      .progress-table-toolbar {
         align-items: flex-start;
-
         flex-direction: column;
       }
 
-      .meta-grid {
+      .progress-meta {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .progress-meta > div:first-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .progress-metrics {
         grid-template-columns: 1fr;
       }
 
-      .summary {
-        flex-wrap: wrap;
+      .progress-report-header,
+      .progress-metrics {
+        padding: 16px;
       }
-
     }
 
-
-    /* =====================================================
-       PRINT
-    ===================================================== */
+    /* ========================================
+       CETAK
+    ======================================== */
 
     @media print {
+      @page {
+        size: A3 landscape;
+        margin: 10mm;
+      }
 
       #sidebarContainer,
-      .topbar,
-      .table-footer,
-      .formula-note,
-      .col-action,
-      .row-actions {
+      .progress-topbar,
+      .progress-savebar,
+      .progress-table-toolbar,
+      .progress-draft,
+      .progress-message,
+      #retryProgress,
+      .progress-page .progress-button,
+      .progress-actions {
         display: none !important;
       }
 
-      .main-content {
-        margin: 0;
-
+      .progress-page .main-content {
         width: 100%;
-
+        margin: 0;
         padding: 0;
       }
 
-      .sheet {
-        border: 0;
-
+      .progress-sheet {
         box-shadow: none;
+        border: 0;
+      }
+
+      .progress-report-header {
+        padding: 8px;
+      }
+
+      .progress-table-wrap {
+        max-height: none;
+        overflow: visible;
       }
 
       .progress-table {
         min-width: 0;
+        width: 100%;
+        table-layout: fixed;
+      }
 
-        font-size: 8px;
+      .progress-table thead {
+        position: static;
       }
 
       .progress-table th,
       .progress-table td {
         padding: 3px;
-      }
-
-      .progress-table input,
-      .progress-table select,
-      .progress-table textarea {
-        padding: 0;
-
-        border: 0;
-
         font-size: 8px;
-
-        appearance: none;
+        white-space: normal;
+        overflow-wrap: anywhere;
       }
 
-      .report-head {
-        padding: 8px;
+      .progress-table tr {
+        break-inside: avoid;
       }
 
+      .progress-notices {
+        width: auto;
+        font-size: 8px;
+      }
+
+      .progress-table .computed,
+      .progress-table .sub-number {
+        min-width: 0;
+        padding: 3px;
+      }
+
+      .progress-status {
+        padding: 2px;
+        font-size: 8px;
+        white-space: normal;
+      }
+
+      .progress-page input,
+      .progress-page textarea,
+      .progress-page select {
+        display: none;
+      }
+
+      .progress-print-value {
+        display: block;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .progress-metrics {
+        padding: 8px 0;
+      }
+
+      .progress-metrics strong {
+        font-size: 16px;
+      }
     }
 
-  </style>
+  .progress-gantt-section {
+  margin-top: 32px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 20px;
+}
 
+.progress-gantt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.progress-gantt-header h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.progress-gantt-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.gantt-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.gantt-table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-size: 12px;
+}
+
+.gantt-table th,
+.gantt-table td {
+  border: 1px solid #9ca3af;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.gantt-name {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 280px;
+  max-width: 280px;
+  background: #fff;
+  padding: 7px 10px;
+  text-align: left;
+}
+
+.gantt-table thead .gantt-name {
+  z-index: 4;
+  background: #dbeafe;
+  text-align: center;
+}
+
+.gantt-week {
+  min-width: 42px;
+  width: 42px;
+  text-align: center;
+}
+
+.gantt-month {
+  text-align: center;
+  background: #dbeafe;
+  font-weight: 700;
+}
+
+.gantt-week-header {
+  background: #eff6ff;
+}
+
+.gantt-module td {
+  font-weight: 700;
+  background: #f3f4f6;
+}
+
+.gantt-module .gantt-name {
+  background: #f3f4f6;
+}
+
+.gantt-cell {
+  min-width: 42px;
+  width: 42px;
+  padding: 0;
+  background: #fff;
+}
+
+.gantt-cell.active {
+  background: #fbbf24;
+}
+
+.gantt-cell.done {
+  background: #22c55e;
+}
+
+.gantt-cell.in-progress {
+  background: #fb923c;
+}
+
+.gantt-cell.not-yet {
+  background: #fde68a;
+}
+  </style>
 </head>
 
+<body class="progress-page">
 
-<body>
-
-
-  <!-- =====================================================
-       SIDEBAR
-  ====================================================== -->
-
+  <!-- SIDEBAR -->
   <div id="sidebarContainer"></div>
 
-
-  <!-- =====================================================
-       MAIN CONTENT
-  ====================================================== -->
-
   <main class="main-content">
+    <div class="progress-shell">
 
-
-    <div class="page">
-
-
-      <!-- =================================================
-           TOP BAR
-      ================================================== -->
-
-      <div class="topbar">
-
-
+      <!-- HEADER HALAMAN -->
+      <header class="progress-topbar">
         <div>
-
-          <h1>
-            Update Progress Proyek
-          </h1>
-
-          <p>
-            Input timeline target, aktual, dan aktual berdasarkan kontrak.
+          <p class="progress-eyebrow">
+            PORTOPRO / PROGRESS
           </p>
 
+          <h1>Update Progress Proyek</h1>
+
+          <p>
+            Susun modul, jadwal target, dan realisasi pekerjaan.
+          </p>
         </div>
 
+        <a
+          id="backToProject"
+          class="progress-button secondary"
+          href="/proyek.html"
+        >
+          Kembali ke Proyek
+        </a>
+      </header>
 
-        <div class="actions">
-
-          <button
-            type="button"
-            class="btn btn-soft"
-            id="saveDraft"
-          >
-            Simpan Draft
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-soft"
-            id="printReport"
-          >
-            Cetak
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-primary"
-            id="submitReport"
-          >
-            Simpan Progress
-          </button>
-
-        </div>
-
-
+      <!-- PESAN -->
+      <div
+        id="progressMessage"
+        class="progress-message"
+        role="status"
+        aria-live="polite"
+      >
+        Memuat progress proyek...
       </div>
 
-
-      <!-- =================================================
-           REPORT
-      ================================================== -->
-
-      <section class="sheet">
-
-
-        <!-- ===============================================
-             REPORT HEADER
-        ================================================ -->
-
-        <div class="report-head">
-
-
-          <div class="report-title">
-
-            <h2>
-              TIMELINE
-              <span id="timelineProject">
-                (NAMA PROYEK)
-              </span>
-            </h2>
-
-            <h3>
-              LAPORAN PENGEMBANGAN PROYEK
-            </h3>
-
-          </div>
-
-
-          <div class="meta-grid">
-
-
-            <div class="meta-fields">
-
-
-              <div class="field-line">
-
-                <label for="clientName">
-                  Instansi
-                </label>
-
-                <span>:</span>
-
-                <input
-                  type="text"
-                  id="clientName"
-                  placeholder="Nama klien/instansi"
-                >
-
-              </div>
-
-
-              <div class="field-line">
-
-                <label for="projectName">
-                  Pekerjaan
-                </label>
-
-                <span>:</span>
-
-                <input
-                  type="text"
-                  id="projectName"
-                  placeholder="Nama proyek"
-                >
-
-              </div>
-
-
-            </div>
-
-
-            <div class="meta-fields date-side">
-
-
-              <div class="field-line">
-
-                <label for="reportDay">
-                  Hari
-                </label>
-
-                <span>:</span>
-
-                <input
-                  type="text"
-                  id="reportDay"
-                  readonly
-                >
-
-              </div>
-
-
-              <div class="field-line">
-
-                <label for="reportDate">
-                  Tanggal
-                </label>
-
-                <span>:</span>
-
-                <input
-                  type="date"
-                  id="reportDate"
-                >
-
-              </div>
-
-
-            </div>
-
-
-          </div>
-
-
-        </div>
-
-
-        <!-- ===============================================
-             TABLE
-        ================================================ -->
-
-        <div class="table-wrap">
-
-
-          <table class="progress-table">
-
-
-            <thead>
-
-
-              <tr>
-
-                <th
-                  rowspan="2"
-                  class="col-no"
-                >
-                  No
-                </th>
-
-                <th
-                  rowspan="2"
-                  class="col-sub"
-                >
-                  Sub No
-                </th>
-
-                <th
-                  rowspan="2"
-                  class="col-module"
-                >
-                  Modul/Pekerjaan
-                </th>
-
-                <th
-                  rowspan="2"
-                  class="col-pic"
-                >
-                  PIC
-                </th>
-
-                <th
-                  rowspan="2"
-                  class="col-status"
-                >
-                  Status
-                </th>
-
-
-                <th
-                  colspan="4"
-                  class="group-target"
-                >
-                  Target
-                </th>
-
-
-                <th
-                  colspan="4"
-                  class="group-actual"
-                >
-                  Actual
-                </th>
-
-
-                <th
-                  colspan="4"
-                  class="group-contract"
-                >
-                  Actual Base on Kontrak
-                </th>
-
-
-                <th
-                  rowspan="2"
-                  class="col-percent"
-                >
-                  Presentase Actual
-                </th>
-
-
-                <th
-                  rowspan="2"
-                  class="col-percent"
-                >
-                  Presentase Actual Dalam Kontrak
-                </th>
-
-
-                <th
-                  rowspan="2"
-                  class="col-action"
-                >
-                  Aksi
-                </th>
-
-              </tr>
-
-
-              <tr>
-
-                <!-- TARGET -->
-
-                <th class="group-target col-date">
-                  Start Date
-                </th>
-
-                <th class="group-target col-date">
-                  End Date
-                </th>
-
-                <th class="group-target col-small">
-                  Durasi
-                </th>
-
-                <th class="group-target col-small">
-                  Bobot (%)
-                </th>
-
-
-                <!-- ACTUAL -->
-
-                <th class="group-actual col-date">
-                  Start Date
-                </th>
-
-                <th class="group-actual col-date">
-                  End Date
-                </th>
-
-                <th class="group-actual col-small">
-                  Durasi
-                </th>
-
-                <th class="group-actual col-small">
-                  Bobot (%)
-                </th>
-
-
-                <!-- ACTUAL BASE ON CONTRACT -->
-
-                <th class="group-contract col-date">
-                  Start Date
-                </th>
-
-                <th class="group-contract col-date">
-                  End Date
-                </th>
-
-                <th class="group-contract col-small">
-                  Durasi
-                </th>
-
-                <th class="group-contract col-small">
-                  Bobot (%)
-                </th>
-
-              </tr>
-
-
-            </thead>
-
-
-            <tbody id="progressRows"></tbody>
-
-
-          </table>
-
-
-        </div>
-
-
-        <!-- ===============================================
-             TABLE FOOTER
-        ================================================ -->
-
-        <div class="table-footer">
-
-
-          <button
-            type="button"
-            class="btn btn-soft"
-            id="addRow"
-          >
-            + Tambah Baris
-          </button>
-
-
-          <div class="summary">
-
-            <span>
-              Total Bobot Target:
-              <strong id="totalTargetWeight">
-                0.00%
-              </strong>
-            </span>
-
-            <span>
-              Total Actual:
-              <strong id="totalActual">
-                0.00%
-              </strong>
-            </span>
-
-            <span>
-              Total Kontrak:
-              <strong id="totalContract">
-                0.00%
-              </strong>
-            </span>
-
-          </div>
-
-
-        </div>
-
-
-        <div class="formula-note">
-
-          Rumus yang digunakan:
-
-          Presentase Actual =
-          (Durasi Actual ÷ Durasi Target)
-          × Bobot Actual.
-
-          Presentase Kontrak =
-          (Durasi Actual Base on Kontrak
-          ÷ Durasi Target)
-          × Bobot Kontrak.
-
-          Durasi dihitung inklusif,
-          termasuk tanggal mulai dan tanggal akhir.
-
-        </div>
-
-
-      </section>
-
-
-    </div>
-
-
-  </main>
-
-
-  <!-- =====================================================
-       TEMPLATE BARIS
-  ====================================================== -->
-
-  <template id="rowTemplate">
-
-
-    <tr>
-
-
-      <!-- NO -->
-
-      <td>
-
-        <input
-          class="row-no"
-          type="number"
-          min="1"
-          placeholder="1"
-        >
-
-      </td>
-
-
-      <!-- SUB NO -->
-
-      <td>
-
-        <input
-          class="sub-no"
-          type="text"
-          placeholder="1.1"
-        >
-
-      </td>
-
-
-      <!-- MODULE -->
-
-      <td>
-
-        <textarea
-          class="module"
-          placeholder="Nama modul atau pekerjaan"
-        ></textarea>
-
-      </td>
-
-
-      <!-- PIC -->
-
-      <td>
-
-        <input
-          class="pic"
-          type="text"
-          placeholder="PIC"
-        >
-
-      </td>
-
-
-      <!-- STATUS -->
-
-      <td>
-
-        <select class="status status-select">
-
-          <option value="">
-            Pilih
-          </option>
-
-          <option value="Not Started">
-            Not Started
-          </option>
-
-          <option value="On Progress">
-            On Progress
-          </option>
-
-          <option value="Hold">
-            Hold
-          </option>
-
-          <option value="Done">
-            Done
-          </option>
-
-          <option value="Cancel">
-            Cancel
-          </option>
-
-        </select>
-
-      </td>
-
-
-      <!-- TARGET START -->
-
-      <td>
-
-        <input
-          type="date"
-          class="target-start"
-        >
-
-      </td>
-
-
-      <!-- TARGET END -->
-
-      <td>
-
-        <input
-          type="date"
-          class="target-end"
-        >
-
-      </td>
-
-
-      <!-- TARGET DURATION -->
-
-      <td>
-
-        <input
-          type="number"
-          class="target-duration"
-          readonly
-        >
-
-      </td>
-
-
-      <!-- TARGET WEIGHT -->
-
-      <td>
-
-        <input
-          type="number"
-          class="target-weight"
-          min="0"
-          max="100"
-          step="0.01"
-          placeholder="0"
-        >
-
-      </td>
-
-
-      <!-- ACTUAL START -->
-
-      <td>
-
-        <input
-          type="date"
-          class="actual-start"
-        >
-
-      </td>
-
-
-      <!-- ACTUAL END -->
-
-      <td>
-
-        <input
-          type="date"
-          class="actual-end"
-        >
-
-      </td>
-
-
-      <!-- ACTUAL DURATION -->
-
-      <td>
-
-        <input
-          type="number"
-          class="actual-duration"
-          readonly
-        >
-
-      </td>
-
-
-      <!-- ACTUAL WEIGHT -->
-
-      <td>
-
-        <input
-          type="number"
-          class="actual-weight"
-          min="0"
-          max="100"
-          step="0.01"
-          placeholder="0"
-        >
-
-      </td>
-
-
-      <!-- CONTRACT START -->
-
-      <td>
-
-        <input
-          type="date"
-          class="contract-start"
-        >
-
-      </td>
-
-
-      <!-- CONTRACT END -->
-
-      <td>
-
-        <input
-          type="date"
-          class="contract-end"
-        >
-
-      </td>
-
-
-      <!-- CONTRACT DURATION -->
-
-      <td>
-
-        <input
-          type="number"
-          class="contract-duration"
-          readonly
-        >
-
-      </td>
-
-
-      <!-- CONTRACT WEIGHT -->
-
-      <td>
-
-        <input
-          type="number"
-          class="contract-weight"
-          min="0"
-          max="100"
-          step="0.01"
-          placeholder="0"
-        >
-
-      </td>
-
-
-      <!-- ACTUAL PERCENT -->
-
-      <td>
-
-        <input
-          class="actual-percent"
-          type="text"
-          readonly
-          value="0.00%"
-        >
-
-      </td>
-
-
-      <!-- CONTRACT PERCENT -->
-
-      <td>
-
-        <input
-          class="contract-percent"
-          type="text"
-          readonly
-          value="0.00%"
-        >
-
-      </td>
-
-
-      <!-- ACTION -->
-
-      <td class="row-actions">
+      <button
+        type="button"
+        id="retryProgress"
+        class="progress-button secondary"
+        hidden
+      >
+        Coba Lagi
+      </button>
+
+      <!-- INFORMASI DRAFT -->
+      <div
+        id="draftNotice"
+        class="progress-draft"
+        hidden
+      >
+        <span id="draftText">
+          Ada draft tersimpan di perangkat ini.
+        </span>
 
         <button
           type="button"
-          class="remove-row"
+          id="restoreDraft"
+          class="progress-button secondary"
         >
-          Hapus
+          Pulihkan Draft
         </button>
 
-      </td>
+        <button
+          type="button"
+          id="downloadDraft"
+          class="progress-button secondary"
+        >
+          Unduh Draft
+        </button>
 
+        <button
+          type="button"
+          id="discardDraft"
+          class="progress-button danger"
+        >
+          Hapus Draft
+        </button>
+      </div>
 
-    </tr>
+      <!-- FORM PROGRESS -->
+      <form id="progressForm">
+        <fieldset id="progressFields" disabled>
 
+          <section class="progress-sheet">
 
-  </template>
+            <!-- INFORMASI PROYEK -->
+            <div class="progress-report-header">
+              <p class="progress-eyebrow">
+                LAPORAN PENGEMBANGAN PROYEK
+              </p>
 
+              <h2 id="timelineNamaProyek">
+                Memuat proyek...
+              </h2>
 
-  <!-- =====================================================
-       LAYOUT DAN SIDEBAR
-  ====================================================== -->
+              <div class="progress-meta">
+                <div>
+                  <span>Instansi / Klien</span>
+                  <strong id="namaInstansi">-</strong>
+                </div>
 
+                <div>
+                  <label for="reportDate">
+                    Tanggal laporan
+                  </label>
+
+                  <input
+                    id="reportDate"
+                    type="date"
+                    required
+                  >
+                </div>
+
+                <div>
+                  <span>Hari</span>
+                  <strong id="reportDay">-</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- RINGKASAN -->
+            <div class="progress-metrics">
+              <div>
+                <span>Total target</span>
+
+                <strong id="totalTargetDuration">
+                  0 hari
+                </strong>
+
+                <small id="totalTargetWeight">
+                  Bobot 0,00%
+                </small>
+              </div>
+
+              <div class="actual">
+                <span>Total aktual</span>
+
+                <strong id="totalActualDuration">
+                  0 hari
+                </strong>
+
+                <small id="totalActual">
+                  Bobot 0,00%
+                </small>
+              </div>
+
+              <div class="actual">
+                <span>Total Progress</span>
+                <strong id="totalProgress">0,00%</strong>
+                <small>Jumlah bobot target submodul Done</small>
+              </div>
+
+              <div>
+                <span>Submodul selesai</span>
+
+                <strong id="completedItems">
+                  0 / 0
+                </strong>
+
+                <small>
+                  Status berdasarkan tanggal aktual
+                </small>
+              </div>
+            </div>
+
+            <!-- TAMBAH MODUL UTAMA -->
+            <div class="progress-table-toolbar">
+              <div>
+                <strong>Modul &amp; pekerjaan</strong>
+
+                <p>
+                  No modul utama bisa diubah.
+                  Sub No mengikuti urutan submodul.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                id="addModule"
+                class="progress-button secondary"
+              >
+                + Tambah Modul Utama
+              </button>
+            </div>
+
+            <!-- TABEL -->
+            <div
+              class="progress-table-wrap"
+              role="region"
+              aria-label="Tabel progress; geser untuk melihat seluruh kolom"
+              tabindex="0"
+            >
+              <table class="progress-table">
+
+                <thead>
+                  <tr>
+                    <th rowspan="2" scope="col">
+                      No
+                    </th>
+
+                    <th rowspan="2" scope="col">
+                      Sub No
+                    </th>
+
+                    <th rowspan="2" scope="col">
+                      Modul / Pekerjaan
+                    </th>
+
+                    <th rowspan="2" scope="col">
+                      PIC
+                    </th>
+
+                    <th rowspan="2" scope="col">
+                      Status
+                    </th>
+
+                    <th
+                      colspan="4"
+                      scope="colgroup"
+                      class="target-heading"
+                    >
+                      Target
+                    </th>
+
+                    <th
+                      colspan="4"
+                      scope="colgroup"
+                      class="actual-heading"
+                    >
+                      Aktual
+                    </th>
+
+                    <th rowspan="2" scope="col">
+                      Bobot Progress
+                    </th>
+
+                    <th rowspan="2" scope="col">
+                      Catatan
+                    </th>
+
+                    <th
+                      rowspan="2"
+                      scope="col"
+                      class="progress-actions"
+                    >
+                      Aksi
+                    </th>
+                  </tr>
+
+                  <tr>
+                    <!-- TARGET -->
+                    <th scope="col">Start Date</th>
+                    <th scope="col">End Date</th>
+                    <th scope="col">Durasi (hari)</th>
+                    <th scope="col">Bobot (%)</th>
+
+                    <!-- AKTUAL -->
+                    <th scope="col">Start Date</th>
+                    <th scope="col">End Date</th>
+                    <th scope="col">Durasi (hari)</th>
+                    <th scope="col">Bobot (%)</th>
+                  </tr>
+                  
+                </thead>
+
+                <!-- Baris modul dibuat oleh update-progress.js -->
+                <tbody id="progressRows"></tbody>
+
+                <tfoot>
+                  <tr>
+                    <th colspan="5" scope="row">
+                      Total
+                    </th>
+
+                    <td colspan="2">
+                      Target
+                    </td>
+
+                    <td id="footerTargetDuration">
+                      0
+                    </td>
+
+                    <td id="footerTargetWeight">
+                      0,00%
+                    </td>
+
+                    <td colspan="2">
+                      Aktual
+                    </td>
+
+                    <td id="footerActualDuration">
+                      0
+                    </td>
+
+                    <td></td>
+                    <td id="footerProgressWeight">0,00%</td>
+                    <td></td>
+                    
+                    <td id="footerActualWeight">
+                      0,00%
+                    </td>
+
+                    
+
+                  </tr>
+                </tfoot>
+
+              </table>
+            </div>
+
+            <!-- KETERANGAN PERHITUNGAN -->
+            <p class="progress-formula">
+              Durasi = tanggal akhir − tanggal mulai
+              (tanggal yang sama = 0 hari).
+              Bobot target = durasi target ÷ total durasi target × 100%.
+              Bobot aktual = durasi aktual ÷ total durasi aktual × 100%.
+              Tanggal yang belum lengkap belum menghasilkan durasi.
+            </p>
+
+            <p class="progress-formula">
+              Total bobot aktual adalah pembagian durasi aktual
+              antarsubmodul, bukan persentase penyelesaian proyek.
+              Modul utama hanya menjadi kelompok dan tidak dihitung
+              sebagai durasi tambahan.
+            </p>
+
+            <!-- TOMBOL SIMPAN -->
+            <footer class="progress-savebar">
+              <span id="saveState">
+                Belum ada perubahan.
+              </span>
+
+              <div>
+                <button
+                  type="button"
+                  id="saveDraft"
+                  class="progress-button secondary"
+                >
+                  Simpan Draft
+                </button>
+
+                <button
+                  type="button"
+                  id="printReport"
+                  class="progress-button secondary"
+                >
+                  Cetak
+                </button>
+
+                <button
+                  type="submit"
+                  id="submitReport"
+                  class="progress-button primary"
+                >
+                  Simpan Progress
+                </button>
+              </div>
+            </footer>
+
+          </section>
+          <section class="progress-gantt-section">
+
+  <div class="progress-gantt-header">
+    <div>
+      <h2>Timeline Proyek</h2>
+      <p>
+        Timeline berdasarkan Target Start dan Target End.
+      </p>
+    </div>
+  </div>
+
+  <div class="gantt-scroll">
+    <table
+      class="gantt-table"
+      id="ganttTable"
+    >
+      <thead id="ganttHead"></thead>
+
+      <tbody id="ganttBody">
+        <tr>
+          <td>
+            Belum ada timeline.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+        </fieldset>
+      </form>
+
+    </div>
+  </main>
+
+  <!-- LAYOUT DAN SIDEBAR -->
   <script src="/layout.js"></script>
-
   <script src="/sidebar.js"></script>
 
-
-  <!-- =====================================================
-       UPDATE PROGRESS SCRIPT
-  ====================================================== -->
-
-  <script>
-
-    const rowsBody =
-      document.getElementById(
-        "progressRows"
-      );
-
-
-    const query =
-      (
-        root,
-        selector
-      ) =>
-        root.querySelector(
-          selector
-        );
-
-
-    const numberValue =
-      value =>
-        Number(value) || 0;
-
-
-    // ==================================================
-    // HITUNG DURASI
-    // ==================================================
-
-    function calculateDuration(
-      startValue,
-      endValue
-    ) {
-
-      if (
-        !startValue ||
-        !endValue
-      ) {
-
-        return 0;
-
-      }
-
-
-      const startDate =
-        new Date(
-          `${startValue}T00:00:00`
-        );
-
-
-      const endDate =
-        new Date(
-          `${endValue}T00:00:00`
-        );
-
-
-      if (
-        endDate < startDate
-      ) {
-
-        return 0;
-
-      }
-
-
-      return (
-
-        Math.floor(
-
-          (
-            endDate -
-            startDate
-          ) /
-
-          86400000
-
-        ) + 1
-
-      );
-
-    }
-
-
-    // ==================================================
-    // SET HARI
-    // ==================================================
-
-    function setDay() {
-
-      const dateValue =
-        document.getElementById(
-          "reportDate"
-        ).value;
-
-
-      const dayInput =
-        document.getElementById(
-          "reportDay"
-        );
-
-
-      if (!dateValue) {
-
-        dayInput.value =
-          "";
-
-        return;
-
-      }
-
-
-      dayInput.value =
-        new Intl.DateTimeFormat(
-
-          "id-ID",
-
-          {
-            weekday: "long"
-          }
-
-        ).format(
-
-          new Date(
-            `${dateValue}T00:00:00`
-          )
-
-        );
-
-    }
-
-
-    // ==================================================
-    // HITUNG SATU BARIS
-    // ==================================================
-
-    function calculateRow(row) {
-
-      const targetDuration =
-        calculateDuration(
-
-          query(
-            row,
-            ".target-start"
-          ).value,
-
-          query(
-            row,
-            ".target-end"
-          ).value
-
-        );
-
-
-      const actualDuration =
-        calculateDuration(
-
-          query(
-            row,
-            ".actual-start"
-          ).value,
-
-          query(
-            row,
-            ".actual-end"
-          ).value
-
-        );
-
-
-      const contractDuration =
-        calculateDuration(
-
-          query(
-            row,
-            ".contract-start"
-          ).value,
-
-          query(
-            row,
-            ".contract-end"
-          ).value
-
-        );
-
-
-      query(
-        row,
-        ".target-duration"
-      ).value =
-        targetDuration || "";
-
-
-      query(
-        row,
-        ".actual-duration"
-      ).value =
-        actualDuration || "";
-
-
-      query(
-        row,
-        ".contract-duration"
-      ).value =
-        contractDuration || "";
-
-
-      const actualWeight =
-        numberValue(
-
-          query(
-            row,
-            ".actual-weight"
-          ).value
-
-        );
-
-
-      const contractWeight =
-        numberValue(
-
-          query(
-            row,
-            ".contract-weight"
-          ).value
-
-        );
-
-
-      const actualPercentage =
-
-        targetDuration > 0
-
-          ? (
-              actualDuration /
-              targetDuration
-            ) * actualWeight
-
-          : 0;
-
-
-      const contractPercentage =
-
-        targetDuration > 0
-
-          ? (
-              contractDuration /
-              targetDuration
-            ) * contractWeight
-
-          : 0;
-
-
-      query(
-        row,
-        ".actual-percent"
-      ).value =
-        actualPercentage
-          .toFixed(2) +
-        "%";
-
-
-      query(
-        row,
-        ".contract-percent"
-      ).value =
-        contractPercentage
-          .toFixed(2) +
-        "%";
-
-
-      calculateSummary();
-
-    }
-
-
-    // ==================================================
-    // HITUNG SUMMARY
-    // ==================================================
-
-    function calculateSummary() {
-
-      let totalTargetWeight =
-        0;
-
-      let totalActual =
-        0;
-
-      let totalContract =
-        0;
-
-
-      [
-        ...rowsBody.rows
-      ].forEach(row => {
-
-        totalTargetWeight +=
-          numberValue(
-
-            query(
-              row,
-              ".target-weight"
-            ).value
-
-          );
-
-
-        totalActual +=
-
-          parseFloat(
-
-            query(
-              row,
-              ".actual-percent"
-            ).value
-
-          ) || 0;
-
-
-        totalContract +=
-
-          parseFloat(
-
-            query(
-              row,
-              ".contract-percent"
-            ).value
-
-          ) || 0;
-
-      });
-
-
-      document.getElementById(
-        "totalTargetWeight"
-      ).textContent =
-
-        totalTargetWeight
-          .toFixed(2) +
-        "%";
-
-
-      document.getElementById(
-        "totalActual"
-      ).textContent =
-
-        totalActual
-          .toFixed(2) +
-        "%";
-
-
-      document.getElementById(
-        "totalContract"
-      ).textContent =
-
-        totalContract
-          .toFixed(2) +
-        "%";
-
-    }
-
-
-    // ==================================================
-    // TAMBAH BARIS
-    // ==================================================
-
-    function addRow(
-      data = {}
-    ) {
-
-      const template =
-        document.getElementById(
-          "rowTemplate"
-        );
-
-
-      const row =
-        template
-          .content
-          .firstElementChild
-          .cloneNode(true);
-
-
-      const fields = [
-
-        "row-no",
-        "sub-no",
-        "module",
-        "pic",
-        "status",
-
-        "target-start",
-        "target-end",
-        "target-weight",
-
-        "actual-start",
-        "actual-end",
-        "actual-weight",
-
-        "contract-start",
-        "contract-end",
-        "contract-weight"
-
-      ];
-
-
-      fields.forEach(
-        fieldName => {
-
-          const element =
-            query(
-              row,
-              `.${fieldName}`
-            );
-
-
-          if (
-            data[fieldName] !== null &&
-            data[fieldName] !== undefined
-          ) {
-
-            element.value =
-              data[fieldName];
-
-          }
-
-        }
-      );
-
-
-      row
-        .querySelectorAll(
-          "input, select, textarea"
-        )
-        .forEach(element => {
-
-          element.addEventListener(
-            "input",
-            () => {
-
-              calculateRow(
-                row
-              );
-
-            }
-          );
-
-          element.addEventListener(
-            "change",
-            () => {
-
-              calculateRow(
-                row
-              );
-
-            }
-          );
-
-        });
-
-
-      query(
-        row,
-        ".remove-row"
-      ).addEventListener(
-        "click",
-        () => {
-
-          row.remove();
-
-          renumberRows();
-
-          calculateSummary();
-
-        }
-      );
-
-
-      rowsBody.appendChild(
-        row
-      );
-
-
-      calculateRow(
-        row
-      );
-
-
-      renumberRows();
-
-    }
-
-
-    // ==================================================
-    // NOMOR BARIS
-    // ==================================================
-
-    function renumberRows() {
-
-      [
-        ...rowsBody.rows
-      ].forEach(
-        (
-          row,
-          index
-        ) => {
-
-          const numberInput =
-            query(
-              row,
-              ".row-no"
-            );
-
-
-          if (
-            !numberInput.value
-          ) {
-
-            numberInput.value =
-              index + 1;
-
-          }
-
-        }
-      );
-
-    }
-
-
-    // ==================================================
-    // AMBIL DATA FORM
-    // ==================================================
-
-    function collectFormData() {
-
-      return {
-
-        clientName:
-
-          document.getElementById(
-            "clientName"
-          ).value,
-
-
-        projectName:
-
-          document.getElementById(
-            "projectName"
-          ).value,
-
-
-        reportDate:
-
-          document.getElementById(
-            "reportDate"
-          ).value,
-
-
-        rows:
-
-          [
-            ...rowsBody.rows
-          ].map(row => {
-
-            const item =
-              {};
-
-
-            const fields = [
-
-              "row-no",
-              "sub-no",
-              "module",
-              "pic",
-              "status",
-
-              "target-start",
-              "target-end",
-              "target-weight",
-
-              "actual-start",
-              "actual-end",
-              "actual-weight",
-
-              "contract-start",
-              "contract-end",
-              "contract-weight"
-
-            ];
-
-
-            fields.forEach(
-              fieldName => {
-
-                item[fieldName] =
-                  query(
-                    row,
-                    `.${fieldName}`
-                  ).value;
-
-              }
-            );
-
-
-            item.targetDuration =
-              query(
-                row,
-                ".target-duration"
-              ).value;
-
-
-            item.actualDuration =
-              query(
-                row,
-                ".actual-duration"
-              ).value;
-
-
-            item.contractDuration =
-              query(
-                row,
-                ".contract-duration"
-              ).value;
-
-
-            item.actualPercentage =
-              query(
-                row,
-                ".actual-percent"
-              ).value;
-
-
-            item.contractPercentage =
-              query(
-                row,
-                ".contract-percent"
-              ).value;
-
-
-            return item;
-
-          })
-
-      };
-
-    }
-
-
-    // ==================================================
-    // RESTORE DRAFT
-    // ==================================================
-
-    function restoreDraft(data) {
-
-      if (!data) {
-        return;
-      }
-
-
-      document.getElementById(
-        "clientName"
-      ).value =
-        data.clientName || "";
-
-
-      document.getElementById(
-        "projectName"
-      ).value =
-        data.projectName || "";
-
-
-      document.getElementById(
-        "reportDate"
-      ).value =
-        data.reportDate || "";
-
-
-      rowsBody.innerHTML =
-        "";
-
-
-      (
-        data.rows || []
-      ).forEach(
-        row => {
-
-          addRow(
-            row
-          );
-
-        }
-      );
-
-
-      if (
-        !data.rows ||
-        data.rows.length === 0
-      ) {
-
-        addRow();
-
-      }
-
-
-      setDay();
-
-      synchronizeProjectTitle();
-
-    }
-
-
-    // ==================================================
-    // SINKRONISASI JUDUL
-    // ==================================================
-
-    function synchronizeProjectTitle() {
-
-      const projectName =
-        document.getElementById(
-          "projectName"
-        ).value.trim();
-
-
-      document.getElementById(
-        "timelineProject"
-      ).textContent =
-
-        projectName ||
-        "(NAMA PROYEK)";
-
-    }
-
-
-    // ==================================================
-    // BUTTON TAMBAH BARIS
-    // ==================================================
-
-    document.getElementById(
-      "addRow"
-    ).addEventListener(
-      "click",
-      () => {
-
-        addRow();
-
-      }
-    );
-
-
-    // ==================================================
-    // TANGGAL LAPORAN
-    // ==================================================
-
-    document.getElementById(
-      "reportDate"
-    ).addEventListener(
-      "change",
-      setDay
-    );
-
-
-    // ==================================================
-    // NAMA PROYEK
-    // ==================================================
-
-    document.getElementById(
-      "projectName"
-    ).addEventListener(
-      "input",
-      synchronizeProjectTitle
-    );
-
-
-    // ==================================================
-    // SIMPAN DRAFT
-    // ==================================================
-
-    document.getElementById(
-      "saveDraft"
-    ).addEventListener(
-      "click",
-      () => {
-
-        const formData =
-          collectFormData();
-
-
-        localStorage.setItem(
-
-          "portopro-progress-draft",
-
-          JSON.stringify(
-            formData
-          )
-
-        );
-
-
-        alert(
-          "Draft progress berhasil disimpan di browser."
-        );
-
-      }
-    );
-
-
-    // ==================================================
-    // CETAK
-    // ==================================================
-
-    document.getElementById(
-      "printReport"
-    ).addEventListener(
-      "click",
-      () => {
-
-        window.print();
-
-      }
-    );
-
-
-    // ==================================================
-    // SIMPAN PROGRESS
-    // ==================================================
-
-    document.getElementById(
-      "submitReport"
-    ).addEventListener(
-      "click",
-      async () => {
-
-        const payload =
-          collectFormData();
-
-
-        if (
-          !payload.projectName.trim()
-        ) {
-
-          alert(
-            "Nama proyek wajib diisi."
-          );
-
-          document.getElementById(
-            "projectName"
-          ).focus();
-
-          return;
-
-        }
-
-
-        if (
-          !payload.reportDate
-        ) {
-
-          alert(
-            "Tanggal laporan wajib diisi."
-          );
-
-          document.getElementById(
-            "reportDate"
-          ).focus();
-
-          return;
-
-        }
-
-
-        if (
-          payload.rows.length === 0
-        ) {
-
-          alert(
-            "Minimal satu baris progress wajib diisi."
-          );
-
-          return;
-
-        }
-
-
-        console.log(
-          "PAYLOAD PROGRESS:",
-          payload
-        );
-
-
-        /*
-        const response =
-          await fetch(
-            "/api/progress",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body:
-                JSON.stringify(
-                  payload
-                )
-            }
-          );
-
-
-        const result =
-          await response.json();
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            result.error ||
-            "Gagal menyimpan progress"
-          );
-
-        }
-
-
-        alert(
-          "Progress berhasil disimpan."
-        );
-        */
-
-
-        alert(
-          "Tampilan dan payload sudah siap. " +
-          "Selanjutnya hubungkan tombol ini " +
-          "ke endpoint POST /api/progress."
-        );
-
-      }
-    );
-
-
-    // ==================================================
-    // DEFAULT TANGGAL HARI INI
-    // ==================================================
-
-    const today =
-      new Date();
-
-
-    document.getElementById(
-      "reportDate"
-    ).value = [
-
-      today.getFullYear(),
-
-      String(
-        today.getMonth() + 1
-      ).padStart(
-        2,
-        "0"
-      ),
-
-      String(
-        today.getDate()
-      ).padStart(
-        2,
-        "0"
-      )
-
-    ].join("-");
-
-
-    setDay();
-
-
-    // ==================================================
-    // LOAD DRAFT ATAU BUAT BARIS BARU
-    // ==================================================
-
-    const savedDraft =
-      localStorage.getItem(
-        "portopro-progress-draft"
-      );
-
-
-    if (savedDraft) {
-
-      try {
-
-        restoreDraft(
-          JSON.parse(
-            savedDraft
-          )
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "ERROR RESTORE DRAFT:",
-          error
-        );
-
-
-        addRow();
-
-      }
-
-
-    } else {
-
-      addRow();
-
-    }
-
-  </script>
-
+  <!-- JAVASCRIPT PROGRESS -->
+  <script src="/update-progress.js"></script>
 
 </body>
-
 </html>

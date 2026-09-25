@@ -1,8 +1,43 @@
 // ======================================================
-// DASHBOARD
+// DASHBOARD PORTOPRO
+// Endpoint: GET /api/dashboard
 // ======================================================
 
 let dashboardData = null;
+
+
+// ======================================================
+// ELEMENT HELPER
+// ======================================================
+
+function getElement(id) {
+  return document.getElementById(id);
+}
+
+
+// ======================================================
+// NUMBER HELPER
+// ======================================================
+
+function angka(value) {
+  const result =
+    Number(value);
+
+  return Number.isFinite(result)
+    ? result
+    : 0;
+}
+
+
+// ======================================================
+// NORMALISASI TEXT
+// ======================================================
+
+function normalizeText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
 
 
 // ======================================================
@@ -10,9 +45,6 @@ let dashboardData = null;
 // ======================================================
 
 function formatRupiah(value) {
-
-  const number = Number(value) || 0;
-
   return new Intl.NumberFormat(
     "id-ID",
     {
@@ -20,8 +52,52 @@ function formatRupiah(value) {
       currency: "IDR",
       maximumFractionDigits: 0
     }
-  ).format(number);
+  ).format(
+    angka(value)
+  );
+}
 
+
+// ======================================================
+// PARSE TANGGAL LOKAL
+// ======================================================
+
+function parseTanggal(value) {
+  if (!value) {
+    return null;
+  }
+
+  const text =
+    String(value);
+
+  const dateOnlyMatch =
+    text.match(
+      /^(\d{4})-(\d{2})-(\d{2})/
+    );
+
+  if (dateOnlyMatch) {
+    const date =
+      new Date(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3])
+      );
+
+    return Number.isNaN(
+      date.getTime()
+    )
+      ? null
+      : date;
+  }
+
+  const date =
+    new Date(value);
+
+  return Number.isNaN(
+    date.getTime()
+  )
+    ? null
+    : date;
 }
 
 
@@ -30,12 +106,10 @@ function formatRupiah(value) {
 // ======================================================
 
 function formatTanggal(value) {
+  const date =
+    parseTanggal(value);
 
-  if (!value) return "-";
-
-  const date = new Date(value);
-
-  if (isNaN(date.getTime())) {
+  if (!date) {
     return "-";
   }
 
@@ -47,7 +121,6 @@ function formatTanggal(value) {
       year: "numeric"
     }
   ).format(date);
-
 }
 
 
@@ -56,21 +129,128 @@ function formatTanggal(value) {
 // ======================================================
 
 function escapeHtml(value) {
-
-  if (
-    value === null ||
-    value === undefined
-  ) {
-    return "";
-  }
-
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
 
+
+// ======================================================
+// EMPTY TABLE
+// ======================================================
+
+function emptyTable(
+  colspan,
+  message
+) {
+  return `
+    <tr>
+      <td
+        colspan="${colspan}"
+        class="empty-state"
+      >
+        ${escapeHtml(message)}
+      </td>
+    </tr>
+  `;
+}
+
+
+// ======================================================
+// STATUS SUDAH DIBAYAR
+// ======================================================
+
+function statusSudahDibayar(status) {
+  return [
+    "dibayar",
+    "sudah dibayar",
+    "lunas",
+    "paid"
+  ].includes(
+    normalizeText(status)
+  );
+}
+
+
+// ======================================================
+// PROJECT LINK
+// ======================================================
+
+function projectLink(item) {
+  const proyekId =
+    Number(
+      item.proyek_id ??
+      item.id
+    );
+
+  const namaProyek =
+    escapeHtml(
+      item.nama_proyek || "-"
+    );
+
+  if (
+    !Number.isInteger(proyekId) ||
+    proyekId <= 0
+  ) {
+    return namaProyek;
+  }
+
+  return `
+    <a
+      class="project-link"
+      href="/detail-proyek.html?id=${encodeURIComponent(
+        proyekId
+      )}"
+    >
+      ${namaProyek}
+    </a>
+  `;
+}
+
+
+// ======================================================
+// NORMALISASI RESPONSE
+// ======================================================
+
+function normalizeDashboardResponse(
+  result
+) {
+  return {
+    projects:
+      Array.isArray(result.projects)
+        ? result.projects
+        : [],
+
+    revenue:
+      Array.isArray(result.revenue)
+        ? result.revenue
+        : [],
+
+    forecast:
+      Array.isArray(result.forecast)
+        ? result.forecast
+        : [],
+
+    termins:
+      Array.isArray(result.termins)
+        ? result.termins
+        : [],
+
+    timelines:
+      Array.isArray(result.timelines)
+        ? result.timelines
+        : [],
+
+    partnerContracts:
+      Array.isArray(
+        result.partner_contracts
+      )
+        ? result.partner_contracts
+        : []
+  };
 }
 
 
@@ -79,744 +259,1330 @@ function escapeHtml(value) {
 // ======================================================
 
 async function loadDashboard() {
-
   try {
-
     const response =
-      await fetch("/api/dashboard");
+      await fetch(
+        "/api/dashboard",
+        {
+          headers: {
+            Accept:
+              "application/json"
+          },
+
+          cache:
+            "no-store"
+        }
+      );
+
+    if (response.status === 401) {
+      window.location.href =
+        "/login.html";
+
+      return;
+    }
+
+    const contentType =
+      response.headers.get(
+        "content-type"
+      ) || "";
+
+    if (
+      !contentType.includes(
+        "application/json"
+      )
+    ) {
+      throw new Error(
+        `Server tidak mengembalikan JSON. Status ${response.status}`
+      );
+    }
 
     const result =
       await response.json();
 
-
     if (!response.ok) {
-
       throw new Error(
         result.error ||
-        "Gagal mengambil dashboard"
+        "Gagal memuat dashboard."
       );
-
     }
 
+    dashboardData =
+      normalizeDashboardResponse(
+        result
+      );
 
-    console.log(
-      "DATA DASHBOARD:",
-      result
-    );
+    buildDashboardFilters();
 
+    renderDashboard();
 
-    dashboardData = result;
+    const lastUpdate =
+      getElement("lastUpdate");
 
-
-    renderFilterOptions();
-
-    applyFilters();
-
-    renderKontrakKlien(
-      result.kontrak_klien_jatuh_tempo || []
-    );
-
-    renderKontrakPartner(
-      result.kontrak_partner_jatuh_tempo || []
-    );
-
+    if (lastUpdate) {
+      lastUpdate.textContent =
+        `Diperbarui ${new Date()
+          .toLocaleString(
+            "id-ID"
+          )}`;
+    }
 
   } catch (error) {
-
     console.error(
-      "ERROR FETCH DASHBOARD:",
+      "ERROR LOAD DASHBOARD:",
       error
     );
 
-  }
+    const lastUpdate =
+      getElement("lastUpdate");
 
+    if (lastUpdate) {
+      lastUpdate.textContent =
+        `Gagal memuat data: ${error.message}`;
+    }
+
+    showDashboardError(
+      error.message
+    );
+  }
 }
 
 
 // ======================================================
-// FILTER OPTIONS
+// ERROR DISPLAY
 // ======================================================
 
-function renderFilterOptions() {
+function showDashboardError(message) {
+  const tableConfigs = [
+    [
+      "highestProjectTable",
+      7
+    ],
+    [
+      "lateProjectTable",
+      6
+    ],
+    [
+      "clientContractTable",
+      5
+    ],
+    [
+      "partnerContractTable",
+      5
+    ]
+  ];
 
-  if (!dashboardData) return;
+  tableConfigs.forEach(
+    ([
+      id,
+      colspan
+    ]) => {
+      const element =
+        getElement(id);
 
-
-  const proyek =
-    dashboardData.proyek || [];
-
-
-  // ====================================================
-  // FILTER TAHUN
-  // ====================================================
-
-  const tahunSet =
-    new Set();
-
-
-  proyek.forEach(item => {
-
-    if (item.tanggal_mulai) {
-
-      const tahun =
-        new Date(
-          item.tanggal_mulai
-        ).getFullYear();
-
-      if (!isNaN(tahun)) {
-        tahunSet.add(tahun);
+      if (element) {
+        element.innerHTML =
+          emptyTable(
+            colspan,
+            `Gagal memuat data: ${message}`
+          );
       }
-
     }
+  );
 
+  const chartIds = [
+    "revenueChart",
+    "partnerPaymentChart"
+  ];
 
-    if (item.tanggal_akhir) {
+  chartIds.forEach(id => {
+    const element =
+      getElement(id);
 
-      const tahun =
-        new Date(
-          item.tanggal_akhir
-        ).getFullYear();
-
-      if (!isNaN(tahun)) {
-        tahunSet.add(tahun);
-      }
-
+    if (element) {
+      element.innerHTML = `
+        <div class="empty-state">
+          ${escapeHtml(message)}
+        </div>
+      `;
     }
-
   });
+}
 
 
-  const filterTahun =
-    document.getElementById(
-      "filterTahun"
-    );
+// ======================================================
+// ARRAY VALUE
+// ======================================================
 
-
-  if (filterTahun) {
-
-    const tahunList =
-      Array.from(tahunSet)
-        .sort((a, b) => b - a);
-
-
-    filterTahun.innerHTML = `
-      <option value="">
-        Semua Tahun
-      </option>
-
-      ${tahunList.map(tahun => `
-        <option value="${tahun}">
-          ${tahun}
-        </option>
-      `).join("")}
-    `;
-
+function getArrayValue(
+  item,
+  arrayKey,
+  textKey
+) {
+  if (
+    Array.isArray(
+      item[arrayKey]
+    )
+  ) {
+    return item[arrayKey]
+      .filter(Boolean)
+      .map(String);
   }
 
-
-  // ====================================================
-  // FILTER PIC
-  // ====================================================
-
-  const picMap =
-    new Map();
-
-
-  proyek.forEach(item => {
-
-    const picList =
-      Array.isArray(item.pic)
-        ? item.pic
-        : [];
+  return String(
+    item[textKey] || ""
+  )
+    .split(",")
+    .map(value =>
+      value.trim()
+    )
+    .filter(Boolean);
+}
 
 
-    picList.forEach(pic => {
+// ======================================================
+// UNIQUE VALUE
+// ======================================================
 
-      if (
-        pic.id !== undefined &&
-        pic.nama_pic
-      ) {
+function uniqueValues(values) {
+  return [
+    ...new Set(
+      values
+        .filter(Boolean)
+        .map(String)
+    )
+  ].sort(
+    (first, second) =>
+      first.localeCompare(
+        second,
+        "id"
+      )
+  );
+}
 
-        picMap.set(
-          String(pic.id),
-          pic.nama_pic
-        );
 
-      }
+// ======================================================
+// ISI SELECT FILTER
+// ======================================================
 
-    });
+function fillSelect(
+  id,
+  values,
+  defaultLabel
+) {
+  const select =
+    getElement(id);
 
-  });
+  if (!select) {
+    return;
+  }
 
+  const previousValue =
+    select.value;
 
-  const filterPic =
-    document.getElementById(
-      "filterPic"
+  select.innerHTML = "";
+
+  const defaultOption =
+    document.createElement(
+      "option"
     );
 
+  defaultOption.value = "";
 
-  if (filterPic) {
+  defaultOption.textContent =
+    defaultLabel;
 
-    const picList =
-      Array.from(
-        picMap.entries()
-      ).sort(
-        (a, b) =>
-          a[1].localeCompare(
-            b[1],
-            "id"
-          )
+  select.appendChild(
+    defaultOption
+  );
+
+  values.forEach(value => {
+    const option =
+      document.createElement(
+        "option"
       );
 
+    option.value =
+      String(value);
 
-    filterPic.innerHTML = `
-      <option value="">
-        Semua PIC
-      </option>
+    option.textContent =
+      String(value);
 
-      ${picList.map(
-        ([id, nama]) => `
-          <option value="${id}">
-            ${escapeHtml(nama)}
-          </option>
-        `
-      ).join("")}
-    `;
-
-  }
-
-}
-
-
-// ======================================================
-// APPLY FILTER
-// ======================================================
-
-function applyFilters() {
-
-  if (!dashboardData) return;
-
-
-  const searchElement =
-    document.getElementById(
-      "searchProyek"
+    select.appendChild(
+      option
     );
-
-  const bulanElement =
-    document.getElementById(
-      "filterBulan"
-    );
-
-  const tahunElement =
-    document.getElementById(
-      "filterTahun"
-    );
-
-  const picElement =
-    document.getElementById(
-      "filterPic"
-    );
-
-
-  const search =
-    searchElement
-      ? searchElement.value
-          .trim()
-          .toLowerCase()
-      : "";
-
-
-  const bulan =
-    bulanElement
-      ? bulanElement.value
-      : "";
-
-
-  const tahun =
-    tahunElement
-      ? tahunElement.value
-      : "";
-
-
-  const picId =
-    picElement
-      ? picElement.value
-      : "";
-
-
-  const proyek =
-    dashboardData.proyek || [];
-
-
-  const filtered =
-    proyek.filter(item => {
-
-
-      // ==================================================
-      // SEARCH
-      // ==================================================
-
-      if (search) {
-
-        const namaProyek =
-          String(
-            item.nama_proyek || ""
-          ).toLowerCase();
-
-
-        const namaKlien =
-          String(
-            item.nama_klien || ""
-          ).toLowerCase();
-
-
-        if (
-          !namaProyek.includes(search) &&
-          !namaKlien.includes(search)
-        ) {
-
-          return false;
-
-        }
-
-      }
-
-
-      // ==================================================
-      // FILTER PIC
-      // ==================================================
-
-      if (picId) {
-
-        const picIds =
-          Array.isArray(item.pic)
-            ? item.pic.map(
-                pic =>
-                  String(pic.id)
-              )
-            : [];
-
-
-        if (
-          !picIds.includes(
-            String(picId)
-          )
-        ) {
-
-          return false;
-
-        }
-
-      }
-
-
-      // ==================================================
-      // FILTER TANGGAL
-      // ==================================================
-
-      if (bulan || tahun) {
-
-        if (
-          !item.tanggal_mulai ||
-          !item.tanggal_akhir
-        ) {
-
-          return false;
-
-        }
-
-
-        const mulai =
-          new Date(
-            item.tanggal_mulai
-          );
-
-
-        const akhir =
-          new Date(
-            item.tanggal_akhir
-          );
-
-
-        let periodeMulai;
-        let periodeAkhir;
-
-
-        // Bulan + Tahun
-        if (bulan && tahun) {
-
-          periodeMulai =
-            new Date(
-              Number(tahun),
-              Number(bulan) - 1,
-              1
-            );
-
-
-          periodeAkhir =
-            new Date(
-              Number(tahun),
-              Number(bulan),
-              0,
-              23,
-              59,
-              59
-            );
-
-        }
-
-
-        // Hanya Tahun
-        else if (tahun) {
-
-          periodeMulai =
-            new Date(
-              Number(tahun),
-              0,
-              1
-            );
-
-
-          periodeAkhir =
-            new Date(
-              Number(tahun),
-              11,
-              31,
-              23,
-              59,
-              59
-            );
-
-        }
-
-
-        // Hanya Bulan
-        else {
-
-          const tahunSekarang =
-            new Date().getFullYear();
-
-
-          periodeMulai =
-            new Date(
-              tahunSekarang,
-              Number(bulan) - 1,
-              1
-            );
-
-
-          periodeAkhir =
-            new Date(
-              tahunSekarang,
-              Number(bulan),
-              0,
-              23,
-              59,
-              59
-            );
-
-        }
-
-
-        // Cek overlap kontrak
-        if (
-          mulai > periodeAkhir ||
-          akhir < periodeMulai
-        ) {
-
-          return false;
-
-        }
-
-      }
-
-
-      return true;
-
-    });
-
-
-  renderProjectTable(filtered);
-
-  renderKpi(filtered);
-
-}
-
-
-// ======================================================
-// RENDER KPI
-// ======================================================
-
-function renderKpi(proyek) {
-
-  let totalNilaiProyek = 0;
-
-  let nilaiTertagihKlien = 0;
-
-  let nilaiBelumTertagihKlien = 0;
-
-  let nilaiTerbayarPartner = 0;
-
-  let nilaiBelumTerbayarPartner = 0;
-
-
-  proyek.forEach(item => {
-
-    totalNilaiProyek +=
-      Number(
-        item.nilai_proyek
-      ) || 0;
-
-
-    nilaiTertagihKlien +=
-      Number(
-        item.nilai_tertagih_klien
-      ) || 0;
-
-
-    nilaiBelumTertagihKlien +=
-      Number(
-        item.nilai_belum_tertagih_klien
-      ) || 0;
-
-
-    nilaiTerbayarPartner +=
-      Number(
-        item.nilai_terbayar_partner
-      ) || 0;
-
-
-    nilaiBelumTerbayarPartner +=
-      Number(
-        item.nilai_belum_terbayar_partner
-      ) || 0;
-
   });
 
-
-  setText(
-    "totalProyek",
-    proyek.length
-  );
-
-
-  setText(
-    "totalNilaiProyek",
-    formatRupiah(
-      totalNilaiProyek
+  if (
+    [
+      ...select.options
+    ].some(
+      option =>
+        option.value ===
+        previousValue
     )
-  );
-
-
-  setText(
-    "nilaiTertagihKlien",
-    formatRupiah(
-      nilaiTertagihKlien
-    )
-  );
-
-
-  setText(
-    "nilaiBelumTertagihKlien",
-    formatRupiah(
-      nilaiBelumTertagihKlien
-    )
-  );
-
-
-  setText(
-    "nilaiTerbayarPartner",
-    formatRupiah(
-      nilaiTerbayarPartner
-    )
-  );
-
-
-  setText(
-    "nilaiBelumTerbayarPartner",
-    formatRupiah(
-      nilaiBelumTerbayarPartner
-    )
-  );
-
+  ) {
+    select.value =
+      previousValue;
+  }
 }
 
 
 // ======================================================
-// HELPER SET TEXT
+// BUILD FILTER
 // ======================================================
 
-function setText(id, value) {
-
-  const element =
-    document.getElementById(id);
-
-  if (element) {
-    element.textContent = value;
+function buildDashboardFilters() {
+  if (!dashboardData) {
+    return;
   }
 
+  const projects =
+    dashboardData.projects;
+
+  const years =
+    uniqueValues(
+      projects
+        .flatMap(item => [
+          item.tanggal_mulai,
+          item.tanggal_akhir,
+          item.created_at
+        ])
+        .map(parseTanggal)
+        .filter(Boolean)
+        .map(date =>
+          date.getFullYear()
+        )
+    ).sort(
+      (first, second) =>
+        Number(second) -
+        Number(first)
+    );
+
+  const jenis =
+    uniqueValues(
+      projects.map(
+        item =>
+          item.jenis_proyek
+      )
+    );
+
+  const kategori =
+    uniqueValues(
+      projects.flatMap(item =>
+        getArrayValue(
+          item,
+          "kategori_list",
+          "kategori"
+        )
+      )
+    );
+
+  const pics =
+    uniqueValues(
+      projects.flatMap(item =>
+        getArrayValue(
+          item,
+          "nama_pic_list",
+          "nama_pic"
+        )
+      )
+    );
+
+  const statusFinal =
+    uniqueValues(
+      projects.map(
+        item =>
+          item.status_final
+      )
+    );
+
+  fillSelect(
+    "filterTahun",
+    years,
+    "Semua Tahun"
+  );
+
+  fillSelect(
+    "filterJenis",
+    jenis,
+    "Semua Jenis"
+  );
+
+  fillSelect(
+    "filterKategori",
+    kategori,
+    "Semua Kategori"
+  );
+
+  fillSelect(
+    "filterPic",
+    pics,
+    "Semua PIC"
+  );
+
+  fillSelect(
+    "filterStatus",
+    statusFinal,
+    "Semua Status"
+  );
 }
 
 
 // ======================================================
-// RENDER PROJECT TABLE
+// PROJECT MATCH FILTER
 // ======================================================
 
-function renderProjectTable(proyek) {
-
-  const tbody =
-    document.getElementById(
-      "projectTableBody"
+function projectMatchesFilter(project) {
+  const search =
+    normalizeText(
+      getElement(
+        "dashboardSearch"
+      )?.value
     );
 
+  const selectedYear =
+    getElement(
+      "filterTahun"
+    )?.value || "";
+
+  const selectedType =
+    getElement(
+      "filterJenis"
+    )?.value || "";
+
+  const selectedCategory =
+    getElement(
+      "filterKategori"
+    )?.value || "";
+
+  const selectedPic =
+    getElement(
+      "filterPic"
+    )?.value || "";
+
+  const selectedStatus =
+    getElement(
+      "filterStatus"
+    )?.value || "";
+
+  const categories =
+    getArrayValue(
+      project,
+      "kategori_list",
+      "kategori"
+    );
+
+  const pics =
+    getArrayValue(
+      project,
+      "nama_pic_list",
+      "nama_pic"
+    );
+
+  const searchText =
+    normalizeText([
+      project.nama_proyek,
+      project.nama_klien,
+      project.nama_partner,
+      project.kategori,
+      categories.join(" "),
+      project.nama_pic,
+      pics.join(" "),
+      project.jenis_proyek,
+      project.sub_jenis_proyek,
+      project.status_pengadaan,
+      project.status_final
+    ].join(" "));
+
+  const projectYears = [
+    project.tanggal_mulai,
+    project.tanggal_akhir,
+    project.created_at
+  ]
+    .map(parseTanggal)
+    .filter(Boolean)
+    .map(date =>
+      String(
+        date.getFullYear()
+      )
+    );
+
+  return (
+    (
+      !search ||
+      searchText.includes(search)
+    ) &&
+    (
+      !selectedYear ||
+      projectYears.includes(
+        selectedYear
+      )
+    ) &&
+    (
+      !selectedType ||
+      project.jenis_proyek ===
+        selectedType
+    ) &&
+    (
+      !selectedCategory ||
+      categories.includes(
+        selectedCategory
+      )
+    ) &&
+    (
+      !selectedPic ||
+      pics.includes(
+        selectedPic
+      )
+    ) &&
+    (
+      !selectedStatus ||
+      project.status_final ===
+        selectedStatus
+    )
+  );
+}
+
+
+// ======================================================
+// FILTER RELATED DATA
+// ======================================================
+
+function filterRelatedData(
+  data,
+  projectIds
+) {
+  return data.filter(item => {
+    if (
+      item.proyek_id === null ||
+      item.proyek_id === undefined
+    ) {
+      return true;
+    }
+
+    return projectIds.has(
+      Number(item.proyek_id)
+    );
+  });
+}
+
+
+// ======================================================
+// SUMMARY BERDASARKAN STATUS PENGADAAN
+// ======================================================
+
+function getProcurementSummary(
+  projects,
+  status
+) {
+  const normalizedStatus =
+    normalizeText(status);
+
+  const filtered =
+    projects.filter(item =>
+      normalizeText(
+        item.status_pengadaan
+      ) === normalizedStatus
+    );
+
+  return {
+    total:
+      filtered.length,
+
+    nilai:
+      filtered.reduce(
+        (sum, item) =>
+          sum +
+          angka(item.nilai_klien),
+        0
+      )
+  };
+}
+
+
+// ======================================================
+// SET SUMMARY CARD
+// ======================================================
+
+function setSummaryCard(
+  totalId,
+  valueId,
+  summary
+) {
+  const totalElement =
+    getElement(totalId);
+
+  const valueElement =
+    getElement(valueId);
+
+  if (totalElement) {
+    totalElement.textContent =
+      summary.total;
+  }
+
+  if (valueElement) {
+    valueElement.textContent =
+      formatRupiah(
+        summary.nilai
+      );
+  }
+}
+
+
+// ======================================================
+// RENDER SUMMARY
+// ======================================================
+
+function renderSummary(
+  projects,
+  termins
+) {
+  setSummaryCard(
+    "totalPipeline",
+    "nilaiPipeline",
+    getProcurementSummary(
+      projects,
+      "Pipeline"
+    )
+  );
+
+  setSummaryCard(
+    "totalSubmitPenawaran",
+    "nilaiSubmitPenawaran",
+    getProcurementSummary(
+      projects,
+      "Submit Penawaran"
+    )
+  );
+
+  setSummaryCard(
+    "totalSubmitPengadaan",
+    "nilaiSubmitPengadaan",
+    getProcurementSummary(
+      projects,
+      "Submit Pengadaan"
+    )
+  );
+
+  setSummaryCard(
+    "totalKontrak",
+    "nilaiKontrak",
+    getProcurementSummary(
+      projects,
+      "Kontrak"
+    )
+  );
+
+  const activeProjects =
+    projects.filter(item =>
+      normalizeText(
+        item.status_final
+      ) === "aktif"
+    );
+
+  setSummaryCard(
+    "totalProyekAktif",
+    "nilaiProyekAktif",
+    {
+      total:
+        activeProjects.length,
+
+      nilai:
+        activeProjects.reduce(
+          (sum, item) =>
+            sum +
+            angka(item.nilai_klien),
+          0
+        )
+    }
+  );
+
+  const clientTerms =
+    termins.filter(item =>
+      normalizeText(
+        item.pihak
+      ) === "klien"
+    );
+
+  const partnerTerms =
+    termins.filter(item =>
+      normalizeText(
+        item.pihak
+      ) === "partner"
+    );
+
+  const paidClient =
+    clientTerms
+      .filter(item =>
+        statusSudahDibayar(
+          item.status_pembayaran
+        )
+      )
+      .reduce(
+        (sum, item) =>
+          sum +
+          angka(item.nominal),
+        0
+      );
+
+  const unpaidClient =
+    clientTerms
+      .filter(item =>
+        !statusSudahDibayar(
+          item.status_pembayaran
+        )
+      )
+      .reduce(
+        (sum, item) =>
+          sum +
+          angka(item.nominal),
+        0
+      );
+
+  const paidPartner =
+    partnerTerms
+      .filter(item =>
+        statusSudahDibayar(
+          item.status_pembayaran
+        )
+      )
+      .reduce(
+        (sum, item) =>
+          sum +
+          angka(item.nominal),
+        0
+      );
+
+  const unpaidPartner =
+    partnerTerms
+      .filter(item =>
+        !statusSudahDibayar(
+          item.status_pembayaran
+        )
+      )
+      .reduce(
+        (sum, item) =>
+          sum +
+          angka(item.nominal),
+        0
+      );
+
+  if (getElement("piutangKlien")) {
+    getElement(
+      "piutangKlien"
+    ).textContent =
+      formatRupiah(
+        unpaidClient
+      );
+  }
+
+  if (getElement("dibayarKlien")) {
+    getElement(
+      "dibayarKlien"
+    ).textContent =
+      formatRupiah(
+        paidClient
+      );
+  }
+
+  if (getElement("hutangPartner")) {
+    getElement(
+      "hutangPartner"
+    ).textContent =
+      formatRupiah(
+        unpaidPartner
+      );
+  }
+
+  if (getElement("dibayarPartner")) {
+    getElement(
+      "dibayarPartner"
+    ).textContent =
+      formatRupiah(
+        paidPartner
+      );
+  }
+
+  const lateProjects =
+    getLateProjects(
+      projects
+    );
+
+  if (
+    getElement(
+      "totalProyekTerlambat"
+    )
+  ) {
+    getElement(
+      "totalProyekTerlambat"
+    ).textContent =
+      lateProjects.length;
+  }
+}
+
+
+// ======================================================
+// PROYEK TERLAMBAT
+// ======================================================
+
+function getLateProjects(projects) {
+  const today =
+    new Date();
+
+  today.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  return projects
+    .filter(item => {
+      const endDate =
+        parseTanggal(
+          item.tanggal_akhir
+        );
+
+      if (!endDate) {
+        return false;
+      }
+
+      endDate.setHours(
+        0,
+        0,
+        0,
+        0
+      );
+
+      const technicalStatus =
+        normalizeText(
+          item.status_teknis
+        );
+
+      return (
+        endDate < today &&
+        ![
+          "done",
+          "selesai"
+        ].includes(
+          technicalStatus
+        )
+      );
+    })
+    .map(item => {
+      const endDate =
+        parseTanggal(
+          item.tanggal_akhir
+        );
+
+      endDate.setHours(
+        0,
+        0,
+        0,
+        0
+      );
+
+      const lateDays =
+        Math.floor(
+          (
+            today.getTime() -
+            endDate.getTime()
+          ) /
+          86400000
+        );
+
+      return {
+        ...item,
+
+        lateDays
+      };
+    })
+    .sort(
+      (first, second) =>
+        second.lateDays -
+        first.lateDays
+    );
+}
+
+
+// ======================================================
+// TAHUN GRAFIK
+// ======================================================
+
+function getSelectedChartYear() {
+  const selectedYear =
+    Number(
+      getElement(
+        "filterTahun"
+      )?.value
+    );
+
+  return selectedYear ||
+    new Date().getFullYear();
+}
+
+
+// ======================================================
+// PENDAPATAN BULAN BERJALAN
+// ======================================================
+
+function renderCurrentMonthIncome(
+  revenue
+) {
+  const now =
+    new Date();
+
+  const currentYear =
+    now.getFullYear();
+
+  const currentMonth =
+    now.getMonth() + 1;
+
+  const previousDate =
+    new Date(
+      currentYear,
+      now.getMonth() - 1,
+      1
+    );
+
+  const previousYear =
+    previousDate.getFullYear();
+
+  const previousMonth =
+    previousDate.getMonth() + 1;
+
+  const currentValue =
+    revenue
+      .filter(item =>
+        angka(item.tahun) ===
+          currentYear &&
+        angka(item.bulan) ===
+          currentMonth
+      )
+      .reduce(
+        (sum, item) =>
+          sum +
+          angka(
+            item.nilai ??
+            item.total
+          ),
+        0
+      );
+
+  const previousValue =
+    revenue
+      .filter(item =>
+        angka(item.tahun) ===
+          previousYear &&
+        angka(item.bulan) ===
+          previousMonth
+      )
+      .reduce(
+        (sum, item) =>
+          sum +
+          angka(
+            item.nilai ??
+            item.total
+          ),
+        0
+      );
+
+  const incomeElement =
+    getElement(
+      "pendapatanBulanIni"
+    );
+
+  if (incomeElement) {
+    incomeElement.textContent =
+      formatRupiah(
+        currentValue
+      );
+  }
+
+  const comparison =
+    getElement(
+      "pendapatanComparison"
+    );
+
+  if (!comparison) {
+    return;
+  }
+
+  comparison.classList.remove(
+    "up",
+    "down",
+    "same"
+  );
+
+  if (
+    currentValue >
+    previousValue
+  ) {
+    const increase =
+      previousValue > 0
+        ? (
+            (
+              currentValue -
+              previousValue
+            ) /
+            previousValue
+          ) * 100
+        : 100;
+
+    comparison.classList.add(
+      "up"
+    );
+
+    comparison.textContent =
+      `▲ Naik ${increase.toFixed(2)}% dari bulan sebelumnya`;
+
+  } else if (
+    currentValue <
+    previousValue
+  ) {
+    const decrease =
+      previousValue > 0
+        ? (
+            (
+              previousValue -
+              currentValue
+            ) /
+            previousValue
+          ) * 100
+        : 0;
+
+    comparison.classList.add(
+      "down"
+    );
+
+    comparison.textContent =
+      `▼ Turun ${decrease.toFixed(2)}% dari bulan sebelumnya`;
+
+  } else {
+    comparison.classList.add(
+      "same"
+    );
+
+    comparison.textContent =
+      "● Sama dengan bulan sebelumnya";
+  }
+}
+
+
+// ======================================================
+// CHART CONFIG
+// ======================================================
+
+const monthNames = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Agu",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des"
+];
+
+
+// ======================================================
+// RENDER BAR CHART
+// ======================================================
+
+function renderBarChart(
+  containerId,
+  data,
+  isPartner = false
+) {
+  const container =
+    getElement(containerId);
+
+  if (!container) {
+    return;
+  }
+
+  const values =
+    Array(12).fill(0);
+
+  data.forEach(item => {
+    const monthIndex =
+      angka(item.bulan) - 1;
+
+    if (
+      monthIndex >= 0 &&
+      monthIndex < 12
+    ) {
+      values[monthIndex] +=
+        angka(
+          item.nilai ??
+          item.total
+        );
+    }
+  });
+
+  const maximumValue =
+    Math.max(
+      ...values,
+      1
+    );
+
+  container.innerHTML =
+    values.map(
+      (
+        value,
+        index
+      ) => {
+        const height =
+          value > 0
+            ? Math.max(
+                (
+                  value /
+                  maximumValue
+                ) * 100,
+                3
+              )
+            : 0;
+
+        return `
+          <div class="chart-month">
+
+            <div class="chart-bar-wrapper">
+
+              <div
+                class="
+                  chart-bar
+                  ${
+                    isPartner
+                      ? "partner"
+                      : ""
+                  }
+                "
+                style="
+                  height:${height}%;
+                "
+                title="${
+                  monthNames[index]
+                }: ${formatRupiah(value)}"
+              ></div>
+
+            </div>
+
+            <span class="chart-label">
+              ${monthNames[index]}
+            </span>
+
+          </div>
+        `;
+      }
+    ).join("");
+}
+
+
+// ======================================================
+// PEMBAYARAN PARTNER BULANAN
+// ======================================================
+
+function buildPartnerMonthlyData(
+  termins,
+  year
+) {
+  const values =
+    Array(12).fill(0);
+
+  termins
+    .filter(item =>
+      normalizeText(
+        item.pihak
+      ) === "partner" &&
+      statusSudahDibayar(
+        item.status_pembayaran
+      ) &&
+      item.tanggal_bayar
+    )
+    .forEach(item => {
+      const paymentDate =
+        parseTanggal(
+          item.tanggal_bayar
+        );
+
+      if (
+        !paymentDate ||
+        paymentDate.getFullYear() !==
+          year
+      ) {
+        return;
+      }
+
+      const monthIndex =
+        paymentDate.getMonth();
+
+      values[monthIndex] +=
+        angka(item.nominal);
+    });
+
+  return values.map(
+    (
+      value,
+      index
+    ) => ({
+      tahun:
+        year,
+
+      bulan:
+        index + 1,
+
+      nilai:
+        value
+    })
+  );
+}
+
+
+// ======================================================
+// PROYEK NILAI TERTINGGI
+// ======================================================
+
+function renderHighestProjects(projects) {
+  const tbody =
+    getElement(
+      "highestProjectTable"
+    );
 
   if (!tbody) {
     return;
   }
 
+  const rows =
+    [...projects]
+      .sort(
+        (first, second) =>
+          angka(
+            second.nilai_klien
+          ) -
+          angka(
+            first.nilai_klien
+          )
+      )
+      .slice(0, 5);
 
-  if (!proyek.length) {
-
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7">
-          Tidak ada proyek.
-        </td>
-      </tr>
-    `;
+  if (rows.length === 0) {
+    tbody.innerHTML =
+      emptyTable(
+        7,
+        "Belum ada data proyek."
+      );
 
     return;
-
   }
 
-
   tbody.innerHTML =
-    proyek.map(
-      (item, index) => {
+    rows.map(
+      (
+        item,
+        index
+      ) => `
+        <tr>
 
+          <td>
+            ${index + 1}
+          </td>
 
-        const picNama =
-          Array.isArray(item.pic)
-            ? item.pic
-                .map(
-                  pic =>
-                    pic.nama_pic
-                )
-                .filter(Boolean)
-                .join(", ")
-            : "-";
+          <td>
+            ${projectLink(item)}
+          </td>
 
+          <td>
+            ${escapeHtml(
+              item.nama_klien ||
+              "-"
+            )}
+          </td>
 
-        return `
-          <tr>
+          <td>
+            ${escapeHtml(
+              item.status_pengadaan ||
+              "-"
+            )}
+          </td>
 
-            <td>
-              ${index + 1}
-            </td>
+          <td>
+            ${escapeHtml(
+              item.status_final ||
+              "-"
+            )}
+          </td>
 
-            <td>
+          <td class="money">
+            ${formatRupiah(
+              item.nilai_klien
+            )}
+          </td>
 
-              <a
-                href="/detail-proyek.html?id=${item.id}"
-                class="project-link"
-              >
-                ${escapeHtml(
-                  item.nama_proyek || "-"
-                )}
-              </a>
+          <td>
+            <a
+              class="project-link"
+              href="/detail-proyek.html?id=${encodeURIComponent(
+                item.proyek_id
+              )}"
+            >
+              Detail
+            </a>
+          </td>
 
-            </td>
-
-            <td>
-              ${escapeHtml(
-                item.nama_klien || "-"
-              )}
-            </td>
-
-            <td>
-              ${escapeHtml(
-                picNama || "-"
-              )}
-            </td>
-
-            <td>
-              ${formatTanggal(
-                item.tanggal_mulai
-              )}
-            </td>
-
-            <td>
-              ${formatTanggal(
-                item.tanggal_akhir
-              )}
-            </td>
-
-            <td>
-              ${formatRupiah(
-                item.nilai_proyek
-              )}
-            </td>
-
-          </tr>
-        `;
-
-      }
+        </tr>
+      `
     ).join("");
-
 }
 
 
 // ======================================================
-// KONTRAK KLIEN
+// RENDER PROYEK TERLAMBAT
 // ======================================================
 
-function renderKontrakKlien(data) {
-
+function renderLateProjects(projects) {
   const tbody =
-    document.getElementById(
-      "kontrakKlienBody"
+    getElement(
+      "lateProjectTable"
     );
 
-
-  if (!tbody) return;
-
-
-  if (!data.length) {
-
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="5">
-          Tidak ada kontrak klien
-          yang akan jatuh tempo
-          dalam 3 bulan.
-        </td>
-      </tr>
-    `;
-
+  if (!tbody) {
     return;
-
   }
 
+  const rows =
+    getLateProjects(
+      projects
+    ).slice(
+      0,
+      10
+    );
+
+  if (rows.length === 0) {
+    tbody.innerHTML =
+      emptyTable(
+        6,
+        "Tidak ada proyek terlambat."
+      );
+
+    return;
+  }
 
   tbody.innerHTML =
-    data.map(item => `
-
+    rows.map(item => `
       <tr>
 
         <td>
-          <a
-            href="/detail-proyek.html?id=${item.proyek_id}"
-            class="project-link"
-          >
-            ${escapeHtml(
-              item.nama_proyek || "-"
-            )}
-          </a>
+          ${projectLink(item)}
         </td>
 
         <td>
           ${escapeHtml(
-            item.nama_klien || "-"
+            item.nama_klien ||
+            "-"
           )}
         </td>
 
@@ -827,343 +1593,555 @@ function renderKontrakKlien(data) {
         </td>
 
         <td>
-          ${renderSisaWaktu(
-            item.sisa_hari
+          ${escapeHtml(
+            item.status_teknis ||
+            "-"
           )}
         </td>
 
-        <td>
-          ${formatRupiah(
-            item.nilai_final
-          )}
+        <td class="days-late">
+          ${item.lateDays} hari
         </td>
-
-      </tr>
-
-    `).join("");
-
-}
-
-
-// ======================================================
-// KONTRAK PARTNER
-// ======================================================
-
-function renderKontrakPartner(data) {
-
-  const tbody =
-    document.getElementById(
-      "kontrakPartnerBody"
-    );
-
-
-  if (!tbody) return;
-
-
-  if (!data.length) {
-
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="5">
-          Tidak ada kontrak partner
-          yang akan jatuh tempo
-          dalam 3 bulan.
-        </td>
-      </tr>
-    `;
-
-    return;
-
-  }
-
-
-  tbody.innerHTML =
-    data.map(item => `
-
-      <tr>
 
         <td>
           <a
-            href="/detail-proyek.html?id=${item.proyek_id}"
             class="project-link"
+            href="/detail-proyek.html?id=${encodeURIComponent(
+              item.proyek_id
+            )}"
           >
-            ${escapeHtml(
-              item.nama_proyek || "-"
-            )}
+            Detail
           </a>
         </td>
 
-        <td>
-          ${escapeHtml(
-            item.nama_partner || "-"
-          )}
-        </td>
-
-        <td>
-          ${formatTanggal(
-            item.tanggal_akhir
-          )}
-        </td>
-
-        <td>
-          ${renderSisaWaktu(
-            item.sisa_hari
-          )}
-        </td>
-
-        <td>
-          ${formatRupiah(
-            item.nilai_final
-          )}
-        </td>
-
       </tr>
-
     `).join("");
-
 }
 
 
 // ======================================================
-// SISA WAKTU
+// KONTRAK KLIEN JATUH TEMPO
 // ======================================================
 
-function renderSisaWaktu(value) {
+function renderClientContracts(projects) {
+  const tbody =
+    getElement(
+      "clientContractTable"
+    );
 
-  const hari =
-    Number(value);
-
-
-  if (isNaN(hari)) {
-    return "-";
+  if (!tbody) {
+    return;
   }
 
+  const today =
+    new Date();
 
-  if (hari === 0) {
-
-    return `
-      <span class="badge badge-danger">
-        Hari ini
-      </span>
-    `;
-
-  }
-
-
-  if (hari < 0) {
-
-    return `
-      <span class="badge badge-danger">
-        Sudah berakhir
-      </span>
-    `;
-
-  }
-
-
-  return `
-    <span class="badge badge-warning">
-      ${hari} hari lagi
-    </span>
-  `;
-
-}
-
-
-// ======================================================
-// EVENT FILTER
-// ======================================================
-
-const searchProyek =
-  document.getElementById(
-    "searchProyek"
+  today.setHours(
+    0,
+    0,
+    0,
+    0
   );
 
+  const threeMonthsLater =
+    new Date(today);
 
-if (searchProyek) {
+  threeMonthsLater.setMonth(
+    threeMonthsLater.getMonth() + 3
+  );
 
-  searchProyek.addEventListener(
+  const rows =
+    projects
+      .filter(item => {
+        const endDate =
+          parseTanggal(
+            item.tanggal_akhir
+          );
+
+        if (!endDate) {
+          return false;
+        }
+
+        endDate.setHours(
+          0,
+          0,
+          0,
+          0
+        );
+
+        return (
+          endDate >= today &&
+          endDate <=
+            threeMonthsLater
+        );
+      })
+      .map(item => {
+        const endDate =
+          parseTanggal(
+            item.tanggal_akhir
+          );
+
+        endDate.setHours(
+          0,
+          0,
+          0,
+          0
+        );
+
+        return {
+          ...item,
+
+          remainingDays:
+            Math.ceil(
+              (
+                endDate.getTime() -
+                today.getTime()
+              ) /
+              86400000
+            )
+        };
+      })
+      .sort(
+        (first, second) =>
+          first.remainingDays -
+          second.remainingDays
+      )
+      .slice(0, 5);
+
+  if (rows.length === 0) {
+    tbody.innerHTML =
+      emptyTable(
+        5,
+        "Tidak ada kontrak klien yang segera berakhir."
+      );
+
+    return;
+  }
+
+  tbody.innerHTML =
+    rows.map(item => `
+      <tr>
+
+        <td>
+          ${projectLink(item)}
+        </td>
+
+        <td>
+          ${escapeHtml(
+            item.nama_klien ||
+            "-"
+          )}
+        </td>
+
+        <td>
+          ${formatTanggal(
+            item.tanggal_akhir
+          )}
+        </td>
+
+        <td>
+          ${item.remainingDays} hari
+        </td>
+
+        <td>
+          <a
+            class="project-link"
+            href="/detail-proyek.html?id=${encodeURIComponent(
+              item.proyek_id
+            )}"
+          >
+            Detail
+          </a>
+        </td>
+
+      </tr>
+    `).join("");
+}
+
+
+// ======================================================
+// KONTRAK PARTNER JATUH TEMPO
+// ======================================================
+
+function renderPartnerContracts(data) {
+  const tbody =
+    getElement(
+      "partnerContractTable"
+    );
+
+  if (!tbody) {
+    return;
+  }
+
+  const rows =
+    data
+      .filter(item =>
+        Number.isFinite(
+          angka(item.sisa_hari)
+        ) &&
+        angka(item.sisa_hari) >= 0 &&
+        angka(item.sisa_hari) <= 92
+      )
+      .sort(
+        (first, second) =>
+          angka(
+            first.sisa_hari
+          ) -
+          angka(
+            second.sisa_hari
+          )
+      )
+      .slice(0, 5);
+
+  if (rows.length === 0) {
+    tbody.innerHTML =
+      emptyTable(
+        5,
+        "Tidak ada kontrak partner yang segera berakhir."
+      );
+
+    return;
+  }
+
+  tbody.innerHTML =
+    rows.map(item => `
+      <tr>
+
+        <td>
+          ${projectLink(item)}
+        </td>
+
+        <td>
+          ${escapeHtml(
+            item.nama_partner ||
+            "-"
+          )}
+        </td>
+
+        <td>
+          ${formatTanggal(
+            item.tanggal_akhir
+          )}
+        </td>
+
+        <td>
+          ${angka(
+            item.sisa_hari
+          )} hari
+        </td>
+
+        <td>
+          <a
+            class="project-link"
+            href="/detail-proyek.html?id=${encodeURIComponent(
+              item.proyek_id
+            )}"
+          >
+            Detail
+          </a>
+        </td>
+
+      </tr>
+    `).join("");
+}
+
+
+// ======================================================
+// RENDER SEMUA DASHBOARD
+// ======================================================
+
+function renderDashboard() {
+  if (!dashboardData) {
+    return;
+  }
+
+  const projects =
+    dashboardData.projects.filter(
+      projectMatchesFilter
+    );
+
+  const projectIds =
+    new Set(
+      projects.map(item =>
+        Number(
+          item.proyek_id
+        )
+      )
+    );
+
+  const termins =
+    filterRelatedData(
+      dashboardData.termins,
+      projectIds
+    );
+
+  const partnerContracts =
+    filterRelatedData(
+      dashboardData.partnerContracts,
+      projectIds
+    );
+
+  const chartYear =
+    getSelectedChartYear();
+
+  const annualRevenue =
+    dashboardData.revenue.filter(
+      item =>
+        angka(item.tahun) ===
+          chartYear
+    );
+
+  const annualPartnerPayments =
+    buildPartnerMonthlyData(
+      termins,
+      chartYear
+    );
+
+  renderSummary(
+    projects,
+    termins
+  );
+
+  renderCurrentMonthIncome(
+    dashboardData.revenue
+  );
+
+  renderBarChart(
+    "revenueChart",
+    annualRevenue,
+    false
+  );
+
+  renderBarChart(
+    "partnerPaymentChart",
+    annualPartnerPayments,
+    true
+  );
+
+  renderHighestProjects(
+    projects
+  );
+
+  renderLateProjects(
+    projects
+  );
+
+  renderClientContracts(
+    projects
+  );
+
+  renderPartnerContracts(
+    partnerContracts
+  );
+}
+
+
+// ======================================================
+// BUKA FILTER PROYEK
+// ======================================================
+
+function openProjectFilter(
+  type,
+  value
+) {
+  const params =
+    new URLSearchParams();
+
+  params.set(
+    type,
+    value
+  );
+
+  window.location.href =
+    `/proyek.html?${params.toString()}`;
+}
+
+
+// ======================================================
+// CLICK CARD STATUS PENGADAAN
+// ======================================================
+
+document
+  .querySelectorAll(
+    "[data-status-pengadaan]"
+  )
+  .forEach(card => {
+    const openCard = () => {
+      openProjectFilter(
+        "status_pengadaan",
+        card.dataset
+          .statusPengadaan
+      );
+    };
+
+    card.addEventListener(
+      "click",
+      openCard
+    );
+
+    card.addEventListener(
+      "keydown",
+      event => {
+        if (
+          event.key === "Enter" ||
+          event.key === " "
+        ) {
+          event.preventDefault();
+
+          openCard();
+        }
+      }
+    );
+  });
+
+
+// ======================================================
+// CLICK CARD STATUS FINAL
+// ======================================================
+
+document
+  .querySelectorAll(
+    "[data-status-final]"
+  )
+  .forEach(card => {
+    const openCard = () => {
+      openProjectFilter(
+        "status_final",
+        card.dataset
+          .statusFinal
+      );
+    };
+
+    card.addEventListener(
+      "click",
+      openCard
+    );
+
+    card.addEventListener(
+      "keydown",
+      event => {
+        if (
+          event.key === "Enter" ||
+          event.key === " "
+        ) {
+          event.preventDefault();
+
+          openCard();
+        }
+      }
+    );
+  });
+
+
+// ======================================================
+// CLICK PROYEK TERLAMBAT
+// ======================================================
+
+const lateProjectCard =
+  getElement(
+    "lateProjectCard"
+  );
+
+if (lateProjectCard) {
+  const scrollToLateProjects =
+    () => {
+      getElement(
+        "lateProjectSection"
+      )?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    };
+
+  lateProjectCard.addEventListener(
+    "click",
+    scrollToLateProjects
+  );
+
+  lateProjectCard.addEventListener(
+    "keydown",
+    event => {
+      if (
+        event.key === "Enter" ||
+        event.key === " "
+      ) {
+        event.preventDefault();
+
+        scrollToLateProjects();
+      }
+    }
+  );
+}
+
+
+// ======================================================
+// FILTER EVENTS
+// ======================================================
+
+const dashboardSearch =
+  getElement(
+    "dashboardSearch"
+  );
+
+if (dashboardSearch) {
+  dashboardSearch.addEventListener(
     "input",
-    applyFilters
+    renderDashboard
   );
-
 }
 
 
-const filterBulan =
-  document.getElementById(
-    "filterBulan"
-  );
+[
+  "filterTahun",
+  "filterJenis",
+  "filterKategori",
+  "filterPic",
+  "filterStatus"
+].forEach(id => {
+  const element =
+    getElement(id);
 
-
-if (filterBulan) {
-
-  filterBulan.addEventListener(
-    "change",
-    applyFilters
-  );
-
-}
-
-
-const filterTahun =
-  document.getElementById(
-    "filterTahun"
-  );
-
-
-if (filterTahun) {
-
-  filterTahun.addEventListener(
-    "change",
-    applyFilters
-  );
-
-}
-
-
-const filterPic =
-  document.getElementById(
-    "filterPic"
-  );
-
-
-if (filterPic) {
-
-  filterPic.addEventListener(
-    "change",
-    applyFilters
-  );
-
-}
+  if (element) {
+    element.addEventListener(
+      "change",
+      renderDashboard
+    );
+  }
+});
 
 
 // ======================================================
 // RESET FILTER
 // ======================================================
 
-const resetFilter =
-  document.getElementById(
-    "resetFilter"
+const resetDashboardFilter =
+  getElement(
+    "resetDashboardFilter"
   );
 
-
-if (resetFilter) {
-
-  resetFilter.addEventListener(
+if (resetDashboardFilter) {
+  resetDashboardFilter.addEventListener(
     "click",
     () => {
+      [
+        "dashboardSearch",
+        "filterTahun",
+        "filterJenis",
+        "filterKategori",
+        "filterPic",
+        "filterStatus"
+      ].forEach(id => {
+        const element =
+          getElement(id);
 
-      if (searchProyek) {
-        searchProyek.value = "";
-      }
-
-      if (filterBulan) {
-        filterBulan.value = "";
-      }
-
-      if (filterTahun) {
-        filterTahun.value = "";
-      }
-
-      if (filterPic) {
-        filterPic.value = "";
-      }
-
-      applyFilters();
-
-    }
-  );
-
-}
-async function loadCurrentUser() {
-
-  try {
-
-    const response = await fetch("/api/me");
-
-    if (!response.ok) {
-      window.location.replace("/login.html");
-      return;
-    }
-
-    const result = await response.json();
-
-    document.getElementById("userNama").textContent =
-      result.user.nama || "User";
-
-    document.getElementById("userRole").textContent =
-      result.user.role || "PIC";
-
-  } catch (error) {
-
-    console.error("ERROR USER:", error);
-
-  }
-
-}
-
-loadCurrentUser();
-
-const logoutButton =
-  document.getElementById(
-    "logoutButton"
-  );
-
-if (logoutButton) {
-
-  logoutButton.addEventListener(
-    "click",
-    async () => {
-
-      try {
-
-        const response =
-          await fetch(
-            "/api/logout",
-            {
-              method: "POST"
-            }
-          );
-
-        const result =
-          await response.json();
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            result.error ||
-            "Logout gagal"
-          );
-
+        if (element) {
+          element.value = "";
         }
+      });
 
-
-        // Logout berhasil
-        // kembali ke login
-
-        window.location.replace(
-          "/login.html"
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "ERROR LOGOUT:",
-          error
-        );
-
-        alert(
-          error.message
-        );
-
-      }
-
+      renderDashboard();
     }
   );
-
 }
 
 

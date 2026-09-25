@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Master Produk Sewa - Portopro</title>
+
+  <link rel="stylesheet" href="/style.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      margin: 0;
+      background: #f4f7fb;
+      color: #172033;
+      font: 14px/1.5 Inter, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    .main-content {
+      margin-left: 260px;
+      width: calc(100% - 260px);
+      min-height: 100vh;
+      padding: 28px;
+    }
+
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    .back {
+      color: #475569;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .back:hover {
+      color: #1d4ed8;
+    }
+
+    .page-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      letter-spacing: -0.5px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .muted {
+      color: #64748b;
+    }
+
+    .badge {
+      border: 1px solid #c7d8f9;
+      background: #eaf1ff;
+      color: #1d4ed8;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #dfe5ee;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      box-shadow: 0 3px 14px #0f172a04;
+    }
+
+    .card-head {
+      padding: 18px 22px;
+      border-bottom: 1px solid #e7ecf2;
+    }
+
+    .form-body {
+      padding: 22px;
+    }
+
+    fieldset {
+      border: 0;
+      padding: 0;
+      margin: 0;
+      min-width: 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      align-content: start;
+    }
+
+    .wide {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-weight: 600;
+      color: #334155;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 43px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      color: #172033;
+      padding: 10px 12px;
+    }
+
+    textarea {
+      min-height: 85px;
+      resize: vertical;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: 2px solid #bfdbfe;
+      outline-offset: 1px;
+      border-color: #2563eb;
+    }
+
+    input[readonly] {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    input:disabled,
+    select:disabled,
+    textarea:disabled {
+      background: #f8fafc;
+    }
+
+    .money-input {
+      display: flex;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .money-input:focus-within {
+      outline: 2px solid #bfdbfe;
+      outline-offset: 1px;
+      border-color: #2563eb;
+    }
+
+    .money-input span {
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      background: #f8fafc;
+      border-right: 1px solid #e2e8f0;
+      color: #64748b;
+    }
+
+    .money-input input {
+      border: 0;
+      border-radius: 0;
+    }
+
+    .money-input input:focus {
+      outline: none;
+    }
+
+    .hint {
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-weight: 600;
+      background: #1d4ed8;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:hover {
+      filter: brightness(0.96);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: 3px solid #93c5fd;
+      outline-offset: 3px;
+    }
+
+    .secondary {
+      background: #eef2f7;
+      color: #334155;
+    }
+
+    .danger {
+      background: #fff1f2;
+      color: #be123c;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 22px;
+      flex-wrap: wrap;
+    }
+
+    .notice {
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      background: #eef2f7;
+      color: #334155;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+
+    .notice[data-tone="error"] {
+      background: #fff1f2;
+      border-color: #fecdd3;
+      color: #9f1239;
+    }
+
+    .notice[data-tone="success"] {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #166534;
+    }
+
+    .list-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr auto;
+      align-items: end;
+      gap: 12px;
+      padding: 18px 22px;
+    }
+
+    .filters label {
+      font-size: 12px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1120px;
+    }
+
+    th {
+      text-align: left;
+      color: #475569;
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    th,
+    td {
+      border-top: 1px solid #e7ecf2;
+      padding: 13px 16px;
+      vertical-align: middle;
+    }
+
+    tbody tr:hover {
+      background: #fafcff;
+    }
+
+    .number {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .row-actions {
+      white-space: nowrap;
+    }
+
+    .row-actions button {
+      padding: 6px 10px;
+      font-size: 12px;
+      margin-right: 6px;
+    }
+
+    .product-name {
+      font-weight: 600;
+      overflow-wrap: anywhere;
+      min-width: 180px;
+      max-width: 300px;
+    }
+
+    .description {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      min-width: 180px;
+      max-width: 320px;
+    }
+
+    .empty {
+      text-align: center;
+      color: #64748b;
+      padding: 34px 16px;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      border-top: 1px solid #e7ecf2;
+      padding: 16px 22px;
+    }
+
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pagination-controls label {
+      color: #475569;
+      font-size: 12px;
+    }
+
+    .pagination-controls select {
+      min-height: 36px;
+      width: auto;
+      padding: 6px 10px;
+    }
+
+    .page-buttons {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .page-buttons button {
+      min-width: 36px;
+      padding: 7px 10px;
+      background: #eef2f7;
+      color: #334155;
+    }
+
+    .page-buttons button[aria-current="page"] {
+      background: #1d4ed8;
+      color: #fff;
+    }
+
+    .page-buttons span {
+      padding: 0 3px;
+      color: #64748b;
+    }
+
+    @media (max-width: 700px) {
+      .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 18px 14px 32px;
+      }
+
+      h1 {
+        font-size: 23px;
+      }
+
+      .form-grid,
+      .filters {
+        grid-template-columns: 1fr;
+      }
+
+      .wide {
+        grid-column: auto;
+      }
+
+      .card-head,
+      .form-body,
+      .filters,
+      .pagination {
+        padding: 17px;
+      }
+
+      .page-head {
+        align-items: flex-start;
+      }
+
+      .page-head .badge {
+        margin-top: 4px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="sidebarContainer"></div>
+
+  <main class="main-content">
+    <div class="page">
+      <a class="back" href="/dashboard.html">← Dashboard</a>
+
+      <header class="page-head">
+        <div>
+          <h1>Master Produk Sewa</h1>
+          <p class="muted">
+            Kelola produk dan harga per item untuk proyek sewa.
+          </p>
+        </div>
+
+        <span class="badge">Sewa</span>
+      </header>
+
+      <p
+        id="message"
+        class="notice"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></p>
+
+      <p id="accessNote" class="notice" hidden>
+        Hanya admin yang dapat menambah, mengedit, dan menghapus produk.
+      </p>
+
+      <section
+        class="card"
+        id="formCard"
+        aria-labelledby="formTitle"
+      >
+        <div class="card-head">
+          <h2 id="formTitle">Tambah Produk</h2>
+        </div>
+
+        <form id="produkForm" class="form-body">
+          <fieldset id="formFields" disabled>
+            <div class="form-grid">
+              <div class="field">
+                <label for="jenisProyek">Jenis Proyek</label>
+
+                <input
+                  id="jenisProyek"
+                  name="jenis_proyek"
+                  value="Sewa"
+                  readonly
+                  aria-readonly="true"
+                >
+              </div>
+
+              <div class="field">
+                <label for="subJenisProyek">
+                  Sub Jenis Proyek
+                </label>
+
+                <select
+                  id="subJenisProyek"
+                  name="sub_jenis_proyek_id"
+                  required
+                >
+                  <option value="">
+                    Pilih Sub Jenis Proyek
+                  </option>
+                </select>
+              </div>
+
+              <div class="field wide">
+                <label for="itemProduk">Item/Produk</label>
+
+                <input
+                  id="itemProduk"
+                  name="item_produk"
+                  maxlength="200"
+                  required
+                  placeholder="Masukkan nama item atau produk"
+                  autocomplete="off"
+                >
+              </div>
+
+              <div class="field wide">
+                <label for="deskripsi">Deskripsi</label>
+
+                <textarea
+                  id="deskripsi"
+                  name="deskripsi"
+                  maxlength="1000"
+                  rows="3"
+                  placeholder="Masukkan deskripsi produk (opsional)"
+                ></textarea>
+              </div>
+
+              <div class="field">
+                <label for="hargaJual">
+                  Harga Jual Per Item
+                </label>
+
+                <div class="money-input">
+                  <span aria-hidden="true">Rp</span>
+
+                  <input
+                    id="hargaJual"
+                    name="harga_jual_per_item"
+                    inputmode="numeric"
+                    maxlength="26"
+                    required
+                    placeholder="0"
+                    autocomplete="off"
+                    aria-describedby="hargaHint"
+                  >
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="margin">Margin Per Item</label>
+
+                <div class="money-input">
+                  <span aria-hidden="true">Rp</span>
+
+                  <input
+                    id="margin"
+                    value="—"
+                    readonly
+                    aria-readonly="true"
+                    aria-describedby="marginHint"
+                  >
+                </div>
+
+                <span class="hint" id="marginHint">
+                  Harga jual dikurangi harga beli; dihitung otomatis.
+                </span>
+              </div>
+
+              <div class="field">
+                <label for="hargaBeli">
+                  Harga Beli Per Item
+                </label>
+
+                <div class="money-input">
+                  <span aria-hidden="true">Rp</span>
+
+                  <input
+                    id="hargaBeli"
+                    name="harga_beli_per_item"
+                    inputmode="numeric"
+                    maxlength="26"
+                    required
+                    placeholder="0"
+                    autocomplete="off"
+                    aria-describedby="hargaHint"
+                  >
+                </div>
+              </div>
+
+              <p class="hint wide" id="hargaHint">
+                Harga dalam rupiah bulat, contoh 1.500.000.
+                Isi 0 jika nilainya nol.
+              </p>
+            </div>
+
+            <div class="actions">
+              <button id="saveButton" type="submit">
+                Simpan Produk
+              </button>
+
+              <button
+                id="cancelButton"
+                type="button"
+                class="secondary"
+                hidden
+              >
+                Batal Edit
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="listTitle">
+        <div class="card-head list-head">
+          <h2 id="listTitle">Daftar Produk</h2>
+
+          <span
+            class="muted"
+            id="count"
+            aria-live="polite"
+          >
+            0 produk
+          </span>
+        </div>
+
+        <div class="filters">
+          <div class="field">
+            <label for="searchProduk">
+              Cari Item/Produk atau Deskripsi
+            </label>
+
+            <input
+              id="searchProduk"
+              type="search"
+              placeholder="Cari produk atau deskripsi…"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="field">
+            <label for="filterSub">
+              Sub Jenis Proyek
+            </label>
+
+            <select id="filterSub">
+              <option value="">
+                Semua Sub Jenis
+              </option>
+            </select>
+          </div>
+
+          <button
+            id="reloadButton"
+            type="button"
+            class="secondary"
+          >
+            Muat Ulang
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table aria-label="Daftar Master Produk Sewa">
+            <thead>
+              <tr>
+                <th scope="col">No</th>
+                <th scope="col">Jenis Proyek</th>
+                <th scope="col">Sub Jenis Proyek</th>
+                <th scope="col">Item/Produk</th>
+                <th scope="col">Deskripsi</th>
+
+                <th scope="col" class="number">
+                  Harga Sewa Per Bulan
+                </th>
+
+                <th scope="col" class="number">
+                  Margin Per Item
+                </th>
+
+                <th scope="col" class="number">
+                  Harga Beli Per Item
+                </th>
+
+                <th scope="col" id="actionHeader">
+                  Aksi
+                </th>
+              </tr>
+            </thead>
+
+            <tbody id="produkRows">
+              <tr>
+                <td class="empty" colspan="9">
+                  Memuat produk…
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="pagination">
+          <span
+            class="muted"
+            id="pageInfo"
+            aria-live="polite"
+          >
+            Menampilkan 0 produk
+          </span>
+
+          <div class="pagination-controls">
+            <label for="pageSize">
+              Produk per halaman
+            </label>
+
+            <select
+              id="pageSize"
+              aria-label="Jumlah produk per halaman"
+            >
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+
+            <nav
+              id="pageButtons"
+              class="page-buttons"
+              aria-label="Pagination produk"
+            ></nav>
+          </div>
+        </div>
+      </section>
+
+      <noscript>
+        <p class="notice">
+          Aktifkan JavaScript untuk mengelola produk sewa.
+        </p>
+      </noscript>
+    </div>
+  </main>
+
+  <script src="/layout.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/produk-sewa.js"></script>
+</body>
+</html>

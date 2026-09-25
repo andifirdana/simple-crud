@@ -2,6 +2,7 @@
 <html lang="id">
 
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -9,351 +10,1055 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Partner - Portopro</title>
+  <title>
+    Partner - Portopro
+  </title>
 
   <link
     rel="stylesheet"
     href="/style.css"
   >
 
+
   <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+
     body {
       margin: 0;
+
+      overflow-x: hidden;
+
       background: #f5f7fb;
       color: #1f2937;
-      overflow-x: hidden;
+
+      font-family:
+        Inter,
+        Arial,
+        sans-serif;
     }
+
+
+    /* =====================================================
+       MAIN CONTENT
+    ====================================================== */
 
     .main-content {
       width: calc(100% - 260px);
       min-height: 100vh;
+
       margin-left: 260px;
       padding: 32px;
-      box-sizing: border-box;
     }
+
 
     .partner-page {
       width: 100%;
-      max-width: 1500px;
+      max-width: 1600px;
+
       margin: 0 auto;
     }
 
+
+    /* =====================================================
+       PAGE HEADER
+    ====================================================== */
+
     .page-header {
       display: flex;
+
       align-items: flex-start;
       justify-content: space-between;
+
       gap: 20px;
+
       margin-bottom: 24px;
     }
 
+
     .page-header h1 {
       margin: 0 0 7px;
+
       color: #0f172a;
+
       font-size: 29px;
+
       letter-spacing: -0.7px;
     }
 
+
     .page-header p {
       margin: 0;
+
       color: #64748b;
+
       font-size: 14px;
     }
 
+
+    /* =====================================================
+       TOOLBAR
+    ====================================================== */
+
     .partner-toolbar {
       display: flex;
+
+      align-items: center;
+
       gap: 12px;
+
       margin-bottom: 20px;
     }
 
+
     .partner-search {
-      width: min(420px, 100%);
+      width: min(440px, 100%);
       min-height: 44px;
+
       padding: 10px 14px;
+
       background: #ffffff;
+
       border: 1px solid #dbe2ea;
       border-radius: 11px;
-      box-sizing: border-box;
+
       font: inherit;
+      font-size: 13px;
+
+      outline: none;
     }
+
+
+    .partner-search:focus {
+      border-color: #4f46e5;
+
+      box-shadow:
+        0 0 0 3px
+        rgba(79, 70, 229, 0.12);
+    }
+
+
+    /* =====================================================
+       PARTNER LIST
+    ====================================================== */
 
     .partner-list {
       display: grid;
-      gap: 18px;
+
+      gap: 22px;
     }
+
+
+    /* =====================================================
+       PARTNER CARD
+    ====================================================== */
 
     .partner-card {
       overflow: hidden;
+
       background: #ffffff;
+
       border: 1px solid #e2e8f0;
-      border-radius: 17px;
+      border-radius: 20px;
+
       box-shadow:
-        0 2px 5px rgba(15, 23, 42, 0.04),
-        0 10px 25px rgba(15, 23, 42, 0.04);
+        0 2px 5px
+        rgba(15, 23, 42, 0.04),
+        0 12px 28px
+        rgba(15, 23, 42, 0.05);
     }
+
+
+    /* =====================================================
+       PARTNER HEADER
+    ====================================================== */
 
     .partner-card-header {
       display: flex;
+
       align-items: center;
       justify-content: space-between;
+
       gap: 16px;
-      padding: 22px 24px;
+
+      padding: 23px 25px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #ffffff 0%,
+          #fafbff 100%
+        );
+
       border-bottom: 1px solid #eef2f7;
     }
 
+
     .partner-name {
       color: #0f172a;
-      font-size: 19px;
+
+      font-size: 20px;
       font-weight: 800;
+
+      letter-spacing: -0.3px;
     }
 
+
     .partner-code {
-      margin-top: 4px;
+      margin-top: 5px;
+
       color: #64748b;
+
       font-size: 12px;
     }
+
 
     .project-total-badge {
       display: inline-flex;
-      padding: 7px 12px;
+
+      align-items: center;
+
+      gap: 6px;
+
+      padding: 8px 13px;
+
       color: #4338ca;
       background: #eef2ff;
+
       border-radius: 999px;
+
       font-size: 12px;
-      font-weight: 750;
+      font-weight: 800;
+
       white-space: nowrap;
     }
 
-    .partner-summary {
+
+    /* =====================================================
+       STATUS SUMMARY
+    ====================================================== */
+
+    .partner-status-summary {
       display: grid;
+
       grid-template-columns:
-        repeat(4, minmax(0, 1fr));
+        repeat(
+          3,
+          minmax(0, 1fr)
+        );
+
       gap: 14px;
-      padding: 20px 24px;
+
+      padding:
+        22px
+        25px
+        8px;
     }
 
-    .summary-item {
-      padding: 16px;
+
+    .status-summary-card {
+      position: relative;
+
+      min-width: 0;
+      min-height: 145px;
+
+      padding: 18px;
+
+      overflow: hidden;
+
       background: #f8fafc;
-      border: 1px solid #eef2f7;
-      border-radius: 12px;
+
+      border: 1px solid #e2e8f0;
+      border-radius: 15px;
     }
 
-    .summary-label {
-      margin-bottom: 7px;
-      color: #64748b;
-      font-size: 10px;
-      font-weight: 750;
-      letter-spacing: 0.45px;
-      text-transform: uppercase;
+
+    .status-summary-card::before {
+      position: absolute;
+
+      top: 0;
+      left: 18px;
+      right: 18px;
+
+      height: 4px;
+
+      border-radius:
+        0
+        0
+        999px
+        999px;
+
+      content: "";
     }
 
-    .summary-value {
-      color: #0f172a;
-      font-size: 18px;
-      font-weight: 800;
-      overflow-wrap: anywhere;
+
+    .status-summary-card.active {
+      background:
+        linear-gradient(
+          145deg,
+          #ffffff 0%,
+          #eff6ff 100%
+        );
+
+      border-color: #bfdbfe;
     }
 
-    .summary-item.paid {
-      background: #f0fdf4;
+
+    .status-summary-card.active::before {
+      background:
+        linear-gradient(
+          90deg,
+          #2563eb,
+          #93c5fd
+        );
+    }
+
+
+    .status-summary-card.done {
+      background:
+        linear-gradient(
+          145deg,
+          #ffffff 0%,
+          #f0fdf4 100%
+        );
+
       border-color: #bbf7d0;
     }
 
-    .summary-item.paid .summary-value {
-      color: #166534;
+
+    .status-summary-card.done::before {
+      background:
+        linear-gradient(
+          90deg,
+          #16a34a,
+          #86efac
+        );
     }
 
-    .summary-item.remaining {
-      background: #fff7ed;
-      border-color: #fed7aa;
+
+    .status-summary-card.cancel {
+      background:
+        linear-gradient(
+          145deg,
+          #ffffff 0%,
+          #fff1f2 100%
+        );
+
+      border-color: #fecdd3;
     }
 
-    .summary-item.remaining .summary-value {
-      color: #9a3412;
+
+    .status-summary-card.cancel::before {
+      background:
+        linear-gradient(
+          90deg,
+          #dc2626,
+          #fda4af
+        );
     }
 
-    .project-section {
-      padding: 0 24px 22px;
+
+    .status-summary-label {
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+      margin-bottom: 14px;
+
+      color: #64748b;
+
+      font-size: 10px;
+      font-weight: 800;
+
+      letter-spacing: 0.5px;
+
+      text-transform: uppercase;
     }
 
-    .project-section-title {
-      margin: 2px 0 12px;
-      color: #334155;
-      font-size: 13px;
-      font-weight: 750;
+
+    .status-summary-dot {
+      width: 8px;
+      height: 8px;
+
+      flex-shrink: 0;
+
+      border-radius: 50%;
     }
 
-    .table-wrapper {
-      width: 100%;
-      overflow-x: auto;
+
+    .status-summary-card.active
+    .status-summary-dot {
+      background: #2563eb;
+
+      box-shadow:
+        0 0 0 4px
+        rgba(37, 99, 235, 0.12);
+    }
+
+
+    .status-summary-card.done
+    .status-summary-dot {
+      background: #16a34a;
+
+      box-shadow:
+        0 0 0 4px
+        rgba(22, 163, 74, 0.12);
+    }
+
+
+    .status-summary-card.cancel
+    .status-summary-dot {
+      background: #dc2626;
+
+      box-shadow:
+        0 0 0 4px
+        rgba(220, 38, 38, 0.12);
+    }
+
+
+    .status-summary-count {
+      display: block;
+
+      margin-bottom: 10px;
+
+      color: #0f172a;
+
+      font-size: 27px;
+      font-weight: 850;
+
+      line-height: 1;
+    }
+
+
+    .status-summary-value-label {
+      display: block;
+
+      margin-bottom: 4px;
+
+      color: #94a3b8;
+
+      font-size: 10px;
+      font-weight: 650;
+    }
+
+
+    .status-summary-value {
+      display: block;
+
+      font-size: 14px;
+      font-weight: 800;
+
+      overflow-wrap: anywhere;
+    }
+
+
+    .status-summary-card.active
+    .status-summary-value {
+      color: #1d4ed8;
+    }
+
+
+    .status-summary-card.done
+    .status-summary-value {
+      color: #15803d;
+    }
+
+
+    .status-summary-card.cancel
+    .status-summary-value {
+      color: #b91c1c;
+    }
+
+
+    /* =====================================================
+       FINANCE SUMMARY
+    ====================================================== */
+
+    .partner-summary {
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          4,
+          minmax(0, 1fr)
+        );
+
+      gap: 14px;
+
+      padding:
+        14px
+        25px
+        22px;
+    }
+
+
+    .summary-item {
+      padding: 16px;
+
+      background: #f8fafc;
+
       border: 1px solid #eef2f7;
       border-radius: 12px;
     }
 
-    table {
-      width: 100%;
-      min-width: 720px;
-      border-collapse: collapse;
-    }
 
-    th {
-      padding: 12px 14px;
-      background: #f8fafc;
+    .summary-label {
+      margin-bottom: 7px;
+
       color: #64748b;
+
       font-size: 10px;
       font-weight: 750;
-      text-align: left;
+
+      letter-spacing: 0.45px;
+
       text-transform: uppercase;
+    }
+
+
+    .summary-value {
+      color: #0f172a;
+
+      font-size: 18px;
+      font-weight: 800;
+
+      overflow-wrap: anywhere;
+    }
+
+
+    .summary-item.paid {
+      background: #f0fdf4;
+
+      border-color: #bbf7d0;
+    }
+
+
+    .summary-item.paid
+    .summary-value {
+      color: #166534;
+    }
+
+
+    .summary-item.remaining {
+      background: #fff7ed;
+
+      border-color: #fed7aa;
+    }
+
+
+    .summary-item.remaining
+    .summary-value {
+      color: #9a3412;
+    }
+
+
+    /* =====================================================
+       PROJECT STATUS SECTION
+    ====================================================== */
+
+    .project-status-section {
+      padding:
+        4px
+        25px
+        24px;
+    }
+
+
+    .project-status-section +
+    .project-status-section {
+      padding-top: 0;
+    }
+
+
+    .project-section-header {
+      display: flex;
+
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 12px;
+
+      margin:
+        4px
+        0
+        12px;
+    }
+
+
+    .project-section-title {
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+      margin: 0;
+
+      color: #334155;
+
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+
+    .project-section-title::before {
+      width: 8px;
+      height: 8px;
+
+      border-radius: 50%;
+
+      content: "";
+    }
+
+
+    .project-status-section.active
+    .project-section-title::before {
+      background: #2563eb;
+    }
+
+
+    .project-status-section.done
+    .project-section-title::before {
+      background: #16a34a;
+    }
+
+
+    .project-status-section.cancel
+    .project-section-title::before {
+      background: #dc2626;
+    }
+
+
+    .project-count-badge {
+      display: inline-flex;
+
+      padding: 5px 9px;
+
+      border-radius: 999px;
+
+      font-size: 10px;
+      font-weight: 800;
+
       white-space: nowrap;
     }
 
-    td {
-      padding: 14px;
-      border-top: 1px solid #eef2f7;
-      color: #334155;
-      font-size: 13px;
-      vertical-align: middle;
+
+    .project-status-section.active
+    .project-count-badge {
+      color: #1e40af;
+      background: #dbeafe;
     }
 
-    .project-name {
-      color: #0f172a;
-      font-weight: 700;
+
+    .project-status-section.done
+    .project-count-badge {
+      color: #166534;
+      background: #dcfce7;
     }
 
-    .project-link {
-      color: #4f46e5;
-      text-decoration: none;
+
+    .project-status-section.cancel
+    .project-count-badge {
+      color: #991b1b;
+      background: #fee2e2;
     }
 
-    .project-link:hover {
-      text-decoration: underline;
-    }
 
-    .empty-state {
-      padding: 50px 24px;
-      background: #ffffff;
-      border: 1px dashed #cbd5e1;
-      border-radius: 15px;
-      color: #64748b;
-      text-align: center;
-    }
+    /* =====================================================
+       TABLE
+    ====================================================== */
 
-    .pagination {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 15px;
-      margin-top: 22px;
-      padding: 16px 18px;
-      background: #ffffff;
+    .table-wrapper {
+      width: 100%;
+
+      overflow-x: auto;
+
       border: 1px solid #e2e8f0;
       border-radius: 13px;
     }
 
+
+    .table-wrapper::-webkit-scrollbar {
+      height: 8px;
+    }
+
+
+    .table-wrapper::-webkit-scrollbar-track {
+      background: #f8fafc;
+    }
+
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+
+      border-radius: 999px;
+    }
+
+
+    table {
+      width: 100%;
+      min-width: 850px;
+
+      border-collapse: collapse;
+    }
+
+
+    th {
+      padding: 12px 14px;
+
+      background: #f8fafc;
+      color: #64748b;
+
+      border-bottom: 1px solid #e2e8f0;
+
+      font-size: 10px;
+      font-weight: 800;
+
+      letter-spacing: 0.35px;
+
+      text-align: left;
+      text-transform: uppercase;
+
+      white-space: nowrap;
+    }
+
+
+    td {
+      padding: 14px;
+
+      color: #334155;
+
+      border-bottom: 1px solid #eef2f7;
+
+      font-size: 12px;
+
+      line-height: 1.45;
+
+      vertical-align: middle;
+    }
+
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+
+    tbody tr:hover td {
+      background: #fafbff;
+    }
+
+
+    .project-name {
+      color: #0f172a;
+
+      font-weight: 700;
+    }
+
+
+    .project-link {
+      color: #4f46e5;
+
+      font-weight: 750;
+
+      text-decoration: none;
+    }
+
+
+    .project-link:hover {
+      color: #3730a3;
+
+      text-decoration: underline;
+    }
+
+
+    .money-value {
+      color: #0f172a;
+
+      font-weight: 800;
+
+      white-space: nowrap;
+    }
+
+
+    /* =====================================================
+       STATUS BADGE
+    ====================================================== */
+
+    .status-badge {
+      display: inline-flex;
+
+      align-items: center;
+
+      padding: 5px 9px;
+
+      border-radius: 999px;
+
+      font-size: 9px;
+      font-weight: 800;
+
+      white-space: nowrap;
+    }
+
+
+    .status-badge.active {
+      color: #1e40af;
+      background: #dbeafe;
+    }
+
+
+    .status-badge.done {
+      color: #166534;
+      background: #dcfce7;
+    }
+
+
+    .status-badge.cancel {
+      color: #991b1b;
+      background: #fee2e2;
+    }
+
+
+    /* =====================================================
+       EMPTY STATE
+    ====================================================== */
+
+    .empty-state {
+      padding: 50px 24px;
+
+      background: #ffffff;
+
+      border: 1px dashed #cbd5e1;
+      border-radius: 15px;
+
+      color: #64748b;
+
+      text-align: center;
+    }
+
+
+    .table-empty {
+      padding: 30px !important;
+
+      color: #94a3b8 !important;
+
+      text-align: center !important;
+    }
+
+
+    /* =====================================================
+       PAGINATION
+    ====================================================== */
+
+    .pagination {
+      display: flex;
+
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 15px;
+
+      margin-top: 22px;
+      padding: 16px 18px;
+
+      background: #ffffff;
+
+      border: 1px solid #e2e8f0;
+      border-radius: 13px;
+    }
+
+
     .pagination-info {
       color: #64748b;
+
       font-size: 12px;
     }
 
+
     .pagination-buttons {
       display: flex;
+
       align-items: center;
+
       gap: 7px;
     }
+
 
     .page-button {
       min-width: 38px;
       height: 38px;
+
       padding: 0 11px;
+
       background: #ffffff;
+      color: #334155;
+
       border: 1px solid #dbe2ea;
       border-radius: 9px;
-      color: #334155;
+
       font-weight: 650;
+
       cursor: pointer;
     }
+
 
     .page-button:hover:not(:disabled) {
       color: #4338ca;
       background: #eef2ff;
+
       border-color: #a5b4fc;
     }
+
 
     .page-button.active {
       color: #ffffff;
       background: #4f46e5;
+
       border-color: #4f46e5;
     }
 
+
     .page-button:disabled {
       opacity: 0.45;
+
       cursor: not-allowed;
     }
 
-    @media (max-width: 1000px) {
+
+    /* =====================================================
+       RESPONSIVE
+    ====================================================== */
+
+    @media (max-width: 1100px) {
+
+      .partner-status-summary {
+        grid-template-columns:
+          repeat(
+            2,
+            minmax(0, 1fr)
+          );
+      }
+
+
       .partner-summary {
         grid-template-columns:
-          repeat(2, minmax(0, 1fr));
+          repeat(
+            2,
+            minmax(0, 1fr)
+          );
       }
+
     }
 
+
     @media (max-width: 768px) {
+
       .main-content {
         width: 100%;
+
         margin-left: 0;
         padding: 20px;
       }
+
 
       .page-header {
         flex-direction: column;
       }
 
+
       .partner-card-header {
         align-items: flex-start;
+
         flex-direction: column;
       }
+
+
+      .partner-status-summary {
+        grid-template-columns: 1fr;
+      }
+
     }
 
+
     @media (max-width: 550px) {
+
       .partner-summary {
         grid-template-columns: 1fr;
       }
 
+
       .pagination {
         align-items: stretch;
+
         flex-direction: column;
       }
+
 
       .pagination-buttons {
         justify-content: center;
       }
+
     }
+
   </style>
+
 </head>
+
 
 <body>
 
+
   <div class="app-layout">
 
-    <!-- SIDEBAR -->
+
+    <!-- =================================================
+         SIDEBAR
+    ================================================== -->
+
     <div id="sidebarContainer"></div>
+
+
+    <!-- =================================================
+         MAIN CONTENT
+    ================================================== -->
 
     <main class="main-content">
 
+
       <div class="partner-page">
+
+
+        <!-- =============================================
+             PAGE HEADER
+        ============================================== -->
 
         <div class="page-header">
 
+
           <div>
-            <h1>Partner</h1>
+
+            <h1>
+              Partner
+            </h1>
 
             <p>
-              Listing Partner dengan proyek aktif,
-              nilai proyek, dan pembayaran.
+              Listing partner berdasarkan proyek aktif,
+              selesai, cancel, nilai proyek, dan pembayaran.
             </p>
+
           </div>
 
+
         </div>
+
+
+        <!-- =============================================
+             SEARCH
+        ============================================== -->
 
         <div class="partner-toolbar">
 
@@ -361,25 +1066,38 @@
             type="search"
             class="partner-search"
             id="partnerSearch"
-            placeholder="Cari nama Partner..."
+            placeholder="Cari nama partner..."
           >
 
         </div>
+
+
+        <!-- =============================================
+             PARTNER LIST
+        ============================================== -->
 
         <div
           class="partner-list"
           id="partnerList"
         >
+
           <div class="empty-state">
-            Memuat data Partner...
+            Memuat data partner...
           </div>
+
         </div>
+
+
+        <!-- =============================================
+             PAGINATION
+        ============================================== -->
 
         <div
           class="pagination"
           id="partnerPagination"
           style="display:none;"
         >
+
 
           <div
             class="pagination-info"
@@ -388,22 +1106,35 @@
             -
           </div>
 
+
           <div
             class="pagination-buttons"
             id="paginationButtons"
           ></div>
 
+
         </div>
+
 
       </div>
 
+
     </main>
+
 
   </div>
 
+
+  <!-- =====================================================
+       SCRIPT
+  ====================================================== -->
+
   <script src="/layout.js"></script>
+
   <script src="/sidebar.js"></script>
-  <script src="/partner-proyek.js"></script>
+
+  <script src="/partner-proyek.js?v=2"></script>
+
 
 </body>
 

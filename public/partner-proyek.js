@@ -1,8 +1,19 @@
+// ======================================================
+// PARTNER PROYEK
+// ======================================================
+
 let currentPage = 1;
+
 let totalPages = 1;
+
 let searchValue = "";
 
 const pageLimit = 10;
+
+
+// ======================================================
+// ELEMENT
+// ======================================================
 
 const partnerList =
   document.getElementById(
@@ -19,9 +30,33 @@ const pagination =
     "partnerPagination"
   );
 
+const paginationInfo =
+  document.getElementById(
+    "paginationInfo"
+  );
+
+const paginationButtons =
+  document.getElementById(
+    "paginationButtons"
+  );
+
 
 // ======================================================
-// FORMAT
+// NUMBER
+// ======================================================
+
+function angka(value) {
+  const result =
+    Number(value);
+
+  return Number.isFinite(result)
+    ? result
+    : 0;
+}
+
+
+// ======================================================
+// FORMAT RUPIAH
 // ======================================================
 
 function rupiah(value) {
@@ -33,37 +68,80 @@ function rupiah(value) {
       maximumFractionDigits: 0
     }
   ).format(
-    Number(value || 0)
+    angka(value)
   );
 }
 
 
-function tanggal(value) {
+// ======================================================
+// PARSE TANGGAL
+// ======================================================
+
+function parseTanggal(value) {
   if (!value) {
-    return "-";
+    return null;
   }
 
-  const date =
+  const text =
+    String(value);
+
+  const dateOnly =
+    text.match(
+      /^(\d{4})-(\d{2})-(\d{2})/
+    );
+
+  if (dateOnly) {
+    const result =
+      new Date(
+        Number(dateOnly[1]),
+        Number(dateOnly[2]) - 1,
+        Number(dateOnly[3])
+      );
+
+    return Number.isNaN(
+      result.getTime()
+    )
+      ? null
+      : result;
+  }
+
+  const result =
     new Date(value);
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
+  return Number.isNaN(
+    result.getTime()
+  )
+    ? null
+    : result;
+}
+
+
+// ======================================================
+// FORMAT TANGGAL
+// ======================================================
+
+function tanggal(value) {
+  const date =
+    parseTanggal(value);
+
+  if (!date) {
     return "-";
   }
 
-  return date.toLocaleDateString(
+  return new Intl.DateTimeFormat(
     "id-ID",
     {
       day: "2-digit",
       month: "2-digit",
       year: "numeric"
     }
-  );
+  ).format(date);
 }
 
+
+// ======================================================
+// ESCAPE HTML
+// ======================================================
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -76,6 +154,17 @@ function escapeHtml(value) {
 
 
 // ======================================================
+// NORMALISASI STATUS
+// ======================================================
+
+function normalisasiStatus(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+
+// ======================================================
 // JANGKA WAKTU
 // ======================================================
 
@@ -83,35 +172,32 @@ function hitungJangkaWaktu(
   tanggalMulai,
   tanggalAkhir
 ) {
-  if (
-    !tanggalMulai ||
-    !tanggalAkhir
-  ) {
-    return "-";
-  }
-
   const mulai =
-    new Date(tanggalMulai);
+    parseTanggal(
+      tanggalMulai
+    );
 
   const akhir =
-    new Date(tanggalAkhir);
+    parseTanggal(
+      tanggalAkhir
+    );
 
   if (
-    Number.isNaN(mulai.getTime()) ||
-    Number.isNaN(akhir.getTime()) ||
+    !mulai ||
+    !akhir ||
     akhir < mulai
   ) {
     return "-";
   }
 
   const selisihHari =
-    Math.ceil(
+    Math.floor(
       (
         akhir.getTime() -
         mulai.getTime()
       ) /
       86400000
-    );
+    ) + 1;
 
   if (selisihHari < 30) {
     return `${selisihHari} hari`;
@@ -146,13 +232,178 @@ function hitungJangkaWaktu(
 
 
 // ======================================================
+// NILAI PROYEK
+// ======================================================
+
+function nilaiProyek(item) {
+  return angka(
+    item.nilai_proyek ??
+    item.nilai_partner ??
+    item.nilai_final_partner
+  );
+}
+
+
+// ======================================================
+// SUDAH DIBAYAR
+// ======================================================
+
+function nilaiSudahDibayar(item) {
+  return angka(
+    item.sudah_dibayar ??
+    item.total_dibayar ??
+    item.dibayar_partner
+  );
+}
+
+
+// ======================================================
+// GABUNGKAN PROYEK PARTNER
+// ======================================================
+
+function getSemuaProyek(partner) {
+  /*
+    Mendukung dua format API:
+
+    1. partner.proyek berisi seluruh proyek.
+
+    2. API memisahkan:
+       partner.proyek_aktif
+       partner.proyek_selesai
+       partner.proyek_cancel
+  */
+
+  if (
+    Array.isArray(
+      partner.proyek
+    )
+  ) {
+    return partner.proyek;
+  }
+
+  const active =
+    Array.isArray(
+      partner.proyek_aktif
+    )
+      ? partner.proyek_aktif
+      : [];
+
+  const done =
+    Array.isArray(
+      partner.proyek_selesai
+    )
+      ? partner.proyek_selesai
+      : Array.isArray(
+          partner.proyek_done
+        )
+        ? partner.proyek_done
+        : [];
+
+  const cancel =
+    Array.isArray(
+      partner.proyek_cancel
+    )
+      ? partner.proyek_cancel
+      : [];
+
+  return [
+    ...active,
+    ...done,
+    ...cancel
+  ];
+}
+
+
+// ======================================================
+// KELOMPOKKAN PROYEK
+// ======================================================
+
+function kelompokkanProyek(partner) {
+  const semuaProyek =
+    getSemuaProyek(partner);
+
+  const proyekAktif = [];
+
+  const proyekDone = [];
+
+  const proyekCancel = [];
+
+  semuaProyek.forEach(item => {
+    const status =
+      normalisasiStatus(
+        item.status_final
+      );
+
+    if (
+      status === "done" ||
+      status === "selesai"
+    ) {
+      proyekDone.push(item);
+
+    } else if (
+      status === "cancel" ||
+      status === "batal"
+    ) {
+      proyekCancel.push(item);
+
+    } else {
+      /*
+        Data lama dari endpoint proyek aktif
+        belum mempunyai status_final.
+
+        Jika status kosong, sementara
+        dimasukkan sebagai Aktif.
+      */
+
+      proyekAktif.push(item);
+    }
+  });
+
+  return {
+    semuaProyek,
+    proyekAktif,
+    proyekDone,
+    proyekCancel
+  };
+}
+
+
+// ======================================================
+// HITUNG SUMMARY STATUS
+// ======================================================
+
+function hitungSummaryStatus(proyek) {
+  return {
+    total:
+      proyek.length,
+
+    nilai:
+      proyek.reduce(
+        (total, item) =>
+          total +
+          nilaiProyek(item),
+        0
+      )
+  };
+}
+
+
+// ======================================================
 // LOAD PARTNER
 // ======================================================
 
 async function loadPartner() {
+  if (!partnerList) {
+    console.error(
+      "Element #partnerList tidak ditemukan."
+    );
+
+    return;
+  }
+
   partnerList.innerHTML = `
     <div class="empty-state">
-      Memuat data Partner...
+      Memuat data partner...
     </div>
   `;
 
@@ -171,8 +422,39 @@ async function loadPartner() {
 
     const response =
       await fetch(
-        `/api/partner-proyek-aktif?${query}`
+        `/api/partner-proyek-aktif?${query.toString()}`,
+        {
+          headers: {
+            Accept:
+              "application/json"
+          },
+
+          cache:
+            "no-store"
+        }
       );
+
+    if (response.status === 401) {
+      window.location.href =
+        "/login.html";
+
+      return;
+    }
+
+    const contentType =
+      response.headers.get(
+        "content-type"
+      ) || "";
+
+    if (
+      !contentType.includes(
+        "application/json"
+      )
+    ) {
+      throw new Error(
+        `Server tidak mengembalikan JSON. Status ${response.status}`
+      );
+    }
 
     const result =
       await response.json();
@@ -180,12 +462,14 @@ async function loadPartner() {
     if (!response.ok) {
       throw new Error(
         result.error ||
-        "Gagal mengambil data Partner"
+        "Gagal mengambil data partner."
       );
     }
 
     renderPartner(
-      result.data || []
+      Array.isArray(result.data)
+        ? result.data
+        : []
     );
 
     currentPage =
@@ -195,9 +479,12 @@ async function loadPartner() {
       );
 
     totalPages =
-      Number(
-        result.pagination
-          ?.total_pages ||
+      Math.max(
+        Number(
+          result.pagination
+            ?.total_pages ||
+          1
+        ),
         1
       );
 
@@ -213,11 +500,288 @@ async function loadPartner() {
 
     partnerList.innerHTML = `
       <div class="empty-state">
-        Gagal mengambil data Partner:
+        Gagal mengambil data partner:
         ${escapeHtml(error.message)}
       </div>
     `;
+
+    if (pagination) {
+      pagination.style.display =
+        "none";
+    }
   }
+}
+
+
+// ======================================================
+// RENDER SUMMARY STATUS
+// ======================================================
+
+function renderStatusSummary(
+  className,
+  label,
+  summary
+) {
+  return `
+    <div
+      class="
+        status-summary-card
+        ${className}
+      "
+    >
+
+      <div class="status-summary-label">
+
+        <span class="status-summary-dot"></span>
+
+        ${escapeHtml(label)}
+
+      </div>
+
+      <strong class="status-summary-count">
+        ${summary.total}
+      </strong>
+
+      <span class="status-summary-value-label">
+        Nilai Proyek
+      </span>
+
+      <strong class="status-summary-value">
+        ${rupiah(summary.nilai)}
+      </strong>
+
+    </div>
+  `;
+}
+
+
+// ======================================================
+// STATUS BADGE
+// ======================================================
+
+function statusBadge(status) {
+  const normalized =
+    normalisasiStatus(status);
+
+  let className =
+    "active";
+
+  let label =
+    status || "Aktif";
+
+  if (
+    normalized === "done" ||
+    normalized === "selesai"
+  ) {
+    className =
+      "done";
+
+    label =
+      "Done";
+
+  } else if (
+    normalized === "cancel" ||
+    normalized === "batal"
+  ) {
+    className =
+      "cancel";
+
+    label =
+      "Cancel";
+  }
+
+  return `
+    <span
+      class="
+        status-badge
+        ${className}
+      "
+    >
+      ${escapeHtml(label)}
+    </span>
+  `;
+}
+
+
+// ======================================================
+// RENDER TABLE ROW
+// ======================================================
+
+function renderProjectRows(
+  proyek,
+  emptyMessage
+) {
+  if (
+    !Array.isArray(proyek) ||
+    proyek.length === 0
+  ) {
+    return `
+      <tr>
+
+        <td
+          colspan="6"
+          class="table-empty"
+        >
+          ${escapeHtml(emptyMessage)}
+        </td>
+
+      </tr>
+    `;
+  }
+
+  return proyek.map(item => {
+    const proyekId =
+      Number(
+        item.proyek_id ??
+        item.id
+      );
+
+    return `
+      <tr>
+
+        <td>
+
+          ${
+            Number.isInteger(
+              proyekId
+            ) &&
+            proyekId > 0
+              ? `
+                <a
+                  href="/detail-proyek.html?id=${encodeURIComponent(
+                    proyekId
+                  )}"
+                  class="
+                    project-link
+                    project-name
+                  "
+                >
+                  ${escapeHtml(
+                    item.nama_proyek ||
+                    "-"
+                  )}
+                </a>
+              `
+              : `
+                <span class="project-name">
+                  ${escapeHtml(
+                    item.nama_proyek ||
+                    "-"
+                  )}
+                </span>
+              `
+          }
+
+        </td>
+
+        <td class="money-value">
+          ${rupiah(
+            nilaiProyek(item)
+          )}
+        </td>
+
+        <td>
+          ${tanggal(
+            item.tanggal_mulai
+          )}
+        </td>
+
+        <td>
+          ${tanggal(
+            item.tanggal_akhir
+          )}
+        </td>
+
+        <td>
+          ${hitungJangkaWaktu(
+            item.tanggal_mulai,
+            item.tanggal_akhir
+          )}
+        </td>
+
+        <td>
+          ${statusBadge(
+            item.status_final
+          )}
+        </td>
+
+      </tr>
+    `;
+  }).join("");
+}
+
+
+// ======================================================
+// RENDER PROJECT SECTION
+// ======================================================
+
+function renderProjectSection({
+  className,
+  title,
+  projects,
+  emptyMessage
+}) {
+  return `
+    <section
+      class="
+        project-status-section
+        ${className}
+      "
+    >
+
+      <div class="project-section-header">
+
+        <h3 class="project-section-title">
+          ${escapeHtml(title)}
+        </h3>
+
+        <span class="project-count-badge">
+          ${projects.length} proyek
+        </span>
+
+      </div>
+
+
+      <div class="table-wrapper">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Nama Proyek</th>
+
+              <th>Nilai Proyek</th>
+
+              <th>Tanggal Mulai</th>
+
+              <th>Tanggal Akhir</th>
+
+              <th>Jangka Waktu</th>
+
+              <th>Status</th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            ${renderProjectRows(
+              projects,
+              emptyMessage
+            )}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+  `;
 }
 
 
@@ -232,7 +796,7 @@ function renderPartner(data) {
   ) {
     partnerList.innerHTML = `
       <div class="empty-state">
-        Tidak ada Partner dengan proyek aktif.
+        Tidak ada partner yang ditemukan.
       </div>
     `;
 
@@ -241,170 +805,238 @@ function renderPartner(data) {
 
   partnerList.innerHTML =
     data.map(partner => {
-      const proyek =
-        Array.isArray(partner.proyek)
-          ? partner.proyek
-          : [];
+      const {
+        semuaProyek,
+        proyekAktif,
+        proyekDone,
+        proyekCancel
+      } =
+        kelompokkanProyek(partner);
+
+      const activeSummary =
+        hitungSummaryStatus(
+          proyekAktif
+        );
+
+      const doneSummary =
+        hitungSummaryStatus(
+          proyekDone
+        );
+
+      const cancelSummary =
+        hitungSummaryStatus(
+          proyekCancel
+        );
+
+      const totalNilaiProyek =
+        semuaProyek.reduce(
+          (total, item) =>
+            total +
+            nilaiProyek(item),
+          0
+        );
+
+      const totalSudahDibayar =
+        partner.sudah_dibayar !==
+          null &&
+        partner.sudah_dibayar !==
+          undefined
+          ? angka(
+              partner.sudah_dibayar
+            )
+          : semuaProyek.reduce(
+              (total, item) =>
+                total +
+                nilaiSudahDibayar(item),
+              0
+            );
+
+      const totalSisa =
+        partner.sisa !== null &&
+        partner.sisa !== undefined
+          ? angka(
+              partner.sisa
+            )
+          : Math.max(
+              totalNilaiProyek -
+              totalSudahDibayar,
+              0
+            );
 
       return `
         <article class="partner-card">
 
+
+          <!-- PARTNER HEADER -->
+
           <div class="partner-card-header">
 
             <div>
+
               <div class="partner-name">
-                ${
-                  escapeHtml(
-                    partner.nama_partner ||
-                    "-"
-                  )
-                }
+                ${escapeHtml(
+                  partner.nama_partner ||
+                  "-"
+                )}
               </div>
 
               <div class="partner-code">
-                ${
-                  escapeHtml(
-                    partner.inisial ||
-                    ""
-                  )
-                }
+                ${escapeHtml(
+                  partner.inisial ||
+                  ""
+                )}
               </div>
+
             </div>
 
+
             <div class="project-total-badge">
-              ${Number(
-                partner.total_proyek || 0
-              )} Proyek Aktif
+              ${semuaProyek.length}
+              Total Proyek
             </div>
 
           </div>
 
+
+          <!-- STATUS SUMMARY -->
+
+          <div class="partner-status-summary">
+
+            ${renderStatusSummary(
+              "active",
+              "Total Proyek Aktif",
+              activeSummary
+            )}
+
+            ${renderStatusSummary(
+              "done",
+              "Total Proyek Selesai",
+              doneSummary
+            )}
+
+            ${renderStatusSummary(
+              "cancel",
+              "Total Proyek Cancel",
+              cancelSummary
+            )}
+
+          </div>
+
+
+          <!-- FINANCE SUMMARY -->
+
           <div class="partner-summary">
 
             <div class="summary-item">
+
               <div class="summary-label">
-                Total Proyek
+                Total Semua Proyek
               </div>
 
               <div class="summary-value">
-                ${Number(
-                  partner.total_proyek || 0
-                )}
+                ${semuaProyek.length}
               </div>
+
             </div>
 
+
             <div class="summary-item">
+
               <div class="summary-label">
-                Nilai Proyek
+                Total Nilai Proyek
               </div>
 
               <div class="summary-value">
                 ${rupiah(
-                  partner.nilai_proyek
+                  totalNilaiProyek
                 )}
               </div>
+
             </div>
 
+
             <div class="summary-item paid">
+
               <div class="summary-label">
                 Sudah Dibayar
               </div>
 
               <div class="summary-value">
                 ${rupiah(
-                  partner.sudah_dibayar
+                  totalSudahDibayar
                 )}
               </div>
+
             </div>
 
+
             <div class="summary-item remaining">
+
               <div class="summary-label">
                 Sisa
               </div>
 
               <div class="summary-value">
                 ${rupiah(
-                  partner.sisa
+                  totalSisa
                 )}
               </div>
-            </div>
-
-          </div>
-
-          <div class="project-section">
-
-            <div class="project-section-title">
-              Daftar Proyek Aktif
-            </div>
-
-            <div class="table-wrapper">
-
-              <table>
-
-                <thead>
-                  <tr>
-                    <th>Nama Proyek</th>
-                    <th>Nilai Proyek</th>
-                    <th>Tanggal Mulai</th>
-                    <th>Tanggal Akhir</th>
-                    <th>Jangka Waktu</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-
-                  ${proyek.map(item => `
-                    <tr>
-
-                      <td>
-                        <a
-                          href="/detail-proyek.html?id=${Number(
-                            item.proyek_id
-                          )}"
-                          class="project-link project-name"
-                        >
-                          ${escapeHtml(
-                            item.nama_proyek ||
-                            "-"
-                          )}
-                        </a>
-                      </td>
-
-                      <td>
-                        ${rupiah(
-                          item.nilai_proyek
-                        )}
-                      </td>
-
-                      <td>
-                        ${tanggal(
-                          item.tanggal_mulai
-                        )}
-                      </td>
-
-                      <td>
-                        ${tanggal(
-                          item.tanggal_akhir
-                        )}
-                      </td>
-
-                      <td>
-                        ${hitungJangkaWaktu(
-                          item.tanggal_mulai,
-                          item.tanggal_akhir
-                        )}
-                      </td>
-
-                    </tr>
-                  `).join("")}
-
-                </tbody>
-
-              </table>
 
             </div>
 
           </div>
+
+
+          <!-- PROYEK AKTIF -->
+
+          ${renderProjectSection({
+            className:
+              "active",
+
+            title:
+              "Daftar Proyek Aktif",
+
+            projects:
+              proyekAktif,
+
+            emptyMessage:
+              "Tidak ada proyek aktif."
+          })}
+
+
+          <!-- PROYEK SELESAI -->
+
+          ${renderProjectSection({
+            className:
+              "done",
+
+            title:
+              "Daftar Proyek Selesai",
+
+            projects:
+              proyekDone,
+
+            emptyMessage:
+              "Tidak ada proyek selesai."
+          })}
+
+
+          <!-- PROYEK CANCEL -->
+
+          ${renderProjectSection({
+            className:
+              "cancel",
+
+            title:
+              "Daftar Proyek Cancel",
+
+            projects:
+              proyekCancel,
+
+            emptyMessage:
+              "Tidak ada proyek cancel."
+          })}
+
 
         </article>
       `;
@@ -417,18 +1049,37 @@ function renderPartner(data) {
 // ======================================================
 
 function renderPagination(data = {}) {
+  if (
+    !pagination ||
+    !paginationInfo ||
+    !paginationButtons
+  ) {
+    return;
+  }
+
   const totalData =
-    Number(data.total_data || 0);
+    angka(
+      data.total_data
+    );
 
   const page =
-    Number(data.page || 1);
+    Math.max(
+      angka(data.page) || 1,
+      1
+    );
 
   const limit =
-    Number(data.limit || pageLimit);
+    Math.max(
+      angka(data.limit) ||
+      pageLimit,
+      1
+    );
 
   totalPages =
     Math.max(
-      Number(data.total_pages || 1),
+      angka(
+        data.total_pages
+      ) || 1,
       1
     );
 
@@ -442,63 +1093,64 @@ function renderPagination(data = {}) {
   pagination.style.display =
     "flex";
 
-  const mulai =
-    (page - 1) * limit + 1;
+  const start =
+    (
+      page - 1
+    ) *
+    limit +
+    1;
 
-  const akhir =
+  const end =
     Math.min(
       page * limit,
       totalData
     );
 
-  document.getElementById(
-    "paginationInfo"
-  ).textContent =
-    `Menampilkan ${mulai}-${akhir} dari ${totalData} Partner`;
-
-  const buttons =
-    document.getElementById(
-      "paginationButtons"
-    );
+  paginationInfo.textContent =
+    `Menampilkan ${start}-${end} dari ${totalData} partner`;
 
   let html = `
     <button
       type="button"
       class="page-button"
+      data-page="${page - 1}"
       ${page <= 1 ? "disabled" : ""}
-      onclick="ubahHalaman(${page - 1})"
     >
       ‹
     </button>
   `;
 
-  const awalPage =
+  const firstPage =
     Math.max(
       1,
       page - 2
     );
 
-  const akhirPage =
+  const lastPage =
     Math.min(
       totalPages,
       page + 2
     );
 
   for (
-    let nomor = awalPage;
-    nomor <= akhirPage;
-    nomor += 1
+    let number = firstPage;
+    number <= lastPage;
+    number += 1
   ) {
     html += `
       <button
         type="button"
         class="
           page-button
-          ${nomor === page ? "active" : ""}
+          ${
+            number === page
+              ? "active"
+              : ""
+          }
         "
-        onclick="ubahHalaman(${nomor})"
+        data-page="${number}"
       >
-        ${nomor}
+        ${number}
       </button>
     `;
   }
@@ -507,20 +1159,46 @@ function renderPagination(data = {}) {
     <button
       type="button"
       class="page-button"
+      data-page="${page + 1}"
       ${
         page >= totalPages
           ? "disabled"
           : ""
       }
-      onclick="ubahHalaman(${page + 1})"
     >
       ›
     </button>
   `;
 
-  buttons.innerHTML = html;
+  paginationButtons.innerHTML =
+    html;
+
+  paginationButtons
+    .querySelectorAll(
+      "[data-page]"
+    )
+    .forEach(button => {
+      button.addEventListener(
+        "click",
+        () => {
+          if (button.disabled) {
+            return;
+          }
+
+          ubahHalaman(
+            Number(
+              button.dataset.page
+            )
+          );
+        }
+      );
+    });
 }
 
+
+// ======================================================
+// UBAH HALAMAN
+// ======================================================
 
 function ubahHalaman(page) {
   if (
@@ -530,7 +1208,8 @@ function ubahHalaman(page) {
     return;
   }
 
-  currentPage = page;
+  currentPage =
+    page;
 
   loadPartner();
 
@@ -547,25 +1226,31 @@ function ubahHalaman(page) {
 
 let searchTimer = null;
 
-partnerSearch.addEventListener(
-  "input",
-  event => {
-    clearTimeout(searchTimer);
-
-    searchTimer =
-      setTimeout(
-        () => {
-          searchValue =
-            event.target.value.trim();
-
-          currentPage = 1;
-
-          loadPartner();
-        },
-        400
+if (partnerSearch) {
+  partnerSearch.addEventListener(
+    "input",
+    event => {
+      clearTimeout(
+        searchTimer
       );
-  }
-);
+
+      searchTimer =
+        setTimeout(
+          () => {
+            searchValue =
+              event.target
+                .value
+                .trim();
+
+            currentPage = 1;
+
+            loadPartner();
+          },
+          400
+        );
+    }
+  );
+}
 
 
 // ======================================================

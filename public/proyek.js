@@ -10,6 +10,31 @@ const itemsPerPage = 15;
 
 
 // ======================================================
+// FILTER DARI URL DASHBOARD
+// ======================================================
+
+const proyekUrlParams =
+  new URLSearchParams(
+    window.location.search
+  );
+
+const urlStatusPengadaan =
+  proyekUrlParams.get(
+    "status_pengadaan"
+  ) || "";
+
+const urlStatusFinal =
+  proyekUrlParams.get(
+    "status_final"
+  ) || "";
+
+const urlProyekTerlambat =
+  proyekUrlParams.get(
+    "terlambat"
+  ) || "";
+  
+
+// ======================================================
 // ELEMENT HTML
 // ======================================================
 
@@ -471,118 +496,225 @@ function buildFilters() {
 
 
 // ======================================================
-// FILTER DATA
+// AMBIL STATUS PENGADAAN
 // ======================================================
 
-function applyFilter() {
+function getStatusPengadaan(item) {
+  return String(
+    item.status_pengadaan ??
+    item.status_pengadaan_klien ??
+    item.klien_status_pengadaan ??
+    ""
+  ).trim();
+}
 
+
+// ======================================================
+// AMBIL STATUS TEKNIS
+// ======================================================
+
+function getStatusTeknis(item) {
+  return String(
+    item.status_teknis ??
+    item.status_teknis_klien ??
+    item.klien_status_teknis ??
+    ""
+  ).trim();
+}
+
+
+// ======================================================
+// CEK PROYEK TERLAMBAT
+// ======================================================
+
+function isProyekTerlambat(item) {
+  const tanggalAkhir =
+    item.tanggal_akhir_klien ??
+    item.tanggal_akhir ??
+    item.end_date;
+
+  if (!tanggalAkhir) {
+    return false;
+  }
+
+  const endDate =
+    new Date(tanggalAkhir);
+
+  if (
+    Number.isNaN(
+      endDate.getTime()
+    )
+  ) {
+    return false;
+  }
+
+  const hariIni =
+    new Date();
+
+  hariIni.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  endDate.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  const statusTeknis =
+    getStatusTeknis(item)
+      .toLowerCase();
+
+  return (
+    endDate < hariIni &&
+    ![
+      "done",
+      "selesai"
+    ].includes(statusTeknis)
+  );
+}
+
+// ======================================================
+// FILTER DATA
+// ======================================================
+function applyFilter() {
   const search =
     searchInput
       .value
       .trim()
       .toLowerCase();
 
-
   const selectedKategori =
     kategoriFilter.value;
-
 
   const selectedJenis =
     jenisFilter.value;
 
-
   const selectedKlien =
     klienFilter.value;
-
 
   const selectedPartner =
     partnerFilter.value;
 
 
   const filtered =
-    allProyek.filter(
-      item => {
+    allProyek.filter(item => {
+      const namaProyek =
+        String(
+          item.nama_proyek || ""
+        ).toLowerCase();
 
-        const namaProyek =
-          String(
-            item.nama_proyek || ""
-          ).toLowerCase();
-
-
-        const categories =
-          listValue(
-            item,
-            "nama_kategori_produk_list",
-            "nama_kategori_produk"
-          );
-
-
-        const partners =
-          listValue(
-            item,
-            "nama_partner_list",
-            "nama_partner"
-          );
-
-
-        const matchSearch =
-
-          !search ||
-
-          namaProyek.includes(
-            search
-          );
-
-
-        const matchKategori =
-
-          !selectedKategori ||
-
-          categories.includes(
-            selectedKategori
-          );
-
-
-        const matchJenis =
-
-          !selectedJenis ||
-
-          item.jenis_proyek ===
-            selectedJenis;
-
-
-        const matchKlien =
-
-          !selectedKlien ||
-
-          item.perusahaan_klien ===
-            selectedKlien;
-
-
-        const matchPartner =
-
-          !selectedPartner ||
-
-          partners.includes(
-            selectedPartner
-          );
-
-
-        return (
-          matchSearch &&
-          matchKategori &&
-          matchJenis &&
-          matchKlien &&
-          matchPartner
+      const perusahaanKlien =
+        String(
+          item.perusahaan_klien ||
+          ""
         );
 
-      }
-    );
+      const categories =
+        listValue(
+          item,
+          "nama_kategori_produk_list",
+          "nama_kategori_produk"
+        );
+
+      const partners =
+        listValue(
+          item,
+          "nama_partner_list",
+          "nama_partner"
+        );
+
+      const statusPengadaan =
+        getStatusPengadaan(item);
+
+      const statusFinal =
+        String(
+          item.status_final || ""
+        ).trim();
 
 
-  // ====================================================
-  // PAGINATION
-  // ====================================================
+      const searchText = [
+        namaProyek,
+        perusahaanKlien,
+        categories.join(" "),
+        partners.join(" "),
+        statusPengadaan,
+        statusFinal
+      ]
+        .join(" ")
+        .toLowerCase();
+
+
+      const matchSearch =
+        !search ||
+        searchText.includes(search);
+
+
+      const matchKategori =
+        !selectedKategori ||
+        categories.includes(
+          selectedKategori
+        );
+
+
+      const matchJenis =
+        !selectedJenis ||
+        item.jenis_proyek ===
+          selectedJenis;
+
+
+      const matchKlien =
+        !selectedKlien ||
+        perusahaanKlien ===
+          selectedKlien;
+
+
+      const matchPartner =
+        !selectedPartner ||
+        partners.includes(
+          selectedPartner
+        );
+
+
+      const matchStatusPengadaan =
+        !urlStatusPengadaan ||
+        statusPengadaan
+          .toLowerCase() ===
+        urlStatusPengadaan
+          .trim()
+          .toLowerCase();
+
+
+      const matchStatusFinal =
+        !urlStatusFinal ||
+        statusFinal
+          .toLowerCase() ===
+        urlStatusFinal
+          .trim()
+          .toLowerCase();
+
+
+      const matchTerlambat =
+        urlProyekTerlambat !== "1" ||
+        isProyekTerlambat(item);
+
+
+      return (
+        matchSearch &&
+        matchKategori &&
+        matchJenis &&
+        matchKlien &&
+        matchPartner &&
+        matchStatusPengadaan &&
+        matchStatusFinal &&
+        matchTerlambat
+      );
+    });
+
 
   const totalPages =
     Math.max(
@@ -598,34 +730,23 @@ function applyFilter() {
     currentPage >
     totalPages
   ) {
-
     currentPage =
       totalPages;
-
   }
 
 
   const startIndex =
-
     (
-      currentPage -
-      1
+      currentPage - 1
     ) *
-
-    itemsPerPage;
-
-
-  const endIndex =
-
-    startIndex +
-
     itemsPerPage;
 
 
   const pageData =
     filtered.slice(
       startIndex,
-      endIndex
+      startIndex +
+      itemsPerPage
     );
 
 
@@ -638,6 +759,109 @@ function applyFilter() {
     filtered.length
   );
 
+
+  showActiveDashboardFilter(
+    filtered.length
+  );
+}
+
+function showActiveDashboardFilter(
+  totalData
+) {
+  let banner =
+    document.getElementById(
+      "dashboardFilterBanner"
+    );
+
+  const activeText = [];
+
+  if (urlStatusPengadaan) {
+    activeText.push(
+      `Status Pengadaan: ${urlStatusPengadaan}`
+    );
+  }
+
+  if (urlStatusFinal) {
+    activeText.push(
+      `Status Final: ${urlStatusFinal}`
+    );
+  }
+
+  if (urlProyekTerlambat === "1") {
+    activeText.push(
+      "Proyek Terlambat"
+    );
+  }
+
+
+  if (activeText.length === 0) {
+    if (banner) {
+      banner.remove();
+    }
+
+    return;
+  }
+
+
+  if (!banner) {
+    banner =
+      document.createElement(
+        "div"
+      );
+
+    banner.id =
+      "dashboardFilterBanner";
+
+    banner.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 13px 16px;
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 12px;
+      font-weight: 700;
+    `;
+
+    const table =
+      proyekTable.closest(
+        ".table-wrapper"
+      );
+
+    if (table) {
+      table.parentElement.insertBefore(
+        banner,
+        table
+      );
+    }
+  }
+
+
+  banner.innerHTML = `
+    <span>
+      Filter aktif:
+      ${escapeHTML(
+        activeText.join(" • ")
+      )}
+      — ${totalData} proyek ditemukan
+    </span>
+
+    <a
+      href="/proyek.html"
+      style="
+        color:#4338ca;
+        font-weight:800;
+        text-decoration:none;
+        white-space:nowrap;
+      "
+    >
+      Hapus Filter
+    </a>
+  `;
 }
 
 
@@ -987,16 +1211,34 @@ function renderTable(data) {
 
             <td>
 
-              <a
-                class="btn btn-secondary"
-                href="/detail-proyek.html?id=${encodeURIComponent(
-                  item.id
-                )}"
-              >
-                Detail
-              </a>
+          <div class="table-actions">
 
-            </td>
+            <a
+              class="btn-detail"
+              href="/detail-proyek.html?id=${encodeURIComponent(
+                item.id
+              )}"
+            >
+              Detail
+            </a>
+
+            <button
+              type="button"
+              class="btn-delete-project"
+              data-delete-project
+              data-project-id="${Number(
+                item.id
+              )}"
+              data-project-name="${escapeHTML(
+                item.nama_proyek || "Proyek"
+              )}"
+            >
+              Hapus
+            </button>
+
+          </div>
+
+        </td>
 
 
           </tr>
@@ -1335,6 +1577,195 @@ partnerFilter.addEventListener(
 
     applyFilter();
 
+  }
+);
+
+// ======================================================
+// HAPUS PROYEK
+// ======================================================
+
+proyekTable.addEventListener(
+  "click",
+  async event => {
+    const deleteButton =
+      event.target.closest(
+        "[data-delete-project]"
+      );
+
+    if (!deleteButton) {
+      return;
+    }
+
+
+    const proyekId =
+      Number(
+        deleteButton.dataset.projectId
+      );
+
+    const namaProyek =
+      deleteButton.dataset.projectName ||
+      "Proyek";
+
+
+    if (
+      !Number.isInteger(proyekId) ||
+      proyekId <= 0
+    ) {
+      alert(
+        "ID proyek tidak valid."
+      );
+
+      return;
+    }
+
+
+    // ================================================
+    // KONFIRMASI PERTAMA
+    // ================================================
+
+    const konfirmasi =
+      window.confirm(
+        `Apakah Anda yakin ingin menghapus proyek "${namaProyek}"?\n\nData proyek dan seluruh data terkait dapat ikut terhapus.`
+      );
+
+    if (!konfirmasi) {
+      return;
+    }
+
+
+    // ================================================
+    // KONFIRMASI KEDUA
+    // ================================================
+
+    const verifikasi =
+      window.prompt(
+        `Ketik HAPUS untuk menghapus proyek "${namaProyek}".`
+      );
+
+    if (
+      String(verifikasi || "")
+        .trim()
+        .toUpperCase() !==
+      "HAPUS"
+    ) {
+      alert(
+        "Penghapusan proyek dibatalkan."
+      );
+
+      return;
+    }
+
+
+    const textSebelumnya =
+      deleteButton.textContent;
+
+    deleteButton.disabled =
+      true;
+
+    deleteButton.textContent =
+      "Menghapus...";
+
+
+    try {
+      const response =
+        await fetch(
+          `/api/proyek/${encodeURIComponent(
+            proyekId
+          )}`,
+          {
+            method:
+              "DELETE",
+
+            headers: {
+              Accept:
+                "application/json"
+            }
+          }
+        );
+
+
+      const contentType =
+        response.headers.get(
+          "content-type"
+        ) || "";
+
+
+      let result = {};
+
+
+      if (
+        contentType.includes(
+          "application/json"
+        )
+      ) {
+        result =
+          await response.json();
+
+      } else {
+        const responseText =
+          await response.text();
+
+        throw new Error(
+          responseText ||
+          `Server menghasilkan status ${response.status}`
+        );
+      }
+
+
+      if (!response.ok) {
+        let pesanError =
+          result.error ||
+          "Gagal menghapus proyek.";
+
+
+        if (result.constraint) {
+          pesanError +=
+            `\n\nConstraint: ${result.constraint}`;
+        }
+
+
+        if (result.detail) {
+          pesanError +=
+            `\n${result.detail}`;
+        }
+
+
+        throw new Error(
+          pesanError
+        );
+      }
+
+
+      alert(
+        result.message ||
+        "Proyek berhasil dihapus."
+      );
+
+
+      // Ambil ulang data listing dari server
+      currentPage = 1;
+
+      await loadProyek();
+
+    } catch (error) {
+      console.error(
+        "ERROR HAPUS PROYEK:",
+        error
+      );
+
+
+      alert(
+        "Gagal menghapus proyek:\n" +
+        error.message
+      );
+
+
+      deleteButton.disabled =
+        false;
+
+      deleteButton.textContent =
+        textSebelumnya;
+    }
   }
 );
 

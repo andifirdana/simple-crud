@@ -116,6 +116,96 @@ function tanggalInput(value) {
 }
 
 // ======================================================
+// FORMAT LAST UPDATE
+// Contoh: Senin, 19 Januari 2026 14:30
+// ======================================================
+
+function formatLastUpdate(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const date =
+    new Date(value);
+
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "-";
+  }
+
+
+  const namaHari = [
+    "Minggu",
+    "Senin",
+    "Selasa",
+    "Rabu",
+    "Kamis",
+    "Jumat",
+    "Sabtu"
+  ];
+
+
+  const namaBulan = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember"
+  ];
+
+
+  const hari =
+    namaHari[
+      date.getDay()
+    ];
+
+
+  const tanggal =
+    String(
+      date.getDate()
+    ).padStart(2, "0");
+
+
+  const bulan =
+    namaBulan[
+      date.getMonth()
+    ];
+
+
+  const tahun =
+    date.getFullYear();
+
+
+  const jam =
+    String(
+      date.getHours()
+    ).padStart(2, "0");
+
+
+  const menit =
+    String(
+      date.getMinutes()
+    ).padStart(2, "0");
+
+
+  return (
+    `${hari}, ${tanggal} ` +
+    `${bulan} ${tahun} ` +
+    `${jam}:${menit}`
+  );
+}
+// ======================================================
 // ESCAPE HTML
 // Mencegah teks dari API dianggap sebagai tag HTML
 // ======================================================
@@ -128,6 +218,182 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+// ======================================================
+// FORMAT INPUT NOMINAL
+// ======================================================
+
+function ambilAngkaNominal(value) {
+  return String(value ?? "")
+    .replace(/[^\d]/g, "");
+}
+
+
+function formatInputNominal(value) {
+  const angka =
+    ambilAngkaNominal(value);
+
+  if (!angka) {
+    return "";
+  }
+
+  const number =
+    Number(angka);
+
+  return Number.isFinite(number)
+    ? new Intl.NumberFormat(
+        "id-ID",
+        {
+          maximumFractionDigits: 0
+        }
+      ).format(number)
+    : "";
+}
+
+
+function nominalOrNull(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  ) {
+    return null;
+  }
+
+  const angka =
+    ambilAngkaNominal(value);
+
+  if (!angka) {
+    return null;
+  }
+
+  const number =
+    Number(angka);
+
+  return Number.isFinite(number)
+    ? number
+    : null;
+}
+
+
+// ======================================================
+// CEK INPUT YANG MERUPAKAN NOMINAL
+// ======================================================
+
+function isInputNominal(element) {
+  if (
+    !element ||
+    element.tagName !== "INPUT"
+  ) {
+    return false;
+  }
+
+  return element.matches(`
+    #editNilaiSubmitKlien,
+    #editNilaiNego1Klien,
+    #editNilaiNego2Klien,
+    #editNilaiNego3Klien,
+    #nominalTermin,
+    .edit-partner-submit,
+    .edit-partner-nego1,
+    .edit-partner-nego2,
+    .edit-partner-nego3
+  `);
+}
+
+
+// ======================================================
+// ISI DAN FORMAT INPUT NOMINAL
+// ======================================================
+
+function setNilaiNominal(
+  inputOrId,
+  value
+) {
+  const input =
+    typeof inputOrId === "string"
+      ? document.getElementById(
+          inputOrId
+        )
+      : inputOrId;
+
+  if (!input) {
+    return;
+  }
+
+  input.type =
+    "text";
+
+  input.inputMode =
+    "numeric";
+
+  input.autocomplete =
+    "off";
+
+  input.classList.add(
+    "input-rupiah"
+  );
+
+  input.value =
+    formatInputNominal(value);
+}
+
+
+// ======================================================
+// FORMAT OTOMATIS SAAT DIKETIK
+// ======================================================
+
+document.addEventListener(
+  "focusin",
+  event => {
+    const input =
+      event.target;
+
+    if (!isInputNominal(input)) {
+      return;
+    }
+
+    input.type =
+      "text";
+
+    input.inputMode =
+      "numeric";
+
+    input.autocomplete =
+      "off";
+  }
+);
+
+
+document.addEventListener(
+  "input",
+  event => {
+    const input =
+      event.target;
+
+    if (!isInputNominal(input)) {
+      return;
+    }
+
+    input.value =
+      formatInputNominal(
+        input.value
+      );
+
+    const posisiAkhir =
+      input.value.length;
+
+    if (
+      typeof input.setSelectionRange ===
+      "function"
+    ) {
+      input.setSelectionRange(
+        posisiAkhir,
+        posisiAkhir
+      );
+    }
+  }
+);
 // =====================================================
 // EDIT KATEGORI
 // ======================================================
@@ -316,10 +582,77 @@ document.getElementById(
 );
 
 // ======================================================
+// LOAD LAST UPDATE PROYEK
+// ======================================================
+
+async function loadLastUpdate() {
+  const element =
+    document.getElementById(
+      "projectLastUpdate"
+    );
+
+
+  if (!element) {
+    return;
+  }
+
+
+  try {
+    const response =
+      await fetch(
+        `/api/proyek/${proyekId}/last-update`,
+        {
+          headers: {
+            Accept:
+              "application/json"
+          },
+
+          cache:
+            "no-store"
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Gagal mengambil last update."
+      );
+    }
+
+
+    element.textContent =
+      `Terakhir diperbarui: ${
+        formatLastUpdate(
+          result.last_update
+        )
+      }`;
+
+  } catch (error) {
+    console.error(
+      "ERROR LOAD LAST UPDATE:",
+      error
+    );
+
+
+    element.textContent =
+      "Terakhir diperbarui: -";
+  }
+}
+// ======================================================
 // LOAD DETAIL PROYEK
 // ======================================================
 
 async function loadDetail() {
+const proyekId =
+  new URLSearchParams(
+    window.location.search
+  ).get("id");
+
   try {
     if (!proyekId) {
       throw new Error(
@@ -346,13 +679,14 @@ async function loadDetail() {
     detailData =
       result;
 
-    console.log(
-      "DETAIL PROYEK:",
-      detailData
-    );
+await loadTotalProgressProyek(
+  proyekId
+);
 
     // Render seluruh detail
     renderDetail();
+    updateProgressReportLink();
+    await loadLastUpdate();
 
   } catch (error) {
     console.error(
@@ -382,13 +716,28 @@ async function loadDetail() {
 
 function renderDetail() {
 
-  const {
-    proyek,
-    pic,
-    klien,
-    partners,
-    summary
-  } = detailData;
+  const proyek =
+  detailData?.proyek || {};
+
+const pic =
+  Array.isArray(detailData?.pic)
+    ? detailData.pic
+    : [];
+
+const klien =
+  detailData?.klien || null;
+
+const partners =
+  Array.isArray(
+    detailData?.partners
+  )
+    ? detailData.partners.filter(
+        Boolean
+      )
+    : [];
+
+const summary =
+  detailData?.summary || {};
 
 
   // HEADER
@@ -871,7 +1220,16 @@ function renderPIC(pic) {
 // ======================================================
 // KLIEN
 // ======================================================
-function nilaiTerakhir(data = {}) {
+function nilaiTerakhir(data) {
+  // Menangani null, undefined,
+  // atau data yang bukan object
+  if (
+    !data ||
+    typeof data !== "object"
+  ) {
+    return 0;
+  }
+
   const kandidat = [
     data.nilai_final,
     data.nilai_final_klien,
@@ -883,7 +1241,16 @@ function nilaiTerakhir(data = {}) {
   ];
 
   for (const value of kandidat) {
-    const nominal = Number(value);
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      continue;
+    }
+
+    const nominal =
+      Number(value);
 
     if (
       Number.isFinite(nominal) &&
@@ -1427,8 +1794,10 @@ if (
         persentase /
         100;
 
-      nominalTerminInput.value =
-        nominal.toFixed(2);
+      setNilaiNominal(
+        nominalTerminInput,
+        Math.round(nominal)
+      );
     }
   );
 
@@ -1444,10 +1813,9 @@ if (
         getNilaiFinalTerminAktif();
 
       const nominal =
-        Number(
-          nominalTerminInput.value ||
-          0
-        );
+      nominalOrNull(
+        nominalTerminInput.value
+      ) || 0;
 
       if (
         nilaiFinal <= 0 ||
@@ -1734,7 +2102,10 @@ if (tambahTerminButton) {
     "click",
     () => {
 
-      if (!detailData?.klien) {
+      if (
+        !detailData?.klien ||
+        !detailData.klien.proyek_klien_id
+      ) {
 
         alert(
           "Proyek belum memiliki klien."
@@ -1845,11 +2216,9 @@ const persenValue =
       );
 
 const nominalValue =
-  nominalInput.value === ""
-    ? null
-    : Number(
-        nominalInput.value
-      );
+  nominalOrNull(
+    nominalInput.value
+  );
 
 
 const payload = {
@@ -2165,10 +2534,10 @@ window.editTerminKlien =
       termin.persentase ?? "";
 
 
-    document.getElementById(
-      "nominalTermin"
-    ).value =
-      termin.nominal ?? "";
+    setNilaiNominal(
+      "nominalTermin",
+      termin.nominal
+    );
 
 
     document.getElementById(
@@ -2467,7 +2836,6 @@ function renderTimeline() {
     return;
   }
 
-  // Listing hanya muncul jika ada Timeline
   if (
     !Array.isArray(timelineData) ||
     timelineData.length === 0
@@ -2498,6 +2866,55 @@ function renderTimeline() {
     ).padStart(2, "0")
   ].join("-");
 
+
+  // ====================================================
+  // URUTKAN BERDASARKAN TANGGAL AKHIR PALING DEKAT
+  // TANGGAL KOSONG DITEMPATKAN PALING BAWAH
+  // ====================================================
+
+  const timelineTerurut =
+    [...timelineData].sort(
+      (itemPertama, itemKedua) => {
+        const tanggalPertama =
+          tanggalInput(
+            itemPertama.tanggal_akhir
+          );
+
+        const tanggalKedua =
+          tanggalInput(
+            itemKedua.tanggal_akhir
+          );
+
+
+        if (
+          !tanggalPertama &&
+          !tanggalKedua
+        ) {
+          return 0;
+        }
+
+        if (!tanggalPertama) {
+          return 1;
+        }
+
+        if (!tanggalKedua) {
+          return -1;
+        }
+
+
+        return (
+          new Date(
+            `${tanggalPertama}T00:00:00`
+          ).getTime()
+          -
+          new Date(
+            `${tanggalKedua}T00:00:00`
+          ).getTime()
+        );
+      }
+    );
+
+
   container.innerHTML = `
     <div class="table-wrapper">
 
@@ -2505,11 +2922,15 @@ function renderTimeline() {
 
         <thead>
           <tr>
+            <th style="width: 60px;">
+              No
+            </th>
+
             <th>Deskripsi</th>
             <th>Tanggal Mulai</th>
             <th>Tanggal Akhir</th>
             <th>Durasi</th>
-           <th>Berakhir Dalam</th>
+            <th>Berakhir Dalam</th>
             <th>Status</th>
             <th>Aksi</th>
           </tr>
@@ -2517,8 +2938,8 @@ function renderTimeline() {
 
         <tbody>
 
-          ${timelineData
-            .map(item => {
+          ${timelineTerurut
+            .map((item, index) => {
               const tanggalMulai =
                 tanggalInput(
                   item.tanggal_mulai
@@ -2555,9 +2976,14 @@ function renderTimeline() {
                     "-"
                   );
 
-              let durasiTampil = "-";
-              let berakhirDalam = "-";
-              let berakhirClass = "";
+              let durasiTampil =
+                "-";
+
+              let berakhirDalam =
+                "-";
+
+              let berakhirClass =
+                "";
 
               if (
                 durasi !== null &&
@@ -2600,6 +3026,10 @@ function renderTimeline() {
               return `
                 <tr>
 
+                  <td class="timeline-number">
+                    ${index + 1}
+                  </td>
+
                   <td class="timeline-description-cell">
                     ${escapeHtml(
                       item.deskripsi ||
@@ -2635,15 +3065,15 @@ function renderTimeline() {
                   </td>
 
                   <td>
-                  <span
-                    class="
-                      timeline-status
-                      timeline-status-${statusClass}
-                    "
-                  >
-                    ${escapeHtml(status)}
-                  </span>
-                </td>
+                    <span
+                      class="
+                        timeline-status
+                        timeline-status-${statusClass}
+                      "
+                    >
+                      ${escapeHtml(status)}
+                    </span>
+                  </td>
 
                   <td>
                     <div class="action-buttons">
@@ -3468,11 +3898,10 @@ function editTerminPartner(id) {
     "";
 
   // Nominal
-  document.getElementById(
-    "nominalTermin"
-  ).value =
-    terminDitemukan.nominal ??
-    "";
+    setNilaiNominal(
+      "nominalTermin",
+      terminDitemukan.nominal
+    );
 
   // Status pembayaran
   document.getElementById(
@@ -5549,7 +5978,7 @@ async function loadMasterKlienEdit() {
 }
 
 // ======================================================
-// BUKA MODAL EDIT KLIEN
+// BUKA MODAL TAMBAH / EDIT KLIEN
 // ======================================================
 
 if (editKlienButton) {
@@ -5557,13 +5986,49 @@ if (editKlienButton) {
     "click",
     async () => {
       try {
+        /*
+         * Jika proyek belum memiliki klien,
+         * gunakan object kosong agar modal
+         * tetap dapat dibuka.
+         */
         const klien =
-          detailData?.klien;
+          detailData?.klien || {};
 
-        if (!klien) {
-          throw new Error(
-            "Data klien proyek tidak ditemukan"
+        const modeTambahKlien =
+          !detailData?.klien;
+
+
+        // ==============================================
+        // UBAH JUDUL MODAL
+        // ==============================================
+
+        const judulModal =
+          editKlienModal?.querySelector(
+            ".modal-header h3"
           );
+
+        if (judulModal) {
+          judulModal.textContent =
+            modeTambahKlien
+              ? "Tambah Data Klien"
+              : "Edit Data Klien";
+        }
+
+
+        // ==============================================
+        // UBAH TEKS TOMBOL UTAMA
+        // ==============================================
+
+        const tombolSimpan =
+          editKlienForm?.querySelector(
+            'button[type="submit"]'
+          );
+
+        if (tombolSimpan) {
+          tombolSimpan.textContent =
+            modeTambahKlien
+              ? "Tambah Klien"
+              : "Simpan Perubahan";
         }
 
 
@@ -5578,38 +6043,40 @@ if (editKlienButton) {
 
 
         // ==============================================
-        // ISI KLIEN
+        // ISI DROPDOWN KLIEN
         // ==============================================
 
-        editKlienId.value =
-          String(
-            klien.klien_id || ""
-          );
+        if (editKlienId) {
+          editKlienId.value =
+            String(
+              klien.klien_id || ""
+            );
+        }
 
 
         // ==============================================
         // ISI NILAI SUBMIT DAN NEGO
         // ==============================================
 
-        document.getElementById(
-          "editNilaiSubmitKlien"
-        ).value =
-          klien.nilai_submit ?? "";
+      setNilaiNominal(
+        "editNilaiSubmitKlien",
+        klien.nilai_submit
+      );
 
-        document.getElementById(
-          "editNilaiNego1Klien"
-        ).value =
-          klien.nilai_nego_1 ?? "";
+      setNilaiNominal(
+        "editNilaiNego1Klien",
+        klien.nilai_nego_1
+      );
 
-        document.getElementById(
-          "editNilaiNego2Klien"
-        ).value =
-          klien.nilai_nego_2 ?? "";
+      setNilaiNominal(
+        "editNilaiNego2Klien",
+        klien.nilai_nego_2
+      );
 
-        document.getElementById(
-          "editNilaiNego3Klien"
-        ).value =
-          klien.nilai_nego_3 ?? "";
+      setNilaiNominal(
+        "editNilaiNego3Klien",
+        klien.nilai_nego_3
+      );
 
 
         // ==============================================
@@ -5632,7 +6099,7 @@ if (editKlienButton) {
 
 
         // ==============================================
-        // ISI MODEL PEMBAYARAN
+        // MODEL PEMBAYARAN
         // ==============================================
 
         const modelPembayaranSelect =
@@ -5640,16 +6107,21 @@ if (editKlienButton) {
             "editModelPembayaranKlien"
           );
 
-        pilihSelectBerdasarkanNama(
-          modelPembayaranSelect,
+        if (modeTambahKlien) {
+          modelPembayaranSelect.value =
+            "";
+        } else {
+          pilihSelectBerdasarkanNama(
+            modelPembayaranSelect,
 
-          klien.model_pembayaran ||
-          klien.metode_pembayaran
-        );
+            klien.model_pembayaran ||
+            klien.metode_pembayaran
+          );
+        }
 
 
         // ==============================================
-        // ISI STATUS PENGADAAN
+        // STATUS PENGADAAN
         // ==============================================
 
         const statusPengadaanSelect =
@@ -5657,22 +6129,23 @@ if (editKlienButton) {
             "editStatusPengadaanKlien"
           );
 
-        /*
-         * Parameter kedua adalah ID.
-         * Parameter ketiga adalah nama/deskripsi.
-         */
-        pilihStatusEdit(
-          statusPengadaanSelect,
+        if (modeTambahKlien) {
+          statusPengadaanSelect.value =
+            "";
+        } else {
+          pilihStatusEdit(
+            statusPengadaanSelect,
 
-          klien.status_pengadaan_id ||
-          null,
+            klien.status_pengadaan_id ||
+            null,
 
-          klien.status_pengadaan
-        );
+            klien.status_pengadaan
+          );
+        }
 
 
         // ==============================================
-        // ISI STATUS TEKNIS
+        // STATUS TEKNIS
         // ==============================================
 
         const statusTeknisSelect =
@@ -5680,14 +6153,31 @@ if (editKlienButton) {
             "editStatusTeknisKlien"
           );
 
-        pilihStatusEdit(
-          statusTeknisSelect,
+        if (modeTambahKlien) {
+          statusTeknisSelect.value =
+            "";
+        } else {
+          pilihStatusEdit(
+            statusTeknisSelect,
 
-          klien.status_teknis_id ||
-          null,
+            klien.status_teknis_id ||
+            null,
 
-          klien.status_teknis
-        );
+            klien.status_teknis
+          );
+        }
+
+
+        // ==============================================
+        // SIMPAN MODE PADA FORM
+        // ==============================================
+
+        if (editKlienForm) {
+          editKlienForm.dataset.mode =
+            modeTambahKlien
+              ? "tambah"
+              : "edit";
+        }
 
 
         // ==============================================
@@ -5695,25 +6185,23 @@ if (editKlienButton) {
         // ==============================================
 
         console.log(
-          "DATA EDIT KLIEN:",
+          "BUKA MODAL KLIEN:",
           {
+            mode:
+              modeTambahKlien
+                ? "tambah"
+                : "edit",
+
+            proyek_id:
+              proyekId,
+
+            proyek_klien_id:
+              klien.proyek_klien_id ||
+              null,
+
             klien_id:
-              klien.klien_id,
-
-            model_pembayaran:
-              klien.model_pembayaran,
-
-            status_pengadaan:
-              klien.status_pengadaan,
-
-            status_pengadaan_terpilih:
-              statusPengadaanSelect.value,
-
-            status_teknis:
-              klien.status_teknis,
-
-            status_teknis_terpilih:
-              statusTeknisSelect.value
+              klien.klien_id ||
+              null
           }
         );
 
@@ -5721,6 +6209,12 @@ if (editKlienButton) {
         // ==============================================
         // BUKA MODAL
         // ==============================================
+
+        if (!editKlienModal) {
+          throw new Error(
+            "Modal edit klien tidak ditemukan"
+          );
+        }
 
         editKlienModal.classList.add(
           "show"
@@ -5733,7 +6227,7 @@ if (editKlienButton) {
         );
 
         alert(
-          `Gagal membuka edit klien: ${error.message}`
+          `Gagal membuka data klien: ${error.message}`
         );
       }
     }
@@ -5994,13 +6488,13 @@ function buatPartnerCard(
           </label>
 
           <input
-            type="number"
-            min="0"
-            step="any"
-            class="edit-partner-submit"
-            value="${
-              item.nilai_submit ?? ""
-            }"
+            type="text"
+            inputmode="numeric"
+            class="edit-partner-submit input-rupiah"
+            value="${formatInputNominal(
+              item.nilai_submit
+            )}"
+            autocomplete="off"
           >
         </div>
 
@@ -6010,13 +6504,13 @@ function buatPartnerCard(
           </label>
 
           <input
-            type="number"
-            min="0"
-            step="any"
-            class="edit-partner-nego1"
-            value="${
-              item.nilai_nego_1 ?? ""
-            }"
+            type="text"
+            inputmode="numeric"
+            class="edit-partner-nego1 input-rupiah"
+            value="${formatInputNominal(
+              item.nilai_nego_1
+            )}"
+            autocomplete="off"
           >
         </div>
 
@@ -6026,13 +6520,13 @@ function buatPartnerCard(
           </label>
 
           <input
-            type="number"
-            min="0"
-            step="any"
-            class="edit-partner-nego2"
-            value="${
-              item.nilai_nego_2 ?? ""
-            }"
+            type="text"
+            inputmode="numeric"
+            class="edit-partner-nego2 input-rupiah"
+            value="${formatInputNominal(
+              item.nilai_nego_2
+            )}"
+            autocomplete="off"
           >
         </div>
 
@@ -6042,13 +6536,13 @@ function buatPartnerCard(
           </label>
 
           <input
-            type="number"
-            min="0"
-            step="any"
-            class="edit-partner-nego3"
-            value="${
-              item.nilai_nego_3 ?? ""
-            }"
+            type="text"
+            inputmode="numeric"
+            class="edit-partner-nego3 input-rupiah"
+            value="${formatInputNominal(
+              item.nilai_nego_3
+            )}"
+            autocomplete="off"
           >
         </div>
 
@@ -6466,19 +6960,21 @@ if (editPartnerButton) {
                 .map(card => {
 
                   function numberOrNull(
+                selector
+              ) {
+                const input =
+                  card.querySelector(
                     selector
-                  ) {
+                  );
 
-                    const value =
-                      card.querySelector(
-                        selector
-                      ).value;
+                if (!input) {
+                  return null;
+                }
 
-                    return value === ""
-                      ? null
-                      : Number(value);
-
-                  }
+                return nominalOrNull(
+                  input.value
+                );
+              }
 
 
                   return {
@@ -7166,19 +7662,16 @@ const editKlienForm =
 
 
 function angkaAtauNull(id) {
+  const element =
+    document.getElementById(id);
 
-  const value =
-    document.getElementById(id).value;
-
-  if (
-    value === "" ||
-    value === null
-  ) {
+  if (!element) {
     return null;
   }
 
-  return Number(value);
-
+  return nominalOrNull(
+    element.value
+  );
 }
 
 
@@ -7674,6 +8167,385 @@ document.addEventListener(
   }
 );
 
+// ======================================================
+// LINK UPDATE PROGRESS SESUAI PROYEK
+// ======================================================
+
+function updateProgressReportLink() {
+  const link =
+    document.getElementById(
+      "progressReportLink"
+    );
+
+  if (!link) {
+    return;
+  }
+
+  if (!proyekId) {
+    link.href =
+      "/proyek.html";
+
+    return;
+  }
+
+  link.href =
+    `/update-progress.html?id=${encodeURIComponent(
+      proyekId
+    )}`;
+}
+
+// ======================================================
+// LOAD TOTAL PROGRESS DARI UPDATE PROGRESS
+// ======================================================
+
+async function loadTotalProgressProyek(proyekId) {
+
+  const totalElement =
+    document.getElementById(
+      "totalProgressProyek"
+    );
+
+  const progressBar =
+    document.getElementById(
+      "progressBarProyek"
+    );
+
+  const infoElement =
+    document.getElementById(
+      "progressReportInfo"
+    );
+
+  const link =
+    document.getElementById(
+      "progressReportLink"
+    );
+
+
+  // Link menuju Update Progress
+  if (link) {
+
+    link.href =
+      `/update-progress.html?id=${encodeURIComponent(
+        proyekId
+      )}`;
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        `/api/proyek/${encodeURIComponent(
+          proyekId
+        )}/progress-modul`,
+        {
+          credentials:
+            "same-origin",
+
+          cache:
+            "no-store"
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Gagal mengambil progress proyek"
+      );
+
+    }
+
+
+    const result =
+      await response.json();
+
+    console.log(
+  "=== DATA PROGRESS DETAIL ===",
+  result
+);
+
+console.log(
+  "=== RESULT.DATA ===",
+  result.data
+);
+
+console.log(
+  "=== MODULES ===",
+  result.data?.modules
+);
+
+console.log(
+  "PROGRESS PROYEK 170:",
+  result
+);
+
+
+    // ==============================================
+    // BELUM ADA DATA PROGRESS
+    // ==============================================
+
+    if (
+      !result.data ||
+      !Array.isArray(
+        result.data.modules
+      )
+    ) {
+
+      if (totalElement) {
+
+        totalElement.textContent =
+          "0.00%";
+
+      }
+
+
+      if (progressBar) {
+
+        progressBar.style.width =
+          "0%";
+
+      }
+
+
+      if (infoElement) {
+
+        infoElement.textContent =
+          "Belum ada progress proyek.";
+
+      }
+
+
+      return;
+
+    }
+
+
+    // ==============================================
+    // AMBIL SEMUA SUBMODUL
+    // ==============================================
+
+    const items =
+      result.data.modules.flatMap(
+        module =>
+          Array.isArray(module.items)
+            ? module.items
+            : []
+      );
+
+
+    // ==============================================
+    // HITUNG TOTAL DURASI TARGET
+    // Sama seperti update-progress.js
+    // ==============================================
+
+    const hitungDurasi =
+      (start, end) => {
+
+        if (
+          !start ||
+          !end
+        ) {
+
+          return 0;
+
+        }
+
+
+        const startDate =
+          new Date(
+            `${start}T00:00:00Z`
+          );
+
+        const endDate =
+          new Date(
+            `${end}T00:00:00Z`
+          );
+
+
+        const selisih =
+          Math.floor(
+            (
+              endDate -
+              startDate
+            ) /
+            86400000
+          );
+
+
+        return selisih >= 0
+          ? selisih + 1
+          : 0;
+
+      };
+
+
+    const totalTargetDuration =
+      items.reduce(
+        (total, item) => {
+
+          return (
+            total +
+            hitungDurasi(
+              item.targetStart,
+              item.targetEnd
+            )
+          );
+
+        },
+        0
+      );
+
+
+    // ==============================================
+    // HITUNG TOTAL PROGRESS
+    // DONE = BOBOT TARGET
+    // ==============================================
+
+    let totalProgress = 0;
+
+
+    items.forEach(
+      item => {
+
+        const targetDuration =
+          hitungDurasi(
+            item.targetStart,
+            item.targetEnd
+          );
+
+
+        const targetWeight =
+          totalTargetDuration > 0
+
+            ? (
+                targetDuration /
+                totalTargetDuration
+              ) * 100
+
+            : 0;
+
+
+        const status =
+          item.actualStart &&
+          item.actualEnd
+
+            ? "Done"
+
+            : item.actualStart
+
+              ? "In Progress"
+
+              : "Not Yet";
+
+
+        if (
+          status === "Done"
+        ) {
+
+          totalProgress +=
+            targetWeight;
+
+        }
+
+      }
+    );
+
+
+    // Batasi 0 - 100
+    totalProgress =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          totalProgress
+        )
+      );
+
+
+    const progressText =
+      new Intl.NumberFormat(
+        "id-ID",
+        {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }
+      ).format(
+        totalProgress
+      ) + "%";
+
+
+    // ==============================================
+    // TAMPILKAN
+    // ==============================================
+
+    if (totalElement) {
+
+      totalElement.textContent =
+        progressText;
+
+    }
+
+
+    if (progressBar) {
+
+      progressBar.style.width =
+        `${totalProgress}%`;
+
+    }
+
+
+    if (infoElement) {
+
+      const selesai =
+        items.filter(
+          item =>
+            item.actualStart &&
+            item.actualEnd
+        ).length;
+
+
+      infoElement.textContent =
+        `${selesai} dari ${items.length} pekerjaan selesai. Klik untuk membuka laporan progress.`;
+
+    }
+
+
+  } catch (error) {
+
+    console.error(
+      "ERROR LOAD TOTAL PROGRESS:",
+      error
+    );
+
+
+    if (totalElement) {
+
+      totalElement.textContent =
+        "0.00%";
+
+    }
+
+
+    if (progressBar) {
+
+      progressBar.style.width =
+        "0%";
+
+    }
+
+
+    if (infoElement) {
+
+      infoElement.textContent =
+        "Progress belum dapat dimuat.";
+
+    }
+
+  }
+
+}
 // ======================================================
 // START
 // ======================================================

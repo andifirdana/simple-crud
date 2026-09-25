@@ -1,3 +1,81 @@
+<style>
+  /* ======================================================
+   SIDEBAR SCROLL
+====================================================== */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 260px;
+  height: 100vh;
+  height: 100dvh;
+
+  overflow: hidden;
+}
+
+
+/* Logo dan informasi user tidak ikut mengecil */
+
+.sidebar .logo,
+.sidebar .sidebar-user {
+  flex: 0 0 auto;
+}
+
+
+/* Hanya bagian menu yang di-scroll */
+
+.sidebar .menu {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding-right: 6px;
+
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color:
+    rgba(148, 163, 184, 0.65)
+    transparent;
+}
+
+
+/* Scrollbar Chrome, Edge, dan Safari */
+
+.sidebar .menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar .menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar .menu::-webkit-scrollbar-thumb {
+  background:
+    rgba(148, 163, 184, 0.55);
+  border-radius: 999px;
+}
+
+.sidebar .menu::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(100, 116, 139, 0.8);
+}
+
+
+/* Tombol logout tetap di bagian bawah */
+
+.sidebar #logoutButton {
+  flex: 0 0 auto;
+  width: calc(100% - 32px);
+  margin: 14px 16px 18px;
+}
+</style>
 <aside class="sidebar">
 
   <div class="logo">

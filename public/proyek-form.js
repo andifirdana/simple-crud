@@ -1,6 +1,21 @@
 const $ = id =>
   document.getElementById(id);
 
+function getInputValue(
+  ...ids
+) {
+  for (const id of ids) {
+    const element =
+      document.getElementById(id);
+
+    if (element) {
+      return element.value;
+    }
+  }
+
+  return "";
+}
+
 const form =
   $("proyekForm");
 
@@ -880,8 +895,37 @@ function partnerOptions() {
 
 
 // =====================================================
-// TAMBAH PARTNER
+// UPDATE NOMOR PARTNER
 // =====================================================
+
+function updatePartnerNumbers() {
+  if (!partnerContainer) {
+    return;
+  }
+
+  const partnerCards = [
+    ...partnerContainer.querySelectorAll(
+      ".partner-card"
+    )
+  ];
+
+  partnerCards.forEach(
+    (card, index) => {
+      const title =
+        card.querySelector(
+          ".partner-title"
+        );
+
+      if (title) {
+        title.textContent =
+          `Partner ${index + 1}`;
+      }
+
+      card.dataset.partnerIndex =
+        String(index);
+    }
+  );
+}
 
 // =====================================================
 // TAMBAH PARTNER
@@ -1581,43 +1625,46 @@ function getPartners() {
 
       nilai_submit:
 
-        numberOrNull(
+  nominalOrNull(
 
-          card.querySelector(
-            ".partner_nilai_submit"
-          ).value
+    card.querySelector(
+      ".partner_nilai_submit"
+    )?.value
 
-        ) ?? 0,
+  ) ?? 0,
 
-      nilai_nego_1:
 
-        numberOrNull(
+nilai_nego_1:
 
-          card.querySelector(
-            ".partner_nego_1"
-          ).value
+  nominalOrNull(
 
-        ),
+    card.querySelector(
+      ".partner_nego_1"
+    )?.value
 
-      nilai_nego_2:
+  ),
 
-        numberOrNull(
 
-          card.querySelector(
-            ".partner_nego_2"
-          ).value
+nilai_nego_2:
 
-        ),
+  nominalOrNull(
 
-      nilai_nego_3:
+    card.querySelector(
+      ".partner_nego_2"
+    )?.value
 
-        numberOrNull(
+  ),
 
-          card.querySelector(
-            ".partner_nego_3"
-          ).value
 
-        ),
+nilai_nego_3:
+
+  nominalOrNull(
+
+    card.querySelector(
+      ".partner_nego_3"
+    )?.value
+
+  ),
 
       status_pengadaan:
 
@@ -1671,6 +1718,321 @@ function validateDates(
 
 }
 
+// ======================================================
+// FORMAT NOMINAL RUPIAH
+// Berlaku untuk klien dan partner
+// ======================================================
+
+function ambilAngkaNominal(value) {
+  return String(value ?? "")
+    .replace(/[^\d]/g, "");
+}
+
+
+function formatNominalRupiah(value) {
+  const angka =
+    ambilAngkaNominal(value);
+
+  if (!angka) {
+    return "";
+  }
+
+  return new Intl.NumberFormat(
+    "id-ID",
+    {
+      maximumFractionDigits: 0
+    }
+  ).format(
+    Number(angka)
+  );
+}
+
+
+function parseNominalRupiah(value) {
+  const angka =
+    ambilAngkaNominal(value);
+
+  if (!angka) {
+    return 0;
+  }
+
+  const hasil =
+    Number(angka);
+
+  return Number.isFinite(hasil)
+    ? hasil
+    : 0;
+}
+
+function nominalOrNull(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  ) {
+    return null;
+  }
+
+  const angka =
+    parseNominalRupiah(value);
+
+  return Number.isFinite(angka)
+    ? angka
+    : null;
+}
+
+// ======================================================
+// DETEKSI INPUT NOMINAL
+// ======================================================
+
+function adalahInputNominal(element) {
+  if (
+    !element ||
+    element.tagName !== "INPUT"
+  ) {
+    return false;
+  }
+
+  const identitas = [
+    element.id,
+    element.name,
+    element.className,
+    element.dataset?.field
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .replaceAll("-", "_");
+
+
+  return (
+    element.classList.contains(
+      "input-rupiah"
+    ) ||
+    identitas.includes(
+      "nilai_submit"
+    ) ||
+    identitas.includes(
+      "nilaisubmit"
+    ) ||
+    identitas.includes(
+      "nilai_nego"
+    ) ||
+    identitas.includes(
+      "nilainego"
+    ) ||
+    identitas.includes(
+      "nego_1"
+    ) ||
+    identitas.includes(
+      "nego_2"
+    ) ||
+    identitas.includes(
+      "nego_3"
+    ) ||
+    identitas.includes(
+      "nego1"
+    ) ||
+    identitas.includes(
+      "nego2"
+    ) ||
+    identitas.includes(
+      "nego3"
+    )
+  );
+}
+
+
+// ======================================================
+// SIAPKAN SATU INPUT
+// ======================================================
+
+function siapkanInputNominal(input) {
+  if (
+    !adalahInputNominal(input)
+  ) {
+    return;
+  }
+
+  /*
+    Input number tidak bisa menampilkan tanda titik.
+    Karena itu otomatis diubah menjadi text.
+  */
+
+  input.type =
+    "text";
+
+  input.inputMode =
+    "numeric";
+
+  input.autocomplete =
+    "off";
+
+  input.classList.add(
+    "input-rupiah"
+  );
+
+  if (input.value) {
+    input.value =
+      formatNominalRupiah(
+        input.value
+      );
+  }
+}
+
+
+// ======================================================
+// SIAPKAN SEMUA INPUT YANG SUDAH ADA
+// ======================================================
+
+function siapkanSemuaInputNominal(
+  root = document
+) {
+  const inputs =
+    root.querySelectorAll
+      ? root.querySelectorAll("input")
+      : [];
+
+  inputs.forEach(
+    siapkanInputNominal
+  );
+}
+
+
+// ======================================================
+// FORMAT SAAT DIKETIK
+// ======================================================
+
+document.addEventListener(
+  "input",
+  event => {
+    const input =
+      event.target;
+
+    if (
+      !adalahInputNominal(input)
+    ) {
+      return;
+    }
+
+    /*
+      Pastikan tetap text agar separator titik
+      tidak dihapus browser.
+    */
+
+    input.type =
+      "text";
+
+    input.inputMode =
+      "numeric";
+
+    input.value =
+      formatNominalRupiah(
+        input.value
+      );
+
+    /*
+      Cursor ditempatkan kembali di akhir.
+    */
+
+    const posisiAkhir =
+      input.value.length;
+
+    input.setSelectionRange(
+      posisiAkhir,
+      posisiAkhir
+    );
+  }
+);
+
+
+// ======================================================
+// FORMAT SAAT INPUT MENDAPAT FOKUS
+// ======================================================
+
+document.addEventListener(
+  "focusin",
+  event => {
+    const input =
+      event.target;
+
+    if (
+      !adalahInputNominal(input)
+    ) {
+      return;
+    }
+
+    siapkanInputNominal(
+      input
+    );
+  }
+);
+
+
+// ======================================================
+// DETEKSI INPUT NEGO/PARTNER YANG DIBUAT DINAMIS
+// ======================================================
+
+const nominalObserver =
+  new MutationObserver(
+    mutations => {
+      mutations.forEach(
+        mutation => {
+          mutation.addedNodes.forEach(
+            node => {
+              if (
+                node.nodeType !==
+                Node.ELEMENT_NODE
+              ) {
+                return;
+              }
+
+              if (
+                node.matches?.("input")
+              ) {
+                siapkanInputNominal(
+                  node
+                );
+              }
+
+              siapkanSemuaInputNominal(
+                node
+              );
+            }
+          );
+        }
+      );
+    }
+  );
+
+
+nominalObserver.observe(
+  document.body,
+  {
+    childList: true,
+    subtree: true
+  }
+);
+
+
+// ======================================================
+// JALANKAN SAAT HALAMAN DIMUAT
+// ======================================================
+
+if (
+  document.readyState ===
+  "loading"
+) {
+  document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+      siapkanSemuaInputNominal();
+    }
+  );
+
+} else {
+  siapkanSemuaInputNominal();
+}
 
 // =====================================================
 // SIMPAN PROYEK
@@ -1967,36 +2329,44 @@ form.addEventListener(
         ),
 
 
-      nilai_submit_klien:
+// =============================================
+// NILAI KLIEN
+// =============================================
 
-        numberOrNull(
-          $("nilai_submit_klien")
-            .value
-        ),
-
-
-      nilai_nego_1_klien:
-
-        numberOrNull(
-          $("nilai_nego_1_klien")
-            .value
-        ),
+nilai_submit_klien:
+  nominalOrNull(
+    getInputValue(
+      "nilaiSubmitKlien",
+      "nilai_submit_klien"
+    )
+  ) ?? 0,
 
 
-      nilai_nego_2_klien:
+nilai_nego_1_klien:
+  nominalOrNull(
+    getInputValue(
+      "nilaiNego1Klien",
+      "nilai_nego_1_klien"
+    )
+  ),
 
-        numberOrNull(
-          $("nilai_nego_2_klien")
-            .value
-        ),
+
+nilai_nego_2_klien:
+  nominalOrNull(
+    getInputValue(
+      "nilaiNego2Klien",
+      "nilai_nego_2_klien"
+    )
+  ),
 
 
-      nilai_nego_3_klien:
-
-        numberOrNull(
-          $("nilai_nego_3_klien")
-            .value
-        ),
+nilai_nego_3_klien:
+  nominalOrNull(
+    getInputValue(
+      "nilaiNego3Klien",
+      "nilai_nego_3_klien"
+    )
+  ),
 
 
       tanggal_mulai_klien:
@@ -2081,6 +2451,28 @@ form.addEventListener(
       saveButton.textContent =
         "Menyimpan...";
 
+console.log(
+  "CEK NILAI KLIEN:",
+  {
+    input_asli:
+      getInputValue(
+        "nilaiSubmitKlien",
+        "nilai_submit_klien"
+      ),
+
+    nilai_submit_klien:
+      payload.nilai_submit_klien,
+
+    nilai_nego_1_klien:
+      payload.nilai_nego_1_klien,
+
+    nilai_nego_2_klien:
+      payload.nilai_nego_2_klien,
+
+    nilai_nego_3_klien:
+      payload.nilai_nego_3_klien
+  }
+);
 
       const response =
         await fetch(
@@ -2165,6 +2557,7 @@ form.addEventListener(
 
   }
 );
+
 
 
 // =====================================================
