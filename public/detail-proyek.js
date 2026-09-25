@@ -305,39 +305,88 @@ function isInputNominal(element) {
 // ======================================================
 // ISI DAN FORMAT INPUT NOMINAL
 // ======================================================
+// ======================================================
+// ISI DAN FORMAT INPUT NOMINAL DARI DATABASE
+// ======================================================
 
 function setNilaiNominal(
   inputOrId,
   value
 ) {
+
   const input =
     typeof inputOrId === "string"
-      ? document.getElementById(
-          inputOrId
-        )
+      ? document.getElementById(inputOrId)
       : inputOrId;
+
 
   if (!input) {
     return;
   }
 
-  input.type =
-    "text";
 
-  input.inputMode =
-    "numeric";
-
-  input.autocomplete =
-    "off";
+  input.type = "text";
+  input.inputMode = "numeric";
+  input.autocomplete = "off";
 
   input.classList.add(
     "input-rupiah"
   );
 
-  input.value =
-    formatInputNominal(value);
-}
 
+  // Jika null / kosong
+  if (
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  ) {
+
+    input.value = "";
+
+    return;
+  }
+
+
+  /*
+   * PENTING:
+   *
+   * Nilai dari PostgreSQL NUMERIC bisa datang seperti:
+   *
+   * 878000000.000
+   *
+   * Number() mengubahnya menjadi:
+   *
+   * 878000000
+   *
+   * sehingga .000 dari decimal database
+   * TIDAK dianggap sebagai ribuan.
+   */
+
+  const nilaiDatabase =
+    Number(value);
+
+
+  if (
+    !Number.isFinite(nilaiDatabase)
+  ) {
+
+    input.value = "";
+
+    return;
+  }
+
+
+  input.value =
+    new Intl.NumberFormat(
+      "id-ID",
+      {
+        maximumFractionDigits: 0
+      }
+    ).format(
+      nilaiDatabase
+    );
+
+}
 
 // ======================================================
 // FORMAT OTOMATIS SAAT DIKETIK

@@ -797,13 +797,31 @@
           </p>
         </div>
 
-        <a
-          id="backToProject"
-          class="progress-button secondary"
-          href="/proyek.html"
-        >
-          Kembali ke Proyek
-        </a>
+        <div
+  style="
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  "
+>
+
+  <a
+    id="timelineButton"
+    class="progress-button primary"
+    href="#"
+  >
+    Lihat Timeline
+  </a>
+
+  <a
+    id="backToProject"
+    class="progress-button secondary"
+    href="/proyek.html"
+  >
+    Kembali ke Proyek
+  </a>
+
+</div>
       </header>
 
       <!-- PESAN -->
@@ -1091,22 +1109,6 @@
               </table>
             </div>
 
-            <!-- KETERANGAN PERHITUNGAN -->
-            <p class="progress-formula">
-              Durasi = tanggal akhir − tanggal mulai
-              (tanggal yang sama = 0 hari).
-              Bobot target = durasi target ÷ total durasi target × 100%.
-              Bobot aktual = durasi aktual ÷ total durasi aktual × 100%.
-              Tanggal yang belum lengkap belum menghasilkan durasi.
-            </p>
-
-            <p class="progress-formula">
-              Total bobot aktual adalah pembagian durasi aktual
-              antarsubmodul, bukan persentase penyelesaian proyek.
-              Modul utama hanya menjadi kelompok dan tidak dihitung
-              sebagai durasi tambahan.
-            </p>
-
             <!-- TOMBOL SIMPAN -->
             <footer class="progress-savebar">
               <span id="saveState">
@@ -1141,35 +1143,7 @@
             </footer>
 
           </section>
-          <section class="progress-gantt-section">
 
-  <div class="progress-gantt-header">
-    <div>
-      <h2>Timeline Proyek</h2>
-      <p>
-        Timeline berdasarkan Target Start dan Target End.
-      </p>
-    </div>
-  </div>
-
-  <div class="gantt-scroll">
-    <table
-      class="gantt-table"
-      id="ganttTable"
-    >
-      <thead id="ganttHead"></thead>
-
-      <tbody id="ganttBody">
-        <tr>
-          <td>
-            Belum ada timeline.
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-</section>
         </fieldset>
       </form>
 

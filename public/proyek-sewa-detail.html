@@ -608,28 +608,143 @@
     }
 
 
-    .inline-order-row {
-      display: grid;
+   /* =====================================================
+   ORDER GRID
+===================================================== */
 
-      grid-template-columns:
-        minmax(220px, 1.4fr)
-        100px
-        minmax(170px, 1fr)
-        minmax(170px, 1fr)
-        90px;
+.inline-order-row {
+  display: grid;
 
-      gap: 12px;
+  /* 20 kolom supaya pembagian baris fleksibel */
+  grid-template-columns: repeat(20, minmax(0, 1fr));
 
-      align-items: end;
+  gap: 16px;
 
-      padding: 12px;
+  padding: 20px;
 
-      background: #f8fafc;
+  margin-bottom: 16px;
 
-      border: 1px solid #e5e7eb;
-      border-radius: 9px;
-    }
+  background: #f8fafc;
 
+  border: 1px solid #e5e7eb;
+
+  border-radius: 14px;
+
+  align-items: end;
+}
+
+
+/* =====================================================
+   BARIS 1
+===================================================== */
+
+/* Lokasi */
+.inline-order-row .order-lokasi {
+  grid-column: span 6;
+}
+
+
+/* Quantity */
+.inline-order-row .order-quantity {
+  grid-column: span 2;
+}
+
+
+/* Harga / Bulan */
+.inline-order-row .order-harga-bulan {
+  grid-column: span 6;
+}
+
+
+/* Total Harga */
+.inline-order-row .order-total-harga {
+  grid-column: span 6;
+}
+
+
+/* =====================================================
+   BARIS 2
+===================================================== */
+
+/* No Req Klien */
+.inline-order-row .order-no-req {
+  grid-column: span 5;
+}
+
+
+/* Tanggal Req Klien */
+.inline-order-row .order-tanggal-req {
+  grid-column: span 4;
+}
+
+
+/* Tanggal DO */
+.inline-order-row .order-tanggal-do {
+  grid-column: span 4;
+}
+
+
+/* No DO */
+.inline-order-row .order-no-do {
+  grid-column: span 4;
+}
+
+
+/* End Date */
+.inline-order-row .order-end-date {
+  grid-column: span 3;
+}
+
+
+/* =====================================================
+   TOMBOL HAPUS
+===================================================== */
+
+.inline-order-row .order-action {
+  grid-column: 1 / -1;
+
+  display: flex;
+
+  justify-content: flex-end;
+
+  margin-top: 4px;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1200px) {
+
+  .inline-order-row {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .inline-order-row .inline-form-group {
+    grid-column: auto !important;
+  }
+
+  .inline-order-row .order-action {
+    grid-column: 1 / -1 !important;
+  }
+
+}
+
+
+@media (max-width: 768px) {
+
+  .inline-order-row {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-order-row .inline-form-group,
+  .inline-order-row .order-action {
+    grid-column: 1 / -1 !important;
+  }
+
+}
 
     .inline-order-row .btn {
       width: 100%;
@@ -1302,31 +1417,17 @@
               <div class="info-item">
 
                 <div class="info-label">
-                  Dibuat
+                  Tanggal PR
                 </div>
 
                 <div
                   class="info-value"
-                  id="detailCreatedAt"
+                  id="detailTanggalPr"
                 >
                   -
                 </div>
 
               </div>
-
-
-              <div class="info-item">
-
-                <div class="info-label">
-                  Terakhir Diperbarui
-                </div>
-
-                <div
-                  class="info-value"
-                  id="detailUpdatedAt"
-                >
-                  -
-                </div>
 
               </div>
 
@@ -1709,6 +1810,19 @@
 
             </div>
 
+          <div class="modal-form-group">
+
+                <label>
+                  Tanggal PR
+                </label>
+
+                <input
+                  type="date"
+                  id="editTanggalPr"
+                  class="modal-form-control"
+                >
+
+              </div>
 
             <!-- RUJUKAN -->
 
@@ -1718,10 +1832,11 @@
                 Rujukan Kontrak Nomor
               </label>
 
-              <input
+             <input
                 type="text"
                 id="editNomorRujukan"
                 class="modal-form-control"
+                readonly
               >
 
             </div>
@@ -1748,6 +1863,7 @@
 
             </div>
 
+            
 
             <!-- KLIEN -->
 

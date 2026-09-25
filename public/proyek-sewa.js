@@ -681,6 +681,139 @@ function applyFilter() {
 
 
 // =====================================================
+// SUMMARY PROYEK SEWA
+// =====================================================
+
+function buatSummaryProyek(
+  produkSummary
+) {
+
+  const produk =
+    Array.isArray(
+      produkSummary
+    )
+      ? produkSummary
+      : [];
+
+
+  if (
+    produk.length === 0
+  ) {
+
+    return `
+      <div class="project-summary">
+        -
+      </div>
+    `;
+
+  }
+
+
+  let totalSemuaUnit = 0;
+
+
+  const htmlProduk =
+    produk
+      .map(
+        item => {
+
+          const orders =
+            Array.isArray(
+              item.orders
+            )
+              ? item.orders
+              : [];
+
+
+          const totalProduk =
+            orders.reduce(
+              (
+                total,
+                order
+              ) =>
+                total +
+                Number(
+                  order.quantity ||
+                  0
+                ),
+              0
+            );
+
+
+          totalSemuaUnit +=
+            totalProduk;
+
+
+          const htmlOrder =
+            orders
+              .map(
+                order => {
+
+                  const namaCabang =
+                    order.nama_cabang ||
+                    "-";
+
+                  const quantity =
+                    Number(
+                      order.quantity ||
+                      0
+                    );
+
+
+                  return `
+                    <div
+                      class="project-summary-order"
+                    >
+                      ${escapeHtml(
+                        namaCabang
+                      )}
+                      ${quantity} Unit
+                    </div>
+                  `;
+
+                }
+              )
+              .join("");
+
+
+          return `
+            <div class="project-summary-item">
+
+              <div
+                class="project-summary-product"
+              >
+                ${escapeHtml(
+                  item.item_produk ||
+                  "-"
+                )}
+              </div>
+
+              ${htmlOrder}
+
+            </div>
+          `;
+
+        }
+      )
+      .join("");
+
+
+  return `
+    <div class="project-summary">
+
+      ${htmlProduk}
+
+      <div
+        class="project-summary-total"
+      >
+        Total ${totalSemuaUnit} Unit
+      </div>
+
+    </div>
+  `;
+
+}
+// =====================================================
 // RENDER TABLE
 // =====================================================
 
@@ -825,25 +958,6 @@ function renderTable() {
                 )}
 
               </td>
-
-
-              <td class="date-value">
-
-                ${formatTanggal(
-                  item.tanggal_mulai
-                )}
-
-              </td>
-
-
-              <td class="date-value">
-
-                ${formatTanggal(
-                  item.tanggal_akhir
-                )}
-
-              </td>
-
 
               <td>
 

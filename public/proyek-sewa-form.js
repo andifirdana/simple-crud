@@ -1,24 +1,35 @@
 // =====================================================
 // PROYEK SEWA FORM
+// TAMBAH + EDIT
 // =====================================================
 
-console.log("PROYEK SEWA FORM JS LOADED");
-
 
 // =====================================================
-// GLOBAL DATA
+// GLOBAL
 // =====================================================
+
+const params =
+  new URLSearchParams(
+    window.location.search
+  );
+
+const proyekSewaId =
+  params.get("id");
+
+const isEdit =
+  Boolean(proyekSewaId);
+
 
 let masterKlien = [];
 let masterProyek = [];
-let masterProdukSewa = [];
+let masterProduk = [];
 let masterCabang = [];
 
 let productCounter = 0;
 
 
 // =====================================================
-// DOM
+// ELEMENT
 // =====================================================
 
 const form =
@@ -26,19 +37,29 @@ const form =
     "proyekSewaForm"
   );
 
-const klienSelect =
+const nomorPr =
+  document.getElementById(
+    "nomorPr"
+  );
+
+const tanggalPr =
+  document.getElementById(
+    "tanggalPr"
+  );
+
+const nomorRujukan =
+  document.getElementById(
+    "nomorRujukan"
+  );
+
+const klienId =
   document.getElementById(
     "klienId"
   );
 
-const proyekSelect =
+const proyekId =
   document.getElementById(
     "proyekId"
-  );
-
-const nomorRujukanInput =
-  document.getElementById(
-    "nomorRujukan"
   );
 
 const productContainer =
@@ -49,16 +70,6 @@ const productContainer =
 const paymentContainer =
   document.getElementById(
     "paymentContainer"
-  );
-
-const btnTambahProduk =
-  document.getElementById(
-    "btnTambahProduk"
-  );
-
-const btnTambahPembayaran =
-  document.getElementById(
-    "btnTambahPembayaran"
   );
 
 const productTemplate =
@@ -76,19 +87,24 @@ const paymentTemplate =
     "paymentTemplate"
   );
 
-const totalNilaiPerBulanEl =
+const btnTambahProduk =
   document.getElementById(
-    "totalNilaiPerBulan"
+    "btnTambahProduk"
   );
 
-const grandTotalProyekEl =
+const btnTambahPembayaran =
   document.getElementById(
-    "grandTotalProyek"
+    "btnTambahPembayaran"
+  );
+
+const btnSimpan =
+  document.getElementById(
+    "btnSimpanProyekSewa"
   );
 
 
 // =====================================================
-// HELPER
+// HELPER ANGKA
 // =====================================================
 
 function angka(value) {
@@ -98,45 +114,62 @@ function angka(value) {
     value === undefined ||
     value === ""
   ) {
+
     return 0;
+
   }
+
 
   if (
     typeof value === "number"
   ) {
-    return value;
+
+    return Number.isFinite(value)
+      ? value
+      : 0;
+
   }
 
-  const hasil =
-    Number(
-      String(value)
-        .replace(/[^\d.-]/g, "")
-    );
 
-  return Number.isFinite(hasil)
-    ? hasil
+  const cleaned =
+    String(value)
+      .replace(/[^\d-]/g, "");
+
+
+  const result =
+    Number(cleaned);
+
+
+  return Number.isFinite(result)
+    ? result
     : 0;
 
 }
 
 
-function rupiah(value) {
+// =====================================================
+// FORMAT RUPIAH
+// =====================================================
 
-  const number =
-    angka(value);
+function rupiah(value) {
 
   return new Intl.NumberFormat(
     "id-ID",
     {
       style: "currency",
       currency: "IDR",
-      minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }
-  ).format(number);
+  ).format(
+    angka(value)
+  );
 
 }
 
+
+// =====================================================
+// ESCAPE HTML
+// =====================================================
 
 function escapeHtml(value) {
 
@@ -167,84 +200,283 @@ function escapeHtml(value) {
 }
 
 
-async function fetchJSON(url) {
+// =====================================================
+// FORMAT DATE UNTUK INPUT
+// =====================================================
 
-  const response =
-    await fetch(
-      url,
-      {
-        credentials:
-          "same-origin"
-      }
-    );
+function tanggalInput(value) {
 
-  let data = null;
-
-  try {
-
-    data =
-      await response.json();
-
-  } catch {
-
-    data = null;
-
+  if (!value) {
+    return "";
   }
+
 
   if (
-    response.status === 401
+    typeof value === "string"
   ) {
 
-    window.location.href =
-      "/login.html";
+    const match =
+      value.match(
+        /^\d{4}-\d{2}-\d{2}/
+      );
 
-    throw new Error(
-      "Belum login"
-    );
+
+    if (match) {
+      return match[0];
+    }
 
   }
+
+
+  const date =
+    new Date(value);
+
 
   if (
-    !response.ok
+    Number.isNaN(
+      date.getTime()
+    )
   ) {
 
-    throw new Error(
-      data?.error ||
-      `HTTP ${response.status}`
-    );
+    return "";
 
   }
 
-  return data;
+
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(
+      date.getMonth() + 1
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const day =
+    String(
+      date.getDate()
+    ).padStart(
+      2,
+      "0"
+    );
+
+
+  return `${year}-${month}-${day}`;
 
 }
 
 
 // =====================================================
-// NORMALISASI RESPONSE API
+// FETCH JSON
 // =====================================================
 
-function ambilArray(result) {
+async function fetchJSON(
+  url,
+  options = {}
+) {
+
+  const response =
+    await fetch(
+      url,
+      options
+    );
+
+
+  const contentType =
+    response.headers.get(
+      "content-type"
+    ) || "";
+
+
+  let result;
+
 
   if (
-    Array.isArray(result)
+    contentType.includes(
+      "application/json"
+    )
   ) {
-    return result;
+
+    result =
+      await response.json();
+
+  } else {
+
+    const text =
+      await response.text();
+
+
+    throw new Error(
+      text ||
+      `HTTP ${response.status}`
+    );
+
   }
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      result.error ||
+      `HTTP ${response.status}`
+    );
+
+  }
+
+
+  return result;
+
+}
+
+
+// =====================================================
+// HITUNG END DATE
+//
+// Tanggal DO + Durasi Bulan
+// =====================================================
+
+function hitungEndDate(
+  tanggalDO,
+  durasiBulan
+) {
 
   if (
-    Array.isArray(result?.data)
+    !tanggalDO ||
+    !durasiBulan
   ) {
-    return result.data;
+
+    return "";
+
   }
+
+
+  const parts =
+    String(tanggalDO)
+      .split("-")
+      .map(Number);
+
 
   if (
-    Array.isArray(result?.rows)
+    parts.length !== 3
   ) {
-    return result.rows;
+
+    return "";
+
   }
 
-  return [];
+
+  const [
+    year,
+    month,
+    day
+  ] = parts;
+
+
+  if (
+    !year ||
+    !month ||
+    !day
+  ) {
+
+    return "";
+
+  }
+
+
+  const result =
+    new Date(
+      year,
+      month - 1,
+      1
+    );
+
+
+  result.setMonth(
+    result.getMonth() +
+    Number(durasiBulan)
+  );
+
+
+  const lastDay =
+    new Date(
+      result.getFullYear(),
+      result.getMonth() + 1,
+      0
+    ).getDate();
+
+
+  result.setDate(
+    Math.min(
+      day,
+      lastDay
+    )
+  );
+
+
+  const yyyy =
+    result.getFullYear();
+
+  const mm =
+    String(
+      result.getMonth() + 1
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const dd =
+    String(
+      result.getDate()
+    ).padStart(
+      2,
+      "0"
+    );
+
+
+  return `${yyyy}-${mm}-${dd}`;
+
+}
+
+
+// =====================================================
+// UPDATE RUJUKAN KONTRAK
+//
+// Menggabungkan seluruh No Req Klien:
+// REQ-001, REQ-002, REQ-003
+// =====================================================
+
+function updateRujukanKontrak() {
+
+  if (!nomorRujukan) {
+    return;
+  }
+
+
+  const values =
+    [
+      ...document.querySelectorAll(
+        ".noReqKlien"
+      )
+    ]
+      .map(
+        input =>
+          String(
+            input.value || ""
+          ).trim()
+      )
+      .filter(Boolean);
+
+
+  const unique =
+    [
+      ...new Set(values)
+    ];
+
+
+  nomorRujukan.value =
+    unique.join(", ");
 
 }
 
@@ -255,71 +487,53 @@ function ambilArray(result) {
 
 async function loadMasterKlien() {
 
-  try {
-
-    /*
-      Endpoint yang akan kita gunakan:
-
-      GET /api/proyek-sewa/master/klien
-    */
-
-    const result =
-      await fetchJSON(
-        "/api/proyek-sewa/master/klien"
-      );
-
-    masterKlien =
-      ambilArray(result);
-
-    renderMasterKlien();
-
-  } catch (error) {
-
-    console.error(
-      "ERROR LOAD MASTER KLIEN:",
-      error
+  const result =
+    await fetchJSON(
+      "/api/proyek-sewa/master/klien"
     );
 
-    klienSelect.innerHTML = `
+
+  masterKlien =
+    Array.isArray(result)
+      ? result
+      : [];
+
+
+  if (!klienId) {
+    return;
+  }
+
+
+  klienId.innerHTML =
+    `
       <option value="">
-        Gagal memuat Klien
+        Pilih Klien
       </option>
     `;
 
-  }
-
-}
-
-
-function renderMasterKlien() {
-
-  klienSelect.innerHTML = `
-    <option value="">
-      Pilih Klien
-    </option>
-  `;
 
   masterKlien.forEach(
-    (item) => {
+    item => {
 
-      const id =
+      const option =
+        document.createElement(
+          "option"
+        );
+
+
+      option.value =
         item.id;
 
-      const nama =
+
+      option.textContent =
         item.perusahaan_klien ||
         item.nama_klien ||
-        item.name ||
-        "-";
+        item.nama ||
+        `Klien ${item.id}`;
 
-      klienSelect.insertAdjacentHTML(
-        "beforeend",
-        `
-          <option
-            value="${id}"
-          >
-            ${escapeHtml(nama)}
-          </option>
-        `
+
+      klienId.appendChild(
+        option
       );
 
     }
@@ -329,70 +543,56 @@ function renderMasterKlien() {
 
 
 // =====================================================
-// LOAD PROYEK EXISTING
+// LOAD MASTER PROYEK
 // =====================================================
 
 async function loadMasterProyek() {
 
-  try {
-
-    /*
-      GET /api/proyek-sewa/master/proyek
-    */
-
-    const result =
-      await fetchJSON(
-        "/api/proyek-sewa/master/proyek"
-      );
-
-    masterProyek =
-      ambilArray(result);
-
-    renderMasterProyek();
-
-  } catch (error) {
-
-    console.error(
-      "ERROR LOAD MASTER PROYEK:",
-      error
+  const result =
+    await fetchJSON(
+      "/api/proyek-sewa/master/proyek"
     );
 
-    proyekSelect.innerHTML = `
+
+  masterProyek =
+    Array.isArray(result)
+      ? result
+      : [];
+
+
+  if (!proyekId) {
+    return;
+  }
+
+
+  proyekId.innerHTML =
+    `
       <option value="">
-        Gagal memuat proyek
+        Pilih Nama Proyek
       </option>
     `;
 
-  }
-
-}
-
-
-function renderMasterProyek() {
-
-  proyekSelect.innerHTML = `
-    <option value="">
-      Pilih Nama Proyek
-    </option>
-  `;
 
   masterProyek.forEach(
-    (item) => {
+    item => {
 
-      const nama =
+      const option =
+        document.createElement(
+          "option"
+        );
+
+
+      option.value =
+        item.id;
+
+
+      option.textContent =
         item.nama_proyek ||
-        item.name ||
-        `Proyek #${item.id}`;
+        `Proyek ${item.id}`;
 
-      proyekSelect.insertAdjacentHTML(
-        "beforeend",
-        `
-          <option
-            value="${item.id}"
-          >
-            ${escapeHtml(nama)}
-          </option>
-        `
+
+      proyekId.appendChild(
+        option
       );
 
     }
@@ -402,40 +602,21 @@ function renderMasterProyek() {
 
 
 // =====================================================
-// LOAD MASTER PRODUK SEWA
+// LOAD MASTER PRODUK
 // =====================================================
 
-async function loadMasterProdukSewa() {
+async function loadMasterProduk() {
 
-  try {
-
-    /*
-      GET /api/proyek-sewa/master/produk
-    */
-
-    const result =
-      await fetchJSON(
-        "/api/proyek-sewa/master/produk"
-      );
-
-    masterProdukSewa =
-      ambilArray(result);
-
-    console.log(
-      "MASTER PRODUK SEWA:",
-      masterProdukSewa
+  const result =
+    await fetchJSON(
+      "/api/proyek-sewa/master/produk"
     );
 
-    refreshSemuaProdukSelect();
 
-  } catch (error) {
-
-    console.error(
-      "ERROR LOAD PRODUK SEWA:",
-      error
-    );
-
-  }
+  masterProduk =
+    Array.isArray(result)
+      ? result
+      : [];
 
 }
 
@@ -446,35 +627,16 @@ async function loadMasterProdukSewa() {
 
 async function loadMasterCabang() {
 
-  try {
-
-    /*
-      GET /api/proyek-sewa/master/cabang
-    */
-
-    const result =
-      await fetchJSON(
-        "/api/proyek-sewa/master/cabang"
-      );
-
-    masterCabang =
-      ambilArray(result);
-
-    console.log(
-      "MASTER CABANG:",
-      masterCabang
+  const result =
+    await fetchJSON(
+      "/api/proyek-sewa/master/cabang"
     );
 
-    refreshSemuaLokasiSelect();
 
-  } catch (error) {
-
-    console.error(
-      "ERROR LOAD MASTER CABANG:",
-      error
-    );
-
-  }
+  masterCabang =
+    Array.isArray(result)
+      ? result
+      : [];
 
 }
 
@@ -485,42 +647,44 @@ async function loadMasterCabang() {
 
 function isiProdukSelect(
   select,
-  selectedValue = ""
+  selectedId = null
 ) {
 
   if (!select) {
     return;
   }
 
-  select.innerHTML = `
-    <option value="">
-      Pilih Produk
-    </option>
-  `;
 
-  masterProdukSewa.forEach(
-    (item) => {
+  select.innerHTML =
+    `
+      <option value="">
+        Pilih Produk
+      </option>
+    `;
 
-      const nama =
-        item.item_produk ||
-        item.nama_produk ||
-        item.name ||
-        "-";
+
+  masterProduk.forEach(
+    item => {
 
       const option =
         document.createElement(
           "option"
         );
 
+
       option.value =
         item.id;
 
+
       option.textContent =
-        nama;
+        item.item_produk ||
+        item.nama_produk ||
+        `Produk ${item.id}`;
+
 
       if (
         String(item.id) ===
-        String(selectedValue)
+        String(selectedId)
       ) {
 
         option.selected =
@@ -528,35 +692,13 @@ function isiProdukSelect(
 
       }
 
+
       select.appendChild(
         option
       );
 
     }
   );
-
-}
-
-
-function refreshSemuaProdukSelect() {
-
-  document
-    .querySelectorAll(
-      ".produkSelect"
-    )
-    .forEach(
-      (select) => {
-
-        const value =
-          select.value;
-
-        isiProdukSelect(
-          select,
-          value
-        );
-
-      }
-    );
 
 }
 
@@ -567,49 +709,52 @@ function refreshSemuaProdukSelect() {
 
 function isiCabangSelect(
   select,
-  selectedValue = ""
+  selectedId = null
 ) {
 
   if (!select) {
     return;
   }
 
-  select.innerHTML = `
-    <option value="">
-      Pilih Lokasi / Cabang
-    </option>
-  `;
+
+  select.innerHTML =
+    `
+      <option value="">
+        Pilih Lokasi / Cabang
+      </option>
+    `;
+
 
   masterCabang.forEach(
-    (item) => {
-
-      const nama =
-        item.nama_cabang ||
-        item.nama ||
-        item.name ||
-        item.lokasi ||
-        "-";
+    item => {
 
       const option =
         document.createElement(
           "option"
         );
 
+
       option.value =
         item.id;
 
+
       option.textContent =
-        nama;
+        item.nama_cabang ||
+        item.nama ||
+        item.cabang ||
+        `Cabang ${item.id}`;
+
 
       if (
         String(item.id) ===
-        String(selectedValue)
+        String(selectedId)
       ) {
 
         option.selected =
           true;
 
       }
+
 
       select.appendChild(
         option
@@ -621,176 +766,465 @@ function isiCabangSelect(
 }
 
 
-function refreshSemuaLokasiSelect() {
+// =====================================================
+// CARI MASTER PRODUK
+// =====================================================
 
-  document
+function getMasterProduk(
+  produkId
+) {
+
+  return masterProduk.find(
+    item =>
+      String(item.id) ===
+      String(produkId)
+  ) || null;
+
+}
+
+
+// =====================================================
+// HARGA PRODUK
+//
+// TAMBAH:
+// harga dari master.
+//
+// EDIT PRODUK YANG SAMA:
+// harga kontrak awal.
+//
+// EDIT DAN GANTI PRODUK:
+// harga master produk baru.
+// =====================================================
+
+function getHargaProduk(
+  productItem
+) {
+
+  if (!productItem) {
+    return 0;
+  }
+
+
+  const select =
+    productItem.querySelector(
+      ".produkSelect"
+    );
+
+
+  const produkId =
+    select?.value;
+
+
+  if (!produkId) {
+    return 0;
+  }
+
+
+  const master =
+    getMasterProduk(
+      produkId
+    );
+
+
+  const originalRowId =
+    productItem.dataset.productId;
+
+  const originalProdukId =
+    productItem.dataset.originalProdukId;
+
+  const originalHarga =
+    angka(
+      productItem.dataset.originalHarga
+    );
+
+
+  // ===============================================
+  // EDIT + PRODUK TIDAK DIGANTI
+  // ===============================================
+
+  if (
+    originalRowId &&
+    String(produkId) ===
+      String(originalProdukId)
+  ) {
+
+    return originalHarga;
+
+  }
+
+
+  // ===============================================
+  // PRODUK BARU / PRODUK DIGANTI
+  // ===============================================
+
+  return angka(
+    master?.harga_jual_per_item
+  );
+
+}
+
+
+// =====================================================
+// UPDATE INFORMASI PRODUK
+// =====================================================
+
+function updateInformasiProduk(
+  productItem
+) {
+
+  if (!productItem) {
+    return;
+  }
+
+
+  const select =
+    productItem.querySelector(
+      ".produkSelect"
+    );
+
+
+  const produkId =
+    select?.value;
+
+
+  const master =
+    getMasterProduk(
+      produkId
+    );
+
+
+  const harga =
+    getHargaProduk(
+      productItem
+    );
+
+
+  const hargaInput =
+    productItem.querySelector(
+      ".hargaProduk"
+    );
+
+
+  const jenisInput =
+    productItem.querySelector(
+      ".jenisProyek"
+    );
+
+
+  const subJenisInput =
+    productItem.querySelector(
+      ".subJenisProyek"
+    );
+
+
+  if (hargaInput) {
+
+    hargaInput.value =
+      rupiah(harga);
+
+  }
+
+
+  if (jenisInput) {
+
+    jenisInput.value =
+      master?.jenis_proyek ||
+      "Sewa";
+
+  }
+
+
+  if (subJenisInput) {
+
+    subJenisInput.value =
+      master?.sub_jenis_proyek ||
+      "-";
+
+  }
+
+}
+
+
+// =====================================================
+// UPDATE END DATE SATU ORDER
+// =====================================================
+
+function updateEndDateOrder(
+  orderItem
+) {
+
+  if (!orderItem) {
+    return;
+  }
+
+
+  const productItem =
+    orderItem.closest(
+      ".product-item"
+    );
+
+
+  if (!productItem) {
+    return;
+  }
+
+
+  const tanggalDO =
+    orderItem.querySelector(
+      ".tanggalDO"
+    )?.value || "";
+
+
+  const durasi =
+    angka(
+      productItem.querySelector(
+        ".durasiProduk"
+      )?.value
+    );
+
+
+  const endDate =
+    orderItem.querySelector(
+      ".endDate"
+    );
+
+
+  if (!endDate) {
+    return;
+  }
+
+
+  endDate.value =
+    hitungEndDate(
+      tanggalDO,
+      durasi
+    );
+
+}
+
+
+// =====================================================
+// HITUNG SATU ORDER
+// =====================================================
+
+function hitungOrder(
+  orderItem
+) {
+
+  if (!orderItem) {
+    return;
+  }
+
+
+  const productItem =
+    orderItem.closest(
+      ".product-item"
+    );
+
+
+  if (!productItem) {
+    return;
+  }
+
+
+  const hargaItem =
+    getHargaProduk(
+      productItem
+    );
+
+
+  const quantity =
+    angka(
+      orderItem.querySelector(
+        ".quantityOrder"
+      )?.value
+    );
+
+
+  const durasi =
+    angka(
+      productItem.querySelector(
+        ".durasiProduk"
+      )?.value
+    );
+
+
+  const hargaPerBulan =
+    hargaItem *
+    quantity;
+
+
+  const totalHarga =
+    hargaPerBulan *
+    durasi;
+
+
+  const hargaPerBulanInput =
+    orderItem.querySelector(
+      ".hargaPerBulan"
+    );
+
+
+  const totalHargaInput =
+    orderItem.querySelector(
+      ".totalHargaOrder"
+    );
+
+
+  if (hargaPerBulanInput) {
+
+    hargaPerBulanInput.value =
+      rupiah(
+        hargaPerBulan
+      );
+
+    hargaPerBulanInput.dataset.value =
+      String(
+        hargaPerBulan
+      );
+
+  }
+
+
+  if (totalHargaInput) {
+
+    totalHargaInput.value =
+      rupiah(
+        totalHarga
+      );
+
+    totalHargaInput.dataset.value =
+      String(
+        totalHarga
+      );
+
+  }
+
+
+  updateEndDateOrder(
+    orderItem
+  );
+
+}
+
+
+// =====================================================
+// HITUNG SATU PRODUK
+// =====================================================
+
+function hitungProduk(
+  productItem
+) {
+
+  if (!productItem) {
+    return;
+  }
+
+
+  updateInformasiProduk(
+    productItem
+  );
+
+
+  productItem
     .querySelectorAll(
-      ".lokasiSelect"
+      ".order-item"
     )
     .forEach(
-      (select) => {
+      orderItem => {
 
-        const value =
-          select.value;
-
-        isiCabangSelect(
-          select,
-          value
+        hitungOrder(
+          orderItem
         );
 
       }
     );
 
+
+  hitungTotalProyek();
+
 }
 
 
 // =====================================================
-// TAMBAH PRODUK
+// HITUNG TOTAL PROYEK
 // =====================================================
 
-function tambahProduk() {
+function hitungTotalProyek() {
 
-  if (!productTemplate) {
+  let totalPerBulan = 0;
+  let totalProyek = 0;
 
-    console.error(
-      "productTemplate tidak ditemukan"
+
+  document
+    .querySelectorAll(
+      ".order-item"
+    )
+    .forEach(
+      orderItem => {
+
+        totalPerBulan +=
+          angka(
+            orderItem
+              .querySelector(
+                ".hargaPerBulan"
+              )
+              ?.dataset.value
+          );
+
+
+        totalProyek +=
+          angka(
+            orderItem
+              .querySelector(
+                ".totalHargaOrder"
+              )
+              ?.dataset.value
+          );
+
+      }
     );
 
-    return;
+
+  const totalBulananEl =
+    document.getElementById(
+      "totalNilaiPerBulan"
+    );
+
+
+  const grandTotalEl =
+    document.getElementById(
+      "grandTotalProyek"
+    );
+
+
+  if (totalBulananEl) {
+
+    totalBulananEl.textContent =
+      rupiah(
+        totalPerBulan
+      );
 
   }
 
-  productCounter++;
 
-  const fragment =
-    productTemplate
-      .content
-      .cloneNode(true);
+  if (grandTotalEl) {
 
-  const productItem =
-    fragment.querySelector(
-      ".product-item"
-    );
-
-  productItem.dataset.productIndex =
-    productCounter;
-
-  const title =
-    productItem.querySelector(
-      ".product-title"
-    );
-
-  title.textContent =
-    `Produk ${productCounter}`;
-
-
-  // PRODUK SELECT
-
-  const produkSelect =
-    productItem.querySelector(
-      ".produkSelect"
-    );
-
-  isiProdukSelect(
-    produkSelect
-  );
-
-
-  // EVENT PRODUK
-
-  produkSelect.addEventListener(
-    "change",
-    () => {
-
-      updateInformasiProduk(
-        productItem
+    grandTotalEl.textContent =
+      rupiah(
+        totalProyek
       );
 
-    }
-  );
-
-
-  // EVENT DURASI
-
-  const durasiInput =
-    productItem.querySelector(
-      ".durasiProduk"
-    );
-
-  durasiInput.addEventListener(
-    "input",
-    () => {
-
-      hitungSemuaOrderProduk(
-        productItem
-      );
-
-    }
-  );
-
-
-  // TAMBAH ORDER
-
-  const btnOrder =
-    productItem.querySelector(
-      ".btnTambahOrder"
-    );
-
-  btnOrder.addEventListener(
-    "click",
-    () => {
-
-      tambahOrder(
-        productItem
-      );
-
-    }
-  );
-
-
-  // HAPUS PRODUK
-
-  const btnHapus =
-    productItem.querySelector(
-      ".btnHapusProduk"
-    );
-
-  btnHapus.addEventListener(
-    "click",
-    () => {
-
-      productItem.remove();
-
-      updateNomorProduk();
-
-      hitungTotalProyek();
-
-    }
-  );
-
-
-  productContainer.appendChild(
-    fragment
-  );
-
-
-  // otomatis 1 order
-
-  tambahOrder(
-    productItem
-  );
-
-
-  updateNomorProduk();
+  }
 
 }
 
 
 // =====================================================
-// UPDATE NOMOR PRODUK
+// UPDATE NOMOR / JUDUL PRODUK
 // =====================================================
 
-function updateNomorProduk() {
+function updateJudulProduk() {
 
   const products =
     [
@@ -800,13 +1234,22 @@ function updateNomorProduk() {
         )
     ];
 
+
   products.forEach(
-    (item, index) => {
+    (
+      item,
+      index
+    ) => {
+
+      item.dataset.productIndex =
+        String(index);
+
 
       const title =
         item.querySelector(
           ".product-title"
         );
+
 
       if (title) {
 
@@ -822,151 +1265,29 @@ function updateNomorProduk() {
 
 
 // =====================================================
-// CARI MASTER PRODUK
-// =====================================================
-
-function getProdukById(id) {
-
-  return masterProdukSewa.find(
-    (item) =>
-      String(item.id) ===
-      String(id)
-  );
-
-}
-
-
-// =====================================================
-// INFORMASI PRODUK
-// =====================================================
-
-function updateInformasiProduk(
-  productItem
-) {
-
-  const select =
-    productItem.querySelector(
-      ".produkSelect"
-    );
-
-  const hargaInput =
-    productItem.querySelector(
-      ".hargaProduk"
-    );
-
-  const jenisInput =
-    productItem.querySelector(
-      ".jenisProyek"
-    );
-
-  const subJenisInput =
-    productItem.querySelector(
-      ".subJenisProyek"
-    );
-
-  const produk =
-    getProdukById(
-      select.value
-    );
-
-
-  if (!produk) {
-
-    hargaInput.value =
-      rupiah(0);
-
-    hargaInput.dataset.value =
-      "0";
-
-    jenisInput.value =
-      "Sewa";
-
-    subJenisInput.value =
-      "-";
-
-    hitungSemuaOrderProduk(
-      productItem
-    );
-
-    return;
-
-  }
-
-
-  /*
-    Menyesuaikan beberapa kemungkinan
-    nama field master produk.
-  */
-
-  const harga =
-    angka(
-      produk.harga_jual_per_item ??
-      produk.harga_jual ??
-      produk.harga ??
-      0
-    );
-
-
-  const jenis =
-    produk.jenis_proyek ||
-    produk.jenis_proyek_name ||
-    "Sewa";
-
-
-  const subJenis =
-    produk.sub_jenis_proyek ||
-    produk.sub_jenis_proyek_name ||
-    produk.nama_sub_jenis ||
-    "-";
-
-
-  hargaInput.value =
-    rupiah(harga);
-
-  hargaInput.dataset.value =
-    String(harga);
-
-  jenisInput.value =
-    jenis;
-
-  subJenisInput.value =
-    subJenis;
-
-
-  hitungSemuaOrderProduk(
-    productItem
-  );
-
-}
-
-
-// =====================================================
 // TAMBAH ORDER
 // =====================================================
 
 function tambahOrder(
-  productItem
+  productItem,
+  data = null
 ) {
 
-  if (!orderTemplate) {
+  if (
+    !productItem ||
+    !orderTemplate
+  ) {
 
-    console.error(
-      "orderTemplate tidak ditemukan"
-    );
-
-    return;
+    return null;
 
   }
 
-  const orderContainer =
-    productItem.querySelector(
-      ".order-container"
-    );
 
   const fragment =
     orderTemplate
       .content
       .cloneNode(true);
+
 
   const orderItem =
     fragment.querySelector(
@@ -974,253 +1295,499 @@ function tambahOrder(
     );
 
 
-  // CABANG
-
-  const lokasiSelect =
+  const lokasi =
     orderItem.querySelector(
       ".lokasiSelect"
     );
 
+
   isiCabangSelect(
-    lokasiSelect
+    lokasi,
+    data?.cabang_id
   );
 
 
-  // QUANTITY
+  // ===============================================
+  // DATA EDIT
+  // ===============================================
 
-  const quantity =
-    orderItem.querySelector(
-      ".quantityOrder"
-    );
+  if (data) {
 
-  quantity.addEventListener(
-    "input",
-    () => {
+    orderItem.dataset.orderId =
+      data.id || "";
 
-      hitungOrder(
-        productItem,
-        orderItem
+
+    const qty =
+      orderItem.querySelector(
+        ".quantityOrder"
       );
 
-    }
-  );
 
+    if (qty) {
 
-  // HAPUS ORDER
-
-  const btnHapus =
-    orderItem.querySelector(
-      ".btnHapusOrder"
-    );
-
-  btnHapus.addEventListener(
-    "click",
-    () => {
-
-      orderItem.remove();
-
-      hitungTotalProyek();
+      qty.value =
+        data.quantity ||
+        1;
 
     }
-  );
 
 
-  orderContainer.appendChild(
-    fragment
-  );
+    const noReq =
+      orderItem.querySelector(
+        ".noReqKlien"
+      );
 
 
-  hitungOrder(
-    productItem,
-    orderItem
-  );
+    if (noReq) {
 
-}
+      noReq.value =
+        data.no_req_klien ||
+        "";
+
+    }
 
 
-// =====================================================
-// HITUNG ORDER
-// =====================================================
+    const tanggalReq =
+      orderItem.querySelector(
+        ".tanggalReqKlien"
+      );
 
-function hitungOrder(
-  productItem,
+
+    if (tanggalReq) {
+
+      tanggalReq.value =
+        tanggalInput(
+          data.tanggal_req_klien
+        );
+
+    }
+
+
+    const tanggalDO =
+      orderItem.querySelector(
+        ".tanggalDO"
+      );
+
+
+    if (tanggalDO) {
+
+      tanggalDO.value =
+        tanggalInput(
+          data.tanggal_do
+        );
+
+    }
+
+
+    const noDO =
+      orderItem.querySelector(
+        ".noDO"
+      );
+
+
+    if (noDO) {
+
+      noDO.value =
+        data.no_do ||
+        "";
+
+    }
+
+
+    const endDate =
+      orderItem.querySelector(
+        ".endDate"
+      );
+
+
+    if (endDate) {
+
+      endDate.value =
+        tanggalInput(
+          data.end_date
+        );
+
+    }
+
+  }
+
+
+  // ===============================================
+  // EVENT QTY
+  // ===============================================
+
   orderItem
-) {
-
-  const hargaProdukEl =
-    productItem.querySelector(
-      ".hargaProduk"
-    );
-
-  const durasiEl =
-    productItem.querySelector(
-      ".durasiProduk"
-    );
-
-  const quantityEl =
-    orderItem.querySelector(
+    .querySelector(
       ".quantityOrder"
-    );
-
-  const hargaPerBulanEl =
-    orderItem.querySelector(
-      ".hargaPerBulan"
-    );
-
-  const totalHargaEl =
-    orderItem.querySelector(
-      ".totalHargaOrder"
-    );
-
-
-  const hargaProduk =
-    angka(
-      hargaProdukEl?.dataset.value
-    );
-
-  const quantity =
-    angka(
-      quantityEl?.value
-    );
-
-  const durasi =
-    angka(
-      durasiEl?.value
-    );
-
-
-  // QTY x HARGA ITEM
-
-  const hargaPerBulan =
-    quantity *
-    hargaProduk;
-
-
-  // HARGA PER BULAN x DURASI
-
-  const totalHarga =
-    hargaPerBulan *
-    durasi;
-
-
-  hargaPerBulanEl.value =
-    rupiah(
-      hargaPerBulan
-    );
-
-  hargaPerBulanEl.dataset.value =
-    String(
-      hargaPerBulan
-    );
-
-
-  totalHargaEl.value =
-    rupiah(
-      totalHarga
-    );
-
-  totalHargaEl.dataset.value =
-    String(
-      totalHarga
-    );
-
-
-  hitungTotalProyek();
-
-}
-
-
-// =====================================================
-// HITUNG SEMUA ORDER DALAM PRODUK
-// =====================================================
-
-function hitungSemuaOrderProduk(
-  productItem
-) {
-
-  productItem
-    .querySelectorAll(
-      ".order-item"
     )
-    .forEach(
-      (orderItem) => {
+    ?.addEventListener(
+      "input",
+      () => {
 
         hitungOrder(
-          productItem,
+          orderItem
+        );
+
+        hitungTotalProyek();
+
+      }
+    );
+
+
+  // ===============================================
+  // NO REQ KLIEN
+  // ===============================================
+
+  orderItem
+    .querySelector(
+      ".noReqKlien"
+    )
+    ?.addEventListener(
+      "input",
+      () => {
+
+        updateRujukanKontrak();
+
+      }
+    );
+
+
+  // ===============================================
+  // TANGGAL DO
+  // ===============================================
+
+  orderItem
+    .querySelector(
+      ".tanggalDO"
+    )
+    ?.addEventListener(
+      "change",
+      () => {
+
+        updateEndDateOrder(
           orderItem
         );
 
       }
     );
 
-}
 
+  // ===============================================
+  // HAPUS ORDER
+  // ===============================================
 
-// =====================================================
-// HITUNG TOTAL PROYEK
-// =====================================================
-
-function hitungTotalProyek() {
-
-  let totalPerBulan = 0;
-  let grandTotal = 0;
-
-
-  document
-    .querySelectorAll(
-      ".order-item"
+  orderItem
+    .querySelector(
+      ".btnHapusOrder"
     )
-    .forEach(
-      (orderItem) => {
+    ?.addEventListener(
+      "click",
+      () => {
 
-        const hargaPerBulan =
-          orderItem.querySelector(
-            ".hargaPerBulan"
-          );
-
-        const totalHarga =
-          orderItem.querySelector(
-            ".totalHargaOrder"
+        const orderContainer =
+          productItem.querySelector(
+            ".order-container"
           );
 
 
-        totalPerBulan +=
-          angka(
-            hargaPerBulan?.dataset.value
-          );
+        const jumlahOrder =
+          orderContainer
+            ?.querySelectorAll(
+              ".order-item"
+            )
+            .length || 0;
 
 
-        grandTotal +=
-          angka(
-            totalHarga?.dataset.value
+        if (
+          jumlahOrder <= 1
+        ) {
+
+          alert(
+            "Minimal harus ada 1 Order pada setiap Produk."
           );
+
+          return;
+
+        }
+
+
+        orderItem.remove();
+
+
+        updateRujukanKontrak();
+
+        hitungProduk(
+          productItem
+        );
 
       }
     );
 
 
-  totalNilaiPerBulanEl.textContent =
-    rupiah(
-      totalPerBulan
+  const container =
+    productItem.querySelector(
+      ".order-container"
     );
 
 
-  grandTotalProyekEl.textContent =
-    rupiah(
-      grandTotal
+  container.appendChild(
+    fragment
+  );
+
+
+  hitungOrder(
+    orderItem
+  );
+
+
+  updateRujukanKontrak();
+
+
+  return orderItem;
+
+}
+
+
+// =====================================================
+// TAMBAH PRODUK
+// =====================================================
+
+function tambahProduk(
+  data = null
+) {
+
+  if (
+    !productTemplate ||
+    !productContainer
+  ) {
+
+    return null;
+
+  }
+
+
+  const fragment =
+    productTemplate
+      .content
+      .cloneNode(true);
+
+
+  const productItem =
+    fragment.querySelector(
+      ".product-item"
     );
 
 
-  totalNilaiPerBulanEl.dataset.value =
-    String(
-      totalPerBulan
+  productCounter++;
+
+
+  // ===============================================
+  // SIMPAN IDENTITAS PRODUK LAMA
+  //
+  // Digunakan supaya harga kontrak existing
+  // tidak berubah mengikuti harga master.
+  // ===============================================
+
+  productItem.dataset.productId =
+    data?.id ||
+    "";
+
+  productItem.dataset.originalProdukId =
+    data?.produk_id ||
+    "";
+
+  productItem.dataset.originalHarga =
+    angka(
+      data?.harga_per_item
     );
 
 
-  grandTotalProyekEl.dataset.value =
-    String(
-      grandTotal
+  const produkSelect =
+    productItem.querySelector(
+      ".produkSelect"
     );
+
+
+  isiProdukSelect(
+    produkSelect,
+    data?.produk_id
+  );
+
+
+  const durasi =
+    productItem.querySelector(
+      ".durasiProduk"
+    );
+
+
+  if (
+    durasi &&
+    data
+  ) {
+
+    durasi.value =
+      data.durasi_bulan ||
+      "";
+
+  }
+
+
+  // ===============================================
+  // GANTI PRODUK
+  // ===============================================
+
+  produkSelect
+    ?.addEventListener(
+      "change",
+      () => {
+
+        hitungProduk(
+          productItem
+        );
+
+      }
+    );
+
+
+  // ===============================================
+  // GANTI DURASI
+  // ===============================================
+
+  durasi
+    ?.addEventListener(
+      "input",
+      () => {
+
+        hitungProduk(
+          productItem
+        );
+
+      }
+    );
+
+
+  // ===============================================
+  // TAMBAH ORDER
+  // ===============================================
+
+  productItem
+    .querySelector(
+      ".btnTambahOrder"
+    )
+    ?.addEventListener(
+      "click",
+      () => {
+
+        tambahOrder(
+          productItem
+        );
+
+
+        hitungProduk(
+          productItem
+        );
+
+      }
+    );
+
+
+  // ===============================================
+  // HAPUS PRODUK
+  // ===============================================
+
+  productItem
+    .querySelector(
+      ".btnHapusProduk"
+    )
+    ?.addEventListener(
+      "click",
+      () => {
+
+        const jumlahProduk =
+          productContainer
+            .querySelectorAll(
+              ".product-item"
+            )
+            .length;
+
+
+        if (
+          jumlahProduk <= 1
+        ) {
+
+          alert(
+            "Minimal harus ada 1 Produk."
+          );
+
+          return;
+
+        }
+
+
+        productItem.remove();
+
+
+        updateJudulProduk();
+
+        updateRujukanKontrak();
+
+        hitungTotalProyek();
+
+      }
+    );
+
+
+  productContainer.appendChild(
+    fragment
+  );
+
+
+  updateJudulProduk();
+
+
+  // ===============================================
+  // ORDER EDIT / ORDER BARU
+  // ===============================================
+
+  if (
+    data &&
+    Array.isArray(
+      data.orders
+    ) &&
+    data.orders.length
+  ) {
+
+    data.orders.forEach(
+      order => {
+
+        tambahOrder(
+          productItem,
+          order
+        );
+
+      }
+    );
+
+  } else {
+
+    tambahOrder(
+      productItem
+    );
+
+  }
+
+
+  updateInformasiProduk(
+    productItem
+  );
+
+
+  hitungProduk(
+    productItem
+  );
+
+
+  return productItem;
 
 }
 
@@ -1229,491 +1796,840 @@ function hitungTotalProyek() {
 // TAMBAH PEMBAYARAN
 // =====================================================
 
-function tambahPembayaran() {
+function tambahPembayaran(
+  data = null
+) {
 
-  if (!paymentTemplate) {
+  if (
+    !paymentTemplate ||
+    !paymentContainer
+  ) {
 
-    console.error(
-      "paymentTemplate tidak ditemukan"
-    );
-
-    return;
+    return null;
 
   }
+
 
   const fragment =
     paymentTemplate
       .content
       .cloneNode(true);
 
+
   const paymentItem =
     fragment.querySelector(
       ".payment-item"
     );
 
-  const btnHapus =
+
+  if (data) {
+
+    paymentItem.dataset.paymentId =
+      data.id ||
+      "";
+
+
+    const deskripsi =
+      paymentItem.querySelector(
+        ".deskripsiPembayaran"
+      );
+
+
+    const nominal =
+      paymentItem.querySelector(
+        ".nominalPembayaran"
+      );
+
+
+    const tanggalBayar =
+      paymentItem.querySelector(
+        ".tanggalBayar"
+      );
+
+
+    if (deskripsi) {
+
+      deskripsi.value =
+        data.deskripsi ||
+        "";
+
+    }
+
+
+    if (nominal) {
+
+      nominal.value =
+        rupiah(
+          data.nominal
+        );
+
+    }
+
+
+    if (tanggalBayar) {
+
+      tanggalBayar.value =
+        tanggalInput(
+          data.tanggal_bayar
+        );
+
+    }
+
+  }
+
+
+  // ===============================================
+  // FORMAT NOMINAL
+  // ===============================================
+
+  const nominalInput =
     paymentItem.querySelector(
-      ".btnHapusPembayaran"
+      ".nominalPembayaran"
     );
 
 
-  btnHapus.addEventListener(
-    "click",
-    () => {
+  nominalInput
+    ?.addEventListener(
+      "input",
+      event => {
 
-      paymentItem.remove();
+        const value =
+          angka(
+            event.target.value
+          );
 
-    }
-  );
+
+        event.target.value =
+          value
+            ? rupiah(value)
+            : "";
+
+      }
+    );
+
+
+  // ===============================================
+  // HAPUS PEMBAYARAN
+  // ===============================================
+
+  paymentItem
+    .querySelector(
+      ".btnHapusPembayaran"
+    )
+    ?.addEventListener(
+      "click",
+      () => {
+
+        paymentItem.remove();
+
+      }
+    );
 
 
   paymentContainer.appendChild(
     fragment
   );
 
+
+  return paymentItem;
+
 }
 
 
 // =====================================================
-// PROYEK EXISTING
+// LOAD DATA EDIT
 // =====================================================
 
-proyekSelect?.addEventListener(
-  "change",
-  () => {
+async function loadDataEdit() {
 
-    const proyek =
-      masterProyek.find(
-        (item) =>
-          String(item.id) ===
-          String(proyekSelect.value)
-      );
+  if (!isEdit) {
+    return;
+  }
 
 
-    if (!proyek) {
-      return;
-    }
+  const result =
+    await fetchJSON(
+      `/api/proyek-sewa/${encodeURIComponent(
+        proyekSewaId
+      )}/detail`
+    );
 
 
-    /*
-      Jika endpoint nanti mengembalikan
-      nomor rujukan proyek, otomatis isi.
-    */
-
-    if (
-      proyek.nomor_rujukan
-    ) {
-
-      nomorRujukanInput.value =
-        proyek.nomor_rujukan;
-
-    }
+  const proyek =
+    result.proyek ||
+    {};
 
 
-    /*
-      Kalau proyek punya klien_id,
-      otomatis pilih klien.
-    */
+  const produk =
+    Array.isArray(
+      result.produk
+    )
+      ? result.produk
+      : [];
 
-    if (
-      proyek.klien_id
-    ) {
 
-      klienSelect.value =
-        String(
-          proyek.klien_id
-        );
+  const pembayaran =
+    Array.isArray(
+      result.pembayaran
+    )
+      ? result.pembayaran
+      : [];
 
-    }
+
+  // ===============================================
+  // HEADER
+  // ===============================================
+
+  if (nomorPr) {
+
+    nomorPr.value =
+      proyek.nomor_pr ||
+      "";
 
   }
-);
 
 
-// =====================================================
-// BUTTON
-// =====================================================
+  if (tanggalPr) {
 
-btnTambahProduk?.addEventListener(
-  "click",
-  () => {
+    tanggalPr.value =
+      tanggalInput(
+        proyek.tanggal_pr
+      );
+
+  }
+
+
+  if (klienId) {
+
+    klienId.value =
+      proyek.klien_id ||
+      "";
+
+  }
+
+
+  if (proyekId) {
+
+    proyekId.value =
+      proyek.proyek_id ||
+      "";
+
+  }
+
+
+  if (nomorRujukan) {
+
+    nomorRujukan.value =
+      proyek.nomor_rujukan ||
+      "";
+
+  }
+
+
+  // ===============================================
+  // PRODUK
+  // ===============================================
+
+  productContainer.innerHTML =
+    "";
+
+
+  if (produk.length) {
+
+    produk.forEach(
+      item => {
+
+        tambahProduk(
+          item
+        );
+
+      }
+    );
+
+  } else {
 
     tambahProduk();
 
   }
-);
 
 
-btnTambahPembayaran?.addEventListener(
-  "click",
-  () => {
+  // ===============================================
+  // PEMBAYARAN
+  // ===============================================
 
-    tambahPembayaran();
+  paymentContainer.innerHTML =
+    "";
+
+
+  pembayaran.forEach(
+    item => {
+
+      tambahPembayaran(
+        item
+      );
+
+    }
+  );
+
+
+  // ===============================================
+  // RUJUKAN KONTRAK
+  //
+  // Kalau order sudah memiliki No Req Klien,
+  // generate ulang dari order.
+  //
+  // Kalau data lama belum memiliki no_req_klien,
+  // nomor_rujukan existing tetap dipertahankan.
+  // ===============================================
+
+  const punyaNoReq =
+    [
+      ...document.querySelectorAll(
+        ".noReqKlien"
+      )
+    ].some(
+      input =>
+        String(
+          input.value || ""
+        ).trim()
+    );
+
+
+  if (punyaNoReq) {
+
+    updateRujukanKontrak();
 
   }
-);
 
 
-// =====================================================
-// BUILD PAYLOAD
-// =====================================================
-
-function buildPayload() {
-
-  const produk = [];
+  hitungTotalProyek();
 
 
-  productContainer
-    .querySelectorAll(
-      ".product-item"
-    )
-    .forEach(
-      (productItem) => {
+  // ===============================================
+  // UBAH JUDUL
+  // ===============================================
 
-        const produkId =
-          productItem.querySelector(
-            ".produkSelect"
-          )?.value;
-
-
-        const durasi =
-          angka(
-            productItem.querySelector(
-              ".durasiProduk"
-            )?.value
-          );
-
-
-        const harga =
-          angka(
-            productItem.querySelector(
-              ".hargaProduk"
-            )?.dataset.value
-          );
-
-
-        const jenisProyek =
-          productItem.querySelector(
-            ".jenisProyek"
-          )?.value || "Sewa";
-
-
-        const subJenisProyek =
-          productItem.querySelector(
-            ".subJenisProyek"
-          )?.value || "";
-
-
-        const orders = [];
-
-
-        productItem
-          .querySelectorAll(
-            ".order-item"
-          )
-          .forEach(
-            (orderItem) => {
-
-              orders.push({
-
-                cabang_id:
-                  Number(
-                    orderItem.querySelector(
-                      ".lokasiSelect"
-                    )?.value
-                  ) || null,
-
-                quantity:
-                  angka(
-                    orderItem.querySelector(
-                      ".quantityOrder"
-                    )?.value
-                  ),
-
-                harga_per_bulan:
-                  angka(
-                    orderItem.querySelector(
-                      ".hargaPerBulan"
-                    )?.dataset.value
-                  ),
-
-                total_harga:
-                  angka(
-                    orderItem.querySelector(
-                      ".totalHargaOrder"
-                    )?.dataset.value
-                  )
-
-              });
-
-            }
-          );
-
-
-        produk.push({
-
-          produk_id:
-            Number(
-              produkId
-            ) || null,
-
-          harga_per_item:
-            harga,
-
-          jenis_proyek:
-            jenisProyek,
-
-          sub_jenis_proyek:
-            subJenisProyek,
-
-          durasi_bulan:
-            durasi,
-
-          orders:
-            orders
-
-        });
-
-      }
+  const pageTitle =
+    document.getElementById(
+      "pageTitle"
     );
 
 
-  // PEMBAYARAN
+  if (pageTitle) {
 
-  const pembayaran = [];
+    pageTitle.textContent =
+      "Edit Proyek Sewa";
 
-
-  paymentContainer
-    .querySelectorAll(
-      ".payment-item"
-    )
-    .forEach(
-      (paymentItem) => {
-
-        pembayaran.push({
-
-          deskripsi:
-            paymentItem.querySelector(
-              ".deskripsiPembayaran"
-            )?.value
-              ?.trim() || "",
-
-        
-
-          tanggal_bayar:
-            paymentItem.querySelector(
-              ".tanggalBayar"
-            )?.value || null
-
-        });
-
-      }
-    );
+  }
 
 
-  return {
+  if (btnSimpan) {
 
-    nomor_pr:
-      document.getElementById(
-        "nomorPr"
-      )?.value
-        ?.trim() || "",
+    btnSimpan.textContent =
+      "Simpan Perubahan";
 
-    nomor_rujukan:
-      nomorRujukanInput
-        ?.value
-        ?.trim() || "",
-
-    proyek_id:
-      Number(
-        proyekSelect?.value
-      ) || null,
-
-    klien_id:
-      Number(
-        klienSelect?.value
-      ) || null,
-
-    total_nilai_per_bulan:
-      angka(
-        totalNilaiPerBulanEl
-          ?.dataset.value
-      ),
-
-    total_nilai:
-      angka(
-        grandTotalProyekEl
-          ?.dataset.value
-      ),
-
-    produk:
-      produk,
-
-    pembayaran:
-      pembayaran
-
-  };
+  }
 
 }
 
 
 // =====================================================
-// VALIDASI SEBELUM SIMPAN
+// BUILD PAYLOAD PRODUK
 // =====================================================
 
-function validasiPayload(
+function buildProdukPayload() {
+
+  const result = [];
+
+
+  const products =
+    [
+      ...productContainer
+        .querySelectorAll(
+          ".product-item"
+        )
+    ];
+
+
+  products.forEach(
+    (
+      productItem,
+      productIndex
+    ) => {
+
+      const produkId =
+        Number(
+          productItem.querySelector(
+            ".produkSelect"
+          )?.value
+        );
+
+
+      const durasiBulan =
+        Number(
+          productItem.querySelector(
+            ".durasiProduk"
+          )?.value
+        );
+
+
+      if (
+        !Number.isInteger(
+          produkId
+        ) ||
+        produkId <= 0
+      ) {
+
+        throw new Error(
+          `Produk ${productIndex + 1} belum dipilih.`
+        );
+
+      }
+
+
+      if (
+        !Number.isFinite(
+          durasiBulan
+        ) ||
+        durasiBulan <= 0
+      ) {
+
+        throw new Error(
+          `Durasi Produk ${productIndex + 1} belum valid.`
+        );
+
+      }
+
+
+      const orders = [];
+
+
+      const orderItems =
+        [
+          ...productItem
+            .querySelectorAll(
+              ".order-item"
+            )
+        ];
+
+
+      if (
+        orderItems.length === 0
+      ) {
+
+        throw new Error(
+          `Produk ${productIndex + 1} minimal memiliki 1 Order.`
+        );
+
+      }
+
+
+      orderItems.forEach(
+        (
+          orderItem,
+          orderIndex
+        ) => {
+
+          const cabangId =
+            Number(
+              orderItem.querySelector(
+                ".lokasiSelect"
+              )?.value
+            );
+
+
+          const quantity =
+            Number(
+              orderItem.querySelector(
+                ".quantityOrder"
+              )?.value
+            );
+
+
+          if (
+            !Number.isInteger(
+              cabangId
+            ) ||
+            cabangId <= 0
+          ) {
+
+            throw new Error(
+              `Lokasi Order ${orderIndex + 1} pada Produk ${productIndex + 1} belum dipilih.`
+            );
+
+          }
+
+
+          if (
+            !Number.isFinite(
+              quantity
+            ) ||
+            quantity <= 0
+          ) {
+
+            throw new Error(
+              `Quantity Order ${orderIndex + 1} pada Produk ${productIndex + 1} tidak valid.`
+            );
+
+          }
+
+
+          const tanggalDO =
+            orderItem.querySelector(
+              ".tanggalDO"
+            )?.value ||
+            null;
+
+
+          // Hitung ulang agar end_date tidak
+          // bergantung pada value readonly frontend.
+
+          const endDate =
+            tanggalDO
+              ? hitungEndDate(
+                  tanggalDO,
+                  durasiBulan
+                )
+              : null;
+
+
+          orders.push({
+
+            id:
+              orderItem.dataset.orderId ||
+              null,
+
+            cabang_id:
+              cabangId,
+
+            quantity:
+              quantity,
+
+            no_req_klien:
+              orderItem.querySelector(
+                ".noReqKlien"
+              )?.value?.trim() ||
+              null,
+
+            tanggal_req_klien:
+              orderItem.querySelector(
+                ".tanggalReqKlien"
+              )?.value ||
+              null,
+
+            tanggal_do:
+              tanggalDO,
+
+            no_do:
+              orderItem.querySelector(
+                ".noDO"
+              )?.value?.trim() ||
+              null,
+
+            end_date:
+              endDate
+
+          });
+
+        }
+      );
+
+
+      result.push({
+
+        // Penting untuk backend menentukan
+        // harga kontrak existing.
+
+        id:
+          productItem.dataset.productId ||
+          null,
+
+        produk_id:
+          produkId,
+
+        durasi_bulan:
+          durasiBulan,
+
+        orders:
+          orders
+
+      });
+
+    }
+  );
+
+
+  return result;
+
+}
+
+
+// =====================================================
+// BUILD PEMBAYARAN
+// =====================================================
+
+function buildPembayaranPayload() {
+
+  const result = [];
+
+
+  const paymentItems =
+    [
+      ...paymentContainer
+        .querySelectorAll(
+          ".payment-item"
+        )
+    ];
+
+
+  paymentItems.forEach(
+    item => {
+
+      const deskripsi =
+        item.querySelector(
+          ".deskripsiPembayaran"
+        )?.value?.trim() ||
+        "";
+
+
+      const nominal =
+        angka(
+          item.querySelector(
+            ".nominalPembayaran"
+          )?.value
+        );
+
+
+      const tanggalBayar =
+        item.querySelector(
+          ".tanggalBayar"
+        )?.value ||
+        null;
+
+
+      // Abaikan pembayaran benar-benar kosong.
+
+      if (
+        !deskripsi &&
+        nominal === 0 &&
+        !tanggalBayar
+      ) {
+
+        return;
+
+      }
+
+
+      result.push({
+
+        id:
+          item.dataset.paymentId ||
+          null,
+
+        deskripsi:
+          deskripsi,
+
+        nominal:
+          nominal,
+
+        tanggal_bayar:
+          tanggalBayar
+
+      });
+
+    }
+  );
+
+
+  return result;
+
+}
+
+
+// =====================================================
+// BUILD RUJUKAN DARI PAYLOAD PRODUK
+//
+// Jangan hanya percaya input readonly.
+// =====================================================
+
+function buildRujukanKontrak(
+  produk
+) {
+
+  const noReq = [];
+
+
+  produk.forEach(
+    item => {
+
+      (
+        item.orders ||
+        []
+      ).forEach(
+        order => {
+
+          const value =
+            String(
+              order.no_req_klien ||
+              ""
+            ).trim();
+
+
+          if (value) {
+
+            noReq.push(
+              value
+            );
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  return [
+    ...new Set(noReq)
+  ].join(", ");
+
+}
+
+
+// =====================================================
+// SIMPAN TAMBAH
+// =====================================================
+
+async function simpanTambah(
   payload
 ) {
 
-  if (
-    !payload.nomor_pr
-  ) {
+  return fetchJSON(
+    "/api/proyek-sewa",
+    {
+      method: "POST",
 
-    alert(
-      "Nomor PR wajib diisi."
-    );
+      headers: {
+        "Content-Type":
+          "application/json"
+      },
 
-    return false;
-
-  }
-
-
-  if (
-    !payload.klien_id
-  ) {
-
-    alert(
-      "Klien wajib dipilih."
-    );
-
-    return false;
-
-  }
-
-
-  /*
-    Salah satu:
-    nomor rujukan manual
-    ATAU proyek existing
-  */
-
-  if (
-    !payload.nomor_rujukan &&
-    !payload.proyek_id
-  ) {
-
-    alert(
-      "Isi Rujukan Kontrak Nomor atau pilih Proyek yang sudah ada."
-    );
-
-    return false;
-
-  }
-
-
-  if (
-    payload.produk.length === 0
-  ) {
-
-    alert(
-      "Minimal tambahkan 1 produk."
-    );
-
-    return false;
-
-  }
-
-
-  for (
-    let i = 0;
-    i < payload.produk.length;
-    i++
-  ) {
-
-    const item =
-      payload.produk[i];
-
-
-    if (
-      !item.produk_id
-    ) {
-
-      alert(
-        `Produk ${i + 1} belum dipilih.`
-      );
-
-      return false;
-
+      body:
+        JSON.stringify(
+          payload
+        )
     }
+  );
+
+}
 
 
-    if (
-      item.durasi_bulan <= 0
-    ) {
+// =====================================================
+// SIMPAN EDIT
+//
+// Menggunakan API PUT yang sudah kita buat:
+// 1. informasi
+// 2. produk
+// 3. pembayaran
+// =====================================================
 
-      alert(
-        `Durasi Produk ${i + 1} wajib lebih dari 0 bulan.`
-      );
+async function simpanEdit(
+  payload
+) {
 
-      return false;
+  // ===============================================
+  // INFORMASI
+  // ===============================================
 
+  await fetchJSON(
+    `/api/proyek-sewa/${encodeURIComponent(
+      proyekSewaId
+    )}/informasi`,
+    {
+      method: "PUT",
+
+      headers: {
+        "Content-Type":
+          "application/json"
+      },
+
+      body:
+        JSON.stringify({
+
+          nomor_pr:
+            payload.nomor_pr,
+
+          tanggal_pr:
+            payload.tanggal_pr,
+
+          nomor_rujukan:
+            payload.nomor_rujukan,
+
+          proyek_id:
+            payload.proyek_id,
+
+          klien_id:
+            payload.klien_id
+
+        })
     }
+  );
 
 
-    if (
-      item.orders.length === 0
-    ) {
+  // ===============================================
+  // PRODUK & ORDER
+  // ===============================================
 
-      alert(
-        `Produk ${i + 1} belum memiliki order.`
-      );
+  await fetchJSON(
+    `/api/proyek-sewa/${encodeURIComponent(
+      proyekSewaId
+    )}/produk`,
+    {
+      method: "PUT",
 
-      return false;
+      headers: {
+        "Content-Type":
+          "application/json"
+      },
 
+      body:
+        JSON.stringify({
+          produk:
+            payload.produk
+        })
     }
+  );
 
 
-    for (
-      let j = 0;
-      j < item.orders.length;
-      j++
-    ) {
+  // ===============================================
+  // PEMBAYARAN
+  // ===============================================
 
-      const order =
-        item.orders[j];
+  await fetchJSON(
+    `/api/proyek-sewa/${encodeURIComponent(
+      proyekSewaId
+    )}/pembayaran`,
+    {
+      method: "PUT",
 
+      headers: {
+        "Content-Type":
+          "application/json"
+      },
 
-      if (
-        !order.cabang_id
-      ) {
-
-        alert(
-          `Lokasi Order ${j + 1} pada Produk ${i + 1} belum dipilih.`
-        );
-
-        return false;
-
-      }
-
-
-      if (
-        order.quantity <= 0
-      ) {
-
-        alert(
-          `Quantity Order ${j + 1} pada Produk ${i + 1} harus lebih dari 0.`
-        );
-
-        return false;
-
-      }
-
+      body:
+        JSON.stringify({
+          pembayaran:
+            payload.pembayaran
+        })
     }
+  );
 
-  }
 
-
-  return true;
+  return {
+    success: true
+  };
 
 }
 
@@ -1724,43 +2640,145 @@ function validasiPayload(
 
 form?.addEventListener(
   "submit",
-  async (event) => {
+  async event => {
 
     event.preventDefault();
 
 
-    const payload =
-      buildPayload();
+    try {
+
+      // =============================================
+      // VALIDASI HEADER
+      // =============================================
+
+      const nomorPrValue =
+        nomorPr?.value?.trim() ||
+        "";
 
 
-    console.log(
-      "PAYLOAD PROYEK SEWA:",
-      payload
-    );
+      const klienValue =
+        Number(
+          klienId?.value
+        );
 
 
-    if (
-      !validasiPayload(
+      if (!nomorPrValue) {
+
+        throw new Error(
+          "Nomor PR wajib diisi."
+        );
+
+      }
+
+
+      if (
+        !Number.isInteger(
+          klienValue
+        ) ||
+        klienValue <= 0
+      ) {
+
+        throw new Error(
+          "Klien wajib dipilih."
+        );
+
+      }
+
+
+      // =============================================
+      // PRODUK
+      // =============================================
+
+      const produk =
+        buildProdukPayload();
+
+
+      if (
+        produk.length === 0
+      ) {
+
+        throw new Error(
+          "Minimal harus ada 1 Produk."
+        );
+
+      }
+
+
+      // =============================================
+      // RUJUKAN KONTRAK
+      // =============================================
+
+      const rujukan =
+        buildRujukanKontrak(
+          produk
+        );
+
+
+      if (nomorRujukan) {
+
+        nomorRujukan.value =
+          rujukan;
+
+      }
+
+
+      // =============================================
+      // PEMBAYARAN
+      // =============================================
+
+      const pembayaran =
+        buildPembayaranPayload();
+
+
+      // =============================================
+      // PAYLOAD
+      // =============================================
+
+      const payload = {
+
+        nomor_pr:
+          nomorPrValue,
+
+        tanggal_pr:
+          tanggalPr?.value ||
+          null,
+
+        nomor_rujukan:
+          rujukan ||
+          null,
+
+        proyek_id:
+          proyekId?.value
+            ? Number(
+                proyekId.value
+              )
+            : null,
+
+        klien_id:
+          klienValue,
+
+        produk:
+          produk,
+
+        pembayaran:
+          pembayaran
+
+      };
+
+
+      console.log(
+        "PAYLOAD PROYEK SEWA:",
         payload
-      )
-    ) {
-
-      return;
-
-    }
-
-
-    const btnSimpan =
-      document.getElementById(
-        "btnSimpanProyekSewa"
       );
 
 
-    const textAwal =
-      btnSimpan?.textContent;
+      // =============================================
+      // BUTTON LOADING
+      // =============================================
 
+      const originalText =
+        btnSimpan?.textContent;
 
-    try {
 
       if (btnSimpan) {
 
@@ -1768,61 +2786,54 @@ form?.addEventListener(
           true;
 
         btnSimpan.textContent =
-          "Menyimpan...";
+          isEdit
+            ? "Menyimpan Perubahan..."
+            : "Menyimpan...";
 
       }
 
 
-      const response =
-        await fetch(
-          "/api/proyek-sewa",
-          {
-            method:
-              "POST",
+      try {
 
-            credentials:
-              "same-origin",
+        if (isEdit) {
 
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body:
-              JSON.stringify(
-                payload
-              )
-          }
-        );
-
-
-      const result =
-        await response
-          .json()
-          .catch(
-            () => ({})
+          await simpanEdit(
+            payload
           );
 
+        } else {
 
-      if (
-        !response.ok
-      ) {
+          await simpanTambah(
+            payload
+          );
 
-        throw new Error(
-          result.error ||
-          "Gagal menyimpan proyek sewa."
+        }
+
+
+        alert(
+          isEdit
+            ? "Proyek Sewa berhasil diperbarui."
+            : "Proyek Sewa berhasil ditambahkan."
         );
 
+
+        window.location.href =
+          "/proyek-sewa.html";
+
+
+      } finally {
+
+        if (btnSimpan) {
+
+          btnSimpan.disabled =
+            false;
+
+          btnSimpan.textContent =
+            originalText;
+
+        }
+
       }
-
-
-      alert(
-        "Proyek sewa berhasil disimpan."
-      );
-
-
-      window.location.href =
-        "/proyek-sewa.html";
 
 
     } catch (error) {
@@ -1835,22 +2846,8 @@ form?.addEventListener(
 
       alert(
         error.message ||
-        "Gagal menyimpan proyek sewa."
+        "Gagal menyimpan Proyek Sewa."
       );
-
-
-    } finally {
-
-      if (btnSimpan) {
-
-        btnSimpan.disabled =
-          false;
-
-        btnSimpan.textContent =
-          textAwal ||
-          "Simpan Proyek Sewa";
-
-      }
 
     }
 
@@ -1859,53 +2856,133 @@ form?.addEventListener(
 
 
 // =====================================================
-// INITIALIZE
+// BUTTON TAMBAH PRODUK
 // =====================================================
 
-async function initialize() {
+btnTambahProduk
+  ?.addEventListener(
+    "click",
+    () => {
 
-  console.log(
-    "INITIALIZE PROYEK SEWA FORM"
+      tambahProduk();
+
+    }
   );
 
 
-  /*
-    Load seluruh master bersamaan.
-  */
+// =====================================================
+// BUTTON TAMBAH PEMBAYARAN
+// =====================================================
 
-  await Promise.all([
-    loadMasterKlien(),
-    loadMasterProyek(),
-    loadMasterProdukSewa(),
-    loadMasterCabang()
-  ]);
+btnTambahPembayaran
+  ?.addEventListener(
+    "click",
+    () => {
 
+      tambahPembayaran();
 
-  /*
-    Saat pertama dibuka:
-    otomatis munculkan 1 Produk.
-  */
-
-  if (
-    productContainer &&
-    productContainer.children.length === 0
-  ) {
-
-    tambahProduk();
-
-  }
-
-
-  hitungTotalProyek();
-
-}
+    }
+  );
 
 
 // =====================================================
-// START
+// PROYEK EXISTING -> KLIEN
+//
+// Kalau master proyek mengembalikan klien_id,
+// pilih klien secara otomatis.
+// =====================================================
+
+proyekId
+  ?.addEventListener(
+    "change",
+    () => {
+
+      const selected =
+        masterProyek.find(
+          item =>
+            String(item.id) ===
+            String(proyekId.value)
+        );
+
+
+      if (
+        selected?.klien_id &&
+        klienId
+      ) {
+
+        klienId.value =
+          selected.klien_id;
+
+      }
+
+    }
+  );
+
+
+// =====================================================
+// INITIALIZE
 // =====================================================
 
 document.addEventListener(
   "DOMContentLoaded",
-  initialize
+  async () => {
+
+    try {
+
+      // =============================================
+      // LOAD SEMUA MASTER
+      // =============================================
+
+      await Promise.all([
+        loadMasterKlien(),
+        loadMasterProyek(),
+        loadMasterProduk(),
+        loadMasterCabang()
+      ]);
+
+
+      // =============================================
+      // EDIT
+      // =============================================
+
+      if (isEdit) {
+
+        await loadDataEdit();
+
+      }
+
+      // =============================================
+      // TAMBAH
+      // =============================================
+
+      else {
+
+        tambahProduk();
+
+      }
+
+
+      console.log(
+        isEdit
+          ? "FORM EDIT PROYEK SEWA SIAP"
+          : "FORM TAMBAH PROYEK SEWA SIAP"
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "ERROR INITIALIZE PROYEK SEWA:",
+        error
+      );
+
+
+      alert(
+        error.message ||
+        "Gagal memuat form Proyek Sewa."
+      );
+
+    }
+
+  }
 );

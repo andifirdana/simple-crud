@@ -12,37 +12,22 @@ const params =
     window.location.search
   );
 
-
 const proyekSewaId =
   params.get("id");
 
 
 // =====================================================
-// GLOBAL DATA
+// GLOBAL
 // =====================================================
 
-let detailProyekSewa =
-  null;
+let detailProyekSewa = null;
 
+let masterKlien = [];
+let masterProyek = [];
+let masterProduk = [];
+let masterCabang = [];
 
-let masterKlien =
-  [];
-
-
-let masterProyek =
-  [];
-
-
-let masterProduk =
-  [];
-
-
-let masterCabang =
-  [];
-
-
-let modeEditProduk =
-  false;
+let modeEditProduk = false;
 
 
 // =====================================================
@@ -59,7 +44,6 @@ function angka(value) {
     return 0;
   }
 
-
   if (
     typeof value === "number"
   ) {
@@ -70,20 +54,15 @@ function angka(value) {
 
   }
 
-
   let text =
     String(value)
       .trim()
       .replace(/[^\d,.-]/g, "");
 
-
   if (!text) {
     return 0;
   }
 
-
-  // format Indonesia:
-  // 1.000.000
   if (
     text.includes(".") &&
     !text.includes(",")
@@ -92,7 +71,6 @@ function angka(value) {
     const parts =
       text.split(".");
 
-
     const semuaRibuan =
       parts
         .slice(1)
@@ -100,7 +78,6 @@ function angka(value) {
           part =>
             part.length === 3
         );
-
 
     if (semuaRibuan) {
 
@@ -111,8 +88,6 @@ function angka(value) {
 
   }
 
-
-  // 1.000.000,50
   if (
     text.includes(",")
   ) {
@@ -124,10 +99,8 @@ function angka(value) {
 
   }
 
-
   const result =
     Number(text);
-
 
   return Number.isFinite(result)
     ? result
@@ -137,7 +110,7 @@ function angka(value) {
 
 
 // =====================================================
-// FORMAT RUPIAH
+// RUPIAH
 // =====================================================
 
 function rupiah(value) {
@@ -155,9 +128,14 @@ function rupiah(value) {
 
 }
 
+// =====================================================
+// FORMAT TANGGAL
+// AMAN TIMEZONE - TIDAK MUNDUR 1 HARI
+// =====================================================
 
 // =====================================================
 // FORMAT TANGGAL
+// FIX DATE + TIMESTAMP POSTGRES
 // =====================================================
 
 function formatTanggal(value) {
@@ -167,33 +145,65 @@ function formatTanggal(value) {
   }
 
 
-  const date =
-    new Date(value);
+  const tanggal =
+    tanggalInput(value);
 
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
+  if (!tanggal) {
     return "-";
   }
 
 
-  return new Intl.DateTimeFormat(
-    "id-ID",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    }
-  ).format(date);
+  const [
+    year,
+    month,
+    day
+  ] =
+    tanggal
+      .split("-")
+      .map(Number);
+
+
+  const namaBulan = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "Mei",
+    "Jun",
+    "Jul",
+    "Agu",
+    "Sep",
+    "Okt",
+    "Nov",
+    "Des"
+  ];
+
+
+  return `${
+    String(day).padStart(
+      2,
+      "0"
+    )
+  } ${
+    namaBulan[
+      month - 1
+    ]
+  } ${
+    year
+  }`;
 
 }
 
 
 // =====================================================
-// FORMAT TANGGAL UNTUK INPUT
+// TANGGAL UNTUK INPUT TYPE DATE
+// AMAN TIMEZONE - TIDAK MUNDUR 1 HARI
+// =====================================================
+
+// =====================================================
+// TANGGAL UNTUK INPUT TYPE="DATE"
+// FIX TIMEZONE POSTGRESQL
 // =====================================================
 
 function tanggalInput(value) {
@@ -203,22 +213,34 @@ function tanggalInput(value) {
   }
 
 
+  // ===============================================
+  // JIKA DATE MURNI
+  // contoh:
+  // 2026-09-11
+  // ===============================================
+
   const text =
     String(value);
 
 
-  // Kalau dari postgres sudah YYYY-MM-DD
   if (
-    /^\d{4}-\d{2}-\d{2}/.test(text)
+    /^\d{4}-\d{2}-\d{2}$/.test(
+      text
+    )
   ) {
 
-    return text.substring(
-      0,
-      10
-    );
+    return text;
 
   }
 
+
+  // ===============================================
+  // JIKA TIMESTAMP DARI POSTGRES
+  // contoh:
+  // 2026-09-10T17:00:00.000Z
+  //
+  // Konversi ke waktu lokal Indonesia/browser
+  // ===============================================
 
   const date =
     new Date(value);
@@ -229,7 +251,9 @@ function tanggalInput(value) {
       date.getTime()
     )
   ) {
+
     return "";
+
   }
 
 
@@ -256,6 +280,104 @@ function tanggalInput(value) {
 
 
   return `${year}-${month}-${day}`;
+
+}
+
+// =====================================================
+// HITUNG END DATE
+//
+// Tanggal DO + Durasi Bulan
+// =====================================================
+
+function hitungEndDate(
+  tanggalDO,
+  durasiBulan
+) {
+
+  if (
+    !tanggalDO ||
+    !durasiBulan
+  ) {
+    return "";
+  }
+
+  const parts =
+    String(tanggalDO)
+      .split("-")
+      .map(Number);
+
+  if (
+    parts.length !== 3
+  ) {
+    return "";
+  }
+
+  const [
+    year,
+    month,
+    day
+  ] = parts;
+
+  if (
+    !year ||
+    !month ||
+    !day
+  ) {
+    return "";
+  }
+
+  /*
+    Gunakan tanggal 1 dahulu agar
+    31 Januari + 1 bulan
+    tidak lompat ke bulan berikutnya.
+  */
+
+  const result =
+    new Date(
+      year,
+      month - 1,
+      1
+    );
+
+  result.setMonth(
+    result.getMonth() +
+    Number(durasiBulan)
+  );
+
+  const lastDay =
+    new Date(
+      result.getFullYear(),
+      result.getMonth() + 1,
+      0
+    ).getDate();
+
+  result.setDate(
+    Math.min(
+      day,
+      lastDay
+    )
+  );
+
+  const yyyy =
+    result.getFullYear();
+
+  const mm =
+    String(
+      result.getMonth() + 1
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const dd =
+    String(
+      result.getDate()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  return `${yyyy}-${mm}-${dd}`;
 
 }
 
@@ -294,6 +416,30 @@ function escapeHtml(value) {
 
 
 // =====================================================
+// SET TEXT
+// =====================================================
+
+function setText(
+  id,
+  value
+) {
+
+  const element =
+    document.getElementById(
+      id
+    );
+
+  if (element) {
+
+    element.textContent =
+      value;
+
+  }
+
+}
+
+
+// =====================================================
 // FETCH JSON
 // =====================================================
 
@@ -313,7 +459,6 @@ async function fetchJSON(
       }
     );
 
-
   if (
     response.status === 401
   ) {
@@ -327,13 +472,10 @@ async function fetchJSON(
 
   }
 
-
   const text =
     await response.text();
 
-
   let result = {};
-
 
   if (text) {
 
@@ -349,7 +491,6 @@ async function fetchJSON(
         text
       );
 
-
       throw new Error(
         "Response server bukan JSON."
       );
@@ -357,7 +498,6 @@ async function fetchJSON(
     }
 
   }
-
 
   if (!response.ok) {
 
@@ -368,7 +508,6 @@ async function fetchJSON(
     );
 
   }
-
 
   return result;
 
@@ -412,20 +551,17 @@ document.addEventListener(
         "[data-close-modal]"
       );
 
-
     if (closeButton) {
 
       const id =
         closeButton.dataset
           .closeModal;
 
-
       tutupModal(id);
 
       return;
 
     }
-
 
     if (
       event.target.classList
@@ -476,14 +612,12 @@ async function loadMasterEdit() {
 
     ]);
 
-
   masterKlien =
     Array.isArray(
       klienResult
     )
       ? klienResult
       : [];
-
 
   masterProyek =
     Array.isArray(
@@ -492,7 +626,6 @@ async function loadMasterEdit() {
       ? proyekResult
       : [];
 
-
   masterProduk =
     Array.isArray(
       produkResult
@@ -500,25 +633,12 @@ async function loadMasterEdit() {
       ? produkResult
       : [];
 
-
   masterCabang =
     Array.isArray(
       cabangResult
     )
       ? cabangResult
       : [];
-
-
-  console.log(
-    "MASTER PRODUK:",
-    masterProduk
-  );
-
-
-  console.log(
-    "MASTER CABANG:",
-    masterCabang
-  );
 
 }
 
@@ -535,15 +655,12 @@ async function loadDetail() {
       "ID Proyek Sewa tidak ditemukan."
     );
 
-
     window.location.href =
       "/proyek-sewa.html";
-
 
     return;
 
   }
-
 
   try {
 
@@ -554,21 +671,17 @@ async function loadDetail() {
         )}/detail`
       );
 
-
     console.log(
       "DETAIL PROYEK SEWA:",
       result
     );
 
-
     detailProyekSewa =
       result;
-
 
     renderDetail(
       result
     );
-
 
   } catch (error) {
 
@@ -576,7 +689,6 @@ async function loadDetail() {
       "ERROR LOAD DETAIL:",
       error
     );
-
 
     alert(
       error.message
@@ -597,14 +709,12 @@ function renderDetail(result) {
     result?.proyek ||
     {};
 
-
   const produk =
     Array.isArray(
       result?.produk
     )
       ? result.produk
       : [];
-
 
   const pembayaran =
     Array.isArray(
@@ -614,35 +724,33 @@ function renderDetail(result) {
       : [];
 
 
-  // =============================================
+  // =================================================
   // HEADER
-  // =============================================
+  // =================================================
 
-  document.getElementById(
-    "detailTitle"
-  ).textContent =
+  setText(
+    "detailTitle",
     proyek.nomor_pr
       ? `Detail ${proyek.nomor_pr}`
-      : "Detail Proyek Sewa";
+      : "Detail Proyek Sewa"
+  );
 
-
-  document.getElementById(
-    "detailSubtitle"
-  ).textContent =
+  setText(
+    "detailSubtitle",
     proyek.nama_klien ||
     proyek.perusahaan_klien ||
-    "Detail proyek sewa";
+    "Detail proyek sewa"
+  );
 
 
-  // =============================================
+  // =================================================
   // EDIT LINK
-  // =============================================
+  // =================================================
 
   const btnEdit =
     document.getElementById(
       "btnEditProyekSewa"
     );
-
 
   if (btnEdit) {
 
@@ -654,21 +762,19 @@ function renderDetail(result) {
   }
 
 
-  // =============================================
+  // =================================================
   // SUMMARY
-  // =============================================
+  // =================================================
 
   const totalProyek =
     angka(
       proyek.total_nilai
     );
 
-
   const totalPerBulan =
     angka(
       proyek.total_nilai_per_bulan
     );
-
 
   const totalDibayar =
     pembayaran.reduce(
@@ -683,14 +789,12 @@ function renderDetail(result) {
       0
     );
 
-
   const sisa =
     Math.max(
       0,
       totalProyek -
       totalDibayar
     );
-
 
   setText(
     "summaryPerBulan",
@@ -699,7 +803,6 @@ function renderDetail(result) {
     )
   );
 
-
   setText(
     "summaryTotal",
     rupiah(
@@ -707,14 +810,12 @@ function renderDetail(result) {
     )
   );
 
-
   setText(
     "summaryDibayar",
     rupiah(
       totalDibayar
     )
   );
-
 
   setText(
     "summarySisa",
@@ -724,9 +825,9 @@ function renderDetail(result) {
   );
 
 
-  // =============================================
+  // =================================================
   // INFORMASI
-  // =============================================
+  // =================================================
 
   setText(
     "detailNomorPr",
@@ -734,13 +835,18 @@ function renderDetail(result) {
     "-"
   );
 
+  setText(
+    "detailTanggalPr",
+    formatTanggal(
+      proyek.tanggal_pr
+    )
+  );
 
   setText(
     "detailRujukan",
     proyek.nomor_rujukan ||
     "-"
   );
-
 
   setText(
     "detailKlien",
@@ -749,13 +855,11 @@ function renderDetail(result) {
     "-"
   );
 
-
   setText(
     "detailProyek",
     proyek.nama_proyek ||
     "-"
   );
-
 
   setText(
     "detailCreatedAt",
@@ -763,7 +867,6 @@ function renderDetail(result) {
       proyek.created_at
     )
   );
-
 
   setText(
     "detailUpdatedAt",
@@ -773,50 +876,25 @@ function renderDetail(result) {
   );
 
 
-  // =============================================
+  // =================================================
   // PRODUK
-  // =============================================
+  // =================================================
 
   renderProduk(
-  produk
-);
+    produk
+  );
+
+  renderTotalProduk();
 
 
-renderTotalProduk();
-
-  // =============================================
+  // =================================================
   // PEMBAYARAN
-  // =============================================
+  // =================================================
 
   renderPembayaran(
     pembayaran,
     totalProyek
   );
-
-}
-
-
-// =====================================================
-// SET TEXT
-// =====================================================
-
-function setText(
-  id,
-  value
-) {
-
-  const element =
-    document.getElementById(
-      id
-    );
-
-
-  if (element) {
-
-    element.textContent =
-      value;
-
-  }
 
 }
 
@@ -843,7 +921,6 @@ function buatProdukOptions(
             String(selectedId)
               ? "selected"
               : "";
-
 
           return `
             <option
@@ -888,7 +965,6 @@ function buatCabangOptions(
               ? "selected"
               : "";
 
-
           return `
             <option
               value="${item.id}"
@@ -924,11 +1000,9 @@ function renderProduk(
       "productEditContainer"
     );
 
-
   if (!container) {
     return;
   }
-
 
   if (
     !Array.isArray(produk) ||
@@ -941,18 +1015,15 @@ function renderProduk(
       </div>
     `;
 
-
     if (modeEditProduk) {
 
       hitungSemuaProduk();
 
     }
 
-
     return;
 
   }
-
 
   container.innerHTML =
     produk
@@ -967,7 +1038,6 @@ function renderProduk(
           )
       )
       .join("");
-
 
   if (modeEditProduk) {
 
@@ -985,7 +1055,6 @@ function renderProduk(
 
         }
       );
-
 
     hitungSemuaProduk();
 
@@ -1011,9 +1080,9 @@ function buatProdukInline(
       : [];
 
 
-  // ===================================================
+  // =================================================
   // MODE LIHAT
-  // ===================================================
+  // =================================================
 
   if (!modeEditProduk) {
 
@@ -1105,7 +1174,6 @@ function buatProdukInline(
 
           <div class="inline-order-section">
 
-
             <div class="inline-order-header">
 
               <h3>
@@ -1138,9 +1206,7 @@ function buatProdukInline(
 
             </div>
 
-
           </div>
-
 
         </div>
 
@@ -1150,26 +1216,30 @@ function buatProdukInline(
   }
 
 
-  // ===================================================
+  // =================================================
   // MODE EDIT
-  // ===================================================
+  // =================================================
 
- return `
-  <div
-    class="inline-product-card"
+  return `
+    <div
+      class="inline-product-card"
 
-    data-product-id="${item.id || ""}"
+      data-product-id="${
+        item.id ||
+        ""
+      }"
 
-    data-original-produk-id="${
-      item.produk_id || ""
-    }"
+      data-original-produk-id="${
+        item.produk_id ||
+        ""
+      }"
 
-    data-original-harga="${
-      angka(
-        item.harga_per_item
-      )
-    }"
-  >
+      data-original-harga="${
+        angka(
+          item.harga_per_item
+        )
+      }"
+    >
 
       <div class="inline-product-header">
 
@@ -1204,11 +1274,9 @@ function buatProdukInline(
               class="inline-control inlineProdukSelect"
               required
             >
-
               ${buatProdukOptions(
                 item.produk_id
               )}
-
             </select>
 
           </div>
@@ -1272,7 +1340,6 @@ function buatProdukInline(
 
           </div>
 
-
         </div>
 
 
@@ -1298,20 +1365,24 @@ function buatProdukInline(
 
           <div class="inline-order-list">
 
-            ${orders
-              .map(
-                order =>
-                  buatOrderInline(
-                    order
-                  )
-              )
-              .join("")}
+            ${
+              orders.length > 0
+
+                ? orders
+                    .map(
+                      order =>
+                        buatOrderInline(
+                          order
+                        )
+                    )
+                    .join("")
+
+                : buatOrderInline()
+            }
 
           </div>
 
-
         </div>
-
 
       </div>
 
@@ -1333,7 +1404,13 @@ function buatOrderInlineView(
     <div class="inline-order-row">
 
 
-      <div class="inline-form-group">
+      <!-- ==============================
+           BARIS 1
+      =============================== -->
+
+
+      <!-- LOKASI -->
+      <div class="inline-form-group order-lokasi">
 
         <label>
           Lokasi
@@ -1351,7 +1428,8 @@ function buatOrderInlineView(
       </div>
 
 
-      <div class="inline-form-group">
+      <!-- QUANTITY -->
+      <div class="inline-form-group order-quantity">
 
         <label>
           Quantity
@@ -1366,7 +1444,8 @@ function buatOrderInlineView(
       </div>
 
 
-      <div class="inline-form-group">
+      <!-- HARGA / BULAN -->
+      <div class="inline-form-group order-harga-bulan">
 
         <label>
           Harga / Bulan
@@ -1381,7 +1460,8 @@ function buatOrderInlineView(
       </div>
 
 
-      <div class="inline-form-group">
+      <!-- TOTAL HARGA -->
+      <div class="inline-form-group order-total-harga">
 
         <label>
           Total Harga
@@ -1396,11 +1476,98 @@ function buatOrderInlineView(
       </div>
 
 
+
+      <!-- ==============================
+           BARIS 2
+      =============================== -->
+
+
+      <!-- NO REQ KLIEN -->
+      <div class="inline-form-group order-no-req">
+
+        <label>
+          No Req Klien
+        </label>
+
+        <div class="inline-view-value">
+          ${escapeHtml(
+            order.no_req_klien ||
+            "-"
+          )}
+        </div>
+
+      </div>
+
+
+      <!-- TANGGAL REQ KLIEN -->
+      <div class="inline-form-group order-tanggal-req">
+
+        <label>
+          Tanggal Req Klien
+        </label>
+
+        <div class="inline-view-value">
+          ${formatTanggal(
+            order.tanggal_req_klien
+          )}
+        </div>
+
+      </div>
+
+
+      <!-- TANGGAL DO -->
+      <div class="inline-form-group order-tanggal-do">
+
+        <label>
+          Tanggal DO
+        </label>
+
+        <div class="inline-view-value">
+          ${formatTanggal(
+            order.tanggal_do
+          )}
+        </div>
+
+      </div>
+
+
+      <!-- NO DO -->
+      <div class="inline-form-group order-no-do">
+
+        <label>
+          No DO
+        </label>
+
+        <div class="inline-view-value">
+          ${escapeHtml(
+            order.no_do ||
+            "-"
+          )}
+        </div>
+
+      </div>
+
+
+      <!-- END DATE -->
+      <div class="inline-form-group order-end-date">
+
+        <label>
+          End Date
+        </label>
+
+        <div class="inline-view-value">
+          ${formatTanggal(
+            order.end_date
+          )}
+        </div>
+
+      </div>
+
+
     </div>
   `;
 
 }
-
 
 // =====================================================
 // ORDER MODE EDIT
@@ -1413,17 +1580,26 @@ function buatOrderInline(
   return `
     <div
       class="inline-order-row"
+
       data-order-id="${order.id || ""}"
+
       data-harga-per-bulan="${angka(
         order.harga_per_bulan
       )}"
+
       data-total-harga="${angka(
         order.total_harga
       )}"
     >
 
 
-      <div class="inline-form-group">
+      <!-- ==============================
+           BARIS 1
+      =============================== -->
+
+
+      <!-- LOKASI -->
+      <div class="inline-form-group order-lokasi">
 
         <label>
           Lokasi
@@ -1443,7 +1619,8 @@ function buatOrderInline(
       </div>
 
 
-      <div class="inline-form-group">
+      <!-- QUANTITY -->
+      <div class="inline-form-group order-quantity">
 
         <label>
           Quantity
@@ -1453,19 +1630,23 @@ function buatOrderInline(
           type="number"
           min="1"
           class="inline-control inlineQuantity"
+
           value="${Math.max(
             1,
             angka(
-              order.quantity
+              order.quantity ||
+              1
             )
           )}"
+
           required
         >
 
       </div>
 
 
-      <div class="inline-form-group">
+      <!-- HARGA / BULAN -->
+      <div class="inline-form-group order-harga-bulan">
 
         <label>
           Harga / Bulan
@@ -1473,17 +1654,24 @@ function buatOrderInline(
 
         <input
           type="text"
-          class="inline-control inlineHargaBulan"
+
+          class="
+            inline-control
+            inlineHargaBulan
+          "
+
           value="${rupiah(
             order.harga_per_bulan
           )}"
+
           readonly
         >
 
       </div>
 
 
-      <div class="inline-form-group">
+      <!-- TOTAL HARGA -->
+      <div class="inline-form-group order-total-harga">
 
         <label>
           Total Harga
@@ -1491,27 +1679,163 @@ function buatOrderInline(
 
         <input
           type="text"
-          class="inline-control inlineTotalHarga"
+
+          class="
+            inline-control
+            inlineTotalHarga
+          "
+
           value="${rupiah(
             order.total_harga
           )}"
+
           readonly
         >
 
       </div>
 
 
-      <div class="inline-form-group">
+
+      <!-- ==============================
+           BARIS 2
+      =============================== -->
+
+
+      <!-- NO REQ KLIEN -->
+      <div class="inline-form-group order-no-req">
 
         <label>
-          &nbsp;
+          No Req Klien
         </label>
+
+        <input
+          type="text"
+
+          class="
+            inline-control
+            inlineNoReqKlien
+          "
+
+          value="${escapeHtml(
+            order.no_req_klien ||
+            ""
+          )}"
+
+          placeholder="Opsional"
+        >
+
+      </div>
+
+
+      <!-- TANGGAL REQ KLIEN -->
+      <div class="inline-form-group order-tanggal-req">
+
+        <label>
+          Tanggal Req Klien
+        </label>
+
+        <input
+          type="date"
+
+          class="
+            inline-control
+            inlineTanggalReqKlien
+          "
+
+          value="${tanggalInput(
+            order.tanggal_req_klien
+          )}"
+        >
+
+      </div>
+
+
+      <!-- TANGGAL DO -->
+      <div class="inline-form-group order-tanggal-do">
+
+        <label>
+          Tanggal DO
+        </label>
+
+        <input
+          type="date"
+
+          class="
+            inline-control
+            inlineTanggalDO
+          "
+
+          value="${tanggalInput(
+            order.tanggal_do
+          )}"
+        >
+
+      </div>
+
+
+      <!-- NO DO -->
+      <div class="inline-form-group order-no-do">
+
+        <label>
+          No DO
+        </label>
+
+        <input
+          type="text"
+
+          class="
+            inline-control
+            inlineNoDO
+          "
+
+          value="${escapeHtml(
+            order.no_do ||
+            ""
+          )}"
+
+          placeholder="Opsional"
+        >
+
+      </div>
+
+
+      <!-- END DATE -->
+      <div class="inline-form-group order-end-date">
+
+        <label>
+          End Date
+        </label>
+
+        <input
+          type="date"
+
+          class="
+            inline-control
+            inlineEndDate
+          "
+
+          value="${tanggalInput(
+            order.end_date
+          )}"
+
+          readonly
+        >
+
+      </div>
+
+
+      <!-- HAPUS -->
+      <div class="order-action">
 
         <button
           type="button"
-          class="btn btn-danger btnHapusOrderInline"
+          class="
+            btn
+            btn-danger
+            btnHapusOrderInline
+          "
         >
-          Hapus
+          Hapus Order
         </button>
 
       </div>
@@ -1521,7 +1845,6 @@ function buatOrderInline(
   `;
 
 }
-
 
 // =====================================================
 // HITUNG SATU PRODUK
@@ -1542,7 +1865,6 @@ function hitungProdukInline(
       ".inlineProdukSelect"
     );
 
-
   const produkId =
     produkSelect?.value;
 
@@ -1555,61 +1877,61 @@ function hitungProdukInline(
     );
 
 
-  // =============================================
-// TENTUKAN HARGA
-// =============================================
+  // =================================================
+  // HARGA KONTRAK
+  // =================================================
 
-const originalProdukId =
-  product.dataset
-    .originalProdukId;
-
-
-const originalHarga =
-  angka(
+  const originalProdukId =
     product.dataset
-      .originalHarga
-  );
+      .originalProdukId;
 
-
-let hargaItem = 0;
-
-
-// =============================================
-// PRODUK EXISTING DAN TIDAK DIGANTI
-// =============================================
-
-if (
-  product.dataset.productId &&
-  String(produkId) ===
-  String(originalProdukId)
-) {
-
-  hargaItem =
-    originalHarga;
-
-}
-
-
-// =============================================
-// PRODUK BARU / PRODUK DIGANTI
-// =============================================
-
-else {
-
-  hargaItem =
+  const originalHarga =
     angka(
-      master
-        ?.harga_jual_per_item
+      product.dataset
+        .originalHarga
     );
 
-}
+  let hargaItem = 0;
 
+
+  /*
+    Produk existing tidak diganti:
+    gunakan harga kontrak lama.
+  */
+
+  if (
+    product.dataset.productId &&
+    String(produkId) ===
+    String(originalProdukId)
+  ) {
+
+    hargaItem =
+      originalHarga;
+
+  } else {
+
+    /*
+      Produk baru / produk diganti:
+      ambil harga master terbaru.
+    */
+
+    hargaItem =
+      angka(
+        master
+          ?.harga_jual_per_item
+      );
+
+  }
+
+
+  // =================================================
+  // HARGA ITEM
+  // =================================================
 
   const hargaInput =
     product.querySelector(
       ".inlineHargaItem"
     );
-
 
   if (hargaInput) {
 
@@ -1621,11 +1943,14 @@ else {
   }
 
 
+  // =================================================
+  // SUB JENIS
+  // =================================================
+
   const subJenisInput =
     product.querySelector(
       ".inlineSubJenis"
     );
-
 
   if (subJenisInput) {
 
@@ -1639,11 +1964,14 @@ else {
   }
 
 
+  // =================================================
+  // DURASI
+  // =================================================
+
   const durasiInput =
     product.querySelector(
       ".inlineDurasi"
     );
-
 
   const durasi =
     Math.max(
@@ -1653,6 +1981,10 @@ else {
       )
     );
 
+
+  // =================================================
+  // HITUNG SETIAP ORDER
+  // =================================================
 
   product
     .querySelectorAll(
@@ -1666,7 +1998,6 @@ else {
             ".inlineQuantity"
           );
 
-
         const qty =
           Math.max(
             0,
@@ -1676,20 +2007,21 @@ else {
           );
 
 
+        // ===========================================
+        // HARGA
+        // ===========================================
+
         const hargaPerBulan =
           qty *
           hargaItem;
-
 
         const totalHarga =
           hargaPerBulan *
           durasi;
 
-
         order.dataset
           .hargaPerBulan =
             hargaPerBulan;
-
 
         order.dataset
           .totalHarga =
@@ -1700,7 +2032,6 @@ else {
           order.querySelector(
             ".inlineHargaBulan"
           );
-
 
         if (hargaBulanInput) {
 
@@ -1717,12 +2048,39 @@ else {
             ".inlineTotalHarga"
           );
 
-
         if (totalHargaInput) {
 
           totalHargaInput.value =
             rupiah(
               totalHarga
+            );
+
+        }
+
+
+        // ===========================================
+        // END DATE
+        // ===========================================
+
+        const tanggalDO =
+          order
+            .querySelector(
+              ".inlineTanggalDO"
+            )
+            ?.value ||
+          "";
+
+        const endDateInput =
+          order.querySelector(
+            ".inlineEndDate"
+          );
+
+        if (endDateInput) {
+
+          endDateInput.value =
+            hitungEndDate(
+              tanggalDO,
+              durasi
             );
 
         }
@@ -1741,18 +2099,13 @@ else {
 
 
 // =====================================================
-// HITUNG TOTAL SEMUA PRODUK
+// HITUNG SEMUA PRODUK
 // =====================================================
 
 function hitungSemuaProduk() {
 
-  let totalPerBulan =
-    0;
-
-
-  let totalProyek =
-    0;
-
+  let totalPerBulan = 0;
+  let totalProyek = 0;
 
   document
     .querySelectorAll(
@@ -1767,7 +2120,6 @@ function hitungSemuaProduk() {
               .hargaPerBulan
           );
 
-
         totalProyek +=
           angka(
             order.dataset
@@ -1777,7 +2129,6 @@ function hitungSemuaProduk() {
       }
     );
 
-
   setText(
     "editTotalPerBulan",
     rupiah(
@@ -1785,6 +2136,64 @@ function hitungSemuaProduk() {
     )
   );
 
+  setText(
+    "editTotalProyek",
+    rupiah(
+      totalProyek
+    )
+  );
+
+}
+
+
+// =====================================================
+// TOTAL PRODUK MODE VIEW
+// =====================================================
+
+function renderTotalProduk() {
+
+  const produk =
+    detailProyekSewa?.produk ||
+    [];
+
+  let totalPerBulan = 0;
+  let totalProyek = 0;
+
+  produk.forEach(
+    item => {
+
+      const orders =
+        Array.isArray(
+          item.orders
+        )
+          ? item.orders
+          : [];
+
+      orders.forEach(
+        order => {
+
+          totalPerBulan +=
+            angka(
+              order.harga_per_bulan
+            );
+
+          totalProyek +=
+            angka(
+              order.total_harga
+            );
+
+        }
+      );
+
+    }
+  );
+
+  setText(
+    "editTotalPerBulan",
+    rupiah(
+      totalPerBulan
+    )
+  );
 
   setText(
     "editTotalProyek",
@@ -1817,7 +2226,6 @@ function updateNomorProduk() {
             ".inline-product-title"
           );
 
-
         if (title) {
 
           title.textContent =
@@ -1832,35 +2240,13 @@ function updateNomorProduk() {
 
 
 // =====================================================
-// MASUK MODE EDIT PRODUK
-// =====================================================
-
-document
-  .getElementById(
-    "btnBatalEditProduk"
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-
-      modeEditProduk =
-        false;
-
-
-// =====================================================
-// AKTIFKAN MODE EDIT PRODUK & ORDER
+// AKTIFKAN EDIT PRODUK
 // =====================================================
 
 async function aktifkanEditProduk() {
 
   try {
 
-    console.log(
-      "KLIK EDIT PRODUK & ORDER"
-    );
-
-
-    // LOAD MASTER JIKA BELUM ADA
     if (
       masterProduk.length === 0 ||
       masterCabang.length === 0
@@ -1870,26 +2256,24 @@ async function aktifkanEditProduk() {
 
     }
 
-
     modeEditProduk =
       true;
 
-
-    // =============================================
-    // BUTTON
-    // =============================================
 
     const btnEdit =
       document.getElementById(
         "btnEditProduk"
       );
 
-
     const btnTambah =
       document.getElementById(
         "btnTambahProduk"
       );
 
+    const summary =
+      document.getElementById(
+        "produkEditSummary"
+      );
 
     const actions =
       document.getElementById(
@@ -1904,14 +2288,19 @@ async function aktifkanEditProduk() {
 
     }
 
-
     if (btnTambah) {
 
       btnTambah.style.display =
-        "";
+        "inline-flex";
 
     }
 
+    if (summary) {
+
+      summary.style.display =
+        "block";
+
+    }
 
     if (actions) {
 
@@ -1921,38 +2310,13 @@ async function aktifkanEditProduk() {
     }
 
 
-    // =============================================
-    // SUMMARY TETAP TAMPIL
-    // =============================================
-
-    const summary =
-      document.getElementById(
-        "produkEditSummary"
-      );
-
-
-    if (summary) {
-
-      summary.style.display =
-        "block";
-
-    }
-
-
-    // =============================================
-    // RENDER ULANG MENJADI FORM EDIT
-    // =============================================
-
     renderProduk(
       detailProyekSewa?.produk ||
       []
     );
 
 
-    console.log(
-      "MODE EDIT PRODUK:",
-      modeEditProduk
-    );
+    hitungSemuaProduk();
 
 
   } catch (error) {
@@ -1961,7 +2325,6 @@ async function aktifkanEditProduk() {
       "ERROR AKTIFKAN EDIT PRODUK:",
       error
     );
-
 
     alert(
       error.message ||
@@ -1972,9 +2335,19 @@ async function aktifkanEditProduk() {
 
 }
 
-    }
-  );
 
+// =====================================================
+// BUTTON EDIT PRODUK
+// =====================================================
+
+document
+  .getElementById(
+    "btnEditProduk"
+  )
+  ?.addEventListener(
+    "click",
+    aktifkanEditProduk
+  );
 
 
 // =====================================================
@@ -1993,35 +2366,62 @@ document
         false;
 
 
-      document.getElementById(
-        "btnEditProduk"
-      ).style.display =
-        "";
+      const btnEdit =
+        document.getElementById(
+          "btnEditProduk"
+        );
+
+      const btnTambah =
+        document.getElementById(
+          "btnTambahProduk"
+        );
+
+      const summary =
+        document.getElementById(
+          "produkEditSummary"
+        );
+
+      const actions =
+        document.getElementById(
+          "produkEditActions"
+        );
 
 
-      document.getElementById(
-        "btnTambahProduk"
-      ).style.display =
-        "none";
+      if (btnEdit) {
 
+        btnEdit.style.display =
+          "";
 
-      document.getElementById(
-        "produkEditSummary"
-      ).style.display =
-        "none";
+      }
 
+      if (btnTambah) {
 
-      document.getElementById(
-        "produkEditActions"
-      ).style.display =
-        "none";
+        btnTambah.style.display =
+          "none";
+
+      }
+
+      if (summary) {
+
+        summary.style.display =
+          "none";
+
+      }
+
+      if (actions) {
+
+        actions.style.display =
+          "none";
+
+      }
 
 
       renderProduk(
-        detailProyekSewa
-          ?.produk ||
+        detailProyekSewa?.produk ||
         []
       );
+
+      renderTotalProduk();
 
     }
   );
@@ -2043,24 +2443,20 @@ document
         return;
       }
 
-
       const container =
         document.getElementById(
           "productEditContainer"
         );
 
-
       if (!container) {
         return;
       }
-
 
       container
         .querySelector(
           ".message"
         )
         ?.remove();
-
 
       const jumlahProduk =
         container
@@ -2069,40 +2465,51 @@ document
           )
           .length;
 
+      container.insertAdjacentHTML(
+        "beforeend",
+        buatProdukInline(
+          {
+            id: null,
 
-      container
-        .insertAdjacentHTML(
-          "beforeend",
-          buatProdukInline(
-            {
-              id: null,
+            produk_id: null,
 
-              produk_id: null,
+            harga_per_item: 0,
 
-              harga_per_item: 0,
+            sub_jenis_proyek: "",
 
-              sub_jenis_proyek: "",
+            durasi_bulan: 1,
 
-              durasi_bulan: 1,
+            orders: [
+              {
+                id: null,
 
-              orders: [
-                {
-                  id: null,
+                cabang_id: null,
 
-                  cabang_id: null,
+                quantity: 1,
 
-                  quantity: 1,
+                no_req_klien: null,
 
-                  harga_per_bulan: 0,
+                tanggal_req_klien:
+                  null,
 
-                  total_harga: 0
-                }
-              ]
-            },
-            jumlahProduk
-          )
-        );
+                tanggal_do:
+                  null,
 
+                no_do:
+                  null,
+
+                end_date:
+                  null,
+
+                harga_per_bulan: 0,
+
+                total_harga: 0
+              }
+            ]
+          },
+          jumlahProduk
+        )
+      );
 
       hitungSemuaProduk();
 
@@ -2127,57 +2534,75 @@ document
       }
 
 
-      // =============================================
+      // =================================================
       // HAPUS PRODUK
-      // =============================================
+      // =================================================
 
       const btnHapusProduk =
         event.target.closest(
           ".btnHapusProdukInline"
         );
 
-
       if (btnHapusProduk) {
+
+        const container =
+          document.getElementById(
+            "productEditContainer"
+          );
+
+        const jumlahProduk =
+          container
+            ?.querySelectorAll(
+              ".inline-product-card"
+            )
+            .length ||
+          0;
+
+        if (
+          jumlahProduk <= 1
+        ) {
+
+          alert(
+            "Minimal harus ada 1 produk."
+          );
+
+          return;
+
+        }
 
         const product =
           btnHapusProduk.closest(
             ".inline-product-card"
           );
 
-
         const yakin =
           confirm(
             "Hapus produk ini beserta seluruh ordernya?"
           );
 
-
         if (!yakin) {
           return;
         }
 
-
         product?.remove();
-
 
         updateNomorProduk();
 
         hitungSemuaProduk();
-
 
         return;
 
       }
 
 
-      // =============================================
+      // =================================================
       // TAMBAH ORDER
-      // =============================================
+      // =================================================
 
       const btnTambahOrder =
         event.target.closest(
           ".btnTambahOrderInline"
         );
-
 
       if (btnTambahOrder) {
 
@@ -2186,55 +2611,62 @@ document
             ".inline-product-card"
           );
 
-
         const list =
           product?.querySelector(
             ".inline-order-list"
           );
 
-
         if (!list) {
           return;
         }
 
-
         list.insertAdjacentHTML(
           "beforeend",
-          buatOrderInline(
-            {
-              id: null,
+          buatOrderInline({
+            id: null,
 
-              cabang_id: null,
+            cabang_id: null,
 
-              quantity: 1,
+            quantity: 1,
 
-              harga_per_bulan: 0,
+            no_req_klien:
+              null,
 
-              total_harga: 0
-            }
-          )
+            tanggal_req_klien:
+              null,
+
+            tanggal_do:
+              null,
+
+            no_do:
+              null,
+
+            end_date:
+              null,
+
+            harga_per_bulan: 0,
+
+            total_harga: 0
+          })
         );
-
 
         hitungProdukInline(
           product
         );
-
 
         return;
 
       }
 
 
-      // =============================================
+      // =================================================
       // HAPUS ORDER
-      // =============================================
+      // =================================================
 
       const btnHapusOrder =
         event.target.closest(
           ".btnHapusOrderInline"
         );
-
 
       if (btnHapusOrder) {
 
@@ -2243,15 +2675,32 @@ document
             ".inline-product-card"
           );
 
+        const jumlahOrder =
+          product
+            ?.querySelectorAll(
+              ".inline-order-row"
+            )
+            .length ||
+          0;
+
+        if (
+          jumlahOrder <= 1
+        ) {
+
+          alert(
+            "Setiap produk minimal harus memiliki 1 order."
+          );
+
+          return;
+
+        }
 
         const order =
           btnHapusOrder.closest(
             ".inline-order-row"
           );
 
-
         order?.remove();
-
 
         hitungProdukInline(
           product
@@ -2264,7 +2713,7 @@ document
 
 
 // =====================================================
-// CHANGE PRODUK
+// CHANGE PRODUK / TANGGAL DO
 // =====================================================
 
 document
@@ -2279,21 +2728,18 @@ document
         return;
       }
 
-
       if (
         !event.target.matches(
-          ".inlineProdukSelect"
+          ".inlineProdukSelect, .inlineTanggalDO"
         )
       ) {
         return;
       }
 
-
       const product =
         event.target.closest(
           ".inline-product-card"
         );
-
 
       hitungProdukInline(
         product
@@ -2319,7 +2765,6 @@ document
         return;
       }
 
-
       if (
         !event.target.matches(
           ".inlineQuantity, .inlineDurasi"
@@ -2328,12 +2773,10 @@ document
         return;
       }
 
-
       const product =
         event.target.closest(
           ".inline-product-card"
         );
-
 
       hitungProdukInline(
         product
@@ -2344,7 +2787,7 @@ document
 
 
 // =====================================================
-// BUILD PAYLOAD PRODUK
+// BUILD PAYLOAD PRODUK & ORDER
 // =====================================================
 
 function buildProdukOrderPayload() {
@@ -2368,7 +2811,6 @@ function buildProdukOrderPayload() {
           ) ||
           null;
 
-
         const durasi =
           angka(
             product
@@ -2377,7 +2819,6 @@ function buildProdukOrderPayload() {
               )
               ?.value
           );
-
 
         const orders =
           [
@@ -2413,11 +2854,52 @@ function buildProdukOrderPayload() {
                         ".inlineQuantity"
                       )
                       ?.value
-                  )
+                  ),
+
+                no_req_klien:
+                  order
+                    .querySelector(
+                      ".inlineNoReqKlien"
+                    )
+                    ?.value
+                    ?.trim() ||
+                  null,
+
+                tanggal_req_klien:
+                  order
+                    .querySelector(
+                      ".inlineTanggalReqKlien"
+                    )
+                    ?.value ||
+                  null,
+
+                tanggal_do:
+                  order
+                    .querySelector(
+                      ".inlineTanggalDO"
+                    )
+                    ?.value ||
+                  null,
+
+                no_do:
+                  order
+                    .querySelector(
+                      ".inlineNoDO"
+                    )
+                    ?.value
+                    ?.trim() ||
+                  null,
+
+                end_date:
+                  order
+                    .querySelector(
+                      ".inlineEndDate"
+                    )
+                    ?.value ||
+                  null
 
               })
             );
-
 
         return {
 
@@ -2460,6 +2942,10 @@ document
         buildProdukOrderPayload();
 
 
+      // =================================================
+      // VALIDASI
+      // =================================================
+
       if (
         produk.length === 0
       ) {
@@ -2468,11 +2954,9 @@ document
           "Minimal harus ada 1 produk."
         );
 
-
         return;
 
       }
-
 
       for (
         const item
@@ -2485,11 +2969,9 @@ document
             "Semua produk harus dipilih."
           );
 
-
           return;
 
         }
-
 
         if (
           item.durasi_bulan <= 0
@@ -2499,11 +2981,9 @@ document
             "Durasi harus lebih dari 0 bulan."
           );
 
-
           return;
 
         }
-
 
         if (
           item.orders.length === 0
@@ -2513,11 +2993,9 @@ document
             "Setiap produk minimal memiliki 1 order."
           );
 
-
           return;
 
         }
-
 
         for (
           const order
@@ -2530,11 +3008,9 @@ document
               "Semua lokasi order harus dipilih."
             );
 
-
             return;
 
           }
-
 
           if (
             order.quantity <= 0
@@ -2543,7 +3019,6 @@ document
             alert(
               "Quantity harus lebih dari 0."
             );
-
 
             return;
 
@@ -2554,77 +3029,118 @@ document
       }
 
 
+      // =================================================
+      // SAVE
+      // =================================================
+
       const button =
         document.getElementById(
           "btnSimpanProdukOrder"
         );
 
-
       const textAwal =
-        button.textContent;
-
+        button?.textContent ||
+        "Simpan Perubahan";
 
       try {
 
-        button.disabled =
-          true;
+        if (button) {
 
+          button.disabled =
+            true;
 
-        button.textContent =
-          "Menyimpan...";
+          button.textContent =
+            "Menyimpan...";
 
+        }
 
-        await fetchJSON(
-          `/api/proyek-sewa/${encodeURIComponent(
-            proyekSewaId
-          )}/produk`,
-          {
-            method:
-              "PUT",
+        const result =
+          await fetchJSON(
+            `/api/proyek-sewa/${encodeURIComponent(
+              proyekSewaId
+            )}/produk`,
+            {
+              method:
+                "PUT",
 
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
 
-            body:
-              JSON.stringify({
-                produk
-              })
-          }
+              body:
+                JSON.stringify({
+                  produk
+                })
+            }
+          );
+
+        console.log(
+          "UPDATE PRODUK:",
+          result
         );
-
 
         alert(
           "Produk & Order berhasil disimpan."
         );
 
 
-        // KEMBALI MODE LIHAT
+        // =============================================
+        // KEMBALI MODE VIEW
+        // =============================================
 
         modeEditProduk =
           false;
 
+        const btnEdit =
+          document.getElementById(
+            "btnEditProduk"
+          );
 
-        document.getElementById(
-          "btnEditProduk"
-        ).style.display =
-          "";
+        const btnTambah =
+          document.getElementById(
+            "btnTambahProduk"
+          );
 
+        const summary =
+          document.getElementById(
+            "produkEditSummary"
+          );
 
-        document.getElementById(
-          "btnTambahProduk"
-        ).style.display =
-          "none";
+        const actions =
+          document.getElementById(
+            "produkEditActions"
+          );
 
-        document.getElementById(
-          "produkEditActions"
-        ).style.display =
-          "none";
+        if (btnEdit) {
 
+          btnEdit.style.display =
+            "";
+
+        }
+
+        if (btnTambah) {
+
+          btnTambah.style.display =
+            "none";
+
+        }
+
+        if (summary) {
+
+          summary.style.display =
+            "none";
+
+        }
+
+        if (actions) {
+
+          actions.style.display =
+            "none";
+
+        }
 
         await loadDetail();
-
 
       } catch (error) {
 
@@ -2633,20 +3149,21 @@ document
           error
         );
 
-
         alert(
           error.message
         );
 
-
       } finally {
 
-        button.disabled =
-          false;
+        if (button) {
 
+          button.disabled =
+            false;
 
-        button.textContent =
-          textAwal;
+          button.textContent =
+            textAwal;
+
+        }
 
       }
 
@@ -2668,11 +3185,9 @@ function renderPembayaran(
       "paymentBody"
     );
 
-
   if (!tbody) {
     return;
   }
-
 
   const totalDibayar =
     pembayaran.reduce(
@@ -2687,7 +3202,6 @@ function renderPembayaran(
       0
     );
 
-
   const sisa =
     Math.max(
       0,
@@ -2696,7 +3210,6 @@ function renderPembayaran(
       ) -
       totalDibayar
     );
-
 
   if (
     pembayaran.length === 0
@@ -2754,7 +3267,6 @@ function renderPembayaran(
 
   }
 
-
   setText(
     "paymentTotalProyek",
     rupiah(
@@ -2762,14 +3274,12 @@ function renderPembayaran(
     )
   );
 
-
   setText(
     "paymentTotalDibayar",
     rupiah(
       totalDibayar
     )
   );
-
 
   setText(
     "paymentSisa",
@@ -2804,7 +3314,6 @@ document
 
         }
 
-
         const proyek =
           detailProyekSewa
             ?.proyek ||
@@ -2820,40 +3329,43 @@ document
             "editKlienId"
           );
 
+        if (klienSelect) {
 
-        klienSelect.innerHTML = `
-          <option value="">
-            Pilih Klien
-          </option>
+          klienSelect.innerHTML = `
+            <option value="">
+              Pilih Klien
+            </option>
 
-          ${masterKlien
-            .map(
-              item => `
-                <option
-                  value="${item.id}"
-                  ${
-                    String(item.id) ===
-                    String(
-                      proyek.klien_id
-                    )
-                      ? "selected"
-                      : ""
-                  }
-                >
-                  ${escapeHtml(
-                    item.perusahaan_klien ||
-                    item.nama_klien ||
-                    "-"
-                  )}
-                </option>
-              `
-            )
-            .join("")}
-        `;
+            ${masterKlien
+              .map(
+                item => `
+                  <option
+                    value="${item.id}"
+                    ${
+                      String(item.id) ===
+                      String(
+                        proyek.klien_id
+                      )
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    ${escapeHtml(
+                      item.perusahaan_klien ||
+                      item.nama_klien ||
+                      "-"
+                    )}
+                  </option>
+                `
+              )
+              .join("")}
+          `;
+
+        }
 
 
         // =============================================
-        // PROYEK
+        // PROYEK EXISTING
         // =============================================
 
         const proyekSelect =
@@ -2861,55 +3373,101 @@ document
             "editProyekId"
           );
 
+        if (proyekSelect) {
 
-        proyekSelect.innerHTML = `
-          <option value="">
-            Tidak menggunakan proyek existing
-          </option>
+          proyekSelect.innerHTML = `
+            <option value="">
+              Tidak menggunakan proyek existing
+            </option>
 
-          ${masterProyek
-            .map(
-              item => `
-                <option
-                  value="${item.id}"
-                  ${
-                    String(item.id) ===
-                    String(
-                      proyek.proyek_id
-                    )
-                      ? "selected"
-                      : ""
-                  }
-                >
-                  ${escapeHtml(
-                    item.nama_proyek ||
-                    "-"
-                  )}
-                </option>
-              `
-            )
-            .join("")}
-        `;
+            ${masterProyek
+              .map(
+                item => `
+                  <option
+                    value="${item.id}"
+                    ${
+                      String(item.id) ===
+                      String(
+                        proyek.proyek_id
+                      )
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    ${escapeHtml(
+                      item.nama_proyek ||
+                      "-"
+                    )}
+                  </option>
+                `
+              )
+              .join("")}
+          `;
 
-
-        document.getElementById(
-          "editNomorPr"
-        ).value =
-          proyek.nomor_pr ||
-          "";
+        }
 
 
-        document.getElementById(
-          "editNomorRujukan"
-        ).value =
-          proyek.nomor_rujukan ||
-          "";
+        // =============================================
+        // NOMOR PR
+        // =============================================
+
+        const nomorPrInput =
+          document.getElementById(
+            "editNomorPr"
+          );
+
+        if (nomorPrInput) {
+
+          nomorPrInput.value =
+            proyek.nomor_pr ||
+            "";
+
+        }
+
+
+        // =============================================
+        // TANGGAL PR
+        // =============================================
+
+        const tanggalPrInput =
+          document.getElementById(
+            "editTanggalPr"
+          );
+
+        if (tanggalPrInput) {
+
+          tanggalPrInput.value =
+            tanggalInput(
+              proyek.tanggal_pr
+            );
+
+        }
+
+
+        // =============================================
+        // RUJUKAN READONLY
+        // =============================================
+
+        const rujukanInput =
+          document.getElementById(
+            "editNomorRujukan"
+          );
+
+        if (rujukanInput) {
+
+          rujukanInput.value =
+            proyek.nomor_rujukan ||
+            "";
+
+          rujukanInput.readOnly =
+            true;
+
+        }
 
 
         bukaModal(
           "modalEditInformasi"
         );
-
 
       } catch (error) {
 
@@ -2917,7 +3475,6 @@ document
           "ERROR OPEN INFORMASI:",
           error
         );
-
 
         alert(
           error.message
@@ -2949,17 +3506,18 @@ document
           .getElementById(
             "editNomorPr"
           )
-          .value
-          .trim();
+          ?.value
+          ?.trim() ||
+        "";
 
 
-      const nomorRujukan =
+      const tanggalPr =
         document
           .getElementById(
-            "editNomorRujukan"
+            "editTanggalPr"
           )
-          .value
-          .trim();
+          ?.value ||
+        null;
 
 
       const proyekId =
@@ -2968,7 +3526,7 @@ document
             .getElementById(
               "editProyekId"
             )
-            .value
+            ?.value
         ) ||
         null;
 
@@ -2979,7 +3537,7 @@ document
             .getElementById(
               "editKlienId"
             )
-            .value
+            ?.value
         ) ||
         null;
 
@@ -3006,38 +3564,27 @@ document
       }
 
 
-      if (
-        !nomorRujukan &&
-        !proyekId
-      ) {
-
-        alert(
-          "Isi Nomor Rujukan atau pilih Proyek Existing."
-        );
-
-        return;
-
-      }
-
-
       const button =
         document.getElementById(
           "btnSimpanInformasi"
         );
 
-
       const textAwal =
-        button.textContent;
+        button?.textContent ||
+        "Simpan Perubahan";
 
 
       try {
 
-        button.disabled =
-          true;
+        if (button) {
 
+          button.disabled =
+            true;
 
-        button.textContent =
-          "Menyimpan...";
+          button.textContent =
+            "Menyimpan...";
+
+        }
 
 
         await fetchJSON(
@@ -3055,18 +3602,19 @@ document
 
             body:
               JSON.stringify({
+
                 nomor_pr:
                   nomorPr,
 
-                nomor_rujukan:
-                  nomorRujukan ||
-                  null,
+                tanggal_pr:
+                  tanggalPr,
 
                 proyek_id:
                   proyekId,
 
                 klien_id:
                   klienId
+
               })
           }
         );
@@ -3092,7 +3640,6 @@ document
           error
         );
 
-
         alert(
           error.message
         );
@@ -3100,12 +3647,15 @@ document
 
       } finally {
 
-        button.disabled =
-          false;
+        if (button) {
 
+          button.disabled =
+            false;
 
-        button.textContent =
-          textAwal;
+          button.textContent =
+            textAwal;
+
+        }
 
       }
 
@@ -3124,7 +3674,10 @@ function buatEditPembayaranHtml(
   return `
     <div
       class="edit-payment-row"
-      data-payment-id="${item.id || ""}"
+      data-payment-id="${
+        item.id ||
+        ""
+      }"
     >
 
 
@@ -3198,7 +3751,6 @@ function buatEditPembayaranHtml(
 
       </div>
 
-
     </div>
   `;
 
@@ -3216,17 +3768,14 @@ function renderEditPembayaran() {
       "editPaymentContainer"
     );
 
-
   if (!container) {
     return;
   }
-
 
   const pembayaran =
     detailProyekSewa
       ?.pembayaran ||
     [];
-
 
   if (
     pembayaran.length === 0
@@ -3239,11 +3788,9 @@ function renderEditPembayaran() {
       </div>
     `;
 
-
     return;
 
   }
-
 
   container.innerHTML =
     pembayaran
@@ -3272,7 +3819,6 @@ document
 
       renderEditPembayaran();
 
-
       bukaModal(
         "modalEditPembayaran"
       );
@@ -3298,18 +3844,15 @@ document
           "editPaymentContainer"
         );
 
-
       if (!container) {
         return;
       }
-
 
       container
         .querySelector(
           ".message"
         )
         ?.remove();
-
 
       container
         .insertAdjacentHTML(
@@ -3338,11 +3881,9 @@ document
           ".btnHapusPayment"
         );
 
-
       if (!button) {
         return;
       }
-
 
       button
         .closest(
@@ -3440,7 +3981,6 @@ document
             "Nominal pembayaran tidak boleh negatif."
           );
 
-
           return;
 
         }
@@ -3455,7 +3995,6 @@ document
             "Tanggal bayar wajib diisi jika nominal pembayaran diisi."
           );
 
-
           return;
 
         }
@@ -3468,19 +4007,22 @@ document
           "btnSimpanPembayaran"
         );
 
-
       const textAwal =
-        button.textContent;
+        button?.textContent ||
+        "Simpan Pembayaran";
 
 
       try {
 
-        button.disabled =
-          true;
+        if (button) {
 
+          button.disabled =
+            true;
 
-        button.textContent =
-          "Menyimpan...";
+          button.textContent =
+            "Menyimpan...";
+
+        }
 
 
         await fetchJSON(
@@ -3524,7 +4066,6 @@ document
           error
         );
 
-
         alert(
           error.message
         );
@@ -3532,83 +4073,138 @@ document
 
       } finally {
 
-        button.disabled =
-          false;
+        if (button) {
 
+          button.disabled =
+            false;
 
-        button.textContent =
-          textAwal;
+          button.textContent =
+            textAwal;
+
+        }
 
       }
 
     }
   );
 
-// =====================================================
-// TOTAL PRODUK - MODE VIEW
-// =====================================================
-
-function renderTotalProduk() {
+function buatSummaryProyek(
+  produkSummary
+) {
 
   const produk =
-    detailProyekSewa?.produk ||
-    [];
+    Array.isArray(
+      produkSummary
+    )
+      ? produkSummary
+      : [];
 
 
-  let totalPerBulan =
-    0;
+  if (
+    produk.length === 0
+  ) {
+
+    return `
+      <div class="project-summary">
+        -
+      </div>
+    `;
+
+  }
 
 
-  let totalProyek =
-    0;
+  let totalSemuaUnit = 0;
 
 
-  produk.forEach(
-    item => {
+  const html =
+    produk
+      .map(
+        item => {
 
-      const orders =
-        Array.isArray(
-          item.orders
-        )
-          ? item.orders
-          : [];
+          const orders =
+            Array.isArray(
+              item.orders
+            )
+              ? item.orders
+              : [];
 
 
-      orders.forEach(
-        order => {
+          const totalProduk =
+            orders.reduce(
+              (
+                total,
+                order
+              ) => {
 
-          totalPerBulan +=
-            angka(
-              order.harga_per_bulan
+                return (
+                  total +
+                  Number(
+                    order.quantity ||
+                    0
+                  )
+                );
+
+              },
+              0
             );
 
 
-          totalProyek +=
-            angka(
-              order.total_harga
-            );
+          totalSemuaUnit +=
+            totalProduk;
+
+
+          return `
+            <div
+              class="project-summary-product"
+            >
+              ${escapeHtml(
+                item.item_produk ||
+                "-"
+              )}
+            </div>
+
+
+            ${orders
+              .map(
+                order => `
+                  <div
+                    class="project-summary-order"
+                  >
+                    ${escapeHtml(
+                      order.nama_cabang ||
+                      "-"
+                    )}
+
+                    ${Number(
+                      order.quantity ||
+                      0
+                    )}
+
+                    Unit
+                  </div>
+                `
+              )
+              .join("")}
+          `;
 
         }
-      );
-
-    }
-  );
+      )
+      .join("");
 
 
-  setText(
-    "editTotalPerBulan",
-    rupiah(
-      totalPerBulan
-    )
-  );
+  return `
+    <div class="project-summary">
 
+      ${html}
 
-  setText(
-    "editTotalProyek",
-    rupiah(
-      totalProyek
-    )
-  );
+      <div
+        class="project-summary-total"
+      >
+        Total ${totalSemuaUnit} Unit
+      </div>
+
+    </div>
+  `;
 
 }
 
@@ -3622,180 +4218,11 @@ document.addEventListener(
 
     try {
 
-      // =============================================
-      // EDIT PRODUK & ORDER
-      // =============================================
-
-      const btnEditProduk =
-        document.getElementById(
-          "btnEditProduk"
-        );
-
-
-      if (btnEditProduk) {
-
-        btnEditProduk.addEventListener(
-          "click",
-          async () => {
-
-            try {
-
-              console.log(
-                "KLIK EDIT PRODUK & ORDER"
-              );
-
-
-              // =====================================
-              // LOAD MASTER PRODUK & CABANG
-              // =====================================
-
-              if (
-                masterProduk.length === 0 ||
-                masterCabang.length === 0
-              ) {
-
-                await loadMasterEdit();
-
-              }
-
-
-              // =====================================
-              // AKTIFKAN MODE EDIT
-              // =====================================
-
-              modeEditProduk =
-                true;
-
-
-              console.log(
-                "MODE EDIT:",
-                modeEditProduk
-              );
-
-
-              // =====================================
-              // SEMBUNYIKAN TOMBOL EDIT
-              // =====================================
-
-              btnEditProduk.style.display =
-                "none";
-
-
-              // =====================================
-              // TAMPILKAN TAMBAH PRODUK
-              // =====================================
-
-              const btnTambahProduk =
-                document.getElementById(
-                  "btnTambahProduk"
-                );
-
-
-              if (btnTambahProduk) {
-
-                btnTambahProduk.style.display =
-                  "inline-flex";
-
-              }
-
-
-              // =====================================
-              // SUMMARY TETAP TAMPIL
-              // =====================================
-
-              const summary =
-                document.getElementById(
-                  "produkEditSummary"
-                );
-
-
-              if (summary) {
-
-                summary.style.display =
-                  "block";
-
-              }
-
-
-              // =====================================
-              // TAMPILKAN BATAL + SIMPAN
-              // =====================================
-
-              const actions =
-                document.getElementById(
-                  "produkEditActions"
-                );
-
-
-              if (actions) {
-
-                actions.style.display =
-                  "flex";
-
-              }
-
-
-              // =====================================
-              // RENDER MENJADI FORM EDIT
-              // =====================================
-
-              renderProduk(
-                detailProyekSewa?.produk ||
-                []
-              );
-
-
-              // =====================================
-              // HITUNG TOTAL
-              // =====================================
-
-              hitungSemuaProduk();
-
-
-              console.log(
-                "EDIT PRODUK & ORDER AKTIF"
-              );
-
-
-            } catch (error) {
-
-              console.error(
-                "ERROR EDIT PRODUK & ORDER:",
-                error
-              );
-
-
-              alert(
-                error.message ||
-                "Gagal membuka edit Produk & Order."
-              );
-
-            }
-
-          }
-        );
-
-
-        console.log(
-          "BUTTON EDIT PRODUK SIAP"
-        );
-
-
-      } else {
-
-        console.error(
-          "BUTTON #btnEditProduk TIDAK DITEMUKAN"
-        );
-
-      }
-
-
-      // =============================================
-      // LOAD DETAIL
-      // =============================================
-
       await loadDetail();
 
+      console.log(
+        "PROYEK SEWA DETAIL SIAP"
+      );
 
     } catch (error) {
 

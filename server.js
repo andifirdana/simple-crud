@@ -7,6 +7,9 @@ const bcrypt = require("bcrypt");
 const fs = require("fs");
 const multer = require("multer");
 const crypto = require("crypto");
+const {
+  simpanActivityLog
+} = require("./activity-log");
 
 const app = express();
 
@@ -923,6 +926,39 @@ async function hitungUlangPersentaseKlien(
   };
 }
 
+// =====================================================
+// GET USER UNTUK ACTIVITY LOG
+// =====================================================
+
+function getActivityUser(req) {
+
+  const user =
+    req.session?.user;
+
+
+  if (!user) {
+
+    return {
+      pic_id: null,
+      nama_pic: "Unknown User"
+    };
+
+  }
+
+
+  return {
+
+    pic_id:
+      Number(user.id) ||
+      null,
+
+    nama_pic:
+      user.nama ||
+      "Unknown User"
+
+  };
+
+}
 // ======================================================
 // MASTER DATA KLIEN
 // ======================================================
@@ -5311,12 +5347,56 @@ app.post(
 
 
       // ==================================================
-      // SELESAI
-      // ==================================================
+// ACTIVITY LOG - CREATE PROYEK
+// ==================================================
 
-      await client.query(
-        "COMMIT"
-      );
+const activityUser =
+  getActivityUser(req);
+
+
+await simpanActivityLog(
+  client,
+  {
+    pic_id:
+      activityUser.pic_id,
+
+    nama_pic:
+      activityUser.nama_pic,
+
+    aktivitas:
+      "CREATE",
+
+    modul:
+      "Proyek",
+
+    entity_id:
+      proyek.id,
+
+    entity_nama:
+      proyek.nama_proyek,
+
+    field_name:
+      null,
+
+    nilai_lama:
+      null,
+
+    nilai_baru:
+      proyek.nama_proyek,
+
+    deskripsi:
+      `membuat proyek ${proyek.nama_proyek}`
+  }
+);
+
+
+// ==================================================
+// SELESAI
+// ==================================================
+
+await client.query(
+  "COMMIT"
+);
 
 
       res.status(201).json({
@@ -8255,6 +8335,107 @@ app.delete(
     }
   }
 );
+
+// ====================================================
+// GET PROYEK TIMELINE
+// Read Only - Gantt Chart
+// ====================================================
+
+app.get(
+  "/api/proyek/:id/proyek-timeline",
+  async (req, res) => {
+
+    try {
+
+      const context =
+        access(req);
+
+
+      const result =
+        await pool.query(
+          projectSql,
+          [
+            context.proyekId,
+            context.isAdmin,
+            context.picId
+          ]
+        );
+
+
+      const row =
+        result.rows[0];
+
+
+      if (!row) {
+
+        throw error(
+          "Proyek tidak ditemukan atau tidak dapat diakses.",
+          404
+        );
+
+      }
+
+
+      const report =
+        row.dokumen
+          ? Progress.calculate(
+              row.dokumen
+            )
+          : null;
+
+
+      res.set(
+        "Cache-Control",
+        "no-store"
+      );
+
+
+      return res.json({
+
+        proyek: {
+
+          id:
+            row.id,
+
+          nama_proyek:
+            row.nama_proyek,
+
+          nama_klien:
+            row.perusahaan_klien ||
+            "-"
+
+        },
+
+
+        version:
+          Number(
+            row.versi || 0
+          ),
+
+
+        updated_at:
+          row.updated_at ||
+          null,
+
+
+        data:
+          report
+
+      });
+
+
+    } catch (caught) {
+
+      return sendError(
+        res,
+        caught
+      );
+
+    }
+
+  }
+);
+
 // ======================================================
 // TAMBAH TERMIN PARTNER
 // Reguler/SLA & Sewa = Persentase
@@ -11293,6 +11474,10 @@ app.get("/api/task-list",
   }
 );
 
+// =====================================================
+// CREATE TASK LIST
+// =====================================================
+
 app.post(
   "/api/task-list",
   async (req, res) => {
@@ -11301,15 +11486,19 @@ app.post(
       !req.session ||
       !req.session.user
     ) {
+
       return res.status(401).json({
         error: "Belum login"
       });
+
     }
+
 
     try {
 
       const user =
         req.session.user;
+
 
       const {
         proyek_id,
@@ -11323,20 +11512,27 @@ app.post(
       } = req.body;
 
 
+      // =================================================
+      // VALIDASI
+      // =================================================
+
       if (
         !proyek_id ||
         !task ||
         !String(task).trim()
       ) {
+
         return res.status(400).json({
           error:
             "Proyek dan task wajib diisi"
         });
+
       }
 
 
       const statusValue =
-        status || "Not Started";
+        status ||
+        "Not Started";
 
 
       const statusValid = [
@@ -11353,32 +11549,44 @@ app.post(
           statusValue
         )
       ) {
+
         return res.status(400).json({
-          error: "Status tidak valid"
+          error:
+            "Status tidak valid"
         });
+
       }
 
 
+      // =================================================
+      // CEK ROLE
+      // =================================================
+
       const isAdmin =
-        String(user.role || "")
-          .toLowerCase() ===
+        String(
+          user.role || ""
+        ).toLowerCase() ===
         "admin";
 
+
+      // =================================================
+      // CEK AKSES PIC
+      // =================================================
 
       if (!isAdmin) {
 
         const akses =
           await pool.query(
             `
-            SELECT 1
+              SELECT 1
 
-            FROM public.proyek_pic
+              FROM public.proyek_pic
 
-            WHERE
-              proyek_id = $1
-              AND pic_id = $2
+              WHERE
+                proyek_id = $1
+                AND pic_id = $2
 
-            LIMIT 1
+              LIMIT 1
             `,
             [
               proyek_id,
@@ -11390,55 +11598,61 @@ app.post(
         if (
           akses.rowCount === 0
         ) {
+
           return res.status(403).json({
             error:
               "Anda tidak memiliki akses ke proyek ini"
           });
+
         }
 
       }
 
 
+      // =================================================
+      // INSERT TASK
+      // =================================================
+
       const result =
         await pool.query(
           `
-          INSERT INTO public.task_list (
+            INSERT INTO public.task_list (
 
-            proyek_id,
-            created_by,
+              proyek_id,
+              created_by,
 
-            task,
-            catatan,
-            link,
+              task,
+              catatan,
+              link,
 
-            master_dokumen_id,
-            nomor_dokumen,
+              master_dokumen_id,
+              nomor_dokumen,
 
-            status,
-            tanggal_mulai,
-            target_date
+              status,
+              tanggal_mulai,
+              target_date
 
-          )
+            )
 
-          VALUES (
+            VALUES (
 
-            $1,
-            $2,
+              $1,
+              $2,
 
-            $3,
-            $4,
-            $5,
+              $3,
+              $4,
+              $5,
 
-            $6,
-            $7,
+              $6,
+              $7,
 
-            $8,
-            CURRENT_DATE,
-            $9
+              $8,
+              CURRENT_DATE,
+              $9
 
-          )
+            )
 
-          RETURNING *
+            RETURNING *
           `,
           [
             proyek_id,
@@ -11457,9 +11671,59 @@ app.post(
         );
 
 
-      res.status(201).json(
-        result.rows[0]
+      const savedTask =
+        result.rows[0];
+
+
+      // =================================================
+      // ACTIVITY LOG
+      // =================================================
+
+      const activityUser =
+        getActivityUser(req);
+
+
+      await simpanActivityLog(
+        pool,
+        {
+          ...activityUser,
+
+          aktivitas:
+            "CREATE",
+
+          modul:
+            "TASK_LIST",
+
+          entity_id:
+            savedTask.id,
+
+          entity_nama:
+            savedTask.task,
+
+          field_name:
+            null,
+
+          nilai_lama:
+            null,
+
+          nilai_baru:
+            savedTask.task,
+
+          deskripsi:
+            `menambahkan Task List ${savedTask.task}`
+        }
       );
+
+
+      // =================================================
+      // RESPONSE
+      // =================================================
+
+      return res
+        .status(201)
+        .json(
+          savedTask
+        );
 
 
     } catch (error) {
@@ -11469,7 +11733,8 @@ app.post(
         error
       );
 
-      res.status(500).json({
+
+      return res.status(500).json({
         error:
           "Gagal menambahkan task"
       });
@@ -11479,7 +11744,12 @@ app.post(
   }
 );
 
-app.put("/api/task-list/:id",
+// =====================================================
+// UPDATE TASK LIST + ACTIVITY LOG
+// =====================================================
+
+app.put(
+  "/api/task-list/:id",
   async (req, res) => {
 
     if (
@@ -11494,6 +11764,10 @@ app.put("/api/task-list/:id",
     }
 
 
+    const client =
+      await pool.connect();
+
+
     try {
 
       const taskId =
@@ -11501,7 +11775,8 @@ app.put("/api/task-list/:id",
 
 
       if (
-        !Number.isInteger(taskId)
+        !Number.isInteger(taskId) ||
+        taskId <= 0
       ) {
 
         return res.status(400).json({
@@ -11513,28 +11788,29 @@ app.put("/api/task-list/:id",
 
 
       const {
-
         proyek_id,
         task,
         catatan,
         link,
-
         master_dokumen_id,
         nomor_dokumen,
-
         status,
         target_date
-
       } = req.body;
 
 
-     const statusValid = [
-      "Not Started",
-      "On Progress",
-      "Hold",
-      "Urgent",
-      "Done"
-    ];
+      const statusValid = [
+        "Not Started",
+        "On Progress",
+        "Hold",
+        "Urgent",
+        "Done"
+      ];
+
+
+      // =================================================
+      // VALIDASI
+      // =================================================
 
       if (
         !proyek_id ||
@@ -11567,25 +11843,30 @@ app.put("/api/task-list/:id",
 
 
       const isAdmin =
-        String(user.role || "")
-          .toLowerCase() ===
+        String(
+          user.role || ""
+        ).toLowerCase() ===
         "admin";
 
+
+      // =================================================
+      // CEK AKSES PIC
+      // =================================================
 
       if (!isAdmin) {
 
         const akses =
-          await pool.query(
+          await client.query(
             `
-            SELECT 1
+              SELECT 1
 
-            FROM public.proyek_pic
+              FROM public.proyek_pic
 
-            WHERE
-              proyek_id = $1
-              AND pic_id = $2
+              WHERE
+                proyek_id = $1
+                AND pic_id = $2
 
-            LIMIT 1
+              LIMIT 1
             `,
             [
               proyek_id,
@@ -11608,92 +11889,45 @@ app.put("/api/task-list/:id",
       }
 
 
-      const result =
-        await pool.query(
+      await client.query(
+        "BEGIN"
+      );
+
+
+      // =================================================
+      // AMBIL DATA TASK SEBELUM DIUBAH
+      // =================================================
+
+      const oldResult =
+        await client.query(
           `
-          UPDATE public.task_list
+            SELECT
+              tl.*,
+              p.nama_proyek
 
-          SET
-            proyek_id =
-              $1::integer,
+            FROM public.task_list tl
 
-            task =
-              $2::varchar,
+            LEFT JOIN public.proyek p
+              ON p.id = tl.proyek_id
 
-            catatan =
-              $3::text,
+            WHERE tl.id = $1
 
-            link =
-              $4::text,
-
-            master_dokumen_id =
-              $5::integer,
-
-            nomor_dokumen =
-              $6::varchar,
-
-            status =
-              $7::varchar,
-
-            target_date =
-              $8::date,
-
-            tanggal_selesai =
-              CASE
-
-                WHEN
-                  $7::varchar = 'Done'
-                  AND tanggal_selesai IS NULL
-
-                THEN CURRENT_DATE
-
-
-                WHEN
-                  $7::varchar <> 'Done'
-
-                THEN NULL
-
-
-                ELSE tanggal_selesai
-
-              END,
-
-            updated_at =
-              CURRENT_TIMESTAMP
-
-          WHERE
-            id =
-              $9::integer
-
-          RETURNING *
+            FOR UPDATE OF tl
           `,
           [
-
-            proyek_id,
-
-            String(task).trim(),
-
-            catatan || null,
-
-            link || null,
-
-            master_dokumen_id || null,
-
-            nomor_dokumen || null,
-
-            status,
-
-            target_date || null,
-
             taskId
-
           ]
         );
 
 
       if (
-        result.rowCount === 0
+        oldResult.rowCount === 0
       ) {
+
+        await client.query(
+          "ROLLBACK"
+        );
+
 
         return res.status(404).json({
           error:
@@ -11703,21 +11937,555 @@ app.put("/api/task-list/:id",
       }
 
 
-      res.json(
-        result.rows[0]
+      const oldTask =
+        oldResult.rows[0];
+
+
+      // =================================================
+      // UPDATE TASK
+      // =================================================
+
+      const result =
+        await client.query(
+          `
+            UPDATE public.task_list
+
+            SET
+              proyek_id =
+                $1::integer,
+
+              task =
+                $2::varchar,
+
+              catatan =
+                $3::text,
+
+              link =
+                $4::text,
+
+              master_dokumen_id =
+                $5::integer,
+
+              nomor_dokumen =
+                $6::varchar,
+
+              status =
+                $7::varchar,
+
+              target_date =
+                $8::date,
+
+              tanggal_selesai =
+                CASE
+
+                  WHEN
+                    $7::varchar = 'Done'
+                    AND tanggal_selesai IS NULL
+
+                  THEN CURRENT_DATE
+
+                  WHEN
+                    $7::varchar <> 'Done'
+
+                  THEN NULL
+
+                  ELSE tanggal_selesai
+
+                END,
+
+              updated_at =
+                CURRENT_TIMESTAMP
+
+            WHERE
+              id =
+                $9::integer
+
+            RETURNING *
+          `,
+          [
+            proyek_id,
+            String(task).trim(),
+            catatan || null,
+            link || null,
+            master_dokumen_id || null,
+            nomor_dokumen || null,
+            status,
+            target_date || null,
+            taskId
+          ]
+        );
+
+
+      const updatedTask =
+        result.rows[0];
+
+
+      // =================================================
+      // USER ACTIVITY
+      // =================================================
+
+      const activityUser =
+        getActivityUser(req);
+
+
+      // =================================================
+      // HELPER NORMALISASI
+      // Supaya NULL dan "" dianggap sama
+      // =================================================
+
+      function normalisasi(value) {
+
+        if (
+          value === null ||
+          value === undefined ||
+          value === ""
+        ) {
+
+          return "";
+
+        }
+
+
+        return String(value);
+
+      }
+
+
+      // =================================================
+      // HELPER TANGGAL
+      // Menghindari perbedaan karena format timestamp
+      // =================================================
+
+      function normalisasiTanggal(value) {
+
+        if (!value) {
+          return "";
+        }
+
+
+        if (
+          value instanceof Date
+        ) {
+
+          const year =
+            value.getFullYear();
+
+          const month =
+            String(
+              value.getMonth() + 1
+            ).padStart(
+              2,
+              "0"
+            );
+
+          const day =
+            String(
+              value.getDate()
+            ).padStart(
+              2,
+              "0"
+            );
+
+
+          return `${year}-${month}-${day}`;
+
+        }
+
+
+        return String(value)
+          .substring(
+            0,
+            10
+          );
+
+      }
+
+
+      // =================================================
+      // HELPER SIMPAN PERUBAHAN
+      // =================================================
+
+      async function logPerubahan(
+        fieldName,
+        label,
+        nilaiLama,
+        nilaiBaru
+      ) {
+
+        if (
+          normalisasi(nilaiLama) ===
+          normalisasi(nilaiBaru)
+        ) {
+
+          return;
+
+        }
+
+
+        await simpanActivityLog(
+          client,
+          {
+            ...activityUser,
+
+            aktivitas:
+              "UPDATE",
+
+            modul:
+              "TASK_LIST",
+
+            entity_id:
+              taskId,
+
+            entity_nama:
+              updatedTask.task,
+
+            field_name:
+              fieldName,
+
+            nilai_lama:
+              nilaiLama || null,
+
+            nilai_baru:
+              nilaiBaru || null,
+
+            deskripsi:
+              `mengubah ${label} Task List ${updatedTask.task}`
+          }
+        );
+
+      }
+
+
+      // =================================================
+      // TASK
+      // =================================================
+
+      await logPerubahan(
+        "task",
+        "Nama Task",
+        oldTask.task,
+        updatedTask.task
+      );
+
+
+      // =================================================
+      // CATATAN
+      // =================================================
+
+      await logPerubahan(
+        "catatan",
+        "Catatan",
+        oldTask.catatan,
+        updatedTask.catatan
+      );
+
+
+      // =================================================
+      // LINK
+      // =================================================
+
+      await logPerubahan(
+        "link",
+        "Link",
+        oldTask.link,
+        updatedTask.link
+      );
+
+
+      // =================================================
+      // NOMOR DOKUMEN
+      // =================================================
+
+      await logPerubahan(
+        "nomor_dokumen",
+        "Nomor Dokumen",
+        oldTask.nomor_dokumen,
+        updatedTask.nomor_dokumen
+      );
+
+
+      // =================================================
+      // STATUS
+      // =================================================
+
+      await logPerubahan(
+        "status",
+        "Status",
+        oldTask.status,
+        updatedTask.status
+      );
+
+
+      // =================================================
+      // TARGET DATE
+      // =================================================
+
+      const targetDateLama =
+        normalisasiTanggal(
+          oldTask.target_date
+        );
+
+
+      const targetDateBaru =
+        normalisasiTanggal(
+          updatedTask.target_date
+        );
+
+
+      await logPerubahan(
+        "target_date",
+        "Target Date",
+        targetDateLama,
+        targetDateBaru
+      );
+
+
+  // =================================================
+// MASTER DOKUMEN
+// Tampilkan NAMA DOKUMEN, bukan ID
+// =================================================
+
+if (
+  Number(oldTask.master_dokumen_id || 0) !==
+  Number(updatedTask.master_dokumen_id || 0)
+) {
+
+  let namaDokumenLama = "-";
+  let namaDokumenBaru = "-";
+
+
+  // ===============================================
+  // DOKUMEN LAMA
+  // ===============================================
+
+  if (oldTask.master_dokumen_id) {
+
+    const dokumenLamaResult =
+      await client.query(
+        `
+          SELECT *
+          FROM public.master_dokumen
+          WHERE id = $1
+          LIMIT 1
+        `,
+        [
+          oldTask.master_dokumen_id
+        ]
+      );
+
+
+    if (
+      dokumenLamaResult.rowCount > 0
+    ) {
+
+      const dokumen =
+        dokumenLamaResult.rows[0];
+
+
+      namaDokumenLama =
+      dokumen.kode && dokumen.deskripsi
+        ? `${dokumen.kode} - ${dokumen.deskripsi}`
+        : dokumen.deskripsi ||
+          dokumen.kode ||
+          `Dokumen ID ${updatedTask.master_dokumen_id}`;
+
+    }
+
+  }
+
+
+  // ===============================================
+  // DOKUMEN BARU
+  // ===============================================
+
+  if (updatedTask.master_dokumen_id) {
+
+    const dokumenBaruResult =
+      await client.query(
+        `
+          SELECT *
+          FROM public.master_dokumen
+          WHERE id = $1
+          LIMIT 1
+        `,
+        [
+          updatedTask.master_dokumen_id
+        ]
+      );
+
+
+    if (
+      dokumenBaruResult.rowCount > 0
+    ) {
+
+      const dokumen =
+        dokumenBaruResult.rows[0];
+
+
+      namaDokumenBaru =
+  dokumen.kode && dokumen.deskripsi
+    ? `${dokumen.kode} - ${dokumen.deskripsi}`
+    : dokumen.deskripsi ||
+      dokumen.kode ||
+      `Dokumen ID ${updatedTask.master_dokumen_id}`;
+
+    }
+
+  }
+
+
+  // ===============================================
+  // SIMPAN ACTIVITY
+  // ===============================================
+
+  await simpanActivityLog(
+    client,
+    {
+      ...activityUser,
+
+      aktivitas:
+        "UPDATE",
+
+      modul:
+        "TASK_LIST",
+
+      entity_id:
+        taskId,
+
+      entity_nama:
+        updatedTask.task,
+
+      field_name:
+        "master_dokumen_id",
+
+      nilai_lama:
+        namaDokumenLama,
+
+      nilai_baru:
+        namaDokumenBaru,
+
+      deskripsi:
+        `mengubah Dokumen Task List ${updatedTask.task}`
+    }
+  );
+
+}
+
+
+      // =================================================
+      // PROYEK
+      // =================================================
+
+      if (
+        Number(oldTask.proyek_id) !==
+        Number(updatedTask.proyek_id)
+      ) {
+
+        const proyekBaruResult =
+          await client.query(
+            `
+              SELECT nama_proyek
+
+              FROM public.proyek
+
+              WHERE id = $1
+            `,
+            [
+              updatedTask.proyek_id
+            ]
+          );
+
+
+        const namaProyekBaru =
+          proyekBaruResult.rows[0]
+            ?.nama_proyek ||
+          `ID ${updatedTask.proyek_id}`;
+
+
+        await simpanActivityLog(
+          client,
+          {
+            ...activityUser,
+
+            aktivitas:
+              "UPDATE",
+
+            modul:
+              "TASK_LIST",
+
+            entity_id:
+              taskId,
+
+            entity_nama:
+              updatedTask.task,
+
+            field_name:
+              "proyek_id",
+
+            nilai_lama:
+              oldTask.nama_proyek ||
+              oldTask.proyek_id,
+
+            nilai_baru:
+              namaProyekBaru,
+
+            deskripsi:
+              `memindahkan Task List ${updatedTask.task} ke proyek ${namaProyekBaru}`
+          }
+        );
+
+      }
+
+
+      // =================================================
+      // COMMIT
+      // =================================================
+
+      await client.query(
+        "COMMIT"
+      );
+
+
+      return res.json(
+        updatedTask
       );
 
 
     } catch (error) {
+
+      try {
+
+        await client.query(
+          "ROLLBACK"
+        );
+
+      } catch (
+        rollbackError
+      ) {
+
+        console.error(
+          "ERROR ROLLBACK UPDATE TASK:",
+          rollbackError
+        );
+
+      }
+
 
       console.error(
         "ERROR UPDATE TASK:",
         error
       );
 
-      res.status(500).json({
-          error: error.message
+
+      return res.status(500).json({
+        error:
+          error.message
       });
+
+
+    } finally {
+
+      client.release();
 
     }
 
@@ -16328,162 +17096,254 @@ app.delete(
   // ====================================================
   // QUERY DATA PROYEK DAN PROGRESS
   // ====================================================
+const projectSql = `
+  SELECT
+    p.id,
+    p.nama_proyek,
 
-  const projectSql = `
+    klien.perusahaan_klien,
+    klien.inisial_klien,
+
+    progress.data_json AS dokumen,
+
+    COALESCE(
+      progress.version,
+      0
+    ) AS versi,
+
+    progress.updated_at
+
+  FROM public.proyek p
+
+
+  -- ==================================================
+  -- KLIEN PROYEK
+  -- ==================================================
+
+  LEFT JOIN LATERAL (
+
     SELECT
-      p.id,
-      p.nama_proyek,
+      d.perusahaan_klien,
 
-      klien.perusahaan_klien,
-      klien.inisial_klien,
+      COALESCE(
 
-     progress.data_json AS dokumen,
-    COALESCE(progress.version, 0) AS versi,
-
-      progress.updated_at
-
-    FROM public.proyek p
-
-    LEFT JOIN LATERAL (
-      SELECT
-        d.perusahaan_klien,
-
-        COALESCE(
-          NULLIF(
-            TRIM(to_jsonb(d)->>'inisial'),
-            ''
+        NULLIF(
+          TRIM(
+            to_jsonb(d)->>'inisial'
           ),
-          NULLIF(
-            TRIM(to_jsonb(d)->>'kode_klien'),
-            ''
+          ''
+        ),
+
+        NULLIF(
+          TRIM(
+            to_jsonb(d)->>'kode_klien'
           ),
-          NULLIF(
-            TRIM(to_jsonb(d)->>'kode'),
-            ''
-          )
-        ) AS inisial_klien
+          ''
+        ),
 
-      FROM public.proyek_klien pk
+        NULLIF(
+          TRIM(
+            to_jsonb(d)->>'kode'
+          ),
+          ''
+        )
 
-      LEFT JOIN public.data d
-        ON d.id = pk.klien_id
+      ) AS inisial_klien
 
-      WHERE pk.proyek_id = p.id
+    FROM public.proyek_klien pk
 
-      ORDER BY pk.id DESC
-
-      LIMIT 1
-    ) klien ON TRUE
-
-    LEFT JOIN public.proyek_progress_modul progress
-      ON progress.project_id = p.id
+    LEFT JOIN public.data d
+      ON d.id = pk.klien_id
 
     WHERE
-      p.id = $1
+      pk.proyek_id = p.id
 
-      AND (
-        $2::BOOLEAN
+    ORDER BY
+      pk.id DESC
 
-        OR EXISTS (
-          SELECT 1
+    LIMIT 1
 
-          FROM public.proyek_pic pp
+  ) klien
+    ON TRUE
 
-          WHERE
-            pp.proyek_id = p.id
-            AND pp.pic_id = $3
-        )
+
+  -- ==================================================
+  -- PROGRESS TERBARU
+  -- ==================================================
+
+  LEFT JOIN LATERAL (
+
+    SELECT
+      ppm.data_json,
+      ppm.version,
+      ppm.updated_at
+
+    FROM public.proyek_progress_modul ppm
+
+    WHERE
+      ppm.project_id = p.id
+
+    ORDER BY
+      ppm.updated_at DESC NULLS LAST,
+      ppm.id DESC
+
+    LIMIT 1
+
+  ) progress
+    ON TRUE
+
+
+  -- ==================================================
+  -- FILTER PROYEK + HAK AKSES
+  -- ==================================================
+
+  WHERE
+    p.id = $1
+
+    AND (
+
+      $2::BOOLEAN = TRUE
+
+      OR EXISTS (
+
+        SELECT 1
+
+        FROM public.proyek_pic pp
+
+        WHERE
+          pp.proyek_id = p.id
+          AND pp.pic_id = $3
+
       )
-  `;
 
+    )
+
+  LIMIT 1
+`;
   // ====================================================
   // GET PROGRESS
   // ====================================================
 
   app.get(
-    "/api/proyek/:id/progress-modul",
-    async (req, res) => {
-      try {
-        const context =
-          access(req);
+  "/api/proyek/:id/progress-modul",
+  async (req, res) => {
 
-        const result =
-          await pool.query(
-            projectSql,
-            [
-              context.proyekId,
-              context.isAdmin,
-              context.picId
-            ]
-          );
+    try {
 
-        const row =
-          result.rows[0];
+      const context =
+        access(req);
 
-        if (!row) {
-          throw error(
-            "Proyek tidak ditemukan atau tidak dapat diakses.",
-            404
-          );
-        }
 
-        const report =
-          row.dokumen
-            ? Progress.calculate(row.dokumen)
-            : null;
-
-        res.set(
-          "Cache-Control",
-          "no-store"
+      const result =
+        await pool.query(
+          projectSql,
+          [
+            context.proyekId,
+            context.isAdmin,
+            context.picId
+          ]
         );
 
-        return res.json({
-          proyek: {
-            id: row.id,
 
-            nama_proyek:
-              row.nama_proyek,
+      const row =
+        result.rows[0];
 
-            nama_klien:
-              row.perusahaan_klien || "-"
+
+      if (!row) {
+
+        throw error(
+          "Proyek tidak ditemukan atau tidak dapat diakses.",
+          404
+        );
+
+      }
+
+
+      const report =
+        row.dokumen
+          ? Progress.calculate(
+              row.dokumen
+            )
+          : null;
+
+
+      res.set(
+        "Cache-Control",
+        "no-store"
+      );
+
+
+      return res.json({
+
+        proyek: {
+
+          id:
+            row.id,
+
+          nama_proyek:
+            row.nama_proyek,
+
+          nama_klien:
+            row.perusahaan_klien ||
+            "-"
+
+        },
+
+
+        pic_options: [
+
+          {
+            value:
+              "klien",
+
+            label:
+              row.inisial_klien ||
+              "Klien (inisial belum tersedia)"
           },
 
-          pic_options: [
-            {
-              value: "klien",
+          {
+            value:
+              "mtm",
 
-              label:
-                row.inisial_klien ||
-                "Klien (inisial belum tersedia)"
-            },
-            {
-              value: "mtm",
-              label: "MTM"
-            }
-          ],
+            label:
+              "MTM"
+          }
 
-          user_id:
-            context.userId,
+        ],
 
-          version:
-            Number(row.versi),
 
-          updated_at:
-            row.updated_at || null,
+        user_id:
+          context.userId,
 
-          data:
-            report
-        });
 
-      } catch (caught) {
-        return sendError(
-          res,
-          caught
-        );
-      }
+        version:
+          Number(
+            row.versi || 0
+          ),
+
+
+        updated_at:
+          row.updated_at ||
+          null,
+
+
+        data:
+          report
+
+      });
+
+
+    } catch (caught) {
+
+      return sendError(
+        res,
+        caught
+      );
+
     }
-  );
 
+  }
+);
   // ====================================================
   // POST PROGRESS
   // Menyimpan seluruh susunan modul dan submodul.
@@ -17805,7 +18665,7 @@ app.post(
 
         nomor_pr,
 
-        nomor_rujukan,
+        tanggal_pr,
 
         proyek_id,
 
@@ -17834,25 +18694,10 @@ app.post(
       }
 
 
-      if (
-        !klien_id
-      ) {
+      if (!klien_id) {
 
         return res.status(400).json({
           error: "Klien wajib dipilih."
-        });
-
-      }
-
-
-      if (
-        !nomor_rujukan &&
-        !proyek_id
-      ) {
-
-        return res.status(400).json({
-          error:
-            "Isi Nomor Rujukan atau pilih Proyek yang sudah ada."
         });
 
       }
@@ -17887,10 +18732,10 @@ app.post(
       const klienResult =
         await client.query(
           `
-          SELECT id
-          FROM public.data
-          WHERE id = $1
-          LIMIT 1
+            SELECT id
+            FROM public.data
+            WHERE id = $1
+            LIMIT 1
           `,
           [
             Number(klien_id)
@@ -17918,10 +18763,10 @@ app.post(
         const proyekResult =
           await client.query(
             `
-            SELECT id
-            FROM public.proyek
-            WHERE id = $1
-            LIMIT 1
+              SELECT id
+              FROM public.proyek
+              WHERE id = $1
+              LIMIT 1
             `,
             [
               Number(proyek_id)
@@ -17949,11 +18794,17 @@ app.post(
       const nomorPrResult =
         await client.query(
           `
-          SELECT id
-          FROM public.proyek_sewa
-          WHERE LOWER(BTRIM(nomor_pr))
-              = LOWER(BTRIM($1))
-          LIMIT 1
+            SELECT id
+            FROM public.proyek_sewa
+
+            WHERE LOWER(
+              BTRIM(nomor_pr)
+            ) =
+            LOWER(
+              BTRIM($1)
+            )
+
+            LIMIT 1
           `,
           [
             String(nomor_pr)
@@ -17973,16 +18824,146 @@ app.post(
 
 
       // =================================================
-      // HITUNG NILAI DARI SERVER
+      // HELPER HITUNG END DATE
       //
-      // Jangan percaya total dari frontend.
-      // Server hitung ulang berdasarkan master produk.
+      // Tanggal DO + durasi bulan
+      // Contoh:
+      // 2026-09-25 + 12 bulan
+      // = 2027-09-25
+      //
+      // 2026-01-31 + 1 bulan
+      // = 2026-02-28
+      // =================================================
+
+      function hitungEndDate(
+        tanggalDO,
+        durasiBulan
+      ) {
+
+        if (
+          !tanggalDO ||
+          !durasiBulan
+        ) {
+
+          return null;
+
+        }
+
+
+        const parts =
+          String(tanggalDO)
+            .split("-")
+            .map(Number);
+
+
+        if (
+          parts.length !== 3
+        ) {
+
+          return null;
+
+        }
+
+
+        const [
+          year,
+          month,
+          day
+        ] = parts;
+
+
+        if (
+          !year ||
+          !month ||
+          !day
+        ) {
+
+          return null;
+
+        }
+
+
+        /*
+          Gunakan tanggal 1 terlebih dahulu.
+
+          Ini mencegah JavaScript lompat bulan
+          pada tanggal seperti 31 Januari.
+        */
+
+        const result =
+          new Date(
+            year,
+            month - 1,
+            1
+          );
+
+
+        result.setMonth(
+          result.getMonth() +
+          Number(durasiBulan)
+        );
+
+
+        // Hari terakhir bulan tujuan
+
+        const lastDay =
+          new Date(
+            result.getFullYear(),
+            result.getMonth() + 1,
+            0
+          ).getDate();
+
+
+        result.setDate(
+          Math.min(
+            day,
+            lastDay
+          )
+        );
+
+
+        const yyyy =
+          result.getFullYear();
+
+
+        const mm =
+          String(
+            result.getMonth() + 1
+          ).padStart(
+            2,
+            "0"
+          );
+
+
+        const dd =
+          String(
+            result.getDate()
+          ).padStart(
+            2,
+            "0"
+          );
+
+
+        return `${yyyy}-${mm}-${dd}`;
+
+      }
+
+
+      // =================================================
+      // TOTAL
       // =================================================
 
       let totalNilaiPerBulan = 0;
+
       let totalNilai = 0;
 
+
       const produkValid = [];
+
+
+      // Untuk membuat nomor_rujukan
+
+      const semuaNoReqKlien = [];
 
 
       // =================================================
@@ -17999,9 +18980,11 @@ app.post(
           produk[i];
 
 
-        if (
-          !item.produk_id
-        ) {
+        // ===============================================
+        // VALIDASI PRODUK
+        // ===============================================
+
+        if (!item.produk_id) {
 
           throw new Error(
             `Produk ${i + 1} belum dipilih.`
@@ -18029,7 +19012,9 @@ app.post(
 
 
         if (
-          !Array.isArray(item.orders) ||
+          !Array.isArray(
+            item.orders
+          ) ||
           item.orders.length === 0
         ) {
 
@@ -18041,36 +19026,43 @@ app.post(
 
 
         // ===============================================
-        // AMBIL PRODUK DARI MASTER
+        // AMBIL MASTER PRODUK
         // ===============================================
 
         const masterResult =
           await client.query(
             `
-            SELECT
-              mps.id,
-              mps.item_produk,
-              mps.harga_jual_per_item,
-              mps.jenis_proyek_id,
-              mps.sub_jenis_proyek_id,
+              SELECT
 
-              jp.name
-                AS jenis_proyek,
+                mps.id,
 
-              sjp.name
-                AS sub_jenis_proyek
+                mps.item_produk,
 
-            FROM public.master_produk_sewa mps
+                mps.harga_jual_per_item,
 
-            LEFT JOIN public.jenis_proyek jp
-              ON jp.id = mps.jenis_proyek_id
+                mps.jenis_proyek_id,
 
-            LEFT JOIN public.jenis_proyek sjp
-              ON sjp.id = mps.sub_jenis_proyek_id
+                mps.sub_jenis_proyek_id,
 
-            WHERE mps.id = $1
+                jp.name
+                  AS jenis_proyek,
 
-            LIMIT 1
+                sjp.name
+                  AS sub_jenis_proyek
+
+              FROM public.master_produk_sewa mps
+
+              LEFT JOIN public.jenis_proyek jp
+                ON jp.id =
+                   mps.jenis_proyek_id
+
+              LEFT JOIN public.jenis_proyek sjp
+                ON sjp.id =
+                   mps.sub_jenis_proyek_id
+
+              WHERE mps.id = $1
+
+              LIMIT 1
             `,
             [
               Number(
@@ -18101,11 +19093,15 @@ app.post(
 
         const hargaPerItem =
           Number(
-            master.harga_jual_per_item || 0
+            master.harga_jual_per_item ||
+            0
           );
 
 
         if (
+          !Number.isFinite(
+            hargaPerItem
+          ) ||
           hargaPerItem < 0
         ) {
 
@@ -18133,9 +19129,11 @@ app.post(
             item.orders[j];
 
 
-          if (
-            !order.cabang_id
-          ) {
+          // =============================================
+          // LOKASI
+          // =============================================
+
+          if (!order.cabang_id) {
 
             throw new Error(
               `Lokasi Order ${j + 1} pada Produk ${i + 1} belum dipilih.`
@@ -18144,6 +19142,10 @@ app.post(
           }
 
 
+          // =============================================
+          // QUANTITY
+          // =============================================
+
           const quantity =
             Number(
               order.quantity
@@ -18151,7 +19153,9 @@ app.post(
 
 
           if (
-            !Number.isInteger(quantity) ||
+            !Number.isInteger(
+              quantity
+            ) ||
             quantity <= 0
           ) {
 
@@ -18169,10 +19173,12 @@ app.post(
           const cabangResult =
             await client.query(
               `
-              SELECT id
-              FROM public.master_cabang
-              WHERE id = $1
-              LIMIT 1
+                SELECT id
+                FROM public.master_cabang
+
+                WHERE id = $1
+
+                LIMIT 1
               `,
               [
                 Number(
@@ -18194,7 +19200,65 @@ app.post(
 
 
           // =============================================
-          // PERHITUNGAN SERVER
+          // DATA TAMBAHAN ORDER
+          //
+          // SEMUA NON MANDATORY
+          // =============================================
+
+          const noReqKlien =
+            order.no_req_klien
+              ? String(
+                  order.no_req_klien
+                ).trim()
+              : null;
+
+
+          const tanggalReqKlien =
+            order.tanggal_req_klien ||
+            null;
+
+
+          const tanggalDO =
+            order.tanggal_do ||
+            null;
+
+
+          const noDO =
+            order.no_do
+              ? String(
+                  order.no_do
+                ).trim()
+              : null;
+
+
+          // =============================================
+          // KUMPULKAN NO REQ
+          // =============================================
+
+          if (noReqKlien) {
+
+            semuaNoReqKlien.push(
+              noReqKlien
+            );
+
+          }
+
+
+          // =============================================
+          // HITUNG END DATE SERVER
+          // =============================================
+
+          const endDate =
+            tanggalDO
+              ? hitungEndDate(
+                  tanggalDO,
+                  durasi
+                )
+              : null;
+
+
+          // =============================================
+          // PERHITUNGAN HARGA SERVER
           // =============================================
 
           const hargaPerBulan =
@@ -18215,6 +19279,10 @@ app.post(
             totalHarga;
 
 
+          // =============================================
+          // ORDER VALID
+          // =============================================
+
           ordersValid.push({
 
             cabang_id:
@@ -18228,12 +19296,31 @@ app.post(
               hargaPerBulan,
 
             total_harga:
-              totalHarga
+              totalHarga,
+
+            no_req_klien:
+              noReqKlien,
+
+            tanggal_req_klien:
+              tanggalReqKlien,
+
+            tanggal_do:
+              tanggalDO,
+
+            no_do:
+              noDO,
+
+            end_date:
+              endDate
 
           });
 
         }
 
+
+        // ===============================================
+        // PRODUK VALID
+        // ===============================================
 
         produkValid.push({
 
@@ -18265,47 +19352,76 @@ app.post(
 
 
       // =================================================
+      // BUAT RUJUKAN KONTRAK
+      //
+      // Hapus duplikat lalu gabungkan koma.
+      //
+      // REQ-001, REQ-002, REQ-003
+      // =================================================
+
+      const nomorRujukan =
+        [
+          ...new Set(
+            semuaNoReqKlien
+          )
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+
+      // Jika semua No Req kosong,
+      // nomor_rujukan = NULL
+
+      const nomorRujukanFinal =
+        nomorRujukan ||
+        null;
+
+
+      // =================================================
       // INSERT HEADER PROYEK SEWA
       // =================================================
 
       const proyekSewaResult =
         await client.query(
           `
-          INSERT INTO public.proyek_sewa (
+            INSERT INTO public.proyek_sewa (
 
-            nomor_pr,
+              nomor_pr,
 
-            nomor_rujukan,
+              tanggal_pr,
 
-            proyek_id,
+              nomor_rujukan,
 
-            klien_id,
+              proyek_id,
 
-            total_nilai_per_bulan,
+              klien_id,
 
-            total_nilai,
+              total_nilai_per_bulan,
 
-            created_at,
+              total_nilai,
 
-            updated_at
+              created_at,
 
-          )
+              updated_at
 
-          VALUES (
+            )
 
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6,
+            VALUES (
 
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              $7,
 
-          )
+              CURRENT_TIMESTAMP,
+              CURRENT_TIMESTAMP
 
-          RETURNING *
+            )
+
+            RETURNING *
           `,
           [
 
@@ -18313,11 +19429,10 @@ app.post(
               nomor_pr
             ).trim(),
 
-            nomor_rujukan
-              ? String(
-                  nomor_rujukan
-                ).trim()
-              : null,
+            tanggal_pr ||
+              null,
+
+            nomorRujukanFinal,
 
             proyek_id
               ? Number(
@@ -18353,41 +19468,41 @@ app.post(
         const produkResult =
           await client.query(
             `
-            INSERT INTO public.proyek_sewa_produk (
+              INSERT INTO public.proyek_sewa_produk (
 
-              proyek_sewa_id,
+                proyek_sewa_id,
 
-              produk_id,
+                produk_id,
 
-              harga_per_item,
+                harga_per_item,
 
-              jenis_proyek,
+                jenis_proyek,
 
-              sub_jenis_proyek,
+                sub_jenis_proyek,
 
-              durasi_bulan,
+                durasi_bulan,
 
-              created_at,
+                created_at,
 
-              updated_at
+                updated_at
 
-            )
+              )
 
-            VALUES (
+              VALUES (
 
-              $1,
-              $2,
-              $3,
-              $4,
-              $5,
-              $6,
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
 
-              CURRENT_TIMESTAMP,
-              CURRENT_TIMESTAMP
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
 
-            )
+              )
 
-            RETURNING id
+              RETURNING id
             `,
             [
 
@@ -18422,36 +19537,51 @@ app.post(
 
           await client.query(
             `
-            INSERT INTO public.proyek_sewa_order (
+              INSERT INTO public.proyek_sewa_order (
 
-              proyek_sewa_produk_id,
+                proyek_sewa_produk_id,
 
-              cabang_id,
+                cabang_id,
 
-              quantity,
+                quantity,
 
-              harga_per_bulan,
+                harga_per_bulan,
 
-              total_harga,
+                total_harga,
 
-              created_at,
+                no_req_klien,
 
-              updated_at
+                tanggal_req_klien,
 
-            )
+                tanggal_do,
 
-            VALUES (
+                no_do,
 
-              $1,
-              $2,
-              $3,
-              $4,
-              $5,
+                end_date,
 
-              CURRENT_TIMESTAMP,
-              CURRENT_TIMESTAMP
+                created_at,
 
-            )
+                updated_at
+
+              )
+
+              VALUES (
+
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9,
+                $10,
+
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+
+              )
             `,
             [
 
@@ -18463,7 +19593,17 @@ app.post(
 
               order.harga_per_bulan,
 
-              order.total_harga
+              order.total_harga,
+
+              order.no_req_klien,
+
+              order.tanggal_req_klien,
+
+              order.tanggal_do,
+
+              order.no_do,
+
+              order.end_date
 
             ]
           );
@@ -18495,7 +19635,8 @@ app.post(
 
           const deskripsi =
             String(
-              bayar.deskripsi || ""
+              bayar.deskripsi ||
+              ""
             ).trim();
 
 
@@ -18504,20 +19645,14 @@ app.post(
             null;
 
 
-          /*
-            Nominal sudah kita tambahkan
-            ke tabel pembayaran.
-          */
-
           const nominal =
             Number(
-              bayar.nominal || 0
+              bayar.nominal ||
+              0
             );
 
 
-          if (
-            !deskripsi
-          ) {
+          if (!deskripsi) {
 
             throw new Error(
               `Deskripsi Pembayaran ${i + 1} wajib diisi.`
@@ -18526,9 +19661,7 @@ app.post(
           }
 
 
-          if (
-            !tanggalBayar
-          ) {
+          if (!tanggalBayar) {
 
             throw new Error(
               `Tanggal Pembayaran ${i + 1} wajib diisi.`
@@ -18538,7 +19671,9 @@ app.post(
 
 
           if (
-            !Number.isFinite(nominal) ||
+            !Number.isFinite(
+              nominal
+            ) ||
             nominal < 0
           ) {
 
@@ -18551,33 +19686,33 @@ app.post(
 
           await client.query(
             `
-            INSERT INTO public.proyek_sewa_pembayaran (
+              INSERT INTO public.proyek_sewa_pembayaran (
 
-              proyek_sewa_id,
+                proyek_sewa_id,
 
-              deskripsi,
+                deskripsi,
 
-              nominal,
+                nominal,
 
-              tanggal_bayar,
+                tanggal_bayar,
 
-              created_at,
+                created_at,
 
-              updated_at
+                updated_at
 
-            )
+              )
 
-            VALUES (
+              VALUES (
 
-              $1,
-              $2,
-              $3,
-              $4,
+                $1,
+                $2,
+                $3,
+                $4,
 
-              CURRENT_TIMESTAMP,
-              CURRENT_TIMESTAMP
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
 
-            )
+              )
             `,
             [
 
@@ -18610,24 +19745,32 @@ app.post(
       // RESPONSE
       // =================================================
 
-      res.status(201).json({
+      return res
+        .status(201)
+        .json({
 
-        message:
-          "Proyek sewa berhasil disimpan.",
+          message:
+            "Proyek sewa berhasil disimpan.",
 
-        id:
-          proyekSewa.id,
+          id:
+            proyekSewa.id,
 
-        nomor_pr:
-          proyekSewa.nomor_pr,
+          nomor_pr:
+            proyekSewa.nomor_pr,
 
-        total_nilai_per_bulan:
-          totalNilaiPerBulan,
+          tanggal_pr:
+            proyekSewa.tanggal_pr,
 
-        total_nilai:
-          totalNilai
+          nomor_rujukan:
+            proyekSewa.nomor_rujukan,
 
-      });
+          total_nilai_per_bulan:
+            totalNilaiPerBulan,
+
+          total_nilai:
+            totalNilai
+
+        });
 
 
     } catch (error) {
@@ -18660,7 +19803,10 @@ app.post(
       );
 
 
-      // Duplicate nomor PR
+      // =================================================
+      // DUPLICATE
+      // =================================================
+
       if (
         error.code === "23505"
       ) {
@@ -18673,7 +19819,10 @@ app.post(
       }
 
 
-      // Foreign key
+      // =================================================
+      // FOREIGN KEY
+      // =================================================
+
       if (
         error.code === "23503"
       ) {
@@ -18686,7 +19835,10 @@ app.post(
       }
 
 
-      // Check constraint
+      // =================================================
+      // CHECK CONSTRAINT
+      // =================================================
+
       if (
         error.code === "23514"
       ) {
@@ -18699,7 +19851,7 @@ app.post(
       }
 
 
-      res.status(500).json({
+      return res.status(500).json({
         error:
           error.message ||
           "Gagal menyimpan proyek sewa."
@@ -18801,6 +19953,63 @@ app.get(
               '-'
             ) AS jenis_produk,
 
+          -- =========================================
+          -- SUMMARY
+          -- =========================================
+
+          COALESCE(
+            (
+              SELECT JSON_AGG(
+                JSON_BUILD_OBJECT(
+                  'produk_id',
+                  psp.produk_id,
+
+                  'item_produk',
+                  mps.item_produk,
+
+                  'orders',
+                  (
+                    SELECT COALESCE(
+                      JSON_AGG(
+                        JSON_BUILD_OBJECT(
+                          'cabang_id',
+                          pso.cabang_id,
+
+                          'nama_cabang',
+                          mc.nama_cabang,
+
+                          'quantity',
+                          pso.quantity
+                        )
+                        ORDER BY pso.id
+                      ),
+                      '[]'::json
+                    )
+
+                    FROM public.proyek_sewa_order pso
+
+                    LEFT JOIN public.master_cabang mc
+                      ON mc.id = pso.cabang_id
+
+                    WHERE
+                      pso.proyek_sewa_produk_id =
+                      psp.id
+                  )
+                )
+                ORDER BY psp.id
+              )
+
+              FROM public.proyek_sewa_produk psp
+
+              LEFT JOIN public.master_produk_sewa mps
+                ON mps.id = psp.produk_id
+
+              WHERE
+                psp.proyek_sewa_id =
+                ps.id
+            ),
+            '[]'::json
+          ) AS produk_summary,
 
             -- =========================================
             -- TOTAL DIBAYAR
@@ -18920,6 +20129,10 @@ app.get(
   "/api/proyek-sewa/:id/detail",
   async (req, res) => {
 
+    // =================================================
+    // CEK LOGIN
+    // =================================================
+
     if (!req.session?.user) {
 
       return res.status(401).json({
@@ -18928,6 +20141,10 @@ app.get(
 
     }
 
+
+    // =================================================
+    // ID PROYEK SEWA
+    // =================================================
 
     const id =
       Number(
@@ -18941,7 +20158,8 @@ app.get(
     ) {
 
       return res.status(400).json({
-        error: "ID Proyek Sewa tidak valid."
+        error:
+          "ID Proyek Sewa tidak valid."
       });
 
     }
@@ -18949,53 +20167,59 @@ app.get(
 
     try {
 
-      // ===============================================
-      // HEADER
-      // ===============================================
+      // =================================================
+      // HEADER PROYEK SEWA
+      // =================================================
 
       const proyekResult =
         await pool.query(
           `
-          SELECT
+            SELECT
 
-            ps.id,
+              ps.id,
 
-            ps.nomor_pr,
+              ps.nomor_pr,
 
-            ps.nomor_rujukan,
+              ps.tanggal_pr,
 
-            ps.proyek_id,
+              ps.nomor_rujukan,
 
-            ps.klien_id,
+              ps.proyek_id,
 
-            ps.total_nilai_per_bulan,
+              ps.klien_id,
 
-            ps.total_nilai,
+              ps.total_nilai_per_bulan,
 
-            ps.created_at,
+              ps.total_nilai,
 
-            ps.updated_at,
+              ps.created_at,
 
-            d.perusahaan_klien
-              AS nama_klien,
+              ps.updated_at,
 
-            p.nama_proyek
+              d.perusahaan_klien
+                AS nama_klien,
 
-          FROM public.proyek_sewa ps
+              p.nama_proyek
 
-          LEFT JOIN public.data d
-            ON d.id = ps.klien_id
+            FROM public.proyek_sewa ps
 
-          LEFT JOIN public.proyek p
-            ON p.id = ps.proyek_id
+            LEFT JOIN public.data d
+              ON d.id = ps.klien_id
 
-          WHERE ps.id = $1
+            LEFT JOIN public.proyek p
+              ON p.id = ps.proyek_id
 
-          LIMIT 1
+            WHERE ps.id = $1
+
+            LIMIT 1
           `,
           [id]
         );
 
+
+      // =================================================
+      // TIDAK DITEMUKAN
+      // =================================================
 
       if (
         proyekResult.rowCount === 0
@@ -19009,106 +20233,129 @@ app.get(
       }
 
 
-      // ===============================================
+      // =================================================
       // PRODUK
-      // ===============================================
+      // =================================================
 
       const produkResult =
         await pool.query(
           `
-          SELECT
+            SELECT
 
-            psp.id,
+              psp.id,
 
-            psp.proyek_sewa_id,
+              psp.proyek_sewa_id,
 
-            psp.produk_id,
+              psp.produk_id,
 
-            mps.item_produk,
+              mps.item_produk,
 
-            psp.harga_per_item,
+              psp.harga_per_item,
 
-            psp.jenis_proyek,
+              psp.jenis_proyek,
 
-            psp.sub_jenis_proyek,
+              psp.sub_jenis_proyek,
 
-            psp.durasi_bulan,
+              psp.durasi_bulan,
 
-            psp.created_at,
+              psp.created_at,
 
-            psp.updated_at
+              psp.updated_at
 
-          FROM public.proyek_sewa_produk psp
+            FROM public.proyek_sewa_produk psp
 
-          LEFT JOIN public.master_produk_sewa mps
-            ON mps.id = psp.produk_id
+            LEFT JOIN public.master_produk_sewa mps
+              ON mps.id = psp.produk_id
 
-          WHERE
-            psp.proyek_sewa_id = $1
+            WHERE
+              psp.proyek_sewa_id = $1
 
-          ORDER BY
-            psp.id ASC
+            ORDER BY
+              psp.id ASC
           `,
           [id]
         );
 
 
-      // ===============================================
+      // =================================================
       // ORDER
-      // ===============================================
+      //
+      // FIELD BARU:
+      // - no_req_klien
+      // - tanggal_req_klien
+      // - tanggal_do
+      // - no_do
+      // - end_date
+      // =================================================
 
       const orderResult =
         await pool.query(
           `
-          SELECT
+            SELECT
 
-            pso.id,
+              pso.id,
 
-            pso.proyek_sewa_produk_id,
+              pso.proyek_sewa_produk_id,
 
-            pso.cabang_id,
+              pso.cabang_id,
 
-            pso.quantity,
+              pso.quantity,
 
-            pso.harga_per_bulan,
+              pso.harga_per_bulan,
 
-            pso.total_harga,
+              pso.total_harga,
 
-            mc.*
+              pso.no_req_klien,
 
-          FROM public.proyek_sewa_order pso
+              pso.tanggal_req_klien,
 
-          LEFT JOIN public.master_cabang mc
-            ON mc.id = pso.cabang_id
+              pso.tanggal_do,
 
-          WHERE
-            pso.proyek_sewa_produk_id
-            IN (
-              SELECT id
+              pso.no_do,
 
-              FROM public.proyek_sewa_produk
+              pso.end_date,
 
-              WHERE proyek_sewa_id = $1
-            )
+              pso.created_at,
 
-          ORDER BY
-            pso.id ASC
+              pso.updated_at,
+
+              mc.nama_cabang
+
+            FROM public.proyek_sewa_order pso
+
+            LEFT JOIN public.master_cabang mc
+              ON mc.id = pso.cabang_id
+
+            WHERE
+              pso.proyek_sewa_produk_id
+              IN (
+
+                SELECT
+                  id
+
+                FROM public.proyek_sewa_produk
+
+                WHERE
+                  proyek_sewa_id = $1
+
+              )
+
+            ORDER BY
+              pso.id ASC
           `,
           [id]
         );
 
 
-      // ===============================================
-      // GABUNGKAN ORDER KE PRODUK
-      // ===============================================
+      // =================================================
+      // GABUNGKAN ORDER KE MASING-MASING PRODUK
+      // =================================================
 
       const produk =
         produkResult.rows.map(
-          item => ({
+          item => {
 
-            ...item,
-
-            orders:
+            const orders =
               orderResult.rows.filter(
                 order =>
                   Number(
@@ -19117,53 +20364,104 @@ app.get(
                   Number(
                     item.id
                   )
-              )
+              );
 
-          })
+
+            return {
+
+              ...item,
+
+              orders
+
+            };
+
+          }
         );
 
 
-      // ===============================================
+      // =================================================
       // PEMBAYARAN
-      // ===============================================
+      // =================================================
 
       const pembayaranResult =
         await pool.query(
           `
-          SELECT
+            SELECT
 
-            id,
+              id,
 
-            proyek_sewa_id,
+              proyek_sewa_id,
 
-            deskripsi,
+              deskripsi,
 
-            nominal,
+              nominal,
 
-            tanggal_bayar,
+              tanggal_bayar,
 
-            created_at,
+              created_at,
 
-            updated_at
+              updated_at
 
-          FROM public.proyek_sewa_pembayaran
+            FROM public.proyek_sewa_pembayaran
 
-          WHERE
-            proyek_sewa_id = $1
+            WHERE
+              proyek_sewa_id = $1
 
-          ORDER BY
-            tanggal_bayar ASC,
-            id ASC
+            ORDER BY
+              tanggal_bayar ASC NULLS LAST,
+              id ASC
           `,
           [id]
         );
 
 
-      // ===============================================
-      // RESPONSE
-      // ===============================================
+      // =================================================
+      // HITUNG TOTAL PEMBAYARAN
+      // =================================================
 
-      res.json({
+      const totalDibayar =
+        pembayaranResult.rows.reduce(
+          (
+            total,
+            item
+          ) => {
+
+            return (
+              total +
+              Number(
+                item.nominal ||
+                0
+              )
+            );
+
+          },
+          0
+        );
+
+
+      // =================================================
+      // TOTAL PROYEK
+      // =================================================
+
+      const totalNilai =
+        Number(
+          proyekResult
+            .rows[0]
+            .total_nilai ||
+          0
+        );
+
+
+      const sisaPembayaran =
+        totalNilai -
+        totalDibayar;
+
+
+      // =================================================
+      // RESPONSE
+      // =================================================
+
+      return res.json({
 
         proyek:
           proyekResult.rows[0],
@@ -19171,7 +20469,28 @@ app.get(
         produk,
 
         pembayaran:
-          pembayaranResult.rows
+          pembayaranResult.rows,
+
+        summary: {
+
+          total_nilai_per_bulan:
+            Number(
+              proyekResult
+                .rows[0]
+                .total_nilai_per_bulan ||
+              0
+            ),
+
+          total_nilai:
+            totalNilai,
+
+          total_dibayar:
+            totalDibayar,
+
+          sisa_pembayaran:
+            sisaPembayaran
+
+        }
 
       });
 
@@ -19184,9 +20503,10 @@ app.get(
       );
 
 
-      res.status(500).json({
+      return res.status(500).json({
         error:
-          error.message
+          error.message ||
+          "Gagal mengambil Detail Proyek Sewa."
       });
 
     }
@@ -19205,84 +20525,67 @@ app.put(
 
     if (!req.session?.user) {
       return res.status(401).json({
-        error: "Belum login."
+        error: "Belum login"
       });
     }
 
-    const proyekSewaId =
-      Number(req.params.id);
-
-    const {
-      nomor_pr,
-      nomor_rujukan,
-      proyek_id,
-      klien_id
-    } = req.body;
-
-    if (
-      !Number.isInteger(proyekSewaId) ||
-      proyekSewaId <= 0
-    ) {
-      return res.status(400).json({
-        error: "ID proyek sewa tidak valid."
-      });
-    }
-
-    const nomorPr =
-      String(nomor_pr || "").trim();
-
-    const nomorRujukan =
-      String(nomor_rujukan || "").trim() ||
-      null;
-
-    const proyekId =
-      proyek_id
-        ? Number(proyek_id)
-        : null;
-
-    const klienId =
-      Number(klien_id);
-
-    if (!nomorPr) {
-      return res.status(400).json({
-        error: "Nomor PR wajib diisi."
-      });
-    }
-
-    if (
-      !Number.isInteger(klienId) ||
-      klienId <= 0
-    ) {
-      return res.status(400).json({
-        error: "Klien wajib dipilih."
-      });
-    }
-
-    if (
-      !nomorRujukan &&
-      !proyekId
-    ) {
-      return res.status(400).json({
-        error:
-          "Isi Nomor Rujukan atau pilih Proyek Existing."
-      });
-    }
 
     const client =
       await pool.connect();
 
+
     try {
+
+      const proyekSewaId =
+        Number(req.params.id);
+
+
+      if (
+        !Number.isInteger(proyekSewaId) ||
+        proyekSewaId <= 0
+      ) {
+        return res.status(400).json({
+          error: "ID Proyek Sewa tidak valid."
+        });
+      }
+
+
+      const {
+        nomor_pr,
+        tanggal_pr,
+        proyek_id,
+        klien_id
+      } = req.body;
+
+
+      if (
+        !nomor_pr ||
+        !String(nomor_pr).trim()
+      ) {
+        return res.status(400).json({
+          error: "Nomor PR wajib diisi."
+        });
+      }
+
+
+      if (!klien_id) {
+        return res.status(400).json({
+          error: "Klien wajib dipilih."
+        });
+      }
+
 
       await client.query("BEGIN");
 
-      // =============================================
-      // CEK PROYEK SEWA
-      // =============================================
 
-      const existing =
+      // =================================================
+      // CEK PROYEK SEWA
+      // =================================================
+
+      const existingResult =
         await client.query(
           `
-            SELECT id
+            SELECT *
             FROM public.proyek_sewa
             WHERE id = $1
             FOR UPDATE
@@ -19290,159 +20593,200 @@ app.put(
           [proyekSewaId]
         );
 
+
       if (
-        existing.rowCount === 0
+        existingResult.rowCount === 0
       ) {
-
-        await client.query("ROLLBACK");
-
-        return res.status(404).json({
-          error:
-            "Proyek sewa tidak ditemukan."
-        });
+        throw new Error(
+          "Proyek Sewa tidak ditemukan."
+        );
       }
 
-      // =============================================
-      // CEK DUPLIKAT NOMOR PR
-      // =============================================
 
-      const duplicatePr =
+      // =================================================
+      // CEK NOMOR PR DUPLIKAT
+      // =================================================
+
+      const duplicateResult =
         await client.query(
           `
             SELECT id
             FROM public.proyek_sewa
-            WHERE LOWER(BTRIM(nomor_pr))
-                = LOWER(BTRIM($1))
+
+            WHERE
+              LOWER(BTRIM(nomor_pr)) =
+              LOWER(BTRIM($1))
+
               AND id <> $2
+
             LIMIT 1
           `,
           [
-            nomorPr,
+            String(nomor_pr).trim(),
             proyekSewaId
           ]
         );
 
+
       if (
-        duplicatePr.rowCount > 0
+        duplicateResult.rowCount > 0
       ) {
-
-        await client.query("ROLLBACK");
-
-        return res.status(409).json({
-          error:
-            "Nomor PR sudah digunakan proyek sewa lain."
-        });
+        throw new Error(
+          "Nomor PR sudah digunakan."
+        );
       }
 
-      // =============================================
-      // CEK KLIEN
-      // =============================================
 
-      const cekKlien =
+      // =================================================
+      // CEK KLIEN
+      // =================================================
+
+      const klienResult =
         await client.query(
           `
             SELECT id
             FROM public.data
             WHERE id = $1
+            LIMIT 1
           `,
-          [klienId]
+          [
+            Number(klien_id)
+          ]
         );
 
+
       if (
-        cekKlien.rowCount === 0
+        klienResult.rowCount === 0
       ) {
-
-        await client.query("ROLLBACK");
-
-        return res.status(400).json({
-          error:
-            "Klien tidak ditemukan."
-        });
+        throw new Error(
+          "Klien tidak ditemukan."
+        );
       }
 
-      // =============================================
+
+      // =================================================
       // CEK PROYEK EXISTING
-      // =============================================
+      // =================================================
 
-      if (proyekId) {
+      if (proyek_id) {
 
-        const cekProyek =
+        const proyekResult =
           await client.query(
             `
               SELECT id
               FROM public.proyek
               WHERE id = $1
+              LIMIT 1
             `,
-            [proyekId]
+            [
+              Number(proyek_id)
+            ]
           );
 
+
         if (
-          cekProyek.rowCount === 0
+          proyekResult.rowCount === 0
         ) {
-
-          await client.query("ROLLBACK");
-
-          return res.status(400).json({
-            error:
-              "Proyek Existing tidak ditemukan."
-          });
+          throw new Error(
+            "Proyek existing tidak ditemukan."
+          );
         }
+
       }
 
-      // =============================================
+
+      // =================================================
       // UPDATE
-      // =============================================
+      //
+      // nomor_rujukan TIDAK diedit di sini.
+      // Rujukan akan mengikuti No Req Klien pada Order.
+      // =================================================
 
       const updateResult =
         await client.query(
           `
             UPDATE public.proyek_sewa
+
             SET
               nomor_pr = $1,
-              nomor_rujukan = $2,
+              tanggal_pr = $2,
               proyek_id = $3,
               klien_id = $4,
               updated_at = CURRENT_TIMESTAMP
+
             WHERE id = $5
+
             RETURNING *
           `,
           [
-            nomorPr,
-            nomorRujukan,
-            proyekId,
-            klienId,
+            String(nomor_pr).trim(),
+
+            tanggal_pr ||
+              null,
+
+            proyek_id
+              ? Number(proyek_id)
+              : null,
+
+            Number(klien_id),
+
             proyekSewaId
           ]
         );
 
+
       await client.query("COMMIT");
 
+
       return res.json({
-        success: true,
         message:
-          "Informasi proyek sewa berhasil diperbarui.",
-        data:
+          "Informasi Proyek Sewa berhasil diperbarui.",
+
+        proyek:
           updateResult.rows[0]
       });
 
+
     } catch (error) {
 
-      await client.query("ROLLBACK");
+      try {
+        await client.query(
+          "ROLLBACK"
+        );
+      } catch (_) {}
+
 
       console.error(
         "ERROR UPDATE INFORMASI PROYEK SEWA:",
         error
       );
 
+
+      if (
+        error.code === "23505" ||
+        error.message ===
+          "Nomor PR sudah digunakan."
+      ) {
+        return res.status(409).json({
+          error:
+            "Nomor PR sudah digunakan."
+        });
+      }
+
+
       return res.status(500).json({
-        error: error.message
+        error:
+          error.message ||
+          "Gagal memperbarui informasi Proyek Sewa."
       });
+
 
     } finally {
 
       client.release();
 
     }
+
   }
 );
 
@@ -19472,47 +20816,156 @@ app.put(
 
     if (!req.session?.user) {
       return res.status(401).json({
-        error: "Belum login."
+        error: "Belum login"
       });
     }
 
-    const proyekSewaId =
-      Number(req.params.id);
-
-    const produk =
-      Array.isArray(req.body.produk)
-        ? req.body.produk
-        : [];
-
-    if (
-      !Number.isInteger(proyekSewaId) ||
-      proyekSewaId <= 0
-    ) {
-      return res.status(400).json({
-        error:
-          "ID proyek sewa tidak valid."
-      });
-    }
-
-    if (
-      produk.length === 0
-    ) {
-      return res.status(400).json({
-        error:
-          "Minimal harus ada 1 produk."
-      });
-    }
 
     const client =
       await pool.connect();
 
+
+    // =================================================
+    // HELPER END DATE
+    // =================================================
+
+    function hitungEndDate(
+      tanggalDO,
+      durasiBulan
+    ) {
+
+      if (
+        !tanggalDO ||
+        !durasiBulan
+      ) {
+        return null;
+      }
+
+
+      const parts =
+        String(tanggalDO)
+          .split("-")
+          .map(Number);
+
+
+      if (
+        parts.length !== 3
+      ) {
+        return null;
+      }
+
+
+      const [
+        year,
+        month,
+        day
+      ] = parts;
+
+
+      if (
+        !year ||
+        !month ||
+        !day
+      ) {
+        return null;
+      }
+
+
+      const result =
+        new Date(
+          year,
+          month - 1,
+          1
+        );
+
+
+      result.setMonth(
+        result.getMonth() +
+        Number(durasiBulan)
+      );
+
+
+      const lastDay =
+        new Date(
+          result.getFullYear(),
+          result.getMonth() + 1,
+          0
+        ).getDate();
+
+
+      result.setDate(
+        Math.min(
+          day,
+          lastDay
+        )
+      );
+
+
+      const yyyy =
+        result.getFullYear();
+
+
+      const mm =
+        String(
+          result.getMonth() + 1
+        ).padStart(
+          2,
+          "0"
+        );
+
+
+      const dd =
+        String(
+          result.getDate()
+        ).padStart(
+          2,
+          "0"
+        );
+
+
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+
     try {
+
+      const proyekSewaId =
+        Number(req.params.id);
+
+
+      const {
+        produk
+      } = req.body;
+
+
+      if (
+        !Number.isInteger(proyekSewaId) ||
+        proyekSewaId <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID Proyek Sewa tidak valid."
+        });
+      }
+
+
+      if (
+        !Array.isArray(produk) ||
+        produk.length === 0
+      ) {
+        return res.status(400).json({
+          error:
+            "Minimal harus ada 1 produk."
+        });
+      }
+
 
       await client.query("BEGIN");
 
-      // =============================================
-      // LOCK HEADER PROYEK SEWA
-      // =============================================
+
+      // =================================================
+      // LOCK HEADER
+      // =================================================
 
       const proyekResult =
         await client.query(
@@ -19522,30 +20975,29 @@ app.put(
             WHERE id = $1
             FOR UPDATE
           `,
-          [proyekSewaId]
+          [
+            proyekSewaId
+          ]
         );
+
 
       if (
         proyekResult.rowCount === 0
       ) {
-
-        await client.query("ROLLBACK");
-
-        return res.status(404).json({
-          error:
-            "Proyek sewa tidak ditemukan."
-        });
+        throw new Error(
+          "Proyek Sewa tidak ditemukan."
+        );
       }
 
-      // =============================================
-      // SIMPAN SNAPSHOT PRODUK LAMA
-      //
-      // WAJIB dilakukan sebelum DELETE.
-      // Snapshot ini digunakan untuk menentukan
-      // harga kontrak lama.
-      // =============================================
 
-      const produkLamaResult =
+      // =================================================
+      // SNAPSHOT PRODUK LAMA
+      //
+      // Ini penting untuk mempertahankan
+      // harga kontrak lama.
+      // =================================================
+
+      const oldProdukResult =
         await client.query(
           `
             SELECT
@@ -19553,22 +21005,34 @@ app.put(
               produk_id,
               harga_per_item,
               durasi_bulan
+
             FROM public.proyek_sewa_produk
+
             WHERE proyek_sewa_id = $1
-            ORDER BY id ASC
           `,
-          [proyekSewaId]
+          [
+            proyekSewaId
+          ]
         );
 
-      const produkLama =
-        produkLamaResult.rows;
 
-      // =============================================
-      // VALIDASI + SIAPKAN DATA
-      // =============================================
+      const oldProduk =
+        oldProdukResult.rows;
 
-      const dataProduk =
-        [];
+
+      let totalNilaiPerBulan = 0;
+
+      let totalNilai = 0;
+
+
+      const produkValid = [];
+
+      const semuaNoReqKlien = [];
+
+
+      // =================================================
+      // VALIDASI SEMUA DATA TERLEBIH DAHULU
+      // =================================================
 
       for (
         let i = 0;
@@ -19577,83 +21041,90 @@ app.put(
       ) {
 
         const item =
-          produk[i] || {};
+          produk[i];
 
-        const existingProdukId =
-          item.id
-            ? Number(item.id)
-            : null;
 
-        const produkId =
-          Number(item.produk_id);
-
-        const durasiBulan =
-          Number(item.durasi_bulan);
-
-        const orders =
-          Array.isArray(item.orders)
-            ? item.orders
-            : [];
-
-        // ===========================================
-        // VALIDASI PRODUK
-        // ===========================================
-
-        if (
-          !Number.isInteger(produkId) ||
-          produkId <= 0
-        ) {
+        if (!item.produk_id) {
           throw new Error(
             `Produk ${i + 1} belum dipilih.`
           );
         }
 
+
+        const durasi =
+          Number(
+            item.durasi_bulan
+          );
+
+
         if (
-          !Number.isFinite(durasiBulan) ||
-          durasiBulan <= 0
+          !Number.isInteger(durasi) ||
+          durasi <= 0
         ) {
           throw new Error(
-            `Durasi Produk ${i + 1} harus lebih dari 0 bulan.`
+            `Durasi Produk ${i + 1} tidak valid.`
           );
         }
 
+
         if (
-          orders.length === 0
+          !Array.isArray(
+            item.orders
+          ) ||
+          item.orders.length === 0
         ) {
           throw new Error(
-            `Produk ${i + 1} minimal memiliki 1 order.`
+            `Produk ${i + 1} minimal memiliki 1 Order.`
           );
         }
 
-        // ===========================================
-        // AMBIL MASTER PRODUK TERBARU
-        // ===========================================
+
+        // =================================================
+        // MASTER PRODUK
+        // =================================================
 
         const masterResult =
           await client.query(
             `
               SELECT
+
                 mps.id,
+
                 mps.item_produk,
+
                 mps.harga_jual_per_item,
+
                 mps.jenis_proyek_id,
+
                 mps.sub_jenis_proyek_id,
 
-                jp.name AS jenis_proyek,
-                sjp.name AS sub_jenis_proyek
+                jp.name
+                  AS jenis_proyek,
+
+                sjp.name
+                  AS sub_jenis_proyek
 
               FROM public.master_produk_sewa mps
 
               LEFT JOIN public.jenis_proyek jp
-                ON jp.id = mps.jenis_proyek_id
+                ON jp.id =
+                   mps.jenis_proyek_id
 
               LEFT JOIN public.jenis_proyek sjp
-                ON sjp.id = mps.sub_jenis_proyek_id
+                ON sjp.id =
+                   mps.sub_jenis_proyek_id
 
               WHERE mps.id = $1
+
+              LIMIT 1
             `,
-            [produkId]
+            [
+              Number(
+                item.produk_id
+              )
+            ]
           );
+
 
         if (
           masterResult.rowCount === 0
@@ -19663,158 +21134,116 @@ app.put(
           );
         }
 
+
         const master =
           masterResult.rows[0];
 
-        // ===========================================
-        // TENTUKAN HARGA YANG DIPAKAI
-        // ===========================================
 
-        let hargaPerItem = 0;
+        // =================================================
+        // TENTUKAN HARGA
+        //
+        // Jika row produk lama masih sama:
+        // gunakan harga kontrak lama.
+        //
+        // Kalau produk diganti / produk baru:
+        // gunakan harga master sekarang.
+        // =================================================
 
-        let sumberHarga =
-          "MASTER";
+        let hargaPerItem =
+          Number(
+            master.harga_jual_per_item ||
+            0
+          );
 
-        let existingProduk =
-          null;
 
-        // ===========================================
-        // JIKA BARIS PRODUK SUDAH ADA
-        // ===========================================
+        if (item.id) {
 
-        if (existingProdukId) {
-
-          existingProduk =
-            produkLama.find(
+          const existing =
+            oldProduk.find(
               row =>
                 Number(row.id) ===
-                existingProdukId
+                Number(item.id)
             );
 
-          if (!existingProduk) {
-            throw new Error(
-              `Data Produk ${i + 1} tidak ditemukan pada proyek ini.`
-            );
-          }
-
-          // =========================================
-          // PRODUK TIDAK DIGANTI
-          //
-          // Pakai harga kontrak awal.
-          // =========================================
 
           if (
+            existing &&
             Number(
-              existingProduk.produk_id
+              existing.produk_id
             ) ===
-            produkId
+            Number(
+              item.produk_id
+            )
           ) {
 
             hargaPerItem =
               Number(
-                existingProduk.harga_per_item
-              ) || 0;
+                existing.harga_per_item ||
+                0
+              );
 
-            sumberHarga =
-              "HARGA KONTRAK AWAL";
-
-          } else {
-
-            // =======================================
-            // PRODUK DIGANTI
-            //
-            // Produk baru berarti menggunakan harga
-            // master produk baru saat ini.
-            // =======================================
-
-            hargaPerItem =
-              Number(
-                master.harga_jual_per_item
-              ) || 0;
-
-            sumberHarga =
-              "MASTER PRODUK BARU";
           }
 
-        } else {
-
-          // =========================================
-          // PRODUK BARU DITAMBAHKAN
-          // =========================================
-
-          hargaPerItem =
-            Number(
-              master.harga_jual_per_item
-            ) || 0;
-
-          sumberHarga =
-            "MASTER PRODUK BARU";
         }
 
+
         if (
-          !Number.isFinite(hargaPerItem) ||
+          !Number.isFinite(
+            hargaPerItem
+          ) ||
           hargaPerItem < 0
         ) {
           throw new Error(
-            `Harga Produk ${i + 1} tidak valid.`
+            `Harga Produk ${master.item_produk} tidak valid.`
           );
         }
 
-        console.log(
-          `PRODUK ${i + 1}:`,
-          {
-            produkId,
-            existingProdukId,
-            namaProduk:
-              master.item_produk,
-            hargaPerItem,
-            sumberHarga
-          }
-        );
 
-        // ===========================================
-        // VALIDASI ORDER
-        // ===========================================
+        const ordersValid = [];
 
-        const validOrders =
-          [];
+
+        // =================================================
+        // ORDER
+        // =================================================
 
         for (
           let j = 0;
-          j < orders.length;
+          j < item.orders.length;
           j++
         ) {
 
           const order =
-            orders[j] || {};
+            item.orders[j];
 
-          const cabangId =
-            Number(order.cabang_id);
 
-          const quantity =
-            Number(order.quantity);
-
-          if (
-            !Number.isInteger(cabangId) ||
-            cabangId <= 0
-          ) {
+          if (!order.cabang_id) {
             throw new Error(
               `Lokasi Order ${j + 1} pada Produk ${i + 1} belum dipilih.`
             );
           }
 
+
+          const quantity =
+            Number(
+              order.quantity
+            );
+
+
           if (
-            !Number.isFinite(quantity) ||
+            !Number.isInteger(
+              quantity
+            ) ||
             quantity <= 0
           ) {
             throw new Error(
-              `Quantity Order ${j + 1} pada Produk ${i + 1} harus lebih dari 0.`
+              `Quantity Order ${j + 1} pada Produk ${i + 1} tidak valid.`
             );
           }
 
-          // =========================================
+
+          // =================================================
           // CEK CABANG
-          // =========================================
+          // =================================================
 
           const cabangResult =
             await client.query(
@@ -19822,132 +21251,278 @@ app.put(
                 SELECT id
                 FROM public.master_cabang
                 WHERE id = $1
+                LIMIT 1
               `,
-              [cabangId]
+              [
+                Number(
+                  order.cabang_id
+                )
+              ]
             );
+
 
           if (
             cabangResult.rowCount === 0
           ) {
             throw new Error(
-              `Lokasi Order ${j + 1} pada Produk ${i + 1} tidak ditemukan.`
+              `Lokasi Order ${j + 1} tidak ditemukan.`
             );
           }
 
-          // =========================================
-          // PERHITUNGAN
+
+          // =================================================
+          // FIELD ORDER BARU
+          // =================================================
+
+          const noReqKlien =
+            order.no_req_klien
+              ? String(
+                  order.no_req_klien
+                ).trim()
+              : null;
+
+
+          const tanggalReqKlien =
+            order.tanggal_req_klien ||
+            null;
+
+
+          const tanggalDO =
+            order.tanggal_do ||
+            null;
+
+
+          const noDO =
+            order.no_do
+              ? String(
+                  order.no_do
+                ).trim()
+              : null;
+
+
+          // =================================================
+          // RUJUKAN
+          // =================================================
+
+          if (noReqKlien) {
+
+            semuaNoReqKlien.push(
+              noReqKlien
+            );
+
+          }
+
+
+          // =================================================
+          // END DATE
           //
-          // Harga / bulan:
-          // harga kontrak × quantity
-          //
-          // Total:
-          // harga / bulan × durasi
-          // =========================================
+          // Tidak percaya nilai dari frontend.
+          // Server hitung ulang.
+          // =================================================
+
+          const endDate =
+            tanggalDO
+              ? hitungEndDate(
+                  tanggalDO,
+                  durasi
+                )
+              : null;
+
+
+          // =================================================
+          // NILAI
+          // =================================================
 
           const hargaPerBulan =
-            hargaPerItem *
-            quantity;
+            quantity *
+            hargaPerItem;
+
 
           const totalHarga =
             hargaPerBulan *
-            durasiBulan;
+            durasi;
 
-          validOrders.push({
-            cabangId,
+
+          totalNilaiPerBulan +=
+            hargaPerBulan;
+
+
+          totalNilai +=
+            totalHarga;
+
+
+          ordersValid.push({
+
+            cabang_id:
+              Number(
+                order.cabang_id
+              ),
+
             quantity,
-            hargaPerBulan,
-            totalHarga
+
+            harga_per_bulan:
+              hargaPerBulan,
+
+            total_harga:
+              totalHarga,
+
+            no_req_klien:
+              noReqKlien,
+
+            tanggal_req_klien:
+              tanggalReqKlien,
+
+            tanggal_do:
+              tanggalDO,
+
+            no_do:
+              noDO,
+
+            end_date:
+              endDate
+
           });
+
         }
 
-        dataProduk.push({
-          produkId,
 
-          hargaPerItem,
+        produkValid.push({
 
-          jenisProyek:
+          produk_id:
+            Number(
+              master.id
+            ),
+
+          harga_per_item:
+            hargaPerItem,
+
+          jenis_proyek:
             master.jenis_proyek ||
             "Sewa",
 
-          subJenisProyek:
+          sub_jenis_proyek:
             master.sub_jenis_proyek ||
             null,
 
-          durasiBulan,
+          durasi_bulan:
+            durasi,
 
           orders:
-            validOrders
+            ordersValid
+
         });
+
       }
 
-      // =============================================
-      // SEMUA VALIDASI SUDAH LOLOS
+
+      // =================================================
+      // RUJUKAN KONTRAK
       //
-      // SEKARANG BOLEH HAPUS DATA LAMA
-      // =============================================
+      // Dari semua No Req Klien
+      // =================================================
+
+      const nomorRujukan =
+        [
+          ...new Set(
+            semuaNoReqKlien
+          )
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+
+      // =================================================
+      // HAPUS PRODUK LAMA
+      //
+      // Order ikut terhapus jika FK ON DELETE CASCADE.
+      // =================================================
 
       await client.query(
         `
           DELETE FROM public.proyek_sewa_produk
           WHERE proyek_sewa_id = $1
         `,
-        [proyekSewaId]
+        [
+          proyekSewaId
+        ]
       );
 
-      // =============================================
-      // INSERT ULANG PRODUK + ORDER
-      // =============================================
+
+      // =================================================
+      // INSERT ULANG PRODUK
+      // =================================================
 
       for (
         const item
-        of dataProduk
+        of produkValid
       ) {
 
-        const insertProduk =
+        const insertProdukResult =
           await client.query(
             `
-              INSERT INTO public.proyek_sewa_produk
-              (
+              INSERT INTO public.proyek_sewa_produk (
+
                 proyek_sewa_id,
+
                 produk_id,
+
                 harga_per_item,
+
                 jenis_proyek,
+
                 sub_jenis_proyek,
+
                 durasi_bulan,
+
                 created_at,
+
                 updated_at
+
               )
 
-              VALUES
-              (
+              VALUES (
+
                 $1,
                 $2,
                 $3,
                 $4,
                 $5,
                 $6,
+
                 CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP
+
               )
 
               RETURNING id
             `,
             [
+
               proyekSewaId,
-              item.produkId,
-              item.hargaPerItem,
-              item.jenisProyek,
-              item.subJenisProyek,
-              item.durasiBulan
+
+              item.produk_id,
+
+              item.harga_per_item,
+
+              item.jenis_proyek,
+
+              item.sub_jenis_proyek,
+
+              item.durasi_bulan
+
             ]
           );
 
-        const proyekSewaProdukId =
-          insertProduk.rows[0].id;
 
-        // ===========================================
+        const proyekSewaProdukId =
+          insertProdukResult
+            .rows[0]
+            .id;
+
+
+        // =================================================
         // INSERT ORDER
-        // ===========================================
+        // =================================================
 
         for (
           const order
@@ -19956,144 +21531,168 @@ app.put(
 
           await client.query(
             `
-              INSERT INTO public.proyek_sewa_order
-              (
+              INSERT INTO public.proyek_sewa_order (
+
                 proyek_sewa_produk_id,
+
                 cabang_id,
+
                 quantity,
+
                 harga_per_bulan,
+
                 total_harga,
+
+                no_req_klien,
+
+                tanggal_req_klien,
+
+                tanggal_do,
+
+                no_do,
+
+                end_date,
+
                 created_at,
+
                 updated_at
+
               )
 
-              VALUES
-              (
+              VALUES (
+
                 $1,
                 $2,
                 $3,
                 $4,
                 $5,
+                $6,
+                $7,
+                $8,
+                $9,
+                $10,
+
                 CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP
+
               )
             `,
             [
+
               proyekSewaProdukId,
-              order.cabangId,
+
+              order.cabang_id,
+
               order.quantity,
-              order.hargaPerBulan,
-              order.totalHarga
+
+              order.harga_per_bulan,
+
+              order.total_harga,
+
+              order.no_req_klien,
+
+              order.tanggal_req_klien,
+
+              order.tanggal_do,
+
+              order.no_do,
+
+              order.end_date
+
             ]
           );
+
         }
+
       }
 
-      // =============================================
-      // HITUNG ULANG TOTAL DARI DATABASE
-      // =============================================
 
-      const totalResult =
-        await client.query(
-          `
-            SELECT
-
-              COALESCE(
-                SUM(
-                  pso.harga_per_bulan
-                ),
-                0
-              ) AS total_nilai_per_bulan,
-
-              COALESCE(
-                SUM(
-                  pso.total_harga
-                ),
-                0
-              ) AS total_nilai
-
-            FROM public.proyek_sewa_produk psp
-
-            JOIN public.proyek_sewa_order pso
-              ON pso.proyek_sewa_produk_id =
-                 psp.id
-
-            WHERE
-              psp.proyek_sewa_id = $1
-          `,
-          [proyekSewaId]
-        );
-
-      const totalPerBulan =
-        Number(
-          totalResult
-            .rows[0]
-            .total_nilai_per_bulan
-        ) || 0;
-
-      const totalNilai =
-        Number(
-          totalResult
-            .rows[0]
-            .total_nilai
-        ) || 0;
-
-      // =============================================
+      // =================================================
       // UPDATE HEADER
-      // =============================================
+      //
+      // nomor_rujukan ikut diperbarui otomatis
+      // =================================================
 
       await client.query(
         `
           UPDATE public.proyek_sewa
+
           SET
-            total_nilai_per_bulan = $1,
-            total_nilai = $2,
+            nomor_rujukan = $1,
+            total_nilai_per_bulan = $2,
+            total_nilai = $3,
             updated_at = CURRENT_TIMESTAMP
-          WHERE id = $3
+
+          WHERE id = $4
         `,
         [
-          totalPerBulan,
+
+          nomorRujukan ||
+            null,
+
+          totalNilaiPerBulan,
+
           totalNilai,
+
           proyekSewaId
+
         ]
       );
 
-      await client.query("COMMIT");
+
+      await client.query(
+        "COMMIT"
+      );
+
 
       return res.json({
-        success: true,
 
         message:
-          "Produk & Order berhasil diperbarui.",
+          "Produk dan Order berhasil diperbarui.",
+
+        nomor_rujukan:
+          nomorRujukan ||
+          null,
 
         total_nilai_per_bulan:
-          totalPerBulan,
+          totalNilaiPerBulan,
 
         total_nilai:
           totalNilai
+
       });
+
 
     } catch (error) {
 
-      await client.query("ROLLBACK");
+      try {
+        await client.query(
+          "ROLLBACK"
+        );
+      } catch (_) {}
+
 
       console.error(
-        "ERROR UPDATE PRODUK ORDER SEWA:",
+        "ERROR UPDATE PRODUK PROYEK SEWA:",
         error
       );
 
+
       return res.status(500).json({
-        error: error.message
+        error:
+          error.message ||
+          "Gagal memperbarui Produk dan Order."
       });
+
 
     } finally {
 
       client.release();
 
     }
+
   }
 );
-
 
 // =====================================================
 // 3. UPDATE PEMBAYARAN
@@ -21347,6 +22946,95 @@ app.put(
     } finally {
 
       client.release();
+
+    }
+
+  }
+);
+
+// =====================================================
+// GET ACTIVITY LOG
+// =====================================================
+
+app.get(
+  "/api/activity-log",
+  async (req, res) => {
+
+    if (
+      !req.session ||
+      !req.session.user
+    ) {
+
+      return res.status(401).json({
+        error: "Belum login"
+      });
+
+    }
+
+
+    try {
+
+      const limitRaw =
+        Number(req.query.limit) || 100;
+
+      const limit =
+        Math.min(
+          Math.max(
+            limitRaw,
+            1
+          ),
+          500
+        );
+
+
+      const result =
+        await pool.query(
+          `
+            SELECT
+              al.id,
+              al.pic_id,
+              al.nama_pic,
+              al.aktivitas,
+              al.modul,
+              al.entity_id,
+              al.entity_nama,
+              al.field_name,
+              al.nilai_lama,
+              al.nilai_baru,
+              al.deskripsi,
+              al.created_at
+
+            FROM public.activity_log al
+
+            ORDER BY
+              al.created_at DESC,
+              al.id DESC
+
+            LIMIT $1
+          `,
+          [
+            limit
+          ]
+        );
+
+
+      return res.json(
+        result.rows
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "ERROR GET ACTIVITY LOG:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
 
     }
 
