@@ -43,9 +43,9 @@
 
 
   const endpoint =
-    `/api/proyek/${encodeURIComponent(
-      proyekId || ""
-    )}/proyek-timeline`;
+  `/api/proyek/${encodeURIComponent(
+    proyekId || ""
+  )}/progress-modul`;
 
 
   // ====================================================

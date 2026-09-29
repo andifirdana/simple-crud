@@ -11,6 +11,20 @@ const {
   simpanActivityLog
 } = require("./activity-log");
 
+const {
+  S3Client,
+  DeleteObjectCommand
+} = require("@aws-sdk/client-s3");
+
+require("dotenv").config();
+
+const {
+  client: s3Client,
+  uploadFile,
+  getImageLinkPresigned,
+  getFileLink
+} = require("./s3-service");
+
 const app = express();
 
 // ======================================================
@@ -608,56 +622,9 @@ app.use(
 // UPLOAD DOKUMEN KLIEN
 // ======================================================
 
-const folderDokumenKlien =
-  path.join(
-    __dirname,
-    "uploads",
-    "dokumen-klien"
-  );
-
-if (
-  !fs.existsSync(folderDokumenKlien)
-) {
-  fs.mkdirSync(
-    folderDokumenKlien,
-    {
-      recursive: true
-    }
-  );
-}
-
-const storageDokumenKlien =
-  multer.diskStorage({
-    destination: (
-      req,
-      file,
-      callback
-    ) => {
-      callback(
-        null,
-        folderDokumenKlien
-      );
-    },
-
-    filename: (
-      req,
-      file,
-      callback
-    ) => {
-      const ekstensi =
-        path
-          .extname(file.originalname)
-          .toLowerCase();
-
-      const namaFile =
-        `${Date.now()}-${crypto.randomUUID()}${ekstensi}`;
-
-      callback(
-        null,
-        namaFile
-      );
-    }
-  });
+// ======================================================
+// KONFIGURASI UPLOAD DOKUMEN KE S3
+// ======================================================
 
 const tipeDokumenDiizinkan = [
   "application/pdf",
@@ -669,36 +636,41 @@ const tipeDokumenDiizinkan = [
   "image/png"
 ];
 
-const uploadDokumenKlien =
-  multer({
-    storage:
-      storageDokumenKlien,
+const uploadDokumenKlien = multer({
 
-    limits: {
-      fileSize:
-        10 * 1024 * 1024
-    },
+  // File disimpan sementara di memory
+  storage: multer.memoryStorage(),
 
-    fileFilter: (
-      req,
-      file,
-      callback
-    ) => {
-      if (
-        !tipeDokumenDiizinkan.includes(
-          file.mimetype
+  // Maksimal 10 MB
+  limits: {
+    fileSize: 10 * 1024 * 1024
+  },
+
+  fileFilter: (
+    req,
+    file,
+    callback
+  ) => {
+
+    if (
+      !tipeDokumenDiizinkan.includes(
+        file.mimetype
+      )
+    ) {
+
+      return callback(
+        new Error(
+          "Format file tidak didukung. Gunakan PDF, Word, Excel, JPG, atau PNG."
         )
-      ) {
-        return callback(
-          new Error(
-            "Format file tidak didukung. Gunakan PDF, Word, Excel, JPG, atau PNG."
-          )
-        );
-      }
+      );
 
-      callback(null, true);
     }
-  });
+
+    callback(null, true);
+
+  }
+
+});
 
 app.use(
   "/uploads",
@@ -1330,12 +1302,9 @@ app.delete("/api/partner/:id",
   }
 });
 
-
-
 // ======================================================
 // IMPOR MASTER KLIEN
 // ======================================================
-
 
 app.post("/api/data/import", 
   async (req, res) => {
@@ -1427,7 +1396,6 @@ app.post("/api/data/import",
     client.release();
   }
 });
-
 
 // ======================================================
 // MASTER PIC
@@ -2057,7 +2025,6 @@ app.delete("/api/kategori-produk/:id",
 
   }
 );
-
 
 // ======================================================
 // TAMPILAN DASHBOARD
@@ -3320,21 +3287,6 @@ app.post("/api/data/import",
 });
 
 // ======================================================
-// API PROYEK
-// ======================================================
-
-
-// ======================================================
-// MASTER DATA FORM PROYEK
-// ======================================================
-
-// KATEGORI AKTIF
-// ======================================================
-// MASTER DATA FORM PROYEK
-// ======================================================
-
-
-// ======================================================
 // GET KATEGORI PRODUK AKTIF
 // ======================================================
 
@@ -4537,9 +4489,7 @@ app.get(
 );
 
 
-// ======================================================
 // CREATE PROYEK
-// ======================================================
 app.post(
   "/api/proyek",
   async (req, res) => {
@@ -5444,10 +5394,7 @@ await client.query(
   }
 );
 
-// ======================================================
 // HAPUS PROYEK
-// ======================================================
-
 app.delete(
   "/api/proyek/:proyekId",
   async (req, res) => {
@@ -5608,10 +5555,8 @@ app.delete(
     }
   }
 );
-// ======================================================
-// DAFTAR PROYEK
-// ======================================================
 
+// DAFTAR PROYEK
 app.get(
   "/api/proyek-listing",
   async (req, res) => {
@@ -6155,10 +6100,8 @@ app.get(
 
   }
 );
-// ======================================================
-// DETAIL PROYEK
-// ======================================================
 
+// DETAIL PROYEK
 app.get("/api/proyek/:id/detail", 
   async (req, res) => {
 
@@ -7116,140 +7059,23 @@ console.log(
 terminKlien =
   terminResult.rows;
     }
+// ======================================================
+// DOKUMEN KLIEN
+// ======================================================
 
 
-  // ======================================================
-  // DOKUMEN KLIEN
-  // ======================================================
-
-    // UPDATE CHECKLIST DOKUMEN
-    app.put("/api/proyek/klien/dokumen/:id/check",
-      async (req, res) => {
-
-        try {
-
-          const { id } = req.params;
-          const { is_checked } = req.body;
-
-
-          const checked =
-            is_checked === true;
-
-
-          const result = await pool.query(`
-            UPDATE public.proyek_klien_dokumen
-
-            SET
-              is_checked = $1,
-
-              checked_at =
-                CASE
-                  WHEN $1 = TRUE
-                  THEN CURRENT_TIMESTAMP
-                  ELSE NULL
-                END,
-
-              updated_at =
-                CURRENT_TIMESTAMP
-
-            WHERE id = $2
-
-            RETURNING *
-          `, [
-            checked,
-            id
-          ]);
-
-
-          if (result.rows.length === 0) {
-
-            return res.status(404).json({
-              error: "Dokumen tidak ditemukan"
-            });
-
-          }
-
-
-          res.json(
-            result.rows[0]
-          );
-
-
-        } catch (error) {
-
-          console.error(
-            "ERROR CHECK DOKUMEN KLIEN:",
-            error
-          );
-
-          res.status(500).json({
-            error: error.message
-          });
-
-        }
-
-      }
-    );
-
-
-    // DELETE DOKUMEN
-    app.delete("/api/proyek/klien/dokumen/:id",
-      async (req, res) => {
-
-        try {
-
-          const { id } = req.params;
-
-
-          const result = await pool.query(`
-            DELETE FROM public.proyek_klien_dokumen
-            WHERE id = $1
-            RETURNING *
-          `, [id]);
-
-
-          if (result.rows.length === 0) {
-
-            return res.status(404).json({
-              error: "Dokumen tidak ditemukan"
-            });
-
-          }
-
-
-          res.json({
-            message:
-              "Dokumen berhasil dihapus"
-          });
-
-
-        } catch (error) {
-
-          console.error(
-            "ERROR DELETE DOKUMEN KLIEN:",
-            error
-          );
-
-          res.status(500).json({
-            error: error.message
-          });
-
-        }
-
-      }
-    );
-    // ------------------------------------------
-    // 5. DOKUMEN KLIEN
-    // ------------------------------------------
-
-    // ==========================================
-// 5. DOKUMEN KLIEN
-// ==========================================
+// ======================================================
+// GET DOKUMEN KLIEN
+// ======================================================
 
 let dokumenKlien = [];
 
 if (klien) {
-  const dokumenResult =
+
+  const proyekKlienId =
+    klien.proyek_klien_id ?? klien.id;
+
+  const dokumenKlienResult =
     await pool.query(
       `
       SELECT
@@ -7257,36 +7083,35 @@ if (klien) {
         proyek_klien_id,
         nama_dokumen,
         nomor_dokumen,
-
         nama_file_asli,
         nama_file_simpan,
         path_file,
         tipe_file,
-        ukuran_file,
-
-        is_checked,
-        checked_at
-
+        ukuran_file
       FROM public.proyek_klien_dokumen
-
       WHERE proyek_klien_id = $1
-
       ORDER BY id ASC
       `,
-      [
-        klien.proyek_klien_id
-      ]
+      [proyekKlienId]
     );
 
   dokumenKlien =
-    dokumenResult.rows;
-}
+    dokumenKlienResult.rows;
 
+  console.log(
+    "DOKUMEN KLIEN:",
+    {
+      proyekKlienId,
+      jumlah: dokumenKlien.length
+    }
+  );
+
+}
     // ------------------------------------------
     // 6. PARTNER
     // ------------------------------------------
 
-    const partnerResult =
+  const partnerResult =
   await pool.query(
     `
     SELECT
@@ -7371,8 +7196,6 @@ if (klien) {
         path_file,
         mime_type,
         ukuran_file,
-        is_checked,
-        checked_at,
         created_at
       FROM public.proyek_partner_dokumen
       WHERE proyek_partner_id = $1
@@ -7460,9 +7283,8 @@ if (klien) {
   }
 });
 
-// ======================================================
+
 // TAMBAH TERMIN KLIEN
-// ======================================================
 
 app.post(
   "/api/proyek/klien/:proyekKlienId/termin",
@@ -7801,25 +7623,174 @@ app.post(
 );
 
 // ======================================================
+// GET URL FILE DOKUMEN KLIEN
+// ======================================================
+
+app.get(
+  "/api/proyek/klien/dokumen/:id/file",
+
+  async (req, res) => {
+
+    try {
+
+      // ================================================
+      // VALIDASI LOGIN
+      // ================================================
+
+      if (!req.session?.user) {
+
+        return res.status(401).json({
+          error: "Belum login"
+        });
+
+      }
+
+      // ================================================
+      // VALIDASI ID DOKUMEN
+      // ================================================
+
+      const dokumenId =
+        Number(req.params.id);
+
+      if (
+        !Number.isInteger(dokumenId) ||
+        dokumenId <= 0
+      ) {
+
+        return res.status(400).json({
+          error: "ID dokumen tidak valid"
+        });
+
+      }
+
+      // ================================================
+      // AMBIL DOKUMEN DARI DATABASE
+      // ================================================
+
+      const result =
+        await pool.query(
+          `
+          SELECT
+            d.id,
+            d.proyek_klien_id,
+            d.nama_dokumen,
+            d.nama_file_asli,
+            d.path_file,
+            pk.proyek_id
+
+          FROM public.proyek_klien_dokumen d
+
+          JOIN public.proyek_klien pk
+            ON pk.id = d.proyek_klien_id
+
+          WHERE d.id = $1
+          `,
+          [dokumenId]
+        );
+
+      // ================================================
+      // VALIDASI DATA DOKUMEN
+      // ================================================
+
+      if (result.rows.length === 0) {
+
+        return res.status(404).json({
+          error: "Dokumen tidak ditemukan"
+        });
+
+      }
+
+      const dokumen =
+        result.rows[0];
+
+      if (!dokumen.path_file) {
+
+        return res.status(404).json({
+          error: "File dokumen belum tersedia"
+        });
+
+      }
+
+      // ================================================
+      // VALIDASI HAK AKSES PROYEK
+      // ================================================
+
+      // Tambahkan pemeriksaan hak akses berdasarkan
+      // dokumen.proyek_id menggunakan aturan PIC
+      // dan Admin yang sudah ada di PORTOPRO.
+      //
+      // Pemeriksaan login saja tidak cukup.
+      // Jangan membuat URL sebelum akses disetujui.
+
+      // ================================================
+// GENERATE PRESIGNED URL S3
+// ================================================
+
+const url =
+  await getFileLink(
+    dokumen.path_file,
+    {
+      download:
+        req.query.download === "true",
+
+      isPrivate: true,
+
+      originalName:
+        dokumen.nama_file_asli
+    }
+  );
+
+// ================================================
+// RESPONSE
+// ================================================
+
+return res.json({
+  url
+});
+
+      // Setelah pemeriksaan hak akses diterapkan,
+      // ganti respons 501 di atas dengan kode
+      // pembuatan URL pada langkah berikutnya.
+
+    } catch (error) {
+
+      console.error(
+        "ERROR GET FILE DOKUMEN KLIEN:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+
+    }
+
+  }
+);
+// ======================================================
 // DOKUMEN KLIEN
 // ======================================================
 
-// ======================================================
-// TAMBAH DOKUMEN KLIEN
-// ======================================================
+
+// TAMBAH DOKUMEN KLIEN - UPLOAD KE S3
+
 app.post(
   "/api/proyek/klien/:proyekKlienId/dokumen",
 
-  uploadDokumenKlien.single(
-    "file_dokumen"
-  ),
+  uploadDokumenKlien.single("file_dokumen"),
 
   async (req, res) => {
+
+    let s3Key = null;
+
     try {
+
+      // ================================================
+      // AMBIL DATA
+      // ================================================
+
       const proyekKlienId =
-        Number(
-          req.params.proyekKlienId
-        );
+        Number(req.params.proyekKlienId);
 
       const {
         nama_dokumen,
@@ -7831,26 +7802,14 @@ app.post(
       // ================================================
 
       if (
-        !Number.isInteger(
-          proyekKlienId
-        ) ||
+        !Number.isInteger(proyekKlienId) ||
         proyekKlienId <= 0
       ) {
-        if (
-          req.file &&
-          fs.existsSync(
-            req.file.path
-          )
-        ) {
-          fs.unlinkSync(
-            req.file.path
-          );
-        }
 
         return res.status(400).json({
-          error:
-            "ID proyek klien tidak valid"
+          error: "ID proyek klien tidak valid"
         });
+
       }
 
       // ================================================
@@ -7858,23 +7817,14 @@ app.post(
       // ================================================
 
       if (
-        !nama_dokumen?.trim()
+        !nama_dokumen ||
+        !String(nama_dokumen).trim()
       ) {
-        if (
-          req.file &&
-          fs.existsSync(
-            req.file.path
-          )
-        ) {
-          fs.unlinkSync(
-            req.file.path
-          );
-        }
 
         return res.status(400).json({
-          error:
-            "Nama dokumen wajib dipilih"
+          error: "Nama dokumen wajib dipilih"
         });
+
       }
 
       // ================================================
@@ -7884,33 +7834,21 @@ app.post(
       const klienResult =
         await pool.query(
           `
-            SELECT id
-            FROM public.proyek_klien
-            WHERE id = $1
+          SELECT id
+          FROM public.proyek_klien
+          WHERE id = $1
           `,
-          [
-            proyekKlienId
-          ]
+          [proyekKlienId]
         );
 
       if (
         klienResult.rows.length === 0
       ) {
-        if (
-          req.file &&
-          fs.existsSync(
-            req.file.path
-          )
-        ) {
-          fs.unlinkSync(
-            req.file.path
-          );
-        }
 
         return res.status(404).json({
-          error:
-            "Data proyek klien tidak ditemukan"
+          error: "Data proyek klien tidak ditemukan"
         });
+
       }
 
       // ================================================
@@ -7923,27 +7861,46 @@ app.post(
       let tipeFile = null;
       let ukuranFile = null;
 
+      // ================================================
+      // UPLOAD FILE KE S3
+      // ================================================
+
       if (req.file) {
+
+        const ekstensi =
+          path.extname(
+            req.file.originalname
+          ).toLowerCase();
+
+        // Buat key unik di dalam bucket
+        const namaFile =
+          `/${crypto.randomUUID()}${ekstensi}`;
+
+        const hasilUpload =
+          await uploadFile(
+            req.file,
+            namaFile
+          );
+
+        s3Key =
+          hasilUpload.key;
+
         namaFileAsli =
-          req.file.originalname ||
-          null;
+          req.file.originalname || null;
 
         namaFileSimpan =
-          req.file.filename ||
-          null;
+          hasilUpload.key;
+
+        // path_file sekarang berisi S3 object key
+        pathFile =
+          hasilUpload.key;
 
         tipeFile =
-          req.file.mimetype ||
-          null;
+          req.file.mimetype || null;
 
         ukuranFile =
-          req.file.size ||
-          null;
+          req.file.size ?? null;
 
-        pathFile =
-          namaFileSimpan
-            ? `/uploads/dokumen-klien/${namaFileSimpan}`
-            : null;
       }
 
       // ================================================
@@ -7953,37 +7910,38 @@ app.post(
       const result =
         await pool.query(
           `
-            INSERT INTO public.proyek_klien_dokumen (
-              proyek_klien_id,
-              nama_dokumen,
-              nomor_dokumen,
-              nama_file_asli,
-              nama_file_simpan,
-              path_file,
-              tipe_file,
-              ukuran_file,
-              is_checked
-            )
-            VALUES (
-              $1,
-              $2,
-              $3,
-              $4,
-              $5,
-              $6,
-              $7,
-              $8,
-              FALSE
-            )
-            RETURNING *
+          INSERT INTO public.proyek_klien_dokumen (
+            proyek_klien_id,
+            nama_dokumen,
+            nomor_dokumen,
+            nama_file_asli,
+            nama_file_simpan,
+            path_file,
+            tipe_file,
+            ukuran_file
+          )
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8
+          )
+          RETURNING *
           `,
           [
             proyekKlienId,
 
-            nama_dokumen.trim(),
+            String(
+              nama_dokumen
+            ).trim(),
 
-            nomor_dokumen?.trim() ||
-            null,
+            String(
+              nomor_dokumen || ""
+            ).trim() || null,
 
             namaFileAsli,
 
@@ -7997,29 +7955,53 @@ app.post(
           ]
         );
 
+      // ================================================
+      // RESPONSE
+      // ================================================
+
       return res.status(201).json({
+
         message:
           req.file
-            ? "Dokumen dan file berhasil disimpan"
+            ? "Dokumen dan file berhasil disimpan ke S3"
             : "Dokumen berhasil disimpan tanpa file",
 
         data:
           result.rows[0]
+
       });
 
     } catch (error) {
-      // Hapus file jika file sudah terunggah,
-      // tetapi penyimpanan database gagal
-      if (
-        req.file &&
-        req.file.path &&
-        fs.existsSync(
-          req.file.path
-        )
-      ) {
-        fs.unlinkSync(
-          req.file.path
+
+      // ================================================
+      // HAPUS FILE S3 JIKA DATABASE GAGAL
+      // ================================================
+
+      if (s3Key) {
+
+        try {
+
+          await s3Client.send(
+          new DeleteObjectCommand({
+
+            Bucket:
+              process.env.bucket_name,
+
+            Key:
+              s3Key
+
+          })
         );
+
+        } catch (hapusError) {
+
+          console.error(
+            "GAGAL MEMBERSIHKAN FILE S3:",
+            hapusError
+          );
+
+        }
+
       }
 
       console.error(
@@ -8028,12 +8010,1219 @@ app.post(
       );
 
       return res.status(500).json({
-        error:
-          error.message
+        error: error.message
       });
+
     }
+
   }
 );
+
+// EDIT DOKUMEN KLIEN - UPLOAD KE S3
+
+app.put(
+  "/api/proyek/klien/dokumen/:id",
+
+  uploadDokumenKlien.single("file_dokumen"),
+
+  async (req, res) => {
+
+    let s3KeyBaru = null;
+    let databaseBerhasil = false;
+
+    try {
+
+      // ================================================
+      // VALIDASI LOGIN
+      // ================================================
+
+      if (!req.session?.user) {
+
+        return res.status(401).json({
+          error: "Belum login"
+        });
+
+      }
+
+      // ================================================
+      // AMBIL DATA
+      // ================================================
+
+      const id =
+        Number(req.params.id);
+
+      const {
+        nama_dokumen,
+        nomor_dokumen
+      } = req.body;
+
+      // ================================================
+      // VALIDASI ID
+      // ================================================
+
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+
+        return res.status(400).json({
+          error: "ID dokumen tidak valid"
+        });
+
+      }
+
+      // ================================================
+      // VALIDASI NAMA DOKUMEN
+      // ================================================
+
+      if (
+        !String(nama_dokumen || "").trim()
+      ) {
+
+        return res.status(400).json({
+          error: "Nama dokumen wajib dipilih"
+        });
+
+      }
+
+      // ================================================
+      // AMBIL DATA DOKUMEN LAMA
+      // ================================================
+
+      const oldResult =
+        await pool.query(
+          `
+          SELECT
+            d.id,
+            d.proyek_klien_id,
+            d.nama_dokumen,
+            d.nomor_dokumen,
+            d.nama_file_asli,
+            d.nama_file_simpan,
+            d.path_file,
+            d.tipe_file,
+            d.ukuran_file,
+            pk.proyek_id
+
+          FROM public.proyek_klien_dokumen d
+
+          JOIN public.proyek_klien pk
+            ON pk.id = d.proyek_klien_id
+
+          WHERE d.id = $1
+          `,
+          [id]
+        );
+
+      if (oldResult.rows.length === 0) {
+
+        return res.status(404).json({
+          error: "Dokumen tidak ditemukan"
+        });
+
+      }
+
+      const dokumenLama =
+        oldResult.rows[0];
+
+      // ================================================
+      // VALIDASI HAK AKSES PROYEK
+      // ================================================
+
+      // Sebelum mengaktifkan endpoint ini,
+      // terapkan pemeriksaan bahwa pengguna
+      // berhak mengedit dokumenLama.proyek_id.
+      //
+      // Gunakan aturan Admin/PIC yang sudah
+      // diterapkan pada API proyek PORTOPRO.
+
+      // ================================================
+      // DEFAULT = FILE LAMA
+      // ================================================
+
+      let namaFileAsli =
+        dokumenLama.nama_file_asli;
+
+      let namaFileSimpan =
+        dokumenLama.nama_file_simpan;
+
+      let pathFile =
+        dokumenLama.path_file;
+
+      let tipeFile =
+        dokumenLama.tipe_file;
+
+      let ukuranFile =
+        dokumenLama.ukuran_file;
+
+      // ================================================
+      // JIKA ADA FILE BARU
+      // ================================================
+
+      if (req.file) {
+
+        const ekstensi =
+          path.extname(
+            req.file.originalname
+          ).toLowerCase();
+
+        // UUID tanpa folder atau ID proyek
+        const namaFile =
+          `${crypto.randomUUID()}${ekstensi}`;
+
+        // Upload file pengganti ke S3
+        const hasilUpload =
+          await uploadFile(
+            req.file,
+            namaFile
+          );
+
+        // Simpan key untuk rollback
+        // jika UPDATE database gagal
+        s3KeyBaru =
+          hasilUpload.key;
+
+        namaFileAsli =
+          req.file.originalname;
+
+        namaFileSimpan =
+          hasilUpload.key;
+
+        pathFile =
+          hasilUpload.key;
+
+        tipeFile =
+          req.file.mimetype;
+
+        ukuranFile =
+          req.file.size;
+
+      }
+
+      // ================================================
+      // UPDATE DATABASE
+      // ================================================
+
+      const result =
+        await pool.query(
+          `
+          UPDATE public.proyek_klien_dokumen
+
+          SET
+            nama_dokumen = $1,
+            nomor_dokumen = $2,
+            nama_file_asli = $3,
+            nama_file_simpan = $4,
+            path_file = $5,
+            tipe_file = $6,
+            ukuran_file = $7
+
+          WHERE id = $8
+
+          RETURNING *
+          `,
+          [
+            String(nama_dokumen).trim(),
+
+            String(
+              nomor_dokumen || ""
+            ).trim() || null,
+
+            namaFileAsli,
+
+            namaFileSimpan,
+
+            pathFile,
+
+            tipeFile,
+
+            ukuranFile,
+
+            id
+          ]
+        );
+
+      databaseBerhasil = true;
+
+      // ================================================
+      // HAPUS FILE S3 LAMA
+      // HANYA JIKA ADA FILE PENGGANTI
+      // ================================================
+
+      if (
+        req.file &&
+        dokumenLama.path_file
+      ) {
+
+        const s3KeyLama =
+          String(
+            dokumenLama.path_file
+          ).trim();
+
+        // Hanya hapus key S3 dengan format
+        // UUID.extensi yang sudah kita gunakan.
+        //
+        // Path lokal /uploads/... dan key
+        // dengan folder tidak ikut dihapus.
+
+        const formatKeyS3 =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z0-9]+$/i;
+
+        if (
+          formatKeyS3.test(s3KeyLama) &&
+          s3KeyLama !== s3KeyBaru
+        ) {
+
+          try {
+
+            await s3Client.send(
+              new DeleteObjectCommand({
+
+                Bucket:
+                  process.env.bucket_name,
+
+                Key:
+                  s3KeyLama
+
+              })
+            );
+
+          } catch (hapusError) {
+
+            // UPDATE database sudah berhasil.
+            // Kegagalan menghapus file lama
+            // tidak membatalkan perubahan dokumen.
+
+            console.error(
+              "GAGAL HAPUS FILE S3 LAMA:",
+              hapusError
+            );
+
+          }
+
+        }
+
+      }
+
+      // ================================================
+      // RESPONSE
+      // ================================================
+
+      return res.json({
+
+        message:
+          req.file
+            ? "Dokumen dan file berhasil diperbarui"
+            : "Dokumen berhasil diperbarui",
+
+        data:
+          result.rows[0]
+
+      });
+
+    } catch (error) {
+
+      // ================================================
+      // ROLLBACK FILE BARU
+      // JIKA DATABASE BELUM BERHASIL
+      // ================================================
+
+      if (
+        s3KeyBaru &&
+        !databaseBerhasil
+      ) {
+
+        try {
+
+          await s3Client.send(
+            new DeleteObjectCommand({
+
+              Bucket:
+                process.env.bucket_name,
+
+              Key:
+                s3KeyBaru
+
+            })
+          );
+
+        } catch (hapusError) {
+
+          console.error(
+            "GAGAL ROLLBACK FILE S3 BARU:",
+            hapusError
+          );
+
+        }
+
+      }
+
+      console.error(
+        "ERROR EDIT DOKUMEN KLIEN:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+
+    }
+
+  }
+);
+
+// HAPUS DOKUMEN KLIEN
+    app.delete("/api/proyek/klien/dokumen/:id",
+      async (req, res) => {
+
+        try {
+
+          const { id } = req.params;
+
+
+          const result = await pool.query(`
+            DELETE FROM public.proyek_klien_dokumen
+            WHERE id = $1
+            RETURNING *
+          `, [id]);
+
+
+          if (result.rows.length === 0) {
+
+            return res.status(404).json({
+              error: "Dokumen tidak ditemukan"
+            });
+
+          }
+
+
+          res.json({
+            message:
+              "Dokumen berhasil dihapus"
+          });
+
+
+        } catch (error) {
+
+          console.error(
+            "ERROR DELETE DOKUMEN KLIEN:",
+            error
+          );
+
+          res.status(500).json({
+            error: error.message
+          });
+
+        }
+
+      }
+    );
+
+
+// ======================================================
+// DOKUMEN PARTNER
+// ======================================================
+
+
+// GET URL FILE DOKUMEN PARTNER
+
+app.get(
+  "/api/proyek/partner/dokumen/:id/file",
+
+  async (req, res) => {
+
+    try {
+
+      // ================================================
+      // VALIDASI LOGIN
+      // ================================================
+
+      if (!req.session?.user) {
+
+        return res.status(401).json({
+          error: "Belum login"
+        });
+
+      }
+
+      // ================================================
+      // VALIDASI ID
+      // ================================================
+
+      const dokumenId =
+        Number(req.params.id);
+
+      if (
+        !Number.isInteger(dokumenId) ||
+        dokumenId <= 0
+      ) {
+
+        return res.status(400).json({
+          error: "ID dokumen partner tidak valid"
+        });
+
+      }
+
+      // ================================================
+      // AMBIL DATA DOKUMEN
+      // ================================================
+
+      const result =
+        await pool.query(
+          `
+          SELECT
+            d.id,
+            d.nama_file_asli,
+            d.path_file,
+            pp.proyek_id
+
+          FROM public.proyek_partner_dokumen d
+
+          JOIN public.proyek_partner pp
+            ON pp.id = d.proyek_partner_id
+
+          WHERE d.id = $1
+          `,
+          [dokumenId]
+        );
+
+      if (result.rows.length === 0) {
+
+        return res.status(404).json({
+          error: "Dokumen partner tidak ditemukan"
+        });
+
+      }
+
+      const dokumen =
+        result.rows[0];
+
+      if (!dokumen.path_file) {
+
+        return res.status(404).json({
+          error: "File dokumen belum tersedia"
+        });
+
+      }
+
+      // ================================================
+      // VALIDASI HAK AKSES PROYEK
+      // ================================================
+
+      // Terapkan aturan akses Admin/PIC PORTOPRO
+      // terhadap dokumen.proyek_id.
+      //
+      // Jangan membuat presigned URL sebelum
+      // hak akses pengguna berhasil diverifikasi.
+
+      
+      const url =
+        await getFileLink(
+          dokumen.path_file,
+          {
+            download:
+              req.query.download === "true",
+
+            isPrivate: true,
+
+            originalName:
+              dokumen.nama_file_asli
+          }
+        );
+
+      return res.json({
+        url
+      });
+
+      // Setelah pemeriksaan hak akses diterapkan,
+      // ganti respons 501 dengan kode pada
+      // langkah berikutnya.
+
+    } catch (error) {
+
+      console.error(
+        "ERROR GET FILE DOKUMEN PARTNER:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+
+    }
+
+  }
+);
+// TAMBAH DOKUMEN PARTNER - UPLOAD KE S3
+
+app.post(
+  "/api/proyek/partner/:proyekPartnerId/dokumen",
+
+  uploadDokumenKlien.single("file_dokumen"),
+
+  async (req, res) => {
+
+    let s3KeyBaru = null;
+    let databaseBerhasil = false;
+
+    try {
+
+      // ================================================
+      // VALIDASI LOGIN
+      // ================================================
+
+      if (!req.session?.user) {
+
+        return res.status(401).json({
+          error: "Belum login"
+        });
+
+      }
+
+      // ================================================
+      // AMBIL DATA
+      // ================================================
+
+      const proyekPartnerId =
+        Number(req.params.proyekPartnerId);
+
+      const {
+        nama_dokumen,
+        nomor_dokumen
+      } = req.body;
+
+      // ================================================
+      // VALIDASI ID
+      // ================================================
+
+      if (
+        !Number.isInteger(proyekPartnerId) ||
+        proyekPartnerId <= 0
+      ) {
+
+        return res.status(400).json({
+          error: "ID partner proyek tidak valid"
+        });
+
+      }
+
+      // ================================================
+      // VALIDASI NAMA DOKUMEN
+      // ================================================
+
+      if (
+        !String(nama_dokumen || "").trim()
+      ) {
+
+        return res.status(400).json({
+          error: "Nama dokumen wajib dipilih"
+        });
+
+      }
+
+      // ================================================
+      // CEK PARTNER PROYEK
+      // ================================================
+
+      const partnerCheck =
+        await pool.query(
+          `
+          SELECT
+            id,
+            proyek_id
+
+          FROM public.proyek_partner
+
+          WHERE id = $1
+          `,
+          [proyekPartnerId]
+        );
+
+      if (partnerCheck.rows.length === 0) {
+
+        return res.status(404).json({
+          error:
+            "Data partner proyek tidak ditemukan"
+        });
+
+      }
+
+      const proyekId =
+        partnerCheck.rows[0].proyek_id;
+
+      // ================================================
+      // VALIDASI HAK AKSES PROYEK
+      // ================================================
+
+      // Terapkan pemeriksaan hak akses Admin/PIC
+      // terhadap proyekId menggunakan aturan
+      // yang sudah berlaku pada API PORTOPRO.
+      //
+      // Jangan mengunggah file atau menyimpan
+      // dokumen sebelum hak akses dinyatakan sah.
+
+      // ================================================
+      // DEFAULT FILE OPSIONAL
+      // ================================================
+
+      let namaFileAsli = null;
+      let namaFileServer = null;
+      let pathFile = null;
+      let mimeType = null;
+      let ukuranFile = null;
+
+      // ================================================
+      // JIKA ADA FILE, UPLOAD KE S3
+      // ================================================
+
+      if (req.file) {
+
+        const ekstensi =
+          path.extname(
+            req.file.originalname
+          ).toLowerCase();
+
+        // Nama file hanya UUID + ekstensi.
+        // Tidak menggunakan folder atau ID proyek.
+
+        const namaFile =
+          `${crypto.randomUUID()}${ekstensi}`;
+
+        const hasilUpload =
+          await uploadFile(
+            req.file,
+            namaFile
+          );
+
+        // Simpan untuk rollback jika INSERT gagal.
+        s3KeyBaru =
+          hasilUpload.key;
+
+        namaFileAsli =
+          req.file.originalname;
+
+        namaFileServer =
+          hasilUpload.key;
+
+        pathFile =
+          hasilUpload.key;
+
+        mimeType =
+          req.file.mimetype;
+
+        ukuranFile =
+          req.file.size;
+
+      }
+
+      // ================================================
+      // SIMPAN KE DATABASE
+      // ================================================
+
+      const result =
+        await pool.query(
+          `
+          INSERT INTO public.proyek_partner_dokumen (
+            proyek_partner_id,
+            nama_dokumen,
+            nomor_dokumen,
+            nama_file_asli,
+            nama_file_server,
+            path_file,
+            mime_type,
+            ukuran_file
+          )
+
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8
+          )
+
+          RETURNING *
+          `,
+          [
+            proyekPartnerId,
+
+            String(nama_dokumen).trim(),
+
+            String(
+              nomor_dokumen || ""
+            ).trim() || null,
+
+            namaFileAsli,
+
+            namaFileServer,
+
+            pathFile,
+
+            mimeType,
+
+            ukuranFile
+          ]
+        );
+
+      databaseBerhasil = true;
+
+      // ================================================
+      // RESPONSE
+      // ================================================
+
+      return res.status(201).json({
+
+        message:
+          "Dokumen partner berhasil ditambahkan",
+
+        data:
+          result.rows[0]
+
+      });
+
+    } catch (error) {
+
+      // ================================================
+      // ROLLBACK FILE S3 JIKA INSERT GAGAL
+      // ================================================
+
+      if (
+        s3KeyBaru &&
+        !databaseBerhasil
+      ) {
+
+        try {
+
+          await s3Client.send(
+            new DeleteObjectCommand({
+
+              Bucket:
+                process.env.bucket_name,
+
+              Key:
+                s3KeyBaru
+
+            })
+          );
+
+        } catch (hapusError) {
+
+          console.error(
+            "GAGAL ROLLBACK FILE S3 PARTNER:",
+            hapusError
+          );
+
+        }
+
+      }
+
+      console.error(
+        "ERROR TAMBAH DOKUMEN PARTNER:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+
+    }
+
+  }
+);
+
+// EDIT DOKUMEN PARTNER - UPLOAD KE S3
+
+app.put(
+  "/api/proyek/partner/dokumen/:id",
+
+  uploadDokumenKlien.single("file_dokumen"),
+
+  async (req, res) => {
+
+    let s3KeyBaru = null;
+    let databaseBerhasil = false;
+
+    try {
+
+      // ================================================
+      // VALIDASI LOGIN
+      // ================================================
+
+      if (!req.session?.user) {
+
+        return res.status(401).json({
+          error: "Belum login"
+        });
+
+      }
+
+      // ================================================
+      // AMBIL DATA
+      // ================================================
+
+      const id =
+        Number(req.params.id);
+
+      const {
+        nama_dokumen,
+        nomor_dokumen
+      } = req.body;
+
+      // ================================================
+      // VALIDASI ID
+      // ================================================
+
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+
+        return res.status(400).json({
+          error: "ID dokumen partner tidak valid"
+        });
+
+      }
+
+      // ================================================
+      // VALIDASI NAMA DOKUMEN
+      // ================================================
+
+      if (
+        !String(nama_dokumen || "").trim()
+      ) {
+
+        return res.status(400).json({
+          error: "Nama dokumen wajib diisi"
+        });
+
+      }
+
+      // ================================================
+      // AMBIL DATA DOKUMEN LAMA
+      // ================================================
+
+      const dokumenResult =
+        await pool.query(
+          `
+          SELECT
+            d.id,
+            d.proyek_partner_id,
+            d.nama_dokumen,
+            d.nomor_dokumen,
+            d.nama_file_asli,
+            d.nama_file_server,
+            d.path_file,
+            d.mime_type,
+            d.ukuran_file,
+            pp.proyek_id
+
+          FROM public.proyek_partner_dokumen d
+
+          JOIN public.proyek_partner pp
+            ON pp.id = d.proyek_partner_id
+
+          WHERE d.id = $1
+          `,
+          [id]
+        );
+
+      if (
+        dokumenResult.rows.length === 0
+      ) {
+
+        return res.status(404).json({
+          error: "Dokumen partner tidak ditemukan"
+        });
+
+      }
+
+      const dokumenLama =
+        dokumenResult.rows[0];
+
+      // ================================================
+      // VALIDASI HAK AKSES PROYEK
+      // ================================================
+
+      // Wajib gunakan aturan Admin/PIC PORTOPRO
+      // untuk memeriksa hak edit terhadap
+      // dokumenLama.proyek_id.
+      //
+      // Jangan melakukan upload atau UPDATE
+      // sebelum pemeriksaan hak akses berhasil.
+
+      // ================================================
+      // DEFAULT = FILE LAMA
+      // ================================================
+
+      let namaFileAsli =
+        dokumenLama.nama_file_asli;
+
+      let namaFileServer =
+        dokumenLama.nama_file_server;
+
+      let pathFile =
+        dokumenLama.path_file;
+
+      let mimeType =
+        dokumenLama.mime_type;
+
+      let ukuranFile =
+        dokumenLama.ukuran_file;
+
+      // ================================================
+      // JIKA ADA FILE BARU
+      // ================================================
+
+      if (req.file) {
+
+        const ekstensi =
+          path.extname(
+            req.file.originalname
+          ).toLowerCase();
+
+        // UUID tanpa folder dan ID proyek
+        const namaFile =
+          `${crypto.randomUUID()}${ekstensi}`;
+
+        // Upload file baru ke S3
+        const hasilUpload =
+          await uploadFile(
+            req.file,
+            namaFile
+          );
+
+        // Simpan key untuk rollback
+        s3KeyBaru =
+          hasilUpload.key;
+
+        namaFileAsli =
+          req.file.originalname;
+
+        namaFileServer =
+          hasilUpload.key;
+
+        pathFile =
+          hasilUpload.key;
+
+        mimeType =
+          req.file.mimetype;
+
+        ukuranFile =
+          req.file.size;
+
+      }
+
+      // ================================================
+      // UPDATE DATABASE
+      // ================================================
+
+      const result =
+        await pool.query(
+          `
+          UPDATE public.proyek_partner_dokumen
+
+          SET
+            nama_dokumen = $1,
+            nomor_dokumen = $2,
+            nama_file_asli = $3,
+            nama_file_server = $4,
+            path_file = $5,
+            mime_type = $6,
+            ukuran_file = $7
+
+          WHERE id = $8
+
+          RETURNING *
+          `,
+          [
+            String(nama_dokumen).trim(),
+
+            String(
+              nomor_dokumen || ""
+            ).trim() || null,
+
+            namaFileAsli,
+
+            namaFileServer,
+
+            pathFile,
+
+            mimeType,
+
+            ukuranFile,
+
+            id
+          ]
+        );
+
+      databaseBerhasil = true;
+
+      // ================================================
+      // HAPUS FILE S3 LAMA
+      // HANYA JIKA ADA FILE PENGGANTI
+      // ================================================
+
+      if (
+        req.file &&
+        dokumenLama.path_file
+      ) {
+
+        const s3KeyLama =
+          String(
+            dokumenLama.path_file
+          ).trim();
+
+        // Hanya hapus file S3 dengan format
+        // UUID + ekstensi.
+        //
+        // Path lokal /uploads/... tidak dihapus.
+
+        const formatKeyS3 =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z0-9]+$/i;
+
+        if (
+          formatKeyS3.test(s3KeyLama) &&
+          s3KeyLama !== s3KeyBaru
+        ) {
+
+          try {
+
+            await s3Client.send(
+              new DeleteObjectCommand({
+
+                Bucket:
+                  process.env.bucket_name,
+
+                Key:
+                  s3KeyLama
+
+              })
+            );
+
+          } catch (hapusError) {
+
+            // Database sudah berhasil diperbarui.
+            // Jangan membatalkan UPDATE jika
+            // penghapusan file lama gagal.
+
+            console.error(
+              "GAGAL HAPUS FILE S3 PARTNER LAMA:",
+              hapusError
+            );
+
+          }
+
+        }
+
+      }
+
+      // ================================================
+      // RESPONSE
+      // ================================================
+
+      return res.json({
+
+        message:
+          req.file
+            ? "Dokumen dan file partner berhasil diperbarui"
+            : "Dokumen partner berhasil diperbarui",
+
+        data:
+          result.rows[0]
+
+      });
+
+    } catch (error) {
+
+      // ================================================
+      // ROLLBACK FILE S3 BARU
+      // JIKA UPDATE DATABASE GAGAL
+      // ================================================
+
+      if (
+        s3KeyBaru &&
+        !databaseBerhasil
+      ) {
+
+        try {
+
+          await s3Client.send(
+            new DeleteObjectCommand({
+
+              Bucket:
+                process.env.bucket_name,
+
+              Key:
+                s3KeyBaru
+
+            })
+          );
+
+        } catch (hapusError) {
+
+          console.error(
+            "GAGAL ROLLBACK FILE S3 PARTNER:",
+            hapusError
+          );
+
+        }
+
+      }
+
+      console.error(
+        "ERROR EDIT DOKUMEN PARTNER:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+
+    }
+
+  }
+);
+
+// HAPUS DOKUMEN PARTNER
+
+app.delete("/api/proyek/partner/dokumen/:id", 
+  async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      DELETE FROM public.proyek_partner_dokumen
+      WHERE id = $1
+      RETURNING *
+      `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Dokumen partner tidak ditemukan"
+      });
+    }
+
+    res.json({
+      message: "Dokumen partner berhasil dihapus"
+    });
+
+  } catch (error) {
+    console.error(
+      "ERROR HAPUS DOKUMEN PARTNER:",
+      error
+    );
+
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
 
 // ======================================================
 // GET TIMELINE PROYEK
@@ -8336,105 +9525,6 @@ app.delete(
   }
 );
 
-// ====================================================
-// GET PROYEK TIMELINE
-// Read Only - Gantt Chart
-// ====================================================
-
-app.get(
-  "/api/proyek/:id/proyek-timeline",
-  async (req, res) => {
-
-    try {
-
-      const context =
-        access(req);
-
-
-      const result =
-        await pool.query(
-          projectSql,
-          [
-            context.proyekId,
-            context.isAdmin,
-            context.picId
-          ]
-        );
-
-
-      const row =
-        result.rows[0];
-
-
-      if (!row) {
-
-        throw error(
-          "Proyek tidak ditemukan atau tidak dapat diakses.",
-          404
-        );
-
-      }
-
-
-      const report =
-        row.dokumen
-          ? Progress.calculate(
-              row.dokumen
-            )
-          : null;
-
-
-      res.set(
-        "Cache-Control",
-        "no-store"
-      );
-
-
-      return res.json({
-
-        proyek: {
-
-          id:
-            row.id,
-
-          nama_proyek:
-            row.nama_proyek,
-
-          nama_klien:
-            row.perusahaan_klien ||
-            "-"
-
-        },
-
-
-        version:
-          Number(
-            row.versi || 0
-          ),
-
-
-        updated_at:
-          row.updated_at ||
-          null,
-
-
-        data:
-          report
-
-      });
-
-
-    } catch (caught) {
-
-      return sendError(
-        res,
-        caught
-      );
-
-    }
-
-  }
-);
 
 // ======================================================
 // TAMBAH TERMIN PARTNER
@@ -9636,271 +10726,7 @@ app.delete("/api/proyek/partner/termin/:id",
   }
 });
 
-// ======================================================
-// PARTNER - TAMBAH DOKUMEN
-// ======================================================
-app.post(
-  "/api/proyek/partner/:proyekPartnerId/dokumen",
 
-  uploadDokumenKlien.single(
-    "file_dokumen"
-  ),
-
-  async (req, res) => {
-    try {
-      const {
-        proyekPartnerId
-      } = req.params;
-
-      const {
-        nama_dokumen,
-        nomor_dokumen
-      } = req.body;
-
-      if (
-        !nama_dokumen ||
-        !nama_dokumen.trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "Nama dokumen wajib dipilih"
-        });
-      }
-
-      const partnerCheck =
-        await pool.query(
-          `
-            SELECT id
-            FROM public.proyek_partner
-            WHERE id = $1
-          `,
-          [
-            proyekPartnerId
-          ]
-        );
-
-      if (
-        partnerCheck.rows.length === 0
-      ) {
-        return res.status(404).json({
-          error:
-            "Data partner proyek tidak ditemukan"
-        });
-      }
-
-      // File bersifat opsional
-      let namaFileAsli = null;
-      let namaFileServer = null;
-      let pathFile = null;
-      let mimeType = null;
-      let ukuranFile = null;
-
-      if (req.file) {
-        const normalizedPath =
-          String(
-            req.file.path || ""
-          ).replaceAll(
-            "\\",
-            "/"
-          );
-
-        namaFileAsli =
-          req.file.originalname ||
-          null;
-
-        namaFileServer =
-          req.file.filename ||
-          null;
-
-        mimeType =
-          req.file.mimetype ||
-          null;
-
-        ukuranFile =
-          req.file.size ||
-          null;
-
-        pathFile =
-          normalizedPath
-            ? `/${normalizedPath.replace(
-                /^.*?uploads\//,
-                "uploads/"
-              )}`
-            : (
-                namaFileServer
-                  ? `/uploads/${namaFileServer}`
-                  : null
-              );
-      }
-
-      const result =
-        await pool.query(
-          `
-            INSERT INTO public.proyek_partner_dokumen (
-              proyek_partner_id,
-              nama_dokumen,
-              nomor_dokumen,
-              nama_file_asli,
-              nama_file_server,
-              path_file,
-              mime_type,
-              ukuran_file,
-              is_checked
-            )
-            VALUES (
-              $1,
-              $2,
-              $3,
-              $4,
-              $5,
-              $6,
-              $7,
-              $8,
-              FALSE
-            )
-            RETURNING *
-          `,
-          [
-            Number(
-              proyekPartnerId
-            ),
-
-            nama_dokumen.trim(),
-
-            nomor_dokumen?.trim() ||
-            null,
-
-            namaFileAsli,
-
-            namaFileServer,
-
-            pathFile,
-
-            mimeType,
-
-            ukuranFile
-          ]
-        );
-
-      res.status(201).json({
-        message:
-          "Dokumen partner berhasil ditambahkan",
-
-        data:
-          result.rows[0]
-      });
-
-    } catch (error) {
-      console.error(
-        "ERROR TAMBAH DOKUMEN PARTNER:",
-        error
-      );
-
-      res.status(500).json({
-        error:
-          error.message
-      });
-    }
-  }
-);
-
-// ======================================================
-// PARTNER - CHECK / UNCHECK DOKUMEN
-// ======================================================
-
-app.put("/api/proyek/partner/dokumen/:id/check", 
-  async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { is_checked } = req.body;
-
-    const checked =
-      is_checked === true;
-
-    const result = await pool.query(
-      `
-      UPDATE public.proyek_partner_dokumen
-      SET
-        is_checked = $1,
-
-        checked_at = CASE
-          WHEN $1 = TRUE
-          THEN CURRENT_TIMESTAMP
-          ELSE NULL
-        END,
-
-        updated_at = CURRENT_TIMESTAMP
-
-      WHERE id = $2
-
-      RETURNING *
-      `,
-      [
-        checked,
-        id
-      ]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Dokumen partner tidak ditemukan"
-      });
-    }
-
-    res.json(result.rows[0]);
-
-  } catch (error) {
-    console.error(
-      "ERROR CHECK DOKUMEN PARTNER:",
-      error
-    );
-
-    res.status(500).json({
-      error: error.message
-    });
-  }
-});
-
-
-// ======================================================
-// PARTNER - HAPUS DOKUMEN
-// ======================================================
-
-app.delete("/api/proyek/partner/dokumen/:id", 
-  async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `
-      DELETE FROM public.proyek_partner_dokumen
-      WHERE id = $1
-      RETURNING *
-      `,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Dokumen partner tidak ditemukan"
-      });
-    }
-
-    res.json({
-      message: "Dokumen partner berhasil dihapus"
-    });
-
-  } catch (error) {
-    console.error(
-      "ERROR HAPUS DOKUMEN PARTNER:",
-      error
-    );
-
-    res.status(500).json({
-      error: error.message
-    });
-  }
-});
 
 // ======================================================
 // UPDATE INFORMASI PROYEK
@@ -23041,6 +23867,23 @@ app.get(
   }
 );
 
+// =====================================================
+// S3 
+// =====================================================
+const uploadS3 =
+  multer({
+
+    storage:
+      multer.memoryStorage(),
+
+    limits: {
+
+      fileSize:
+        10 * 1024 * 1024
+
+    }
+
+  });
 // ======================================================
 // START SERVER
 // ======================================================
@@ -23050,3 +23893,9 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server berjalan di port ${PORT}`);
 });
+
+
+
+
+
+  

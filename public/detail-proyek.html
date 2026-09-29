@@ -1450,83 +1450,276 @@ and (
   }
 }
 
+/* =====================================================
+   DOKUMEN KLIEN & PARTNER
+===================================================== */
+
 .dokumen-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px 0;
+
+  padding: 20px 0;
+
   border-bottom: 1px solid #e5e7eb;
 }
+
+.dokumen-item:last-child {
+  border-bottom: none;
+}
+
 
 .dokumen-info {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+
   min-width: 0;
   flex: 1;
 }
 
-.dokumen-check {
-  width: 22px;
-  height: 22px;
-  margin-top: 4px;
-  flex-shrink: 0;
-  cursor: pointer;
-}
 
 .dokumen-detail {
   min-width: 0;
 }
 
+
 .dokumen-detail strong {
   display: block;
-  margin-bottom: 6px;
+
+  margin-bottom: 7px;
+
   color: #0f172a;
-  font-size: 18px;
+
+  font-size: 16px;
+  font-weight: 750;
 }
+
+
+.dokumen-detail .label {
+  margin-top: 4px;
+
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+
+/* =====================================================
+   ACTION DOKUMEN
+===================================================== */
 
 .dokumen-action {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-end;
   flex-wrap: wrap;
+
+  gap: 8px;
 }
+
+
+/* BUTTON DASAR */
 
 .btn-file {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0 18px;
-  border-radius: 12px;
+
+  min-height: 38px;
+
+  padding: 0 14px;
+
+  border: 1px solid #dbe2ea;
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #334155;
+
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 700;
+
   text-decoration: none;
   white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
+
+
+.btn-file:hover {
+  transform: translateY(-1px);
+}
+
+
+/* LIHAT */
 
 .btn-lihat-file {
   color: #4338ca;
-  border: 1px solid #c7d2fe;
+
+  border-color: #c7d2fe;
+
   background: #eef2ff;
 }
 
+
+.btn-lihat-file:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+
+
+/* UNDUH */
+
 .btn-unduh-file {
   color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+
+  border-color: #bfdbfe;
+
   background: #eff6ff;
 }
 
+
+.btn-unduh-file:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+
+/* EDIT */
+
+.btn-edit-file {
+  color: #92400e;
+
+  border-color: #fde68a;
+
+  background: #fffbeb;
+}
+
+
+.btn-edit-file:hover {
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+
+
+/* HAPUS */
+
+.btn-hapus-file {
+  color: #b91c1c;
+
+  border-color: #fecaca;
+
+  background: #fef2f2;
+}
+
+
+.btn-hapus-file:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+
+/* =====================================================
+   FILE LAMA SAAT EDIT
+===================================================== */
+
+.dokumen-file-lama {
+  margin-bottom: 16px;
+
+  padding: 14px 16px;
+
+  background: #f8fafc;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  color: #334155;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+
+.dokumen-file-lama[hidden] {
+  display: none;
+}
+
+
+.dokumen-file-lama strong {
+  color: #0f172a;
+}
+
+
+.dokumen-file-lama a {
+  color: #4f46e5;
+
+  font-weight: 700;
+
+  text-decoration: none;
+}
+
+
+.dokumen-file-lama a:hover {
+  text-decoration: underline;
+}
+
+
+/* =====================================================
+   FORM HINT
+===================================================== */
+
+.form-hint {
+  display: block;
+
+  margin-top: 7px;
+
+  color: #64748b;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
 @media (max-width: 768px) {
+
   .dokumen-item {
     align-items: flex-start;
     flex-direction: column;
+
+    gap: 14px;
   }
+
 
   .dokumen-action {
     width: 100%;
-    padding-left: 38px;
+
+    justify-content: flex-start;
   }
+
+
+  .btn-file,
+  .btn-hapus-file {
+    flex: 1;
+
+    min-width: 80px;
+  }
+
 }
 
 .partner-detail-card {
@@ -2759,7 +2952,9 @@ and (
 </div>
 
 
-<!-- MODAL DOKUMEN -->
+<!-- =====================================================
+     MODAL DOKUMEN KLIEN / PARTNER
+===================================================== -->
 
 <div
   class="modal"
@@ -2768,16 +2963,40 @@ and (
 
   <div class="modal-content">
 
+
+    <!-- HEADER -->
+
     <div class="modal-header">
 
-      <h3 id="dokumenModalTitle">
-        Tambah Dokumen
-      </h3>
+      <div>
+
+        <h3 id="dokumenModalTitle">
+          Tambah Dokumen
+        </h3>
+
+        <div
+          class="sub-section-description"
+          id="dokumenModalDescription"
+        >
+          Tambahkan dokumen proyek.
+        </div>
+
+      </div>
 
     </div>
 
 
-    <form id="dokumenForm">
+    <!-- FORM -->
+
+    <form
+      id="dokumenForm"
+      enctype="multipart/form-data"
+    >
+
+
+      <!-- ============================================= -->
+      <!-- NAMA DOKUMEN -->
+      <!-- ============================================= -->
 
       <div class="form-group">
 
@@ -2785,17 +3004,24 @@ and (
           Nama Dokumen
         </label>
 
-       <select
-            id="namaDokumen"
-            required
-          >
-            <option value="">
-              Pilih Kode Dokumen
-            </option>
-          </select>
+        <select
+          id="namaDokumen"
+          name="nama_dokumen"
+          required
+        >
+
+          <option value="">
+            Pilih Kode Dokumen
+          </option>
+
+        </select>
 
       </div>
 
+
+      <!-- ============================================= -->
+      <!-- NOMOR DOKUMEN -->
+      <!-- ============================================= -->
 
       <div class="form-group">
 
@@ -2806,12 +3032,31 @@ and (
         <input
           type="text"
           id="nomorDokumen"
+          name="nomor_dokumen"
           placeholder="Contoh: PKS/001/IX/2026"
         >
 
       </div>
 
+
+      <!-- ============================================= -->
+      <!-- FILE LAMA -->
+      <!-- MUNCUL SAAT EDIT -->
+      <!-- ============================================= -->
+
+      <div
+        id="dokumenFileLama"
+        class="dokumen-file-lama"
+        hidden
+      ></div>
+
+
+      <!-- ============================================= -->
+      <!-- UPLOAD FILE -->
+      <!-- ============================================= -->
+
       <div class="form-group">
+
         <label for="fileDokumen">
           Upload Dokumen
         </label>
@@ -2824,10 +3069,24 @@ and (
         >
 
         <small class="form-hint">
-          File bersifat opsional. PDF, Word, Excel, JPG, atau PNG. Maksimal 10 MB.
+
+          PDF, Word, Excel, JPG, atau PNG.
+          Maksimal 10 MB.
+
+          <br>
+
+          Saat Edit, kosongkan upload jika
+          file lama tidak ingin diganti.
+
         </small>
+
       </div>
-      
+
+
+      <!-- ============================================= -->
+      <!-- ACTION -->
+      <!-- ============================================= -->
+
       <div class="modal-actions">
 
         <button
@@ -2838,21 +3097,23 @@ and (
           Batal
         </button>
 
+
         <button
           type="submit"
           class="btn btn-primary"
+          id="simpanDokumenButton"
         >
           Simpan Dokumen
         </button>
 
       </div>
 
+
     </form>
 
   </div>
 
 </div>
-
 
 <!-- MODAL EDIT PROYEK -->
 

@@ -11,8 +11,10 @@ let activePartnerId = null;
 let activePartnerDokumenId = null;
 let modeTerminKlien = null;
 let editKategoriDipilih = [];
-let activePartnerDokumenUploadId =
-  null;
+let activeDokumenEditId = null;
+let activePartnerDokumenUploadId = null;
+let activePartnerDokumenEditId = null;
+
 
 
 
@@ -207,7 +209,6 @@ function formatLastUpdate(value) {
 }
 // ======================================================
 // ESCAPE HTML
-// Mencegah teks dari API dianggap sebagai tag HTML
 // ======================================================
 
 function escapeHtml(value) {
@@ -276,10 +277,6 @@ function nominalOrNull(value) {
 }
 
 
-// ======================================================
-// CEK INPUT YANG MERUPAKAN NOMINAL
-// ======================================================
-
 function isInputNominal(element) {
   if (
     !element ||
@@ -301,13 +298,6 @@ function isInputNominal(element) {
   `);
 }
 
-
-// ======================================================
-// ISI DAN FORMAT INPUT NOMINAL
-// ======================================================
-// ======================================================
-// ISI DAN FORMAT INPUT NOMINAL DARI DATABASE
-// ======================================================
 
 function setNilaiNominal(
   inputOrId,
@@ -413,7 +403,6 @@ document.addEventListener(
   }
 );
 
-
 document.addEventListener(
   "input",
   event => {
@@ -443,6 +432,7 @@ document.addEventListener(
     }
   }
 );
+
 // =====================================================
 // EDIT KATEGORI
 // ======================================================
@@ -889,7 +879,6 @@ function hitungNominalTermin(
 
   return 0;
 }
-
 
 // ======================================================
 // NILAI FINAL KLIEN
@@ -1697,7 +1686,6 @@ function getNilaiFinalTerminAktif() {
   );
 }
 
-
 // ======================================================
 // ATUR INPUT PERSENTASE DAN NOMINAL
 // ======================================================
@@ -1783,7 +1771,6 @@ function aturInputTermin() {
   }
 }
 
-
 // ======================================================
 // PERHITUNGAN OTOMATIS INPUT
 // ======================================================
@@ -1797,7 +1784,6 @@ const nominalTerminInput =
   document.getElementById(
     "nominalTermin"
   );
-
 
 if (
   persentaseTerminInput &&
@@ -1938,7 +1924,6 @@ function nilaiSubmitKlienTampil(klien) {
   );
 
 }
-
 
 // ======================================================
 // RENDER TERMIN KLIEN
@@ -2686,7 +2671,6 @@ async function hapusTerminPartner(id) {
 
 }
 
-
 // ======================================================
 // TIMELINE PROYEK
 // ======================================================
@@ -3257,7 +3241,6 @@ function editTimeline(id) {
   );
 }
 
-
 // ======================================================
 // SIMPAN TIMELINE
 // ======================================================
@@ -3359,7 +3342,6 @@ timelineForm?.addEventListener(
   }
 );
 
-
 // ======================================================
 // HAPUS TIMELINE
 // ======================================================
@@ -3398,7 +3380,6 @@ async function hapusTimeline(id) {
     alert(error.message);
   }
 }
-
 
 // ======================================================
 // TUTUP MODAL TIMELINE
@@ -3534,9 +3515,12 @@ async function loadMasterDokumen() {
 // DOKUMEN PARTNER
 // ======================================================
 
-function renderDokumenPartner(
-  dokumen = []
-) {
+// ======================================================
+// RENDER DOKUMEN PARTNER
+// ======================================================
+
+function renderDokumenPartner(dokumen = []) {
+
   if (
     !Array.isArray(dokumen) ||
     dokumen.length === 0
@@ -3548,261 +3532,350 @@ function renderDokumenPartner(
     `;
   }
 
-  return dokumen
-    .map(item => {
-      const checked =
-        item.is_checked === true;
+  return dokumen.map(item => {
 
-      const ukuranFile =
-        Number(
-          item.ukuran_file || 0
-        );
+    const ukuranFile =
+      Number(item.ukuran_file || 0);
 
-      const ukuranTampil =
-        ukuranFile >=
-        1024 * 1024
+    const ukuranTampil =
+      ukuranFile >= 1024 * 1024
+        ? `${(
+            ukuranFile / (1024 * 1024)
+          ).toFixed(2)} MB`
+        : ukuranFile > 0
           ? `${(
-              ukuranFile /
-              (1024 * 1024)
-            ).toFixed(2)} MB`
-          : ukuranFile > 0
-            ? `${(
-                ukuranFile / 1024
-              ).toFixed(1)} KB`
-            : "";
-
-      const informasiFile =
-        item.path_file
-          ? `
-            <div style="
-              margin-top:10px;
-              color:#64748b;
-              font-size:13px;
-            ">
-              📎
-              ${
-                escapeHtml(
-                  item.nama_file_asli ||
-                  "Dokumen"
-                )
-              }
-
-              ${
-                ukuranTampil
-                  ? ` • ${ukuranTampil}`
-                  : ""
-              }
-            </div>
-          `
-          : `
-            <div style="
-              margin-top:10px;
-              color:#94a3b8;
-              font-size:13px;
-            ">
-              Belum ada file
-            </div>
-          `;
-
-      const tombolFile =
-        item.path_file
-          ? `
-            <a
-              href="${escapeHtml(
-                item.path_file
-              )}"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn-file btn-lihat-file"
-            >
-              Lihat
-            </a>
-
-            <a
-              href="${escapeHtml(
-                item.path_file
-              )}"
-              download
-              class="btn-file btn-unduh-file"
-            >
-              Unduh
-            </a>
-          `
+              ukuranFile / 1024
+            ).toFixed(1)} KB`
           : "";
 
-      return `
-        <div class="dokumen-item">
+    const informasiFile =
+      item.path_file
+        ? `
+          <div style="
+            margin-top:10px;
+            color:#64748b;
+            font-size:13px;
+          ">
+            📎
+            ${escapeHtml(
+              item.nama_file_asli || "Dokumen"
+            )}
 
-          <div class="dokumen-info">
+            ${
+              ukuranTampil
+                ? ` • ${ukuranTampil}`
+                : ""
+            }
+          </div>
+        `
+        : `
+          <div style="
+            margin-top:10px;
+            color:#94a3b8;
+            font-size:13px;
+          ">
+            Belum ada file
+          </div>
+        `;
 
-            <input
-              type="checkbox"
-              class="dokumen-check"
-              ${checked ? "checked" : ""}
-              onchange="
-                toggleDokumenPartner(
-                  ${Number(item.id)},
-                  this.checked
-                )
-              "
-            >
+    const tombolFile =
+  item.path_file
+    ? `
+      <button
+        type="button"
+        class="btn-file btn-lihat-file"
+        onclick="bukaDokumenPartner(${Number(item.id)}, false)"
+      >
+        Lihat
+      </button>
 
-            <div class="dokumen-detail">
+      <button
+        type="button"
+        class="btn-file btn-unduh-file"
+        onclick="bukaDokumenPartner(${Number(item.id)}, true)"
+      >
+        Unduh
+      </button>
+    `
+    : "";
 
-              <strong>
-                ${
-                  escapeHtml(
-                    item.nama_dokumen ||
-                    "-"
-                  )
-                }
-              </strong>
+    return `
+      <div class="dokumen-item">
 
-              <div class="label">
-                No. Dokumen:
-                ${
-                  escapeHtml(
-                    item.nomor_dokumen ||
-                    "-"
-                  )
-                }
-              </div>
+        <div class="dokumen-info">
 
-              <div class="label">
-                ${
-                  checked
-                    ? `Selesai • ${
-                        formatTanggalWaktu(
-                          item.checked_at
-                        )
-                      }`
-                    : "Belum selesai"
-                }
-              </div>
+          <div class="dokumen-detail">
 
-              ${informasiFile}
+            <strong>
+              ${escapeHtml(
+                item.nama_dokumen || "-"
+              )}
+            </strong>
 
+            <div class="label">
+              No. Dokumen:
+              ${escapeHtml(
+                item.nomor_dokumen || "-"
+              )}
             </div>
 
-          </div>
-
-          <div class="dokumen-action">
-
-            ${tombolFile}
-
-            <button
-              type="button"
-              class="btn-danger"
-              onclick="
-                hapusDokumenPartner(
-                  ${Number(item.id)}
-                )
-              "
-            >
-              Hapus
-            </button>
+            ${informasiFile}
 
           </div>
 
         </div>
-      `;
-    })
-    .join("");
-}
 
-async function tambahDokumenPartner(
-  proyekPartnerId
-) {
+        <div class="dokumen-action">
+
+          ${tombolFile}
+
+          <button
+            type="button"
+            class="btn-file btn-edit-file"
+            onclick="editDokumenPartner(${Number(item.id)})"
+          >
+            Edit
+          </button>
+
+          <button
+            type="button"
+            class="btn-file btn-hapus-file"
+            onclick="hapusDokumenPartner(${Number(item.id)})"
+          >
+            Hapus
+          </button>
+
+        </div>
+
+      </div>
+    `;
+
+  }).join("");
+
+}
+// ======================================================
+// TAMBAH DOKUMEN PARTNER
+// ======================================================
+
+async function tambahDokumenPartner(proyekPartnerId) {
+
   if (!proyekPartnerId) {
     alert(
       "ID partner proyek tidak ditemukan."
     );
-
     return;
   }
+
+  resetDokumenModal();
 
   activePartnerDokumenUploadId =
     Number(proyekPartnerId);
 
-  document.getElementById(
-    "dokumenForm"
-  )?.reset();
+  activeDokumenEditId = null;
+  activePartnerDokumenEditId = null;
+  
 
   await loadMasterDokumen();
 
-  const title =
-    document.getElementById(
-      "dokumenModalTitle"
-    );
+  document.getElementById(
+    "dokumenModalTitle"
+  ).textContent = "Tambah Dokumen Partner";
 
-  if (title) {
-    title.textContent =
-      "Tambah Dokumen Partner";
-  }
+  document.getElementById(
+    "simpanDokumenButton"
+  ).textContent = "Simpan Dokumen";
 
-  dokumenModal.classList.add(
-    "show"
-  );
+  dokumenModal.classList.add("show");
+
 }
 
-async function toggleDokumenPartner(
-  id,
-  checked
-) {
+// ======================================================
+// EDIT DOKUMEN PARTNER
+// ======================================================
+
+async function editDokumenPartner(id) {
 
   try {
 
-    const response =
-      await fetch(
-        `/api/proyek/partner/dokumen/${id}/check`,
-        {
-          method: "PUT",
+    const partners =
+      detailData?.partners || [];
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
+    let dokumen = null;
 
-          body:
-            JSON.stringify({
-              is_checked: checked
-            })
-        }
-      );
+    let proyekPartnerId = null;
 
+    for (const partner of partners) {
 
-    const result =
-      await response.json();
+      const ditemukan =
+        (partner.dokumen || []).find(
+          item =>
+            Number(item.id) === Number(id)
+        );
 
+      if (ditemukan) {
 
-    if (!response.ok) {
+        dokumen = ditemukan;
 
-      throw new Error(
-        result.error ||
-        "Gagal memperbarui dokumen partner"
-      );
+        proyekPartnerId =
+          partner.proyek_partner_id;
+
+        break;
+
+      }
 
     }
 
+    if (!dokumen) {
+      throw new Error(
+        "Dokumen partner tidak ditemukan."
+      );
+    }
 
-    await loadDetail();
+    // RESET FORM DAN STATE
 
+    resetDokumenModal();
+
+    // SET MODE EDIT PARTNER
+
+    activeDokumenEditId = null;
+
+    activePartnerDokumenUploadId =
+      Number(proyekPartnerId);
+
+    activePartnerDokumenEditId =
+      Number(id);
+
+    // LOAD MASTER DOKUMEN
+
+    await loadMasterDokumen();
+
+    // JUDUL MODAL
+
+    document.getElementById(
+      "dokumenModalTitle"
+    ).textContent = "Edit Dokumen Partner";
+
+    // NAMA DOKUMEN
+
+    const namaSelect =
+      document.getElementById(
+        "namaDokumen"
+      );
+
+    const namaLama =
+      String(
+        dokumen.nama_dokumen || ""
+      ).trim().toLowerCase();
+
+    const option =
+      Array.from(
+        namaSelect.options
+      ).find(item => {
+
+        const value =
+          String(
+            item.value || ""
+          ).trim().toLowerCase();
+
+        const text =
+          String(
+            item.textContent || ""
+          ).trim().toLowerCase();
+
+        return (
+          value === namaLama ||
+          text === namaLama ||
+          text.startsWith(
+            `${namaLama} -`
+          )
+        );
+
+      });
+
+    if (option) {
+      namaSelect.value = option.value;
+    }
+
+    // NOMOR DOKUMEN
+
+    document.getElementById(
+      "nomorDokumen"
+    ).value =
+      dokumen.nomor_dokumen || "";
+
+    // FILE INPUT
+
+    const fileInput =
+      document.getElementById(
+        "fileDokumen"
+      );
+
+    fileInput.value = "";
+
+    fileInput.required = false;
+
+    // FILE LAMA
+
+    const fileLama =
+      document.getElementById(
+        "dokumenFileLama"
+      );
+
+    fileLama.hidden = false;
+
+    if (dokumen.path_file) {
+
+      fileLama.innerHTML = `
+        <strong>File saat ini:</strong>
+
+        <a
+          href="${escapeHtml(
+            dokumen.path_file
+          )}"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          ${escapeHtml(
+            dokumen.nama_file_asli ||
+            "Lihat Dokumen"
+          )}
+        </a>
+
+        <div class="form-hint">
+          Kosongkan upload jika tidak
+          ingin mengganti file lama.
+        </div>
+      `;
+
+    } else {
+
+      fileLama.textContent =
+        "Dokumen ini belum memiliki file.";
+
+    }
+
+    // TOMBOL SIMPAN
+
+    document.getElementById(
+      "simpanDokumenButton"
+    ).textContent = "Simpan Perubahan";
+
+    // BUKA MODAL
+
+    dokumenModal.classList.add("show");
 
   } catch (error) {
 
     console.error(
-      "ERROR CHECK DOKUMEN PARTNER:",
+      "ERROR EDIT DOKUMEN PARTNER:",
       error
     );
 
     alert(error.message);
 
-    await loadDetail();
-
   }
 
 }
-
 
 async function hapusDokumenPartner(id) {
 
@@ -3856,6 +3929,77 @@ async function hapusDokumenPartner(id) {
 
 }
 
+async function bukaDokumenPartner(
+  dokumenId,
+  download = false
+) {
+
+  // Buka tab langsung saat tombol diklik
+  // agar tidak diblokir oleh browser.
+
+  const tabBaru =
+    window.open("", "_blank");
+
+  try {
+
+    const response =
+      await fetch(
+        `/api/proyek/partner/dokumen/${dokumenId}/file?download=${download}`,
+        {
+          credentials: "same-origin"
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+
+      throw new Error(
+        result.error ||
+        "Gagal mendapatkan URL dokumen"
+      );
+
+    }
+
+    if (!result.url) {
+
+      throw new Error(
+        "URL dokumen tidak tersedia"
+      );
+
+    }
+
+    // Arahkan browser ke presigned URL S3.
+
+    if (tabBaru && !tabBaru.closed) {
+
+      tabBaru.location.href =
+        result.url;
+
+    } else {
+
+      window.location.href =
+        result.url;
+
+    }
+
+  } catch (error) {
+
+    if (tabBaru && !tabBaru.closed) {
+      tabBaru.close();
+    }
+
+    console.error(
+      "ERROR BUKA DOKUMEN PARTNER:",
+      error
+    );
+
+    alert(error.message);
+
+  }
+
+}
 // ======================================================
 // EDIT TERMIN PARTNER
 // ======================================================
@@ -4057,6 +4201,7 @@ async function hapusTermin(id) {
 // ======================================================
 
 function renderDokumen(klien) {
+
   const container =
     document.getElementById(
       "dokumenContainer"
@@ -4069,9 +4214,8 @@ function renderDokumen(klien) {
       ? klien.dokumen
       : [];
 
-  if (
-    daftarDokumen.length === 0
-  ) {
+  if (daftarDokumen.length === 0) {
+
     container.innerHTML = `
       <div class="empty">
         Belum ada dokumen.
@@ -4084,17 +4228,15 @@ function renderDokumen(klien) {
   container.innerHTML =
     daftarDokumen
       .map(item => {
-        const checked =
-          item.is_checked === true;
+
+        const dokumenId =
+          Number(item.id);
 
         const ukuranFile =
-          Number(
-            item.ukuran_file || 0
-          );
+          Number(item.ukuran_file || 0);
 
         const ukuranTampil =
-          ukuranFile >=
-          1024 * 1024
+          ukuranFile >= 1024 * 1024
             ? `${(
                 ukuranFile /
                 (1024 * 1024)
@@ -4114,7 +4256,13 @@ function renderDokumen(klien) {
                 font-size:13px;
               ">
                 📎
-                ${item.nama_file_asli || "Dokumen"}
+                ${
+                  escapeHtml(
+                    item.nama_file_asli ||
+                    "Dokumen"
+                  )
+                }
+
                 ${
                   ukuranTampil
                     ? ` • ${ukuranTampil}`
@@ -4132,88 +4280,174 @@ function renderDokumen(klien) {
               </div>
             `;
 
-        const tombolFile =
-          item.path_file
-            ? `
-              <a
-                href="${item.path_file}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn-file btn-lihat-file"
-              >
-                Lihat
-              </a>
-
-              <a
-                href="${item.path_file}"
-                download
-                class="btn-file btn-unduh-file"
-              >
-                Unduh
-              </a>
-            `
-            : "";
-
         return `
           <div class="dokumen-item">
+
             <div class="dokumen-info">
-              <input
-                type="checkbox"
-                class="dokumen-check"
-                ${checked ? "checked" : ""}
-                onchange="
-                  toggleDokumen(
-                    ${item.id},
-                    this.checked
-                  )
-                "
-              >
 
               <div class="dokumen-detail">
+
                 <strong>
-                  ${item.nama_dokumen}
+                  ${
+                    escapeHtml(
+                      item.nama_dokumen ||
+                      "-"
+                    )
+                  }
                 </strong>
 
                 <div class="label">
                   No. Dokumen:
-                  ${item.nomor_dokumen || "-"}
-                </div>
-
-                <div class="label">
                   ${
-                    checked
-                      ? `Selesai • ${
-                          formatTanggalWaktu(
-                            item.checked_at
-                          )
-                        }`
-                      : "Belum selesai"
+                    escapeHtml(
+                      item.nomor_dokumen ||
+                      "-"
+                    )
                   }
                 </div>
 
                 ${informasiFile}
+
               </div>
+
             </div>
 
             <div class="dokumen-action">
-              ${tombolFile}
+
+              ${
+                item.path_file
+                  ? `
+                    <button
+                      type="button"
+                      class="btn-file btn-lihat-file"
+                      onclick="
+                        bukaDokumenKlien(
+                          ${dokumenId},
+                          false
+                        )
+                      "
+                    >
+                      Lihat
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-file btn-unduh-file"
+                      onclick="
+                        bukaDokumenKlien(
+                          ${dokumenId},
+                          true
+                        )
+                      "
+                    >
+                      Unduh
+                    </button>
+                  `
+                  : ""
+              }
+
+              <button
+                type="button"
+                class="btn-file btn-edit-file"
+                onclick="
+                  editDokumenKlien(
+                    ${dokumenId}
+                  )
+                "
+              >
+                Edit
+              </button>
 
               <button
                 type="button"
                 class="btn-danger"
                 onclick="
                   hapusDokumen(
-                    ${item.id}
+                    ${dokumenId}
                   )
                 "
               >
                 Hapus
               </button>
+
             </div>
+
           </div>
         `;
+
       })
       .join("");
+
+}
+
+
+// ======================================================
+// LIHAT DAN UNDUH DOKUMEN KLIEN DARI S3
+// ======================================================
+
+async function bukaDokumenKlien(
+  dokumenId,
+  download = false
+) {
+
+  const tabFile = window.open(
+    "",
+    "_blank"
+  );
+
+  try {
+
+    if (tabFile) {
+      tabFile.document.title =
+        "Memuat dokumen";
+
+      tabFile.document.body.textContent =
+        "Sedang mengambil dokumen...";
+    }
+
+    const response = await fetch(
+      `/api/proyek/klien/dokumen/${dokumenId}/file?download=${download}`
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Gagal mengambil dokumen"
+      );
+    }
+
+    if (!result.url) {
+      throw new Error(
+        "URL dokumen tidak tersedia"
+      );
+    }
+
+    if (tabFile) {
+      tabFile.location.replace(
+        result.url
+      );
+    } else {
+      window.location.href =
+        result.url;
+    }
+
+  } catch (error) {
+
+    if (tabFile && !tabFile.closed) {
+      tabFile.close();
+    }
+
+    console.error(
+      "ERROR BUKA DOKUMEN KLIEN:",
+      error
+    );
+
+    alert(error.message);
+
+  }
+
 }
 
 // ======================================================
@@ -4227,307 +4461,933 @@ const dokumenModal =
 // ======================================================
 // BUKA MODAL DOKUMEN
 // ======================================================
+// ======================================================
+// STATE DOKUMEN
+// Pastikan deklarasi ini hanya SATU KALI di file
+// ======================================================
+
+// let activeDokumenEditId = null;
+// let activePartnerDokumenUploadId = null;
+
+
+// ======================================================
+// HELPER RESET MODAL DOKUMEN
+// ======================================================
+
+function resetDokumenModal() {
+
+  const form =
+    document.getElementById(
+      "dokumenForm"
+    );
+
+  const title =
+    document.getElementById(
+      "dokumenModalTitle"
+    );
+
+  const fileLama =
+    document.getElementById(
+      "dokumenFileLama"
+    );
+
+  const saveButton =
+    document.getElementById(
+      "simpanDokumenButton"
+    );
+
+
+  // ================================================
+  // RESET STATE
+  // ================================================
+
+  activeDokumenEditId =
+    null;
+
+  activePartnerDokumenUploadId =
+    null;
+
+
+  // ================================================
+  // RESET FORM
+  // ================================================
+
+  form?.reset();
+
+
+  // ================================================
+  // RESET TITLE
+  // ================================================
+
+  if (title) {
+
+    title.textContent =
+      "Tambah Dokumen Klien";
+
+  }
+
+
+  // ================================================
+  // HILANGKAN INFO FILE LAMA
+  // ================================================
+
+  if (fileLama) {
+
+    fileLama.hidden =
+      true;
+
+    fileLama.innerHTML =
+      "";
+
+  }
+
+
+  // ================================================
+  // RESET BUTTON
+  // ================================================
+
+  if (saveButton) {
+
+    saveButton.textContent =
+      "Simpan Dokumen";
+
+    saveButton.disabled =
+      false;
+
+  }
+
+}
+
+
+// ======================================================
+// TAMBAH DOKUMEN KLIEN
+// ======================================================
+
 const tambahDokumenButton =
   document.getElementById(
     "tambahDokumenButton"
   );
 
+
 if (tambahDokumenButton) {
+
   tambahDokumenButton.addEventListener(
     "click",
     async () => {
-      if (!detailData?.klien) {
-        alert(
-          "Proyek belum memiliki klien."
+
+      try {
+
+        // ============================================
+        // CEK DATA KLIEN
+        // Jangan cek .id karena struktur detailData
+        // tidak menggunakan detailData.klien.id
+        // ============================================
+
+        if (!detailData?.klien) {
+
+          alert(
+            "Proyek belum memiliki klien."
+          );
+
+          return;
+
+        }
+
+
+        // ============================================
+        // RESET MODE
+        // ============================================
+
+        activeDokumenEditId =
+          null;
+
+        activePartnerDokumenUploadId =
+          null;
+
+
+        // ============================================
+        // RESET FORM
+        // ============================================
+
+        const form =
+          document.getElementById(
+            "dokumenForm"
+          );
+
+        form?.reset();
+
+
+        // ============================================
+        // RESET FILE LAMA
+        // ============================================
+
+        const fileLama =
+          document.getElementById(
+            "dokumenFileLama"
+          );
+
+        if (fileLama) {
+
+          fileLama.hidden =
+            true;
+
+          fileLama.innerHTML =
+            "";
+
+        }
+
+
+        // ============================================
+        // LOAD MASTER DOKUMEN
+        // ============================================
+
+        await loadMasterDokumen();
+
+
+        // ============================================
+        // TITLE
+        // ============================================
+
+        const title =
+          document.getElementById(
+            "dokumenModalTitle"
+          );
+
+        if (title) {
+
+          title.textContent =
+            "Tambah Dokumen Klien";
+
+        }
+
+
+        // ============================================
+        // BUTTON
+        // ============================================
+
+        const saveButton =
+          document.getElementById(
+            "simpanDokumenButton"
+          );
+
+        if (saveButton) {
+
+          saveButton.textContent =
+            "Simpan Dokumen";
+
+          saveButton.disabled =
+            false;
+
+        }
+
+
+        // ============================================
+        // BUKA MODAL
+        // ============================================
+
+        dokumenModal?.classList.add(
+          "show"
         );
 
-        return;
+
+      } catch (error) {
+
+        console.error(
+          "ERROR BUKA TAMBAH DOKUMEN:",
+          error
+        );
+
+
+        alert(
+          error.message ||
+          "Gagal membuka form dokumen."
+        );
+
       }
 
-      activePartnerDokumenUploadId =
-        null;
-
-      document.getElementById(
-        "dokumenForm"
-      )?.reset();
-
-      await loadMasterDokumen();
-
-      document.getElementById(
-        "dokumenModalTitle"
-      ).textContent =
-        "Tambah Dokumen Klien";
-
-      dokumenModal.classList.add(
-        "show"
-      );
     }
   );
+
 }
 
+
 // ======================================================
-// TUTUP MODAL DOKUMEN
+// BATAL / TUTUP MODAL DOKUMEN
 // ======================================================
+
 const batalDokumen =
   document.getElementById(
     "batalDokumen"
   );
 
+
 if (batalDokumen) {
+
   batalDokumen.addEventListener(
     "click",
     () => {
-      dokumenModal.classList.remove(
+
+      // ============================================
+      // TUTUP
+      // ============================================
+
+      dokumenModal?.classList.remove(
         "show"
       );
 
-      document.getElementById(
-        "dokumenForm"
-      )?.reset();
 
-      activePartnerDokumenUploadId =
-        null;
+      // ============================================
+      // RESET SEMUA STATE
+      // ============================================
+
+      resetDokumenModal();
+
     }
   );
+
 }
+
+
 // ======================================================
 // SIMPAN DOKUMEN
+// TAMBAH / EDIT KLIEN / TAMBAH PARTNER
 // ======================================================
+
 const dokumenForm =
   document.getElementById(
     "dokumenForm"
   );
 
+
 if (dokumenForm) {
+
   dokumenForm.addEventListener(
     "submit",
     async event => {
+
       event.preventDefault();
 
-      const namaDokumen =
+
+      const saveButton =
         document.getElementById(
-          "namaDokumen"
-        ).value.trim();
-
-      const nomorDokumen =
-        document.getElementById(
-          "nomorDokumen"
-        ).value.trim();
-
-      const fileInput =
-        document.getElementById(
-          "fileDokumen"
+          "simpanDokumenButton"
         );
 
-      const fileDokumen =
-        fileInput?.files?.[0];
-
-      if (!namaDokumen) {
-        alert(
-          "Nama dokumen wajib diisi."
-        );
-
-        document.getElementById(
-          "namaDokumen"
-        ).focus();
-
-        return;
-      }
-
-      if (
-          fileDokumen &&
-          fileDokumen.size >
-          10 * 1024 * 1024
-        ) {
-        alert(
-          "Ukuran file maksimal 10 MB."
-        );
-
-        return;
-      }
-
-      const formData =
-        new FormData();
-
-      formData.append(
-        "nama_dokumen",
-        namaDokumen
-      );
-
-      formData.append(
-        "nomor_dokumen",
-        nomorDokumen
-      );
-
-      if (fileDokumen) {
-        formData.append(
-          "file_dokumen",
-          fileDokumen
-        );
-      }
-
-      // Tentukan endpoint berdasarkan mode modal
-      const isDokumenPartner =
-        activePartnerDokumenUploadId !==
-        null;
-
-      let url;
-
-      if (isDokumenPartner) {
-        url =
-          `/api/proyek/partner/${activePartnerDokumenUploadId}/dokumen`;
-      } else {
-        const proyekKlienId =
-          detailData?.klien
-            ?.proyek_klien_id;
-
-        if (!proyekKlienId) {
-          alert(
-            "Data proyek klien tidak ditemukan."
-          );
-
-          return;
-        }
-
-        url =
-          `/api/proyek/klien/${proyekKlienId}/dokumen`;
-      }
-
-      const tombolSimpan =
-        dokumenForm.querySelector(
-          'button[type="submit"]'
-        );
 
       try {
-        if (tombolSimpan) {
-          tombolSimpan.disabled =
+
+        // ============================================
+        // CEGAH DOUBLE SUBMIT
+        // ============================================
+
+        if (saveButton?.disabled) {
+
+          return;
+
+        }
+
+
+        if (saveButton) {
+
+          saveButton.disabled =
             true;
 
-          tombolSimpan.textContent =
-            "Mengunggah...";
+          saveButton.textContent =
+            "Menyimpan...";
+
         }
+
+
+        // ============================================
+        // FORM DATA
+        // ============================================
+
+        const formData =
+          new FormData(
+            dokumenForm
+          );
+
+
+        // ============================================
+        // DEBUG ISI FORM
+        // ============================================
+
+        console.log(
+          "FORM DOKUMEN:",
+          Object.fromEntries(
+            formData.entries()
+          )
+        );
+
+
+        console.log(
+          "STATE DOKUMEN:",
+          {
+            activeDokumenEditId,
+            activePartnerDokumenUploadId
+          }
+        );
+
+
+        let url = "";
+let method = "";
+
+// ============================================
+// EDIT DOKUMEN PARTNER
+// ============================================
+
+if (
+  Number(activePartnerDokumenEditId) > 0
+) {
+
+  url =
+    `/api/proyek/partner/dokumen/${
+      activePartnerDokumenEditId
+    }`;
+
+  method = "PUT";
+
+}
+
+// ============================================
+// EDIT DOKUMEN KLIEN
+// ============================================
+
+else if (
+  Number(activeDokumenEditId) > 0
+) {
+
+  url =
+    `/api/proyek/klien/dokumen/${
+      activeDokumenEditId
+    }`;
+
+  method = "PUT";
+
+}
+
+// ============================================
+// TAMBAH DOKUMEN PARTNER
+// ============================================
+
+else if (
+  Number(activePartnerDokumenUploadId) > 0
+) {
+
+  url =
+    `/api/proyek/partner/${
+      activePartnerDokumenUploadId
+    }/dokumen`;
+
+  method = "POST";
+
+}
+
+// ============================================
+// TAMBAH DOKUMEN KLIEN
+// ============================================
+
+else {
+
+  const proyekKlienId =
+    Number(
+      detailData?.klien?.proyek_klien_id ||
+      detailData?.klien?.id
+    );
+
+  if (
+    !Number.isInteger(proyekKlienId) ||
+    proyekKlienId <= 0
+  ) {
+    throw new Error(
+      "ID proyek klien tidak ditemukan."
+    );
+  }
+
+  url =
+    `/api/proyek/klien/${
+      proyekKlienId
+    }/dokumen`;
+
+  method = "POST";
+
+}
+
+
+        // ============================================
+        // DEBUG REQUEST
+        // ============================================
+
+        console.log(
+          "REQUEST DOKUMEN:",
+          {
+            method,
+            url
+          }
+        );
+
+
+        // ============================================
+        // REQUEST
+        // ============================================
 
         const response =
           await fetch(
             url,
             {
-              method: "POST",
-              body: formData
+              method,
+              body:
+                formData
             }
           );
+
+
+        // ============================================
+        // RESPONSE
+        // ============================================
 
         const contentType =
           response.headers.get(
             "content-type"
           ) || "";
 
-        const result =
+
+        let result;
+
+
+        if (
           contentType.includes(
             "application/json"
           )
-            ? await response.json()
-            : {
-                error:
-                  await response.text()
-              };
+        ) {
 
-        if (!response.ok) {
+          result =
+            await response.json();
+
+        } else {
+
+          const text =
+            await response.text();
+
+
           throw new Error(
-            result.error ||
-            "Gagal mengunggah dokumen"
+            text ||
+            `Server error (${response.status})`
           );
+
         }
 
-        dokumenModal.classList.remove(
+
+        if (!response.ok) {
+
+          throw new Error(
+            result.error ||
+            "Gagal menyimpan dokumen."
+          );
+
+        }
+
+
+        console.log(
+          "DOKUMEN BERHASIL:",
+          result
+        );
+
+
+        // ============================================
+        // TUTUP MODAL
+        // ============================================
+
+        dokumenModal?.classList.remove(
           "show"
         );
 
-        dokumenForm.reset();
 
-        activePartnerDokumenUploadId =
-          null;
+        // ============================================
+        // RESET STATE
+        // ============================================
+
+        resetDokumenModal();
+
+
+        // ============================================
+        // REFRESH DETAIL
+        // ============================================
 
         await loadDetail();
 
+
       } catch (error) {
+
         console.error(
-          "ERROR UPLOAD DOKUMEN:",
+          "ERROR SIMPAN DOKUMEN:",
           error
         );
 
-        alert(error.message);
 
-      } finally {
-        if (tombolSimpan) {
-          tombolSimpan.disabled =
-            false;
+        alert(
+          error.message ||
+          "Gagal menyimpan dokumen."
+        );
 
-          tombolSimpan.textContent =
-            "Simpan";
+
+        // ============================================
+        // BUTTON AKTIF KEMBALI
+        // ============================================
+
+        if (saveButton) {
+
+          saveButton.disabled = false;
+
+          saveButton.textContent =
+            activeDokumenEditId ||
+            activePartnerDokumenEditId
+              ? "Simpan Perubahan"
+              : "Simpan Dokumen";
+
         }
+
       }
+
     }
   );
+
 }
 
 // ======================================================
-// CHECK / UNCHECK
+// EDIT DOKUMEN KLIEN
 // ======================================================
 
-async function toggleDokumen(
-  id,
-  checked
-) {
+async function editDokumenKlien(id) {
 
   try {
 
-    const response =
-      await fetch(
-        `/api/proyek/klien/dokumen/${id}/check`,
-        {
-          method: "PUT",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body:
-            JSON.stringify({
-              is_checked:
-                checked
-            })
-        }
+    const dokumen =
+      detailData?.klien?.dokumen?.find(
+        item =>
+          Number(item.id) ===
+          Number(id)
       );
 
 
-    const result =
-      await response.json();
-
-
-    if (!response.ok) {
+    if (!dokumen) {
 
       throw new Error(
-        result.error ||
-        "Gagal memperbarui dokumen"
+        "Dokumen tidak ditemukan."
       );
 
     }
 
 
-    await loadDetail();
+ // ===============================================
+// MODE EDIT DOKUMEN KLIEN
+// ===============================================
+
+activeDokumenEditId =
+  Number(id);
+
+// Nonaktifkan seluruh mode dokumen Partner
+activePartnerDokumenEditId =
+  null;
+
+activePartnerDokumenUploadId =
+  null;
+
+    // ===============================================
+    // RESET
+    // ===============================================
+
+    const form =
+      document.getElementById(
+        "dokumenForm"
+      );
+
+    form?.reset();
+
+
+    // ===============================================
+    // LOAD MASTER DOKUMEN
+    // ===============================================
+
+    await loadMasterDokumen();
+
+
+    // ===============================================
+    // TITLE
+    // ===============================================
+
+    const title =
+      document.getElementById(
+        "dokumenModalTitle"
+      );
+
+    if (title) {
+
+      title.textContent =
+        "Edit Dokumen Klien";
+
+    }
+
+
+    // ===============================================
+    // NAMA DOKUMEN
+    // ===============================================
+
+    const namaSelect =
+      document.getElementById(
+        "namaDokumen"
+      );
+
+
+    if (namaSelect) {
+
+      const namaLama =
+        String(
+          dokumen.nama_dokumen || ""
+        )
+          .trim()
+          .toLowerCase();
+
+
+      const option =
+        Array.from(
+          namaSelect.options
+        ).find(item => {
+
+          const value =
+            String(
+              item.value || ""
+            )
+              .trim()
+              .toLowerCase();
+
+
+          const text =
+            String(
+              item.textContent || ""
+            )
+              .trim()
+              .toLowerCase();
+
+
+          return (
+            value === namaLama ||
+            text === namaLama ||
+            text.startsWith(
+              `${namaLama} `
+            ) ||
+            text.startsWith(
+              `${namaLama} -`
+            )
+          );
+
+        });
+
+
+      if (option) {
+
+        namaSelect.value =
+          option.value;
+
+      } else {
+
+        console.warn(
+          "Nama dokumen tidak ditemukan di master:",
+          dokumen.nama_dokumen
+        );
+
+      }
+
+    }
+
+
+    // ===============================================
+    // NOMOR DOKUMEN
+    // ===============================================
+
+    const nomorInput =
+      document.getElementById(
+        "nomorDokumen"
+      );
+
+
+    if (nomorInput) {
+
+      nomorInput.value =
+        dokumen.nomor_dokumen ||
+        "";
+
+    }
+
+
+    // ===============================================
+    // FILE INPUT
+    // ===============================================
+
+    const fileInput =
+      document.getElementById(
+        "fileDokumen"
+      );
+
+
+    if (fileInput) {
+
+      fileInput.value = "";
+      fileInput.required = false;
+
+    }
+
+
+    // ===============================================
+    // FILE LAMA
+    // ===============================================
+
+    const fileLama =
+      document.getElementById(
+        "dokumenFileLama"
+      );
+
+
+    if (fileLama) {
+
+      if (dokumen.path_file) {
+
+        fileLama.hidden =
+          false;
+
+
+        fileLama.innerHTML = `
+
+          <div
+            style="
+              padding:12px 14px;
+              margin-bottom:16px;
+              background:#f8fafc;
+              border:1px solid #e2e8f0;
+              border-radius:10px;
+            "
+          >
+
+            <div
+              style="
+                font-size:13px;
+                color:#64748b;
+                margin-bottom:5px;
+              "
+            >
+              File saat ini
+            </div>
+
+
+            <div>
+
+              <strong>
+                ${escapeHtml(
+                  dokumen.nama_file_asli ||
+                  "Dokumen"
+                )}
+              </strong>
+
+              &nbsp;
+
+              <a
+                href="${escapeHtml(
+                  dokumen.path_file
+                )}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Lihat
+              </a>
+
+            </div>
+
+
+            <div
+              style="
+                font-size:12px;
+                color:#94a3b8;
+                margin-top:5px;
+              "
+            >
+              Kosongkan Upload Dokumen
+              jika tidak ingin mengganti file.
+            </div>
+
+          </div>
+
+        `;
+
+      } else {
+
+        fileLama.hidden =
+          false;
+
+
+        fileLama.innerHTML = `
+
+          <div
+            style="
+              padding:12px 14px;
+              margin-bottom:16px;
+              background:#f8fafc;
+              border:1px solid #e2e8f0;
+              border-radius:10px;
+              color:#64748b;
+            "
+          >
+            Dokumen ini belum memiliki file.
+          </div>
+
+        `;
+
+      }
+
+    }
+
+
+    // ===============================================
+    // BUTTON
+    // ===============================================
+
+    const saveButton =
+      document.getElementById(
+        "simpanDokumenButton"
+      );
+
+
+    if (saveButton) {
+
+      saveButton.textContent =
+        "Simpan Perubahan";
+
+    }
+
+
+    // ===============================================
+    // OPEN MODAL
+    // ===============================================
+
+    dokumenModal?.classList.add(
+      "show"
+    );
 
 
   } catch (error) {
 
-    alert(error.message);
+    console.error(
+      "ERROR EDIT DOKUMEN:",
+      error
+    );
 
-    await loadDetail();
+
+    alert(
+      error.message
+    );
 
   }
 
 }
-
 
 // ======================================================
 // HAPUS DOKUMEN
