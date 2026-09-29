@@ -366,7 +366,172 @@ function userAdalahAdmin(user) {
   );
 }
 
+// ======================================================
+// HELPER LOG EDIT KLIEN
+// ======================================================
+const BULAN_INDONESIA = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember"
+];
 
+function formatTeksLog(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  ) {
+    return "-";
+  }
+
+  return String(value).trim();
+}
+
+function formatRupiahLog(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "-";
+  }
+
+  const angka = Number(value);
+
+  if (!Number.isFinite(angka)) {
+    return formatTeksLog(value);
+  }
+
+  return `Rp ${new Intl.NumberFormat(
+    "id-ID",
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }
+  ).format(angka)}`;
+}
+
+function formatTanggalLog(value) {
+  if (!value) {
+    return "-";
+  }
+
+  let tahun;
+  let bulan;
+  let tanggal;
+
+  if (value instanceof Date) {
+    tahun = value.getUTCFullYear();
+    bulan = value.getUTCMonth() + 1;
+    tanggal = value.getUTCDate();
+  } else {
+    const cocok =
+      String(value).match(
+        /^(\d{4})-(\d{2})-(\d{2})/
+      );
+
+    if (!cocok) {
+      return formatTeksLog(value);
+    }
+
+    tahun = Number(cocok[1]);
+    bulan = Number(cocok[2]);
+    tanggal = Number(cocok[3]);
+  }
+
+  return `${tanggal} ${
+    BULAN_INDONESIA[bulan - 1]
+  } ${tahun}`;
+}
+
+function buatDetailLogKlien(data) {
+  return [
+    {
+      label: "KLIEN",
+      nilai: formatTeksLog(
+        data.perusahaan_klien
+      )
+    },
+    {
+      label: "NILAI SUBMIT",
+      nilai: formatRupiahLog(
+        data.nilai_submit
+      )
+    },
+    {
+      label: "NILAI NEGO 1",
+      nilai: formatRupiahLog(
+        data.nilai_nego_1
+      )
+    },
+    {
+      label: "NILAI NEGO 2",
+      nilai: formatRupiahLog(
+        data.nilai_nego_2
+      )
+    },
+    {
+      label: "NILAI NEGO 3",
+      nilai: formatRupiahLog(
+        data.nilai_nego_3
+      )
+    },
+    {
+      label: "TANGGAL MULAI",
+      nilai: formatTanggalLog(
+        data.tanggal_mulai
+      )
+    },
+    {
+      label: "TANGGAL AKHIR",
+      nilai: formatTanggalLog(
+        data.tanggal_akhir
+      )
+    },
+    {
+      label: "MODEL PEMBAYARAN",
+      nilai: formatTeksLog(
+        data.model_pembayaran
+      )
+    },
+    {
+      label: "STATUS PENGADAAN",
+      nilai: formatTeksLog(
+        data.status_pengadaan
+      )
+    },
+    {
+      label: "STATUS TEKNIS",
+      nilai: formatTeksLog(
+        data.status_teknis
+      )
+    },
+    {
+      label: "STATUS ADMINISTRASI",
+      nilai: formatTeksLog(
+        data.status_administrasi
+      )
+    }
+  ];
+}
+
+function gabungkanDetailLog(daftar) {
+  return daftar
+    .map(
+      item =>
+        `${item.label} = ${item.nilai}`
+    )
+    .join(", ");
+}
 // ======================================================
 // VALIDASI AKSES PROYEK
 //
@@ -1103,33 +1268,17 @@ app.get("/api/partner",
 });
 
 // CREATE PARTNER
-app.post("/api/partner", 
+app.post(
+  "/api/partner",
   async (req, res) => {
-  try {
+    const client =
+      await pool.connect();
 
-    const {
-      nama_partner,
-      inisial,
-      jenis_partner,
-      nama_pic,
-      no_pic,
-      email_pic,
-      alamat,
-      status
-    } = req.body;
+    let transaksiDimulai =
+      false;
 
-
-    if (!nama_partner) {
-
-      return res.status(400).json({
-        error: "Nama Partner wajib diisi"
-      });
-
-    }
-
-
-    const result = await pool.query(
-      `INSERT INTO partner (
+    try {
+      const {
         nama_partner,
         inisial,
         jenis_partner,
@@ -1138,85 +1287,273 @@ app.post("/api/partner",
         email_pic,
         alamat,
         status
-      )
-      VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8
-      )
-      RETURNING *`,
-      [
-        nama_partner,
-        inisial,
-        jenis_partner,
-        nama_pic,
-        no_pic,
-        email_pic,
-        alamat,
-        status || "Aktif"
-      ]
-    );
+      } = req.body;
 
 
-    res.status(201).json(
-      result.rows[0]
-    );
+      // ================================================
+      // VALIDASI
+      // ================================================
+
+      if (
+        !nama_partner ||
+        !String(
+          nama_partner
+        ).trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "Nama Partner wajib diisi"
+        });
+      }
 
 
-  } catch (error) {
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
 
-    console.error(
-      "ERROR CREATE PARTNER:",
-      error
-    );
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
 
 
-    res.status(500).json({
-      error: error.message
-    });
+      // ================================================
+      // SIMPAN PARTNER
+      // ================================================
 
+      const result =
+        await client.query(
+          `
+            INSERT INTO partner (
+              nama_partner,
+              inisial,
+              jenis_partner,
+              nama_pic,
+              no_pic,
+              email_pic,
+              alamat,
+              status
+            )
+
+            VALUES (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              $7,
+              $8
+            )
+
+            RETURNING *
+          `,
+          [
+            String(
+              nama_partner
+            ).trim(),
+
+            String(
+              inisial || ""
+            ).trim() || null,
+
+            String(
+              jenis_partner || ""
+            ).trim() || null,
+
+            String(
+              nama_pic || ""
+            ).trim() || null,
+
+            String(
+              no_pic || ""
+            ).trim() || null,
+
+            String(
+              email_pic || ""
+            ).trim() || null,
+
+            String(
+              alamat || ""
+            ).trim() || null,
+
+            String(
+              status || "Aktif"
+            ).trim()
+          ]
+        );
+
+
+      const partnerBaru =
+        result.rows[0];
+
+
+      // ================================================
+      // FORMAT NILAI LOG
+      // ================================================
+
+      const formatNilaiPartner =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      const nilaiBaruLog = [
+        `NAMA PARTNER = ${
+          formatNilaiPartner(
+            partnerBaru.nama_partner
+          )
+        }`,
+
+        `INISIAL = ${
+          formatNilaiPartner(
+            partnerBaru.inisial
+          )
+        }`,
+
+        `JENIS PARTNER = ${
+          formatNilaiPartner(
+            partnerBaru.jenis_partner
+          )
+        }`,
+
+        `NAMA PIC = ${
+          formatNilaiPartner(
+            partnerBaru.nama_pic
+          )
+        }`,
+
+        `NO. PIC = ${
+          formatNilaiPartner(
+            partnerBaru.no_pic
+          )
+        }`,
+
+        `EMAIL PIC = ${
+          formatNilaiPartner(
+            partnerBaru.email_pic
+          )
+        }`,
+
+        `ALAMAT = ${
+          formatNilaiPartner(
+            partnerBaru.alamat
+          )
+        }`,
+
+        `STATUS = ${
+          formatNilaiPartner(
+            partnerBaru.status
+          )
+        }`
+      ].join(", ");
+
+
+      // ================================================
+      // SIMPAN ACTIVITY LOG
+      // CREATE HANYA NILAI BARU
+      // ================================================
+
+      await simpanActivityLog(
+        client,
+        {
+          ...getActivityUser(req),
+
+          aktivitas: "CREATE",
+
+          modul:
+            "MASTER PARTNER",
+
+          // Master partner memakai ID partner
+          entity_id:
+            partnerBaru.id,
+
+          entity_nama:
+            partnerBaru.nama_partner,
+
+          field_name:
+            "DATA PARTNER",
+
+          nilai_lama: null,
+
+          nilai_baru:
+            nilaiBaruLog,
+
+          deskripsi:
+            "menambahkan master partner"
+        }
+      );
+
+
+      // ================================================
+      // COMMIT
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
+
+
+      return res
+        .status(201)
+        .json(partnerBaru);
+
+    } catch (error) {
+      if (transaksiDimulai) {
+        try {
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK CREATE PARTNER:",
+            rollbackError
+          );
+        }
+      }
+
+
+      console.error(
+        "ERROR CREATE PARTNER:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
+
+    } finally {
+      client.release();
+    }
   }
-});
+);
 
 // UPDATE PARTNER
-app.put("/api/partner/:id", 
+app.put(
+  "/api/partner/:id",
   async (req, res) => {
-  try {
+    const client =
+      await pool.connect();
 
-    const { id } = req.params;
+    let transaksiDimulai =
+      false;
 
-
-    const {
-      nama_partner,
-      inisial,
-      jenis_partner,
-      nama_pic,
-      no_pic,
-      email_pic,
-      alamat,
-      status
-    } = req.body;
+    try {
+      const id =
+        Number(req.params.id);
 
 
-    const result = await pool.query(
-      `UPDATE partner
-       SET nama_partner = $1,
-           inisial = $2,
-           jenis_partner = $3,
-           nama_pic = $4,
-           no_pic = $5,
-           email_pic = $6,
-           alamat = $7,
-           status = $8,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9
-       RETURNING *`,
-      [
+      const {
         nama_partner,
         inisial,
         jenis_partner,
@@ -1224,83 +1561,728 @@ app.put("/api/partner/:id",
         no_pic,
         email_pic,
         alamat,
-        status,
-        id
-      ]
-    );
+        status
+      } = req.body;
 
 
-    if (result.rows.length === 0) {
+      // ================================================
+      // VALIDASI
+      // ================================================
 
-      return res.status(404).json({
-        error: "Data partner tidak ditemukan"
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID partner tidak valid"
+        });
+      }
+
+
+      if (
+        !nama_partner ||
+        !String(
+          nama_partner
+        ).trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "Nama Partner wajib diisi"
+        });
+      }
+
+
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
+
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
+
+
+      // ================================================
+      // AMBIL DATA PARTNER LAMA
+      // ================================================
+
+      const oldResult =
+        await client.query(
+          `
+            SELECT
+              id,
+              nama_partner,
+              inisial,
+              jenis_partner,
+              nama_pic,
+              no_pic,
+              email_pic,
+              alamat,
+              status
+
+            FROM partner
+
+            WHERE id = $1
+
+            FOR UPDATE
+          `,
+          [id]
+        );
+
+
+      if (
+        oldResult.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
+
+        return res.status(404).json({
+          error:
+            "Data partner tidak ditemukan"
+        });
+      }
+
+
+      const partnerLama =
+        oldResult.rows[0];
+
+
+      // ================================================
+      // UPDATE PARTNER
+      // ================================================
+
+      const result =
+        await client.query(
+          `
+            UPDATE partner
+
+            SET
+              nama_partner = $1,
+              inisial = $2,
+              jenis_partner = $3,
+              nama_pic = $4,
+              no_pic = $5,
+              email_pic = $6,
+              alamat = $7,
+              status = $8,
+              updated_at =
+                CURRENT_TIMESTAMP
+
+            WHERE id = $9
+
+            RETURNING *
+          `,
+          [
+            String(
+              nama_partner
+            ).trim(),
+
+            String(
+              inisial || ""
+            ).trim() || null,
+
+            String(
+              jenis_partner || ""
+            ).trim() || null,
+
+            String(
+              nama_pic || ""
+            ).trim() || null,
+
+            String(
+              no_pic || ""
+            ).trim() || null,
+
+            String(
+              email_pic || ""
+            ).trim() || null,
+
+            String(
+              alamat || ""
+            ).trim() || null,
+
+            String(
+              status || "Aktif"
+            ).trim(),
+
+            id
+          ]
+        );
+
+
+      const partnerBaru =
+        result.rows[0];
+
+
+      // ================================================
+      // FORMAT NILAI LOG
+      // ================================================
+
+      const formatNilaiPartner =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      const detailPartnerLama = [
+        {
+          label:
+            "NAMA PARTNER",
+
+          nilai:
+            formatNilaiPartner(
+              partnerLama.nama_partner
+            )
+        },
+        {
+          label:
+            "INISIAL",
+
+          nilai:
+            formatNilaiPartner(
+              partnerLama.inisial
+            )
+        },
+        {
+          label:
+            "JENIS PARTNER",
+
+          nilai:
+            formatNilaiPartner(
+              partnerLama.jenis_partner
+            )
+        },
+        {
+          label:
+            "NAMA PIC",
+
+          nilai:
+            formatNilaiPartner(
+              partnerLama.nama_pic
+            )
+        },
+        {
+          label:
+            "NO. PIC",
+
+          nilai:
+            formatNilaiPartner(
+              partnerLama.no_pic
+            )
+        },
+        {
+          label:
+            "EMAIL PIC",
+
+          nilai:
+            formatNilaiPartner(
+              partnerLama.email_pic
+            )
+        },
+        {
+          label:
+            "ALAMAT",
+
+          nilai:
+            formatNilaiPartner(
+              partnerLama.alamat
+            )
+        },
+        {
+          label:
+            "STATUS",
+
+          nilai:
+            formatNilaiPartner(
+              partnerLama.status
+            )
+        }
+      ];
+
+
+      const detailPartnerBaru = [
+        {
+          label:
+            "NAMA PARTNER",
+
+          nilai:
+            formatNilaiPartner(
+              partnerBaru.nama_partner
+            )
+        },
+        {
+          label:
+            "INISIAL",
+
+          nilai:
+            formatNilaiPartner(
+              partnerBaru.inisial
+            )
+        },
+        {
+          label:
+            "JENIS PARTNER",
+
+          nilai:
+            formatNilaiPartner(
+              partnerBaru.jenis_partner
+            )
+        },
+        {
+          label:
+            "NAMA PIC",
+
+          nilai:
+            formatNilaiPartner(
+              partnerBaru.nama_pic
+            )
+        },
+        {
+          label:
+            "NO. PIC",
+
+          nilai:
+            formatNilaiPartner(
+              partnerBaru.no_pic
+            )
+        },
+        {
+          label:
+            "EMAIL PIC",
+
+          nilai:
+            formatNilaiPartner(
+              partnerBaru.email_pic
+            )
+        },
+        {
+          label:
+            "ALAMAT",
+
+          nilai:
+            formatNilaiPartner(
+              partnerBaru.alamat
+            )
+        },
+        {
+          label:
+            "STATUS",
+
+          nilai:
+            formatNilaiPartner(
+              partnerBaru.status
+            )
+        }
+      ];
+
+
+      // ================================================
+      // HANYA AMBIL FIELD YANG BERUBAH
+      // ================================================
+
+      const perubahanPartner =
+        detailPartnerBaru
+          .map(
+            (
+              itemBaru,
+              index
+            ) => ({
+              label:
+                itemBaru.label,
+
+              nilai_lama:
+                detailPartnerLama[index]
+                  .nilai,
+
+              nilai_baru:
+                itemBaru.nilai
+            })
+          )
+          .filter(
+            item =>
+              item.nilai_lama !==
+              item.nilai_baru
+          );
+
+
+      // ================================================
+      // SIMPAN SATU ACTIVITY LOG
+      // ================================================
+
+      if (
+        perubahanPartner.length > 0
+      ) {
+        await simpanActivityLog(
+          client,
+          {
+            ...getActivityUser(req),
+
+            aktivitas: "UPDATE",
+
+            modul:
+              "MASTER PARTNER",
+
+            // Master partner menggunakan ID partner
+            entity_id:
+              partnerBaru.id,
+
+            entity_nama:
+              partnerBaru.nama_partner,
+
+            field_name:
+              "DATA PARTNER",
+
+            nilai_lama:
+              perubahanPartner
+                .map(
+                  item =>
+                    `${item.label} = ${item.nilai_lama}`
+                )
+                .join(", "),
+
+            nilai_baru:
+              perubahanPartner
+                .map(
+                  item =>
+                    `${item.label} = ${item.nilai_baru}`
+                )
+                .join(", "),
+
+            deskripsi:
+              "memperbarui master partner"
+          }
+        );
+      }
+
+
+      // ================================================
+      // COMMIT
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
+
+
+      return res.json(
+        partnerBaru
+      );
+
+    } catch (error) {
+      if (transaksiDimulai) {
+        try {
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK UPDATE PARTNER:",
+            rollbackError
+          );
+        }
+      }
+
+
+      console.error(
+        "ERROR UPDATE PARTNER:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          error.message
       });
 
+    } finally {
+      client.release();
     }
-
-
-    res.json(result.rows[0]);
-
-
-  } catch (error) {
-
-    console.error(
-      "ERROR UPDATE PARTNER:",
-      error
-    );
-
-
-    res.status(500).json({
-      error: error.message
-    });
-
   }
-});
+);
 
 // DELETE PARTNER
-app.delete("/api/partner/:id", 
+app.delete(
+  "/api/partner/:id",
   async (req, res) => {
-  try {
+    const client =
+      await pool.connect();
 
-    const { id } = req.params;
+    let transaksiDimulai =
+      false;
 
-
-    const result = await pool.query(
-      `DELETE FROM partner
-       WHERE id = $1
-       RETURNING *`,
-      [id]
-    );
+    try {
+      const id =
+        Number(req.params.id);
 
 
-    if (result.rows.length === 0) {
+      // ================================================
+      // VALIDASI ID
+      // ================================================
 
-      return res.status(404).json({
-        error: "Data partner tidak ditemukan"
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID partner tidak valid"
+        });
+      }
+
+
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
+
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
+
+
+      // ================================================
+      // AMBIL DATA PARTNER LAMA
+      // ================================================
+
+      const oldResult =
+        await client.query(
+          `
+            SELECT
+              id,
+              nama_partner,
+              inisial,
+              jenis_partner,
+              nama_pic,
+              no_pic,
+              email_pic,
+              alamat,
+              status
+
+            FROM partner
+
+            WHERE id = $1
+
+            FOR UPDATE
+          `,
+          [id]
+        );
+
+
+      if (
+        oldResult.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
+
+        return res.status(404).json({
+          error:
+            "Data partner tidak ditemukan"
+        });
+      }
+
+
+      const partnerLama =
+        oldResult.rows[0];
+
+
+      // ================================================
+      // HAPUS PARTNER
+      // ================================================
+
+      const result =
+        await client.query(
+          `
+            DELETE FROM partner
+
+            WHERE id = $1
+
+            RETURNING *
+          `,
+          [id]
+        );
+
+
+      if (
+        result.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
+
+        return res.status(404).json({
+          error:
+            "Data partner tidak ditemukan"
+        });
+      }
+
+
+      // ================================================
+      // FORMAT NILAI LAMA
+      // ================================================
+
+      const formatNilaiPartner =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      const nilaiLamaLog = [
+        `NAMA PARTNER = ${
+          formatNilaiPartner(
+            partnerLama.nama_partner
+          )
+        }`,
+
+        `INISIAL = ${
+          formatNilaiPartner(
+            partnerLama.inisial
+          )
+        }`,
+
+        `JENIS PARTNER = ${
+          formatNilaiPartner(
+            partnerLama.jenis_partner
+          )
+        }`,
+
+        `NAMA PIC = ${
+          formatNilaiPartner(
+            partnerLama.nama_pic
+          )
+        }`,
+
+        `NO. PIC = ${
+          formatNilaiPartner(
+            partnerLama.no_pic
+          )
+        }`,
+
+        `EMAIL PIC = ${
+          formatNilaiPartner(
+            partnerLama.email_pic
+          )
+        }`,
+
+        `ALAMAT = ${
+          formatNilaiPartner(
+            partnerLama.alamat
+          )
+        }`,
+
+        `STATUS = ${
+          formatNilaiPartner(
+            partnerLama.status
+          )
+        }`
+      ].join(", ");
+
+
+      // ================================================
+      // SIMPAN ACTIVITY LOG
+      // DELETE HANYA NILAI LAMA
+      // ================================================
+
+      await simpanActivityLog(
+        client,
+        {
+          ...getActivityUser(req),
+
+          aktivitas: "DELETE",
+
+          modul:
+            "MASTER PARTNER",
+
+          // Master partner menggunakan ID partner
+          entity_id:
+            partnerLama.id,
+
+          entity_nama:
+            partnerLama.nama_partner,
+
+          field_name:
+            "DATA PARTNER",
+
+          nilai_lama:
+            nilaiLamaLog,
+
+          nilai_baru: null,
+
+          deskripsi:
+            "menghapus master partner"
+        }
+      );
+
+
+      // ================================================
+      // COMMIT
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
+
+
+      return res.json({
+        message:
+          "Data partner berhasil dihapus"
       });
 
+    } catch (error) {
+      if (transaksiDimulai) {
+        try {
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK DELETE PARTNER:",
+            rollbackError
+          );
+        }
+      }
+
+
+      console.error(
+        "ERROR DELETE PARTNER:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
+
+    } finally {
+      client.release();
     }
-
-
-    res.json({
-      message: "Data partner berhasil dihapus"
-    });
-
-
-  } catch (error) {
-
-    console.error(
-      "ERROR DELETE PARTNER:",
-      error
-    );
-
-
-    res.status(500).json({
-      error: error.message
-    });
-
   }
-});
+);
 
 // ======================================================
 // IMPOR MASTER KLIEN
@@ -5296,7 +6278,7 @@ app.post(
       }
 
 
-      // ==================================================
+// ==================================================
 // ACTIVITY LOG - CREATE PROYEK
 // ==================================================
 
@@ -6180,9 +7162,7 @@ app.get("/api/proyek/:id/detail",
     // TERMIN PEMBAYARAN KLIEN
     // ======================================================
 
-// ======================================================
 // EDIT TERMIN KLIEN
-// ======================================================
 
 app.put(
   "/api/proyek/klien/termin/:id",
@@ -6197,6 +7177,7 @@ app.put(
       const terminId =
         Number(req.params.id);
 
+
       if (
         !Number.isInteger(terminId) ||
         terminId <= 0
@@ -6206,6 +7187,7 @@ app.put(
             "ID termin klien tidak valid"
         });
       }
+
 
       const {
         nama_termin,
@@ -6218,6 +7200,7 @@ app.put(
         syarat_pembayaran
       } = req.body;
 
+
       if (
         !nama_termin ||
         !String(nama_termin).trim()
@@ -6228,33 +7211,57 @@ app.put(
         });
       }
 
+
       await client.query("BEGIN");
 
-      transaksiDimulai =
-        true;
+      transaksiDimulai = true;
+
 
       // ================================================
-      // AMBIL TERMIN DAN PROYEK KLIEN
+      // AMBIL TERMIN LAMA DAN INFORMASI PROYEK
       // ================================================
 
       const terminResult =
         await client.query(
           `
-          SELECT
-            id,
-            proyek_klien_id
-          FROM public.proyek_klien_termin
-          WHERE id = $1
-          FOR UPDATE
+            SELECT
+              t.id,
+              t.proyek_klien_id,
+              t.nama_termin,
+              t.persentase,
+              t.nominal,
+              t.status_pembayaran,
+              t.tanggal_jatuh_tempo,
+              t.tanggal_bayar,
+              t.syarat_pembayaran,
+
+              pk.proyek_id,
+              p.nama_proyek
+
+            FROM public.proyek_klien_termin t
+
+            JOIN public.proyek_klien pk
+              ON pk.id = t.proyek_klien_id
+
+            JOIN public.proyek p
+              ON p.id = pk.proyek_id
+
+            WHERE t.id = $1
+
+            FOR UPDATE OF t
           `,
           [terminId]
         );
 
-      if (terminResult.rowCount === 0) {
-        await client.query("ROLLBACK");
 
-        transaksiDimulai =
-          false;
+      if (
+        terminResult.rowCount === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
 
         return res.status(404).json({
           error:
@@ -6262,15 +7269,30 @@ app.put(
         });
       }
 
+
+      const dataTerminLama =
+        terminResult.rows[0];
+
       const proyekKlienId =
         Number(
-          terminResult
-            .rows[0]
+          dataTerminLama
             .proyek_klien_id
         );
 
+      const proyekId =
+        Number(
+          dataTerminLama.proyek_id
+        );
+
+      const namaProyek =
+        dataTerminLama.nama_proyek;
+
+
       // ================================================
-      // AMBIL NILAI FINAL KLIEN
+      // AMBIL NILAI FINAL
+      //
+      // HELPER INI TETAP DIGUNAKAN AGAR NILAI FINAL
+      // MENGIKUTI SUMMARY JIKA NILAI SUBMIT KOSONG
       // ================================================
 
       const nilaiFinalAsli =
@@ -6279,17 +7301,20 @@ app.put(
           proyekKlienId
         );
 
-      if (nilaiFinalAsli === null) {
-        await client.query("ROLLBACK");
 
-        transaksiDimulai =
-          false;
+      if (nilaiFinalAsli === null) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
 
         return res.status(404).json({
           error:
             "Data proyek klien tidak ditemukan"
         });
       }
+
 
       // ================================================
       // NORMALISASI NILAI
@@ -6302,6 +7327,7 @@ app.put(
           ? null
           : Number(persentase);
 
+
       let nilaiNominal =
         nominal === null ||
         nominal === undefined ||
@@ -6309,37 +7335,29 @@ app.put(
           ? null
           : Number(nominal);
 
+
+      const inputTerakhir =
+        String(
+          input_terakhir || ""
+        )
+          .trim()
+          .toLowerCase();
+
+
       // ================================================
-      // JIKA NILAI FINAL SUDAH TERSEDIA
+      // NILAI FINAL TERSEDIA
       // ================================================
 
       if (nilaiFinalAsli > 0) {
-        if (input_terakhir === "nominal") {
-          if (
-            !Number.isFinite(
-              nilaiNominal
-            ) ||
-            nilaiNominal <= 0
-          ) {
-            await client.query(
-              "ROLLBACK"
-            );
+        // ==============================================
+        // INPUT PERSENTASE
+        // NOMINAL DIHITUNG OTOMATIS
+        // ==============================================
 
-            transaksiDimulai =
-              false;
-
-            return res.status(400).json({
-              error:
-                "Nominal termin harus lebih dari Rp 0"
-            });
-          }
-
-          nilaiPersentase =
-            nilaiNominal /
-            nilaiFinalAsli *
-            100;
-
-        } else {
+        if (
+          inputTerakhir ===
+          "persentase"
+        ) {
           if (
             !Number.isFinite(
               nilaiPersentase
@@ -6351,8 +7369,7 @@ app.put(
               "ROLLBACK"
             );
 
-            transaksiDimulai =
-              false;
+            transaksiDimulai = false;
 
             return res.status(400).json({
               error:
@@ -6360,12 +7377,85 @@ app.put(
             });
           }
 
+
           nilaiNominal =
-            nilaiFinalAsli *
-            nilaiPersentase /
-            100;
+            (
+              nilaiFinalAsli *
+              nilaiPersentase
+            ) / 100;
         }
 
+        // ==============================================
+        // INPUT NOMINAL
+        // PERSENTASE DIHITUNG OTOMATIS
+        // ==============================================
+
+        else if (
+          inputTerakhir ===
+          "nominal"
+        ) {
+          if (
+            !Number.isFinite(
+              nilaiNominal
+            ) ||
+            nilaiNominal <= 0
+          ) {
+            await client.query(
+              "ROLLBACK"
+            );
+
+            transaksiDimulai = false;
+
+            return res.status(400).json({
+              error:
+                "Nominal termin harus lebih dari Rp 0"
+            });
+          }
+
+
+          nilaiPersentase =
+            (
+              nilaiNominal /
+              nilaiFinalAsli
+            ) * 100;
+
+
+          if (
+            nilaiPersentase <= 0 ||
+            nilaiPersentase > 100
+          ) {
+            await client.query(
+              "ROLLBACK"
+            );
+
+            transaksiDimulai = false;
+
+            return res.status(400).json({
+              error:
+                "Nominal termin tidak boleh melebihi nilai final proyek"
+            });
+          }
+        }
+
+        // ==============================================
+        // INPUT TERAKHIR TIDAK VALID
+        // ==============================================
+
+        else {
+          await client.query(
+            "ROLLBACK"
+          );
+
+          transaksiDimulai = false;
+
+          return res.status(400).json({
+            error:
+              "Input terakhir harus persentase atau nominal"
+          });
+        }
+
+
+        // Simpan keduanya
         nilaiPersentase =
           Number(
             nilaiPersentase.toFixed(2)
@@ -6376,23 +7466,25 @@ app.put(
             nilaiNominal.toFixed(2)
           );
 
+
         // ==============================================
-        // TOTAL TERMIN LAIN, KECUALI TERMIN YANG DIEDIT
+        // TOTAL TERMIN LAIN
+        // KECUALI TERMIN YANG SEDANG DIEDIT
         // ==============================================
 
         const totalResult =
           await client.query(
             `
-            SELECT
-              COALESCE(
-                SUM(persentase),
-                0
-              ) AS total_persentase
+              SELECT
+                COALESCE(
+                  SUM(persentase),
+                  0
+                ) AS total_persentase
 
-            FROM public.proyek_klien_termin
+              FROM public.proyek_klien_termin
 
-            WHERE proyek_klien_id = $1
-              AND id <> $2
+              WHERE proyek_klien_id = $1
+                AND id <> $2
             `,
             [
               proyekKlienId,
@@ -6400,12 +7492,14 @@ app.put(
             ]
           );
 
+
         const totalPersentaseLain =
           Number(
             totalResult
               .rows[0]
               .total_persentase || 0
           );
+
 
         if (
           totalPersentaseLain +
@@ -6416,8 +7510,7 @@ app.put(
             "ROLLBACK"
           );
 
-          transaksiDimulai =
-            false;
+          transaksiDimulai = false;
 
           return res.status(400).json({
             error:
@@ -6425,12 +7518,13 @@ app.put(
               `Total termin lain ${totalPersentaseLain.toFixed(2)}%.`
           });
         }
+      }
 
-      } else {
-        // ================================================
-        // NILAI FINAL BELUM TERSEDIA
-        // ================================================
+      // ================================================
+      // NILAI FINAL BELUM TERSEDIA
+      // ================================================
 
+      else {
         if (
           !Number.isFinite(
             nilaiNominal
@@ -6441,8 +7535,7 @@ app.put(
             "ROLLBACK"
           );
 
-          transaksiDimulai =
-            false;
+          transaksiDimulai = false;
 
           return res.status(400).json({
             error:
@@ -6450,14 +7543,19 @@ app.put(
           });
         }
 
+
         nilaiNominal =
           Number(
             nilaiNominal.toFixed(2)
           );
 
-        nilaiPersentase =
-          null;
+        /*
+         * Persentase dihitung ulang berdasarkan
+         * nilai final Summary setelah UPDATE.
+         */
+        nilaiPersentase = null;
       }
+
 
       // ================================================
       // UPDATE TERMIN
@@ -6465,18 +7563,18 @@ app.put(
 
       await client.query(
         `
-        UPDATE public.proyek_klien_termin
+          UPDATE public.proyek_klien_termin
 
-        SET
-          nama_termin = $1,
-          persentase = $2,
-          nominal = $3,
-          status_pembayaran = $4,
-          tanggal_jatuh_tempo = $5,
-          tanggal_bayar = $6,
-          syarat_pembayaran = $7
+          SET
+            nama_termin = $1,
+            persentase = $2,
+            nominal = $3,
+            status_pembayaran = $4,
+            tanggal_jatuh_tempo = $5,
+            tanggal_bayar = $6,
+            syarat_pembayaran = $7
 
-        WHERE id = $8
+          WHERE id = $8
         `,
         [
           String(
@@ -6504,20 +7602,40 @@ app.put(
         ]
       );
 
+
       // ================================================
-      // JIKA NILAI FINAL KOSONG, HITUNG ULANG SEMUA %
+      // JIKA NILAI FINAL BELUM TERSEDIA,
+      // HITUNG ULANG BERDASARKAN SUMMARY
       // ================================================
 
       let nilaiFinalEfektif =
         nilaiFinalAsli;
 
+
       if (nilaiFinalAsli <= 0) {
-        nilaiFinalEfektif =
+        const perhitungan =
           await hitungUlangPersentaseKlien(
             client,
             proyekKlienId
           );
+
+
+        /*
+         * Mendukung helper yang mengembalikan object
+         * maupun langsung berupa angka.
+         */
+        nilaiFinalEfektif =
+          perhitungan &&
+          typeof perhitungan === "object"
+            ? Number(
+                perhitungan.nilai_final ||
+                0
+              )
+            : Number(
+                perhitungan || 0
+              );
       }
+
 
       // ================================================
       // AMBIL DATA HASIL UPDATE
@@ -6526,33 +7644,326 @@ app.put(
       const hasilResult =
         await client.query(
           `
-          SELECT
-            id,
-            proyek_klien_id,
-            nama_termin,
-            persentase,
-            nominal,
-            status_pembayaran,
-            tanggal_jatuh_tempo,
-            tanggal_bayar,
-            syarat_pembayaran
+            SELECT
+              id,
+              proyek_klien_id,
+              nama_termin,
+              persentase,
+              nominal,
+              status_pembayaran,
+              tanggal_jatuh_tempo,
+              tanggal_bayar,
+              syarat_pembayaran
 
-          FROM public.proyek_klien_termin
+            FROM public.proyek_klien_termin
 
-          WHERE id = $1
+            WHERE id = $1
           `,
           [terminId]
         );
 
+
+      const dataTerminBaru =
+        hasilResult.rows[0];
+
+
+      // ================================================
+      // FORMAT ACTIVITY LOG
+      // ================================================
+
+      const formatTeksTerminLog =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      const formatRupiahTerminLog =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            value === ""
+          ) {
+            return "-";
+          }
+
+          const angka =
+            Number(value);
+
+          if (!Number.isFinite(angka)) {
+            return String(value);
+          }
+
+          return `Rp ${new Intl.NumberFormat(
+            "id-ID",
+            {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
+            }
+          ).format(angka)}`;
+        };
+
+
+      const formatPersentaseTerminLog =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            value === ""
+          ) {
+            return "-";
+          }
+
+          const angka =
+            Number(value);
+
+          if (!Number.isFinite(angka)) {
+            return String(value);
+          }
+
+          return `${
+            new Intl.NumberFormat(
+              "id-ID",
+              {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+              }
+            ).format(angka)
+          }%`;
+        };
+
+
+      const formatTanggalTerminLog =
+        value => {
+          if (!value) {
+            return "-";
+          }
+
+          const daftarBulan = [
+            "Januari",
+            "Februari",
+            "Maret",
+            "April",
+            "Mei",
+            "Juni",
+            "Juli",
+            "Agustus",
+            "September",
+            "Oktober",
+            "November",
+            "Desember"
+          ];
+
+          let tahun;
+          let bulan;
+          let tanggal;
+
+          if (value instanceof Date) {
+            tahun =
+              value.getUTCFullYear();
+
+            bulan =
+              value.getUTCMonth() + 1;
+
+            tanggal =
+              value.getUTCDate();
+          } else {
+            const cocok =
+              String(value).match(
+                /^(\d{4})-(\d{2})-(\d{2})/
+              );
+
+            if (!cocok) {
+              return String(value);
+            }
+
+            tahun =
+              Number(cocok[1]);
+
+            bulan =
+              Number(cocok[2]);
+
+            tanggal =
+              Number(cocok[3]);
+          }
+
+          return `${tanggal} ${
+            daftarBulan[bulan - 1]
+          } ${tahun}`;
+        };
+
+
+      const buatDetailTerminLog =
+        data => [
+          {
+            label:
+              "NAMA TERMIN",
+
+            nilai:
+              formatTeksTerminLog(
+                data.nama_termin
+              )
+          },
+          {
+            label:
+              "PERSENTASE",
+
+            nilai:
+              formatPersentaseTerminLog(
+                data.persentase
+              )
+          },
+          {
+            label:
+              "NOMINAL",
+
+            nilai:
+              formatRupiahTerminLog(
+                data.nominal
+              )
+          },
+          {
+            label:
+              "STATUS PEMBAYARAN",
+
+            nilai:
+              formatTeksTerminLog(
+                data.status_pembayaran
+              )
+          },
+          {
+            label:
+              "TANGGAL JATUH TEMPO",
+
+            nilai:
+              formatTanggalTerminLog(
+                data.tanggal_jatuh_tempo
+              )
+          },
+          {
+            label:
+              "TANGGAL BAYAR",
+
+            nilai:
+              formatTanggalTerminLog(
+                data.tanggal_bayar
+              )
+          },
+          {
+            label:
+              "SYARAT PEMBAYARAN",
+
+            nilai:
+              formatTeksTerminLog(
+                data.syarat_pembayaran
+              )
+          }
+        ];
+
+
+      const detailTerminLama =
+        buatDetailTerminLog(
+          dataTerminLama
+        );
+
+      const detailTerminBaru =
+        buatDetailTerminLog(
+          dataTerminBaru
+        );
+
+
+      // ================================================
+      // HANYA CATAT FIELD YANG BERUBAH
+      // ================================================
+
+      const perubahanTermin =
+        detailTerminBaru
+          .map(
+            (
+              itemBaru,
+              index
+            ) => ({
+              label:
+                itemBaru.label,
+
+              nilai_lama:
+                detailTerminLama[index]
+                  .nilai,
+
+              nilai_baru:
+                itemBaru.nilai
+            })
+          )
+          .filter(
+            item =>
+              item.nilai_lama !==
+              item.nilai_baru
+          );
+
+
+      // ================================================
+      // SIMPAN SATU ACTIVITY LOG
+      // ================================================
+
+      if (
+        perubahanTermin.length > 0
+      ) {
+        await simpanActivityLog(
+          client,
+          {
+            ...getActivityUser(req),
+
+            aktivitas: "UPDATE",
+            modul: "PROYEK",
+
+            // Menggunakan proyek ID
+            entity_id: proyekId,
+            entity_nama: namaProyek,
+
+            field_name:
+              "TERMIN KLIEN",
+
+            nilai_lama:
+              perubahanTermin
+                .map(
+                  item =>
+                    `${item.label} = ${item.nilai_lama}`
+                )
+                .join(", "),
+
+            nilai_baru:
+              perubahanTermin
+                .map(
+                  item =>
+                    `${item.label} = ${item.nilai_baru}`
+                )
+                .join(", "),
+
+            deskripsi:
+              "memperbarui termin klien"
+          }
+        );
+      }
+
+
       await client.query("COMMIT");
 
-      transaksiDimulai =
-        false;
+      transaksiDimulai = false;
+
 
       console.log(
         "TERMIN KLIEN DIPERBARUI:",
-        hasilResult.rows[0]
+        dataTerminBaru
       );
+
 
       return res.json({
         message:
@@ -6565,7 +7976,7 @@ app.put(
           nilaiFinalEfektif,
 
         data:
-          hasilResult.rows[0]
+          dataTerminBaru
       });
 
     } catch (error) {
@@ -6574,9 +7985,7 @@ app.put(
           await client.query(
             "ROLLBACK"
           );
-        } catch (
-          rollbackError
-        ) {
+        } catch (rollbackError) {
           console.error(
             "ERROR ROLLBACK TERMIN KLIEN:",
             rollbackError
@@ -6584,10 +7993,12 @@ app.put(
         }
       }
 
+
       console.error(
         "ERROR UPDATE TERMIN KLIEN:",
         error
       );
+
 
       return res.status(500).json({
         error:
@@ -6600,9 +8011,7 @@ app.put(
   }
 );
 
-    // ======================================================
-    // DELETE TERMIN KLIEN
-    // ======================================================
+// DELETE TERMIN KLIEN
 
     app.delete(
       "/api/proyek/klien/termin/:id",
@@ -7295,22 +8704,27 @@ app.post(
     try {
       await client.query("BEGIN");
 
+
       const proyekKlienId =
         Number(
           req.params.proyekKlienId
         );
 
+
       if (
         !Number.isInteger(proyekKlienId) ||
         proyekKlienId <= 0
       ) {
-        await client.query("ROLLBACK");
+        await client.query(
+          "ROLLBACK"
+        );
 
         return res.status(400).json({
           error:
             "ID proyek klien tidak valid"
         });
       }
+
 
       const {
         nama_termin,
@@ -7323,8 +8737,13 @@ app.post(
         syarat_pembayaran
       } = req.body;
 
-      if (!nama_termin?.trim()) {
-        await client.query("ROLLBACK");
+
+      if (
+        !nama_termin?.trim()
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
 
         return res.status(400).json({
           error:
@@ -7332,8 +8751,64 @@ app.post(
         });
       }
 
+
       // ================================================
-      // AMBIL NILAI FINAL ASLI
+      // AMBIL INFORMASI PROYEK UNTUK LOG
+      // ================================================
+
+      const proyekInfoResult =
+        await client.query(
+          `
+            SELECT
+              pk.proyek_id,
+              p.nama_proyek
+
+            FROM public.proyek_klien pk
+
+            JOIN public.proyek p
+              ON p.id = pk.proyek_id
+
+            WHERE pk.id = $1
+
+            LIMIT 1
+          `,
+          [proyekKlienId]
+        );
+
+
+      if (
+        proyekInfoResult.rowCount === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        return res.status(404).json({
+          error:
+            "Data proyek klien tidak ditemukan"
+        });
+      }
+
+
+      const proyekId =
+        Number(
+          proyekInfoResult
+            .rows[0]
+            .proyek_id
+        );
+
+      const namaProyek =
+        proyekInfoResult
+          .rows[0]
+          .nama_proyek;
+
+
+      // ================================================
+      // AMBIL NILAI FINAL
+      //
+      // TETAP MENGGUNAKAN HELPER INI.
+      // JIKA NILAI SUBMIT KOSONG, HELPER MENGAMBIL
+      // NILAI FINAL YANG SAMA DENGAN SUMMARY.
       // ================================================
 
       const nilaiFinalAsli =
@@ -7342,14 +8817,18 @@ app.post(
           proyekKlienId
         );
 
+
       if (nilaiFinalAsli === null) {
-        await client.query("ROLLBACK");
+        await client.query(
+          "ROLLBACK"
+        );
 
         return res.status(404).json({
           error:
             "Data proyek klien tidak ditemukan"
         });
       }
+
 
       // ================================================
       // NORMALISASI INPUT
@@ -7362,6 +8841,7 @@ app.post(
           ? null
           : Number(persentase);
 
+
       const nominalInput =
         nominal === null ||
         nominal === undefined ||
@@ -7369,16 +8849,31 @@ app.post(
           ? null
           : Number(nominal);
 
+
+      const inputTerakhir =
+        String(
+          input_terakhir || ""
+        )
+          .trim()
+          .toLowerCase();
+
+
       let persentaseSimpan = null;
       let nominalSimpan = null;
 
+
       // ================================================
-      // NILAI FINAL ASLI TERSEDIA
+      // NILAI FINAL TERSEDIA
       // ================================================
 
       if (nilaiFinalAsli > 0) {
+        // ==============================================
+        // INPUT PERSENTASE
+        // HITUNG NOMINAL
+        // ==============================================
+
         if (
-          input_terakhir ===
+          inputTerakhir ===
           "persentase"
         ) {
           if (
@@ -7398,8 +8893,12 @@ app.post(
             });
           }
 
+
           persentaseSimpan =
-            persentaseInput;
+            Number(
+              persentaseInput.toFixed(2)
+            );
+
 
           nominalSimpan =
             Math.round(
@@ -7408,8 +8907,17 @@ app.post(
                 persentaseSimpan
               ) / 100
             );
+        }
 
-        } else {
+        // ==============================================
+        // INPUT NOMINAL
+        // HITUNG PERSENTASE
+        // ==============================================
+
+        else if (
+          inputTerakhir ===
+          "nominal"
+        ) {
           if (
             !Number.isFinite(
               nominalInput
@@ -7426,11 +8934,28 @@ app.post(
             });
           }
 
+
+          /*
+           * Ini perbaikan utamanya.
+           * nominalSimpan harus diisi sebelum dipakai
+           * untuk menghitung persentase.
+           */
+          nominalSimpan =
+            Math.round(
+              nominalInput
+            );
+
+
           persentaseSimpan =
-          (
-            nominalSimpan /
-            nilaiFinalAsli
-          ) * 100;
+            Number(
+              (
+                (
+                  nominalSimpan /
+                  nilaiFinalAsli
+                ) * 100
+              ).toFixed(2)
+            );
+
 
           if (
             persentaseSimpan <= 0 ||
@@ -7448,35 +8973,59 @@ app.post(
         }
 
         // ==============================================
+        // INPUT TERAKHIR TIDAK DIKIRIM
+        // ==============================================
+
+        else {
+          await client.query(
+            "ROLLBACK"
+          );
+
+          return res.status(400).json({
+            error:
+              "Input terakhir harus persentase atau nominal"
+          });
+        }
+
+
+        // ==============================================
         // VALIDASI TOTAL PERSENTASE
         // ==============================================
 
         const totalResult =
           await client.query(
             `
-            SELECT
-              COALESCE(
-                SUM(persentase),
-                0
-              )::numeric AS total_persentase
-            FROM public.proyek_klien_termin
-            WHERE proyek_klien_id = $1
+              SELECT
+                COALESCE(
+                  SUM(persentase),
+                  0
+                )::numeric
+                  AS total_persentase
+
+              FROM public.proyek_klien_termin
+
+              WHERE proyek_klien_id = $1
             `,
             [proyekKlienId]
           );
 
+
         const totalPersentase =
           Number(
-            totalResult.rows[0]
+            totalResult
+              .rows[0]
               .total_persentase || 0
           );
+
 
         if (
           totalPersentase +
           persentaseSimpan >
-          100
+          100.01
         ) {
-          await client.query("ROLLBACK");
+          await client.query(
+            "ROLLBACK"
+          );
 
           return res.status(400).json({
             error:
@@ -7484,20 +9033,22 @@ app.post(
               `Saat ini ${totalPersentase.toFixed(2)}%.`
           });
         }
+      }
 
-      } else {
-        // ==============================================
-        // NILAI FINAL TIDAK ADA
-        // HANYA NOMINAL YANG BOLEH DIISI
-        // ==============================================
+      // ================================================
+      // NILAI FINAL BELUM TERSEDIA
+      // ================================================
 
+      else {
         if (
           !Number.isFinite(
             nominalInput
           ) ||
           nominalInput <= 0
         ) {
-          await client.query("ROLLBACK");
+          await client.query(
+            "ROLLBACK"
+          );
 
           return res.status(400).json({
             error:
@@ -7505,17 +9056,20 @@ app.post(
           });
         }
 
+
         nominalSimpan =
-          nominalInput;
+          Math.round(
+            nominalInput
+          );
 
         /*
-         * Penting:
-         * Jangan simpan persentase 0.
-         * Simpan NULL dahulu, kemudian helper akan
-         * menghitung ulang setelah INSERT.
+         * Persentase sementara NULL.
+         * Setelah INSERT, helper menghitung ulang
+         * berdasarkan nilai final Summary.
          */
         persentaseSimpan = null;
       }
+
 
       // ================================================
       // INSERT TERMIN
@@ -7524,30 +9078,30 @@ app.post(
       const result =
         await client.query(
           `
-          INSERT INTO public.proyek_klien_termin (
-            proyek_klien_id,
-            nama_termin,
-            persentase,
-            nominal,
-            status_pembayaran,
-            tanggal_jatuh_tempo,
-            tanggal_bayar,
-            syarat_pembayaran
-          )
-          VALUES (
-            $1, $2, $3, $4,
-            $5, $6, $7, $8
-          )
-          RETURNING *
+            INSERT INTO
+              public.proyek_klien_termin (
+                proyek_klien_id,
+                nama_termin,
+                persentase,
+                nominal,
+                status_pembayaran,
+                tanggal_jatuh_tempo,
+                tanggal_bayar,
+                syarat_pembayaran
+              )
+
+            VALUES (
+              $1, $2, $3, $4,
+              $5, $6, $7, $8
+            )
+
+            RETURNING *
           `,
           [
             proyekKlienId,
+
             nama_termin.trim(),
 
-            /*
-             * Nilainya harus NULL atau lebih dari 0.
-             * Jangan menggunakan persentase || 0.
-             */
             persentaseSimpan,
 
             nominalSimpan,
@@ -7561,13 +9115,17 @@ app.post(
             tanggal_bayar ||
               null,
 
-            syarat_pembayaran?.trim() ||
-              null
+            syarat_pembayaran
+              ?.trim() || null
           ]
         );
 
+
       // ================================================
       // HITUNG ULANG PERSENTASE
+      //
+      // DIGUNAKAN JIKA NILAI SUBMIT KOSONG DAN
+      // NILAI FINAL BERASAL DARI SUMMARY TERMIN.
       // ================================================
 
       const perhitungan =
@@ -7576,25 +9134,246 @@ app.post(
           proyekKlienId
         );
 
-      // Ambil kembali hasil setelah dihitung ulang
+
+      // ================================================
+      // AMBIL HASIL TERBARU
+      // PERSENTASE DAN NOMINAL KEDUANYA DIKEMBALIKAN
+      // ================================================
+
       const terminBaruResult =
         await client.query(
           `
-          SELECT *
-          FROM public.proyek_klien_termin
-          WHERE id = $1
+            SELECT
+              id,
+              proyek_klien_id,
+              nama_termin,
+              persentase,
+              nominal,
+              status_pembayaran,
+              tanggal_jatuh_tempo,
+              tanggal_bayar,
+              syarat_pembayaran
+
+            FROM public.proyek_klien_termin
+
+            WHERE id = $1
           `,
           [result.rows[0].id]
         );
 
+
+      const dataTerminBaru =
+        terminBaruResult.rows[0];
+
+
+      // ================================================
+      // FORMAT LOG
+      // ================================================
+
+      const formatTeksTerminLog =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      const formatNominalTerminLog =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            value === ""
+          ) {
+            return "-";
+          }
+
+          return `Rp ${new Intl.NumberFormat(
+            "id-ID",
+            {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
+            }
+          ).format(Number(value))}`;
+        };
+
+
+      const formatPersentaseTerminLog =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            value === ""
+          ) {
+            return "-";
+          }
+
+          return `${
+            new Intl.NumberFormat(
+              "id-ID",
+              {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+              }
+            ).format(Number(value))
+          }%`;
+        };
+
+
+      const formatTanggalTerminLog =
+        value => {
+          if (!value) {
+            return "-";
+          }
+
+          const daftarBulan = [
+            "Januari",
+            "Februari",
+            "Maret",
+            "April",
+            "Mei",
+            "Juni",
+            "Juli",
+            "Agustus",
+            "September",
+            "Oktober",
+            "November",
+            "Desember"
+          ];
+
+          let tahun;
+          let bulan;
+          let tanggal;
+
+          if (value instanceof Date) {
+            tahun =
+              value.getUTCFullYear();
+
+            bulan =
+              value.getUTCMonth() + 1;
+
+            tanggal =
+              value.getUTCDate();
+          } else {
+            const cocok =
+              String(value).match(
+                /^(\d{4})-(\d{2})-(\d{2})/
+              );
+
+            if (!cocok) {
+              return String(value);
+            }
+
+            tahun =
+              Number(cocok[1]);
+
+            bulan =
+              Number(cocok[2]);
+
+            tanggal =
+              Number(cocok[3]);
+          }
+
+          return `${tanggal} ${
+            daftarBulan[bulan - 1]
+          } ${tahun}`;
+        };
+
+
+      // ================================================
+      // ACTIVITY LOG
+      // CREATE HANYA NILAI BARU
+      //
+      // PERSENTASE DAN NOMINAL KEDUANYA DIMUNCULKAN
+      // ================================================
+
+      const nilaiBaruLog = [
+        `NAMA TERMIN = ${
+          formatTeksTerminLog(
+            dataTerminBaru.nama_termin
+          )
+        }`,
+
+        `PERSENTASE = ${
+          formatPersentaseTerminLog(
+            dataTerminBaru.persentase
+          )
+        }`,
+
+        `NOMINAL = ${
+          formatNominalTerminLog(
+            dataTerminBaru.nominal
+          )
+        }`,
+
+        `STATUS PEMBAYARAN = ${
+          formatTeksTerminLog(
+            dataTerminBaru
+              .status_pembayaran
+          )
+        }`,
+
+        `TANGGAL JATUH TEMPO = ${
+          formatTanggalTerminLog(
+            dataTerminBaru
+              .tanggal_jatuh_tempo
+          )
+        }`,
+
+        `TANGGAL BAYAR = ${
+          formatTanggalTerminLog(
+            dataTerminBaru
+              .tanggal_bayar
+          )
+        }`,
+
+        `SYARAT PEMBAYARAN = ${
+          formatTeksTerminLog(
+            dataTerminBaru
+              .syarat_pembayaran
+          )
+        }`
+      ].join(", ");
+
+
+      await simpanActivityLog(
+        client,
+        {
+          ...getActivityUser(req),
+
+          aktivitas: "CREATE",
+          modul: "PROYEK",
+
+          entity_id: proyekId,
+          entity_nama: namaProyek,
+
+          field_name:
+            "TERMIN KLIEN",
+
+          nilai_lama: null,
+          nilai_baru: nilaiBaruLog,
+
+          deskripsi:
+            "menambahkan termin klien"
+        }
+      );
+
+
       await client.query("COMMIT");
+
 
       return res.status(201).json({
         message:
           "Termin berhasil ditambahkan",
 
         data:
-          terminBaruResult.rows[0],
+          dataTerminBaru,
 
         nilai_final:
           perhitungan.nilai_final,
@@ -7604,7 +9383,9 @@ app.post(
       });
 
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query(
+        "ROLLBACK"
+      );
 
       console.error(
         "ERROR CREATE TERMIN KLIEN:",
@@ -7621,7 +9402,6 @@ app.post(
     }
   }
 );
-
 // ======================================================
 // GET URL FILE DOKUMEN KLIEN
 // ======================================================
@@ -7777,25 +9557,34 @@ return res.json({
 app.post(
   "/api/proyek/klien/:proyekKlienId/dokumen",
 
-  uploadDokumenKlien.single("file_dokumen"),
+  uploadDokumenKlien.single(
+    "file_dokumen"
+  ),
 
   async (req, res) => {
+    const client =
+      await pool.connect();
 
     let s3Key = null;
 
-    try {
+    let transaksiDimulai =
+      false;
 
+    try {
       // ================================================
       // AMBIL DATA
       // ================================================
 
       const proyekKlienId =
-        Number(req.params.proyekKlienId);
+        Number(
+          req.params.proyekKlienId
+        );
 
       const {
         nama_dokumen,
         nomor_dokumen
       } = req.body;
+
 
       // ================================================
       // VALIDASI ID
@@ -7805,12 +9594,12 @@ app.post(
         !Number.isInteger(proyekKlienId) ||
         proyekKlienId <= 0
       ) {
-
         return res.status(400).json({
-          error: "ID proyek klien tidak valid"
+          error:
+            "ID proyek klien tidak valid"
         });
-
       }
+
 
       // ================================================
       // VALIDASI NAMA DOKUMEN
@@ -7818,38 +9607,80 @@ app.post(
 
       if (
         !nama_dokumen ||
-        !String(nama_dokumen).trim()
+        !String(
+          nama_dokumen
+        ).trim()
       ) {
-
         return res.status(400).json({
-          error: "Nama dokumen wajib dipilih"
+          error:
+            "Nama dokumen wajib dipilih"
         });
-
       }
+
+
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
+
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
+
 
       // ================================================
       // CEK PROYEK KLIEN
+      // SEKALIGUS AMBIL PROYEK ID
       // ================================================
 
       const klienResult =
-        await pool.query(
+        await client.query(
           `
-          SELECT id
-          FROM public.proyek_klien
-          WHERE id = $1
+            SELECT
+              pk.id,
+              pk.proyek_id,
+              p.nama_proyek
+
+            FROM public.proyek_klien pk
+
+            JOIN public.proyek p
+              ON p.id = pk.proyek_id
+
+            WHERE pk.id = $1
+
+            LIMIT 1
           `,
           [proyekKlienId]
         );
 
+
       if (
         klienResult.rows.length === 0
       ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
 
         return res.status(404).json({
-          error: "Data proyek klien tidak ditemukan"
+          error:
+            "Data proyek klien tidak ditemukan"
         });
-
       }
+
+
+      const proyekId =
+        Number(
+          klienResult
+            .rows[0]
+            .proyek_id
+        );
+
+      const namaProyek =
+        klienResult
+          .rows[0]
+          .nama_proyek;
+
 
       // ================================================
       // INFORMASI FILE OPSIONAL
@@ -7861,20 +9692,21 @@ app.post(
       let tipeFile = null;
       let ukuranFile = null;
 
+
       // ================================================
       // UPLOAD FILE KE S3
       // ================================================
 
       if (req.file) {
-
         const ekstensi =
           path.extname(
             req.file.originalname
           ).toLowerCase();
 
-        // Buat key unik di dalam bucket
+
         const namaFile =
           `/${crypto.randomUUID()}${ekstensi}`;
+
 
         const hasilUpload =
           await uploadFile(
@@ -7882,55 +9714,61 @@ app.post(
             namaFile
           );
 
+
         s3Key =
           hasilUpload.key;
 
         namaFileAsli =
-          req.file.originalname || null;
+          req.file.originalname ||
+          null;
 
         namaFileSimpan =
           hasilUpload.key;
 
-        // path_file sekarang berisi S3 object key
         pathFile =
           hasilUpload.key;
 
         tipeFile =
-          req.file.mimetype || null;
+          req.file.mimetype ||
+          null;
 
         ukuranFile =
-          req.file.size ?? null;
-
+          req.file.size ??
+          null;
       }
+
 
       // ================================================
       // SIMPAN KE DATABASE
       // ================================================
 
       const result =
-        await pool.query(
+        await client.query(
           `
-          INSERT INTO public.proyek_klien_dokumen (
-            proyek_klien_id,
-            nama_dokumen,
-            nomor_dokumen,
-            nama_file_asli,
-            nama_file_simpan,
-            path_file,
-            tipe_file,
-            ukuran_file
-          )
-          VALUES (
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6,
-            $7,
-            $8
-          )
-          RETURNING *
+            INSERT INTO
+              public.proyek_klien_dokumen (
+                proyek_klien_id,
+                nama_dokumen,
+                nomor_dokumen,
+                nama_file_asli,
+                nama_file_simpan,
+                path_file,
+                tipe_file,
+                ukuran_file
+              )
+
+            VALUES (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              $7,
+              $8
+            )
+
+            RETURNING *
           `,
           [
             proyekKlienId,
@@ -7955,66 +9793,173 @@ app.post(
           ]
         );
 
+
+      const dokumenBaru =
+        result.rows[0];
+
+
+      // ================================================
+      // FORMAT NILAI ACTIVITY LOG
+      // ================================================
+
+      const formatNilaiDokumen =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      const nilaiBaruLog = [
+        `NAMA DOKUMEN = ${
+          formatNilaiDokumen(
+            dokumenBaru.nama_dokumen
+          )
+        }`,
+
+        `NOMOR DOKUMEN = ${
+          formatNilaiDokumen(
+            dokumenBaru.nomor_dokumen
+          )
+        }`,
+
+        `NAMA FILE = ${
+          dokumenBaru.nama_file_asli
+            ? formatNilaiDokumen(
+                dokumenBaru
+                  .nama_file_asli
+              )
+            : "Tanpa file"
+        }`
+      ].join(", ");
+
+
+      // ================================================
+      // SIMPAN ACTIVITY LOG
+      // CREATE HANYA NILAI BARU
+      // ================================================
+
+      await simpanActivityLog(
+        client,
+        {
+          ...getActivityUser(req),
+
+          aktivitas: "CREATE",
+          modul: "PROYEK",
+
+          // Menggunakan proyek ID
+          entity_id: proyekId,
+          entity_nama: namaProyek,
+
+          field_name:
+            "DOKUMEN KLIEN",
+
+          nilai_lama: null,
+
+          nilai_baru:
+            nilaiBaruLog,
+
+          deskripsi:
+            "menambahkan dokumen klien"
+        }
+      );
+
+
+      // ================================================
+      // COMMIT
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
+
+
+      /*
+       * Upload dan database sudah berhasil.
+       * Kosongkan agar file tidak dihapus
+       * setelah transaksi berhasil.
+       */
+      s3Key = null;
+
+
       // ================================================
       // RESPONSE
       // ================================================
 
       return res.status(201).json({
-
         message:
           req.file
             ? "Dokumen dan file berhasil disimpan ke S3"
             : "Dokumen berhasil disimpan tanpa file",
 
         data:
-          result.rows[0]
-
+          dokumenBaru
       });
 
     } catch (error) {
+      // ================================================
+      // ROLLBACK DATABASE
+      // ================================================
+
+      if (transaksiDimulai) {
+        try {
+          await client.query(
+            "ROLLBACK"
+          );
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK DOKUMEN KLIEN:",
+            rollbackError
+          );
+        }
+      }
+
 
       // ================================================
-      // HAPUS FILE S3 JIKA DATABASE GAGAL
+      // HAPUS FILE S3 JIKA DATABASE / LOG GAGAL
       // ================================================
 
       if (s3Key) {
-
         try {
-
           await s3Client.send(
-          new DeleteObjectCommand({
+            new DeleteObjectCommand({
+              Bucket:
+                process.env.bucket_name,
 
-            Bucket:
-              process.env.bucket_name,
-
-            Key:
-              s3Key
-
-          })
-        );
+              Key:
+                s3Key
+            })
+          );
 
         } catch (hapusError) {
-
           console.error(
             "GAGAL MEMBERSIHKAN FILE S3:",
             hapusError
           );
-
         }
-
       }
+
 
       console.error(
         "ERROR SIMPAN DOKUMEN KLIEN:",
         error
       );
 
+
       return res.status(500).json({
-        error: error.message
+        error:
+          error.message
       });
 
+    } finally {
+      client.release();
     }
-
   }
 );
 
@@ -8023,26 +9968,32 @@ app.post(
 app.put(
   "/api/proyek/klien/dokumen/:id",
 
-  uploadDokumenKlien.single("file_dokumen"),
+  uploadDokumenKlien.single(
+    "file_dokumen"
+  ),
 
   async (req, res) => {
+    let client = null;
+
+    let transaksiDimulai =
+      false;
 
     let s3KeyBaru = null;
-    let databaseBerhasil = false;
+
+    let databaseBerhasil =
+      false;
 
     try {
-
       // ================================================
       // VALIDASI LOGIN
       // ================================================
 
       if (!req.session?.user) {
-
         return res.status(401).json({
           error: "Belum login"
         });
-
       }
+
 
       // ================================================
       // AMBIL DATA
@@ -8056,6 +10007,7 @@ app.put(
         nomor_dokumen
       } = req.body;
 
+
       // ================================================
       // VALIDASI ID
       // ================================================
@@ -8064,80 +10016,121 @@ app.put(
         !Number.isInteger(id) ||
         id <= 0
       ) {
-
         return res.status(400).json({
-          error: "ID dokumen tidak valid"
+          error:
+            "ID dokumen tidak valid"
         });
-
       }
+
 
       // ================================================
       // VALIDASI NAMA DOKUMEN
       // ================================================
 
       if (
-        !String(nama_dokumen || "").trim()
+        !String(
+          nama_dokumen || ""
+        ).trim()
       ) {
-
         return res.status(400).json({
-          error: "Nama dokumen wajib dipilih"
+          error:
+            "Nama dokumen wajib dipilih"
         });
-
       }
+
+
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
+
+      client =
+        await pool.connect();
+
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
+
 
       // ================================================
       // AMBIL DATA DOKUMEN LAMA
       // ================================================
 
       const oldResult =
-        await pool.query(
+        await client.query(
           `
-          SELECT
-            d.id,
-            d.proyek_klien_id,
-            d.nama_dokumen,
-            d.nomor_dokumen,
-            d.nama_file_asli,
-            d.nama_file_simpan,
-            d.path_file,
-            d.tipe_file,
-            d.ukuran_file,
-            pk.proyek_id
+            SELECT
+              d.id,
+              d.proyek_klien_id,
+              d.nama_dokumen,
+              d.nomor_dokumen,
+              d.nama_file_asli,
+              d.nama_file_simpan,
+              d.path_file,
+              d.tipe_file,
+              d.ukuran_file,
 
-          FROM public.proyek_klien_dokumen d
+              pk.proyek_id,
+              p.nama_proyek
 
-          JOIN public.proyek_klien pk
-            ON pk.id = d.proyek_klien_id
+            FROM public.proyek_klien_dokumen d
 
-          WHERE d.id = $1
+            JOIN public.proyek_klien pk
+              ON pk.id =
+                d.proyek_klien_id
+
+            JOIN public.proyek p
+              ON p.id =
+                pk.proyek_id
+
+            WHERE d.id = $1
+
+            FOR UPDATE OF d
           `,
           [id]
         );
 
-      if (oldResult.rows.length === 0) {
+
+      if (
+        oldResult.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
 
         return res.status(404).json({
-          error: "Dokumen tidak ditemukan"
+          error:
+            "Dokumen tidak ditemukan"
         });
-
       }
+
 
       const dokumenLama =
         oldResult.rows[0];
+
+      const proyekId =
+        Number(
+          dokumenLama.proyek_id
+        );
+
+      const namaProyek =
+        dokumenLama.nama_proyek;
+
 
       // ================================================
       // VALIDASI HAK AKSES PROYEK
       // ================================================
 
-      // Sebelum mengaktifkan endpoint ini,
-      // terapkan pemeriksaan bahwa pengguna
-      // berhak mengedit dokumenLama.proyek_id.
-      //
-      // Gunakan aturan Admin/PIC yang sudah
-      // diterapkan pada API proyek PORTOPRO.
+      /*
+       * Terapkan pemeriksaan Admin/PIC
+       * menggunakan dokumenLama.proyek_id
+       * jika validasi hak akses sudah tersedia.
+       */
+
 
       // ================================================
-      // DEFAULT = FILE LAMA
+      // DEFAULT MENGGUNAKAN FILE LAMA
       // ================================================
 
       let namaFileAsli =
@@ -8155,32 +10148,33 @@ app.put(
       let ukuranFile =
         dokumenLama.ukuran_file;
 
+
       // ================================================
       // JIKA ADA FILE BARU
       // ================================================
 
       if (req.file) {
-
         const ekstensi =
           path.extname(
             req.file.originalname
           ).toLowerCase();
 
-        // UUID tanpa folder atau ID proyek
+
         const namaFile =
           `${crypto.randomUUID()}${ekstensi}`;
 
-        // Upload file pengganti ke S3
+
         const hasilUpload =
           await uploadFile(
             req.file,
             namaFile
           );
 
-        // Simpan key untuk rollback
-        // jika UPDATE database gagal
+
+        // Digunakan untuk rollback S3
         s3KeyBaru =
           hasilUpload.key;
+
 
         namaFileAsli =
           req.file.originalname;
@@ -8196,33 +10190,36 @@ app.put(
 
         ukuranFile =
           req.file.size;
-
       }
+
 
       // ================================================
       // UPDATE DATABASE
       // ================================================
 
       const result =
-        await pool.query(
+        await client.query(
           `
-          UPDATE public.proyek_klien_dokumen
+            UPDATE
+              public.proyek_klien_dokumen
 
-          SET
-            nama_dokumen = $1,
-            nomor_dokumen = $2,
-            nama_file_asli = $3,
-            nama_file_simpan = $4,
-            path_file = $5,
-            tipe_file = $6,
-            ukuran_file = $7
+            SET
+              nama_dokumen = $1,
+              nomor_dokumen = $2,
+              nama_file_asli = $3,
+              nama_file_simpan = $4,
+              path_file = $5,
+              tipe_file = $6,
+              ukuran_file = $7
 
-          WHERE id = $8
+            WHERE id = $8
 
-          RETURNING *
+            RETURNING *
           `,
           [
-            String(nama_dokumen).trim(),
+            String(
+              nama_dokumen
+            ).trim(),
 
             String(
               nomor_dokumen || ""
@@ -8242,181 +10239,559 @@ app.put(
           ]
         );
 
+
+      const dokumenBaru =
+        result.rows[0];
+
+
+      // ================================================
+      // FORMAT ACTIVITY LOG
+      // ================================================
+
+      const formatNilaiDokumen =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      // ================================================
+      // CARI FIELD YANG BERUBAH
+      // ================================================
+
+      const perubahanDokumen = [
+        {
+          label:
+            "NAMA DOKUMEN",
+
+          nilai_lama:
+            formatNilaiDokumen(
+              dokumenLama
+                .nama_dokumen
+            ),
+
+          nilai_baru:
+            formatNilaiDokumen(
+              dokumenBaru
+                .nama_dokumen
+            ),
+
+          paksa: false
+        },
+        {
+          label:
+            "NOMOR DOKUMEN",
+
+          nilai_lama:
+            formatNilaiDokumen(
+              dokumenLama
+                .nomor_dokumen
+            ),
+
+          nilai_baru:
+            formatNilaiDokumen(
+              dokumenBaru
+                .nomor_dokumen
+            ),
+
+          paksa: false
+        },
+        {
+          label:
+            "NAMA FILE",
+
+          nilai_lama:
+            dokumenLama
+              .nama_file_asli
+                ? formatNilaiDokumen(
+                    dokumenLama
+                      .nama_file_asli
+                  )
+                : "Tanpa file",
+
+          nilai_baru:
+            dokumenBaru
+              .nama_file_asli
+                ? formatNilaiDokumen(
+                    dokumenBaru
+                      .nama_file_asli
+                  )
+                : "Tanpa file",
+
+          /*
+           * Tetap dianggap berubah jika ada
+           * upload file baru, meskipun nama
+           * file lama dan baru sama.
+           */
+          paksa:
+            Boolean(req.file)
+        }
+      ].filter(
+        item =>
+          item.paksa ||
+          item.nilai_lama !==
+            item.nilai_baru
+      );
+
+
+      // ================================================
+      // SIMPAN SATU ACTIVITY LOG
+      // ================================================
+
+      if (
+        perubahanDokumen.length > 0
+      ) {
+        await simpanActivityLog(
+          client,
+          {
+            ...getActivityUser(req),
+
+            aktivitas: "UPDATE",
+            modul: "PROYEK",
+
+            // Entity menggunakan proyek ID
+            entity_id: proyekId,
+            entity_nama: namaProyek,
+
+            field_name:
+              "DOKUMEN KLIEN",
+
+            nilai_lama:
+              perubahanDokumen
+                .map(
+                  item =>
+                    `${item.label} = ${item.nilai_lama}`
+                )
+                .join(", "),
+
+            nilai_baru:
+              perubahanDokumen
+                .map(
+                  item =>
+                    `${item.label} = ${item.nilai_baru}`
+                )
+                .join(", "),
+
+            deskripsi:
+              "memperbarui dokumen klien"
+          }
+        );
+      }
+
+
+      // ================================================
+      // COMMIT DATABASE DAN LOG
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
       databaseBerhasil = true;
+
 
       // ================================================
       // HAPUS FILE S3 LAMA
-      // HANYA JIKA ADA FILE PENGGANTI
+      // HANYA SETELAH DATABASE BERHASIL
       // ================================================
 
       if (
         req.file &&
         dokumenLama.path_file
       ) {
-
         const s3KeyLama =
           String(
             dokumenLama.path_file
           ).trim();
 
-        // Hanya hapus key S3 dengan format
-        // UUID.extensi yang sudah kita gunakan.
-        //
-        // Path lokal /uploads/... dan key
-        // dengan folder tidak ikut dihapus.
 
         const formatKeyS3 =
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z0-9]+$/i;
 
+
         if (
-          formatKeyS3.test(s3KeyLama) &&
+          formatKeyS3.test(
+            s3KeyLama
+          ) &&
           s3KeyLama !== s3KeyBaru
         ) {
-
           try {
-
             await s3Client.send(
               new DeleteObjectCommand({
-
                 Bucket:
-                  process.env.bucket_name,
+                  process.env
+                    .bucket_name,
 
                 Key:
                   s3KeyLama
-
               })
             );
 
           } catch (hapusError) {
-
-            // UPDATE database sudah berhasil.
-            // Kegagalan menghapus file lama
-            // tidak membatalkan perubahan dokumen.
-
+            /*
+             * Database sudah berhasil.
+             * Kegagalan menghapus file lama
+             * tidak membatalkan perubahan.
+             */
             console.error(
               "GAGAL HAPUS FILE S3 LAMA:",
               hapusError
             );
-
           }
-
         }
-
       }
+
 
       // ================================================
       // RESPONSE
       // ================================================
 
       return res.json({
-
         message:
           req.file
             ? "Dokumen dan file berhasil diperbarui"
             : "Dokumen berhasil diperbarui",
 
         data:
-          result.rows[0]
-
+          dokumenBaru
       });
 
     } catch (error) {
+      // ================================================
+      // ROLLBACK DATABASE DAN LOG
+      // ================================================
+
+      if (
+        transaksiDimulai &&
+        client
+      ) {
+        try {
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK EDIT DOKUMEN KLIEN:",
+            rollbackError
+          );
+        }
+      }
+
 
       // ================================================
-      // ROLLBACK FILE BARU
-      // JIKA DATABASE BELUM BERHASIL
+      // HAPUS FILE BARU JIKA TRANSAKSI GAGAL
       // ================================================
 
       if (
         s3KeyBaru &&
         !databaseBerhasil
       ) {
-
         try {
-
           await s3Client.send(
             new DeleteObjectCommand({
-
               Bucket:
-                process.env.bucket_name,
+                process.env
+                  .bucket_name,
 
               Key:
                 s3KeyBaru
-
             })
           );
 
         } catch (hapusError) {
-
           console.error(
             "GAGAL ROLLBACK FILE S3 BARU:",
             hapusError
           );
-
         }
-
       }
+
 
       console.error(
         "ERROR EDIT DOKUMEN KLIEN:",
         error
       );
 
+
       return res.status(500).json({
-        error: error.message
+        error:
+          error.message
       });
 
+    } finally {
+      if (client) {
+        client.release();
+      }
     }
-
   }
 );
 
 // HAPUS DOKUMEN KLIEN
-    app.delete("/api/proyek/klien/dokumen/:id",
-      async (req, res) => {
+    app.delete(
+  "/api/proyek/klien/dokumen/:id",
+  async (req, res) => {
+    const client =
+      await pool.connect();
 
-        try {
+    let transaksiDimulai =
+      false;
 
-          const { id } = req.params;
+    try {
+      const id =
+        Number(req.params.id);
 
 
-          const result = await pool.query(`
-            DELETE FROM public.proyek_klien_dokumen
+      // ================================================
+      // VALIDASI ID
+      // ================================================
+
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID dokumen tidak valid"
+        });
+      }
+
+
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
+
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
+
+
+      // ================================================
+      // AMBIL NILAI LAMA DAN INFORMASI PROYEK
+      // ================================================
+
+      const oldResult =
+        await client.query(
+          `
+            SELECT
+              d.id,
+              d.proyek_klien_id,
+              d.nama_dokumen,
+              d.nomor_dokumen,
+              d.nama_file_asli,
+              d.nama_file_simpan,
+              d.path_file,
+              d.tipe_file,
+              d.ukuran_file,
+
+              pk.proyek_id,
+              p.nama_proyek
+
+            FROM public.proyek_klien_dokumen d
+
+            JOIN public.proyek_klien pk
+              ON pk.id =
+                d.proyek_klien_id
+
+            JOIN public.proyek p
+              ON p.id =
+                pk.proyek_id
+
+            WHERE d.id = $1
+
+            FOR UPDATE OF d
+          `,
+          [id]
+        );
+
+
+      if (
+        oldResult.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
+
+        return res.status(404).json({
+          error:
+            "Dokumen tidak ditemukan"
+        });
+      }
+
+
+      const dokumenLama =
+        oldResult.rows[0];
+
+      const proyekId =
+        Number(
+          dokumenLama.proyek_id
+        );
+
+      const namaProyek =
+        dokumenLama.nama_proyek;
+
+
+      // ================================================
+      // HAPUS DOKUMEN DARI DATABASE
+      // ================================================
+
+      const result =
+        await client.query(
+          `
+            DELETE FROM
+              public.proyek_klien_dokumen
+
             WHERE id = $1
+
             RETURNING *
-          `, [id]);
+          `,
+          [id]
+        );
 
 
-          if (result.rows.length === 0) {
+      if (
+        result.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
 
-            return res.status(404).json({
-              error: "Dokumen tidak ditemukan"
-            });
+        transaksiDimulai = false;
 
+        return res.status(404).json({
+          error:
+            "Dokumen tidak ditemukan"
+        });
+      }
+
+
+      // ================================================
+      // FORMAT NILAI LAMA
+      // ================================================
+
+      const formatNilaiDokumen =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
           }
 
-
-          res.json({
-            message:
-              "Dokumen berhasil dihapus"
-          });
+          return String(value).trim();
+        };
 
 
-        } catch (error) {
+      const nilaiLamaLog = [
+        `NAMA DOKUMEN = ${
+          formatNilaiDokumen(
+            dokumenLama.nama_dokumen
+          )
+        }`,
 
-          console.error(
-            "ERROR DELETE DOKUMEN KLIEN:",
-            error
+        `NOMOR DOKUMEN = ${
+          formatNilaiDokumen(
+            dokumenLama.nomor_dokumen
+          )
+        }`,
+
+        `NAMA FILE = ${
+          dokumenLama.nama_file_asli
+            ? formatNilaiDokumen(
+                dokumenLama
+                  .nama_file_asli
+              )
+            : "Tanpa file"
+        }`
+      ].join(", ");
+
+
+      // ================================================
+      // SIMPAN ACTIVITY LOG
+      // DELETE HANYA NILAI LAMA
+      // ================================================
+
+      await simpanActivityLog(
+        client,
+        {
+          ...getActivityUser(req),
+
+          aktivitas: "DELETE",
+          modul: "PROYEK",
+
+          // Entity menggunakan proyek ID
+          entity_id: proyekId,
+          entity_nama: namaProyek,
+
+          field_name:
+            "DOKUMEN KLIEN",
+
+          nilai_lama:
+            nilaiLamaLog,
+
+          nilai_baru: null,
+
+          deskripsi:
+            "menghapus dokumen klien"
+        }
+      );
+
+
+      // ================================================
+      // COMMIT
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
+
+
+      return res.json({
+        message:
+          "Dokumen berhasil dihapus"
+      });
+
+    } catch (error) {
+      if (transaksiDimulai) {
+        try {
+          await client.query(
+            "ROLLBACK"
           );
 
-          res.status(500).json({
-            error: error.message
-          });
-
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK DELETE DOKUMEN KLIEN:",
+            rollbackError
+          );
         }
-
       }
-    );
+
+
+      console.error(
+        "ERROR DELETE DOKUMEN KLIEN:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
+
+    } finally {
+      client.release();
+    }
+  }
+);
 
 
 // ======================================================
@@ -8558,108 +10933,158 @@ app.get(
 app.post(
   "/api/proyek/partner/:proyekPartnerId/dokumen",
 
-  uploadDokumenKlien.single("file_dokumen"),
+  uploadDokumenKlien.single(
+    "file_dokumen"
+  ),
 
   async (req, res) => {
+    let client = null;
+
+    let transaksiDimulai =
+      false;
 
     let s3KeyBaru = null;
-    let databaseBerhasil = false;
+
+    let databaseBerhasil =
+      false;
 
     try {
-
       // ================================================
       // VALIDASI LOGIN
       // ================================================
 
       if (!req.session?.user) {
-
         return res.status(401).json({
           error: "Belum login"
         });
-
       }
+
 
       // ================================================
       // AMBIL DATA
       // ================================================
 
       const proyekPartnerId =
-        Number(req.params.proyekPartnerId);
+        Number(
+          req.params.proyekPartnerId
+        );
 
       const {
         nama_dokumen,
         nomor_dokumen
       } = req.body;
 
+
       // ================================================
       // VALIDASI ID
       // ================================================
 
       if (
-        !Number.isInteger(proyekPartnerId) ||
+        !Number.isInteger(
+          proyekPartnerId
+        ) ||
         proyekPartnerId <= 0
       ) {
-
         return res.status(400).json({
-          error: "ID partner proyek tidak valid"
+          error:
+            "ID partner proyek tidak valid"
         });
-
       }
+
 
       // ================================================
       // VALIDASI NAMA DOKUMEN
       // ================================================
 
       if (
-        !String(nama_dokumen || "").trim()
+        !String(
+          nama_dokumen || ""
+        ).trim()
       ) {
-
         return res.status(400).json({
-          error: "Nama dokumen wajib dipilih"
+          error:
+            "Nama dokumen wajib dipilih"
         });
-
       }
+
+
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
+
+      client =
+        await pool.connect();
+
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
+
 
       // ================================================
       // CEK PARTNER PROYEK
+      // SEKALIGUS AMBIL PROYEK ID DAN NAMA PROYEK
       // ================================================
 
       const partnerCheck =
-        await pool.query(
+        await client.query(
           `
-          SELECT
-            id,
-            proyek_id
+            SELECT
+              pp.id,
+              pp.proyek_id,
+              p.nama_proyek
 
-          FROM public.proyek_partner
+            FROM public.proyek_partner pp
 
-          WHERE id = $1
+            JOIN public.proyek p
+              ON p.id = pp.proyek_id
+
+            WHERE pp.id = $1
+
+            LIMIT 1
           `,
           [proyekPartnerId]
         );
 
-      if (partnerCheck.rows.length === 0) {
+
+      if (
+        partnerCheck.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
 
         return res.status(404).json({
           error:
             "Data partner proyek tidak ditemukan"
         });
-
       }
 
+
       const proyekId =
-        partnerCheck.rows[0].proyek_id;
+        Number(
+          partnerCheck
+            .rows[0]
+            .proyek_id
+        );
+
+      const namaProyek =
+        partnerCheck
+          .rows[0]
+          .nama_proyek;
+
 
       // ================================================
       // VALIDASI HAK AKSES PROYEK
       // ================================================
 
-      // Terapkan pemeriksaan hak akses Admin/PIC
-      // terhadap proyekId menggunakan aturan
-      // yang sudah berlaku pada API PORTOPRO.
-      //
-      // Jangan mengunggah file atau menyimpan
-      // dokumen sebelum hak akses dinyatakan sah.
+      /*
+       * Terapkan pemeriksaan Admin/PIC terhadap
+       * proyekId jika fungsi validasi hak akses
+       * sudah tersedia.
+       */
+
 
       // ================================================
       // DEFAULT FILE OPSIONAL
@@ -8671,22 +11096,21 @@ app.post(
       let mimeType = null;
       let ukuranFile = null;
 
+
       // ================================================
       // JIKA ADA FILE, UPLOAD KE S3
       // ================================================
 
       if (req.file) {
-
         const ekstensi =
           path.extname(
             req.file.originalname
           ).toLowerCase();
 
-        // Nama file hanya UUID + ekstensi.
-        // Tidak menggunakan folder atau ID proyek.
 
         const namaFile =
           `${crypto.randomUUID()}${ekstensi}`;
+
 
         const hasilUpload =
           await uploadFile(
@@ -8694,9 +11118,11 @@ app.post(
             namaFile
           );
 
-        // Simpan untuk rollback jika INSERT gagal.
+
+        // Digunakan untuk rollback S3
         s3KeyBaru =
           hasilUpload.key;
+
 
         namaFileAsli =
           req.file.originalname;
@@ -8712,44 +11138,47 @@ app.post(
 
         ukuranFile =
           req.file.size;
-
       }
+
 
       // ================================================
       // SIMPAN KE DATABASE
       // ================================================
 
       const result =
-        await pool.query(
+        await client.query(
           `
-          INSERT INTO public.proyek_partner_dokumen (
-            proyek_partner_id,
-            nama_dokumen,
-            nomor_dokumen,
-            nama_file_asli,
-            nama_file_server,
-            path_file,
-            mime_type,
-            ukuran_file
-          )
+            INSERT INTO
+              public.proyek_partner_dokumen (
+                proyek_partner_id,
+                nama_dokumen,
+                nomor_dokumen,
+                nama_file_asli,
+                nama_file_server,
+                path_file,
+                mime_type,
+                ukuran_file
+              )
 
-          VALUES (
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6,
-            $7,
-            $8
-          )
+            VALUES (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              $7,
+              $8
+            )
 
-          RETURNING *
+            RETURNING *
           `,
           [
             proyekPartnerId,
 
-            String(nama_dokumen).trim(),
+            String(
+              nama_dokumen
+            ).trim(),
 
             String(
               nomor_dokumen || ""
@@ -8767,69 +11196,174 @@ app.post(
           ]
         );
 
+
+      const dokumenBaru =
+        result.rows[0];
+
+
+      // ================================================
+      // FORMAT NILAI LOG
+      // ================================================
+
+      const formatNilaiDokumen =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      const nilaiBaruLog = [
+        `NAMA DOKUMEN = ${
+          formatNilaiDokumen(
+            dokumenBaru.nama_dokumen
+          )
+        }`,
+
+        `NOMOR DOKUMEN = ${
+          formatNilaiDokumen(
+            dokumenBaru.nomor_dokumen
+          )
+        }`,
+
+        `NAMA FILE = ${
+          dokumenBaru.nama_file_asli
+            ? formatNilaiDokumen(
+                dokumenBaru
+                  .nama_file_asli
+              )
+            : "Tanpa file"
+        }`
+      ].join(", ");
+
+
+      // ================================================
+      // SIMPAN ACTIVITY LOG
+      // CREATE HANYA NILAI BARU
+      // ================================================
+
+      await simpanActivityLog(
+        client,
+        {
+          ...getActivityUser(req),
+
+          aktivitas: "CREATE",
+          modul: "PROYEK",
+
+          // Entity menggunakan proyek ID
+          entity_id: proyekId,
+          entity_nama: namaProyek,
+
+          field_name:
+            "DOKUMEN PARTNER",
+
+          nilai_lama: null,
+
+          nilai_baru:
+            nilaiBaruLog,
+
+          deskripsi:
+            "menambahkan dokumen partner"
+        }
+      );
+
+
+      // ================================================
+      // COMMIT DATABASE DAN LOG
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
       databaseBerhasil = true;
+
 
       // ================================================
       // RESPONSE
       // ================================================
 
       return res.status(201).json({
-
         message:
           "Dokumen partner berhasil ditambahkan",
 
         data:
-          result.rows[0]
-
+          dokumenBaru
       });
 
     } catch (error) {
+      // ================================================
+      // ROLLBACK DATABASE DAN LOG
+      // ================================================
+
+      if (
+        transaksiDimulai &&
+        client
+      ) {
+        try {
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK DOKUMEN PARTNER:",
+            rollbackError
+          );
+        }
+      }
+
 
       // ================================================
-      // ROLLBACK FILE S3 JIKA INSERT GAGAL
+      // ROLLBACK FILE S3 JIKA INSERT / LOG GAGAL
       // ================================================
 
       if (
         s3KeyBaru &&
         !databaseBerhasil
       ) {
-
         try {
-
           await s3Client.send(
             new DeleteObjectCommand({
-
               Bucket:
-                process.env.bucket_name,
+                process.env
+                  .bucket_name,
 
               Key:
                 s3KeyBaru
-
             })
           );
 
         } catch (hapusError) {
-
           console.error(
             "GAGAL ROLLBACK FILE S3 PARTNER:",
             hapusError
           );
-
         }
-
       }
+
 
       console.error(
         "ERROR TAMBAH DOKUMEN PARTNER:",
         error
       );
 
+
       return res.status(500).json({
-        error: error.message
+        error:
+          error.message
       });
 
+    } finally {
+      if (client) {
+        client.release();
+      }
     }
-
   }
 );
 
@@ -8838,26 +11372,32 @@ app.post(
 app.put(
   "/api/proyek/partner/dokumen/:id",
 
-  uploadDokumenKlien.single("file_dokumen"),
+  uploadDokumenKlien.single(
+    "file_dokumen"
+  ),
 
   async (req, res) => {
+    let client = null;
+
+    let transaksiDimulai =
+      false;
 
     let s3KeyBaru = null;
-    let databaseBerhasil = false;
+
+    let databaseBerhasil =
+      false;
 
     try {
-
       // ================================================
       // VALIDASI LOGIN
       // ================================================
 
       if (!req.session?.user) {
-
         return res.status(401).json({
           error: "Belum login"
         });
-
       }
+
 
       // ================================================
       // AMBIL DATA
@@ -8871,6 +11411,7 @@ app.put(
         nomor_dokumen
       } = req.body;
 
+
       // ================================================
       // VALIDASI ID
       // ================================================
@@ -8879,82 +11420,121 @@ app.put(
         !Number.isInteger(id) ||
         id <= 0
       ) {
-
         return res.status(400).json({
-          error: "ID dokumen partner tidak valid"
+          error:
+            "ID dokumen partner tidak valid"
         });
-
       }
+
 
       // ================================================
       // VALIDASI NAMA DOKUMEN
       // ================================================
 
       if (
-        !String(nama_dokumen || "").trim()
+        !String(
+          nama_dokumen || ""
+        ).trim()
       ) {
-
         return res.status(400).json({
-          error: "Nama dokumen wajib diisi"
+          error:
+            "Nama dokumen wajib diisi"
         });
-
       }
+
+
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
+
+      client =
+        await pool.connect();
+
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
+
 
       // ================================================
       // AMBIL DATA DOKUMEN LAMA
       // ================================================
 
       const dokumenResult =
-        await pool.query(
+        await client.query(
           `
-          SELECT
-            d.id,
-            d.proyek_partner_id,
-            d.nama_dokumen,
-            d.nomor_dokumen,
-            d.nama_file_asli,
-            d.nama_file_server,
-            d.path_file,
-            d.mime_type,
-            d.ukuran_file,
-            pp.proyek_id
+            SELECT
+              d.id,
+              d.proyek_partner_id,
+              d.nama_dokumen,
+              d.nomor_dokumen,
+              d.nama_file_asli,
+              d.nama_file_server,
+              d.path_file,
+              d.mime_type,
+              d.ukuran_file,
 
-          FROM public.proyek_partner_dokumen d
+              pp.proyek_id,
+              p.nama_proyek
 
-          JOIN public.proyek_partner pp
-            ON pp.id = d.proyek_partner_id
+            FROM public.proyek_partner_dokumen d
 
-          WHERE d.id = $1
+            JOIN public.proyek_partner pp
+              ON pp.id =
+                d.proyek_partner_id
+
+            JOIN public.proyek p
+              ON p.id =
+                pp.proyek_id
+
+            WHERE d.id = $1
+
+            FOR UPDATE OF d
           `,
           [id]
         );
 
+
       if (
         dokumenResult.rows.length === 0
       ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
 
         return res.status(404).json({
-          error: "Dokumen partner tidak ditemukan"
+          error:
+            "Dokumen partner tidak ditemukan"
         });
-
       }
+
 
       const dokumenLama =
         dokumenResult.rows[0];
+
+      const proyekId =
+        Number(
+          dokumenLama.proyek_id
+        );
+
+      const namaProyek =
+        dokumenLama.nama_proyek;
+
 
       // ================================================
       // VALIDASI HAK AKSES PROYEK
       // ================================================
 
-      // Wajib gunakan aturan Admin/PIC PORTOPRO
-      // untuk memeriksa hak edit terhadap
-      // dokumenLama.proyek_id.
-      //
-      // Jangan melakukan upload atau UPDATE
-      // sebelum pemeriksaan hak akses berhasil.
+      /*
+       * Terapkan pemeriksaan Admin/PIC
+       * terhadap dokumenLama.proyek_id
+       * jika fungsi hak akses sudah tersedia.
+       */
+
 
       // ================================================
-      // DEFAULT = FILE LAMA
+      // DEFAULT MENGGUNAKAN FILE LAMA
       // ================================================
 
       let namaFileAsli =
@@ -8972,31 +11552,33 @@ app.put(
       let ukuranFile =
         dokumenLama.ukuran_file;
 
+
       // ================================================
       // JIKA ADA FILE BARU
       // ================================================
 
       if (req.file) {
-
         const ekstensi =
           path.extname(
             req.file.originalname
           ).toLowerCase();
 
-        // UUID tanpa folder dan ID proyek
+
         const namaFile =
           `${crypto.randomUUID()}${ekstensi}`;
 
-        // Upload file baru ke S3
+
         const hasilUpload =
           await uploadFile(
             req.file,
             namaFile
           );
 
-        // Simpan key untuk rollback
+
+        // Digunakan jika transaksi gagal
         s3KeyBaru =
           hasilUpload.key;
+
 
         namaFileAsli =
           req.file.originalname;
@@ -9012,33 +11594,36 @@ app.put(
 
         ukuranFile =
           req.file.size;
-
       }
+
 
       // ================================================
       // UPDATE DATABASE
       // ================================================
 
       const result =
-        await pool.query(
+        await client.query(
           `
-          UPDATE public.proyek_partner_dokumen
+            UPDATE
+              public.proyek_partner_dokumen
 
-          SET
-            nama_dokumen = $1,
-            nomor_dokumen = $2,
-            nama_file_asli = $3,
-            nama_file_server = $4,
-            path_file = $5,
-            mime_type = $6,
-            ukuran_file = $7
+            SET
+              nama_dokumen = $1,
+              nomor_dokumen = $2,
+              nama_file_asli = $3,
+              nama_file_server = $4,
+              path_file = $5,
+              mime_type = $6,
+              ukuran_file = $7
 
-          WHERE id = $8
+            WHERE id = $8
 
-          RETURNING *
+            RETURNING *
           `,
           [
-            String(nama_dokumen).trim(),
+            String(
+              nama_dokumen
+            ).trim(),
 
             String(
               nomor_dokumen || ""
@@ -9058,171 +11643,560 @@ app.put(
           ]
         );
 
+
+      const dokumenBaru =
+        result.rows[0];
+
+
+      // ================================================
+      // FORMAT NILAI LOG
+      // ================================================
+
+      const formatNilaiDokumen =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      // ================================================
+      // CARI FIELD YANG BERUBAH
+      // ================================================
+
+      const perubahanDokumen = [
+        {
+          label:
+            "NAMA DOKUMEN",
+
+          nilai_lama:
+            formatNilaiDokumen(
+              dokumenLama
+                .nama_dokumen
+            ),
+
+          nilai_baru:
+            formatNilaiDokumen(
+              dokumenBaru
+                .nama_dokumen
+            ),
+
+          paksa: false
+        },
+        {
+          label:
+            "NOMOR DOKUMEN",
+
+          nilai_lama:
+            formatNilaiDokumen(
+              dokumenLama
+                .nomor_dokumen
+            ),
+
+          nilai_baru:
+            formatNilaiDokumen(
+              dokumenBaru
+                .nomor_dokumen
+            ),
+
+          paksa: false
+        },
+        {
+          label:
+            "NAMA FILE",
+
+          nilai_lama:
+            dokumenLama
+              .nama_file_asli
+                ? formatNilaiDokumen(
+                    dokumenLama
+                      .nama_file_asli
+                  )
+                : "Tanpa file",
+
+          nilai_baru:
+            dokumenBaru
+              .nama_file_asli
+                ? formatNilaiDokumen(
+                    dokumenBaru
+                      .nama_file_asli
+                  )
+                : "Tanpa file",
+
+          /*
+           * Tetap dianggap berubah apabila
+           * file baru diunggah meskipun nama
+           * file sama dengan file sebelumnya.
+           */
+          paksa:
+            Boolean(req.file)
+        }
+      ].filter(
+        item =>
+          item.paksa ||
+          item.nilai_lama !==
+            item.nilai_baru
+      );
+
+
+      // ================================================
+      // SIMPAN SATU ACTIVITY LOG
+      // ================================================
+
+      if (
+        perubahanDokumen.length > 0
+      ) {
+        await simpanActivityLog(
+          client,
+          {
+            ...getActivityUser(req),
+
+            aktivitas: "UPDATE",
+            modul: "PROYEK",
+
+            // Entity menggunakan proyek ID
+            entity_id: proyekId,
+            entity_nama: namaProyek,
+
+            field_name:
+              "DOKUMEN PARTNER",
+
+            nilai_lama:
+              perubahanDokumen
+                .map(
+                  item =>
+                    `${item.label} = ${item.nilai_lama}`
+                )
+                .join(", "),
+
+            nilai_baru:
+              perubahanDokumen
+                .map(
+                  item =>
+                    `${item.label} = ${item.nilai_baru}`
+                )
+                .join(", "),
+
+            deskripsi:
+              "memperbarui dokumen partner"
+          }
+        );
+      }
+
+
+      // ================================================
+      // COMMIT DATABASE DAN LOG
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
       databaseBerhasil = true;
+
 
       // ================================================
       // HAPUS FILE S3 LAMA
-      // HANYA JIKA ADA FILE PENGGANTI
+      // HANYA SETELAH DATABASE BERHASIL
       // ================================================
 
       if (
         req.file &&
         dokumenLama.path_file
       ) {
-
         const s3KeyLama =
           String(
             dokumenLama.path_file
           ).trim();
 
-        // Hanya hapus file S3 dengan format
-        // UUID + ekstensi.
-        //
-        // Path lokal /uploads/... tidak dihapus.
 
         const formatKeyS3 =
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z0-9]+$/i;
 
+
         if (
-          formatKeyS3.test(s3KeyLama) &&
+          formatKeyS3.test(
+            s3KeyLama
+          ) &&
           s3KeyLama !== s3KeyBaru
         ) {
-
           try {
-
             await s3Client.send(
               new DeleteObjectCommand({
-
                 Bucket:
-                  process.env.bucket_name,
+                  process.env
+                    .bucket_name,
 
                 Key:
                   s3KeyLama
-
               })
             );
 
           } catch (hapusError) {
-
-            // Database sudah berhasil diperbarui.
-            // Jangan membatalkan UPDATE jika
-            // penghapusan file lama gagal.
-
+            /*
+             * Database sudah berhasil.
+             * Kegagalan menghapus file lama
+             * tidak membatalkan perubahan.
+             */
             console.error(
               "GAGAL HAPUS FILE S3 PARTNER LAMA:",
               hapusError
             );
-
           }
-
         }
-
       }
+
 
       // ================================================
       // RESPONSE
       // ================================================
 
       return res.json({
-
         message:
           req.file
             ? "Dokumen dan file partner berhasil diperbarui"
             : "Dokumen partner berhasil diperbarui",
 
         data:
-          result.rows[0]
-
+          dokumenBaru
       });
 
     } catch (error) {
+      // ================================================
+      // ROLLBACK DATABASE DAN LOG
+      // ================================================
+
+      if (
+        transaksiDimulai &&
+        client
+      ) {
+        try {
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK EDIT DOKUMEN PARTNER:",
+            rollbackError
+          );
+        }
+      }
+
 
       // ================================================
       // ROLLBACK FILE S3 BARU
-      // JIKA UPDATE DATABASE GAGAL
       // ================================================
 
       if (
         s3KeyBaru &&
         !databaseBerhasil
       ) {
-
         try {
-
           await s3Client.send(
             new DeleteObjectCommand({
-
               Bucket:
-                process.env.bucket_name,
+                process.env
+                  .bucket_name,
 
               Key:
                 s3KeyBaru
-
             })
           );
 
         } catch (hapusError) {
-
           console.error(
             "GAGAL ROLLBACK FILE S3 PARTNER:",
             hapusError
           );
-
         }
-
       }
+
 
       console.error(
         "ERROR EDIT DOKUMEN PARTNER:",
         error
       );
 
+
       return res.status(500).json({
-        error: error.message
+        error:
+          error.message
       });
 
+    } finally {
+      if (client) {
+        client.release();
+      }
     }
-
   }
 );
 
 // HAPUS DOKUMEN PARTNER
 
-app.delete("/api/proyek/partner/dokumen/:id", 
+app.delete(
+  "/api/proyek/partner/dokumen/:id",
   async (req, res) => {
-  try {
-    const { id } = req.params;
+    const client =
+      await pool.connect();
 
-    const result = await pool.query(
-      `
-      DELETE FROM public.proyek_partner_dokumen
-      WHERE id = $1
-      RETURNING *
-      `,
-      [id]
-    );
+    let transaksiDimulai =
+      false;
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Dokumen partner tidak ditemukan"
+    try {
+      const id =
+        Number(req.params.id);
+
+
+      // ================================================
+      // VALIDASI ID
+      // ================================================
+
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID dokumen partner tidak valid"
+        });
+      }
+
+
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
+
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
+
+
+      // ================================================
+      // AMBIL NILAI LAMA DAN INFORMASI PROYEK
+      // ================================================
+
+      const oldResult =
+        await client.query(
+          `
+            SELECT
+              d.id,
+              d.proyek_partner_id,
+              d.nama_dokumen,
+              d.nomor_dokumen,
+              d.nama_file_asli,
+              d.nama_file_server,
+              d.path_file,
+              d.mime_type,
+              d.ukuran_file,
+
+              pp.proyek_id,
+              p.nama_proyek
+
+            FROM public.proyek_partner_dokumen d
+
+            JOIN public.proyek_partner pp
+              ON pp.id =
+                d.proyek_partner_id
+
+            JOIN public.proyek p
+              ON p.id =
+                pp.proyek_id
+
+            WHERE d.id = $1
+
+            FOR UPDATE OF d
+          `,
+          [id]
+        );
+
+
+      if (
+        oldResult.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
+
+        return res.status(404).json({
+          error:
+            "Dokumen partner tidak ditemukan"
+        });
+      }
+
+
+      const dokumenLama =
+        oldResult.rows[0];
+
+      const proyekId =
+        Number(
+          dokumenLama.proyek_id
+        );
+
+      const namaProyek =
+        dokumenLama.nama_proyek;
+
+
+      // ================================================
+      // HAPUS DOKUMEN PARTNER
+      // ================================================
+
+      const result =
+        await client.query(
+          `
+            DELETE FROM
+              public.proyek_partner_dokumen
+
+            WHERE id = $1
+
+            RETURNING *
+          `,
+          [id]
+        );
+
+
+      if (
+        result.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
+
+        return res.status(404).json({
+          error:
+            "Dokumen partner tidak ditemukan"
+        });
+      }
+
+
+      // ================================================
+      // FORMAT NILAI LAMA
+      // ================================================
+
+      const formatNilaiDokumen =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      const nilaiLamaLog = [
+        `NAMA DOKUMEN = ${
+          formatNilaiDokumen(
+            dokumenLama.nama_dokumen
+          )
+        }`,
+
+        `NOMOR DOKUMEN = ${
+          formatNilaiDokumen(
+            dokumenLama.nomor_dokumen
+          )
+        }`,
+
+        `NAMA FILE = ${
+          dokumenLama.nama_file_asli
+            ? formatNilaiDokumen(
+                dokumenLama
+                  .nama_file_asli
+              )
+            : "Tanpa file"
+        }`
+      ].join(", ");
+
+
+      // ================================================
+      // SIMPAN ACTIVITY LOG
+      // DELETE HANYA NILAI LAMA
+      // ================================================
+
+      await simpanActivityLog(
+        client,
+        {
+          ...getActivityUser(req),
+
+          aktivitas: "DELETE",
+          modul: "PROYEK",
+
+          // Entity menggunakan proyek ID
+          entity_id: proyekId,
+          entity_nama: namaProyek,
+
+          field_name:
+            "DOKUMEN PARTNER",
+
+          nilai_lama:
+            nilaiLamaLog,
+
+          nilai_baru: null,
+
+          deskripsi:
+            "menghapus dokumen partner"
+        }
+      );
+
+
+      // ================================================
+      // COMMIT
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
+
+
+      return res.json({
+        message:
+          "Dokumen partner berhasil dihapus"
       });
+
+    } catch (error) {
+      if (transaksiDimulai) {
+        try {
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK HAPUS DOKUMEN PARTNER:",
+            rollbackError
+          );
+        }
+      }
+
+
+      console.error(
+        "ERROR HAPUS DOKUMEN PARTNER:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
+
+    } finally {
+      client.release();
     }
-
-    res.json({
-      message: "Dokumen partner berhasil dihapus"
-    });
-
-  } catch (error) {
-    console.error(
-      "ERROR HAPUS DOKUMEN PARTNER:",
-      error
-    );
-
-    res.status(500).json({
-      error: error.message
-    });
   }
-});
+);
 
 // ======================================================
 // GET TIMELINE PROYEK
@@ -9289,9 +12263,19 @@ app.get(
 app.post(
   "/api/proyek/:proyekId/timeline",
   async (req, res) => {
+
+    const client =
+      await pool.connect();
+
+    let transactionAktif =
+      false;
+
     try {
+
       const proyekId =
-        Number(req.params.proyekId);
+        Number(
+          req.params.proyekId
+        );
 
       const {
         deskripsi,
@@ -9300,42 +12284,71 @@ app.post(
         status
       } = req.body;
 
+
+      // =========================================
+      // VALIDASI PROYEK ID
+      // =========================================
+
       if (
         !Number.isInteger(proyekId) ||
         proyekId <= 0
       ) {
+
         return res.status(400).json({
           error:
             "ID proyek tidak valid"
         });
+
       }
 
+
+      // =========================================
+      // VALIDASI DESKRIPSI
+      // =========================================
+
       if (!deskripsi?.trim()) {
+
         return res.status(400).json({
           error:
             "Deskripsi wajib diisi"
         });
+
       }
+
+
+      // =========================================
+      // VALIDASI TANGGAL
+      // =========================================
 
       if (
         !tanggal_mulai ||
         !tanggal_akhir
       ) {
+
         return res.status(400).json({
           error:
             "Tanggal mulai dan akhir wajib diisi"
         });
+
       }
 
+
       if (
-        new Date(tanggal_akhir) <
-        new Date(tanggal_mulai)
+        tanggal_akhir <
+        tanggal_mulai
       ) {
+
         return res.status(400).json({
           error:
             "Tanggal akhir tidak boleh sebelum tanggal mulai"
         });
+
       }
+
+
+      // =========================================
+      // VALIDASI STATUS
+      // =========================================
 
       const statusValid = [
         "Aktif",
@@ -9343,27 +12356,94 @@ app.post(
         "Diperpanjang"
       ];
 
+
       if (
         !statusValid.includes(status)
       ) {
+
         return res.status(400).json({
           error:
             "Status Timeline tidak valid"
         });
+
       }
 
-      const result =
-        await pool.query(
+
+      await client.query(
+        "BEGIN"
+      );
+
+      transactionAktif =
+        true;
+
+
+      // =========================================
+      // AMBIL INFORMASI PROYEK
+      // =========================================
+
+      const proyekResult =
+        await client.query(
           `
-            INSERT INTO public.proyek_timeline (
+          SELECT
+            id,
+            nama_proyek
+
+          FROM public.proyek
+
+          WHERE id = $1
+          `,
+          [proyekId]
+        );
+
+
+      if (
+        proyekResult.rows.length === 0
+      ) {
+
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transactionAktif =
+          false;
+
+        return res.status(404).json({
+          error:
+            "Proyek tidak ditemukan"
+        });
+
+      }
+
+
+      const proyek =
+        proyekResult.rows[0];
+
+
+      // =========================================
+      // SIMPAN TIMELINE
+      // =========================================
+
+      const result =
+        await client.query(
+          `
+          INSERT INTO
+            public.proyek_timeline (
               proyek_id,
               deskripsi,
               tanggal_mulai,
               tanggal_akhir,
               status
             )
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *
+
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5
+          )
+
+          RETURNING *
           `,
           [
             proyekId,
@@ -9374,24 +12454,177 @@ app.post(
           ]
         );
 
-      res.status(201).json({
-        message:
-          "Timeline berhasil ditambahkan",
 
-        data:
-          result.rows[0]
-      });
+      const savedTimeline =
+        result.rows[0];
+
+
+      // =========================================
+      // FORMAT TANGGAL INDONESIA
+      // Tidak menggunakan new Date agar tanggal
+      // tidak mundur akibat konversi timezone
+      // =========================================
+
+      const namaBulan = [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember"
+      ];
+
+
+      const formatTanggalIndonesia =
+        value => {
+
+          const [
+            tahun,
+            bulan,
+            tanggal
+          ] = String(value)
+            .slice(0, 10)
+            .split("-");
+
+
+          return (
+            `${Number(tanggal)} ` +
+            `${namaBulan[
+              Number(bulan) - 1
+            ]} ` +
+            `${tahun}`
+          );
+
+        };
+
+
+     const tanggalMulaiText =
+  formatTanggalIndonesia(
+    tanggal_mulai
+  );
+
+
+const tanggalAkhirText =
+  formatTanggalIndonesia(
+    tanggal_akhir
+  );
+
+
+const nilaiLog =
+  [
+    `DESKRIPSI = ${deskripsi.trim()}`,
+    `TANGGAL MULAI = ${tanggalMulaiText}`,
+    `TANGGAL AKHIR = ${tanggalAkhirText}`
+  ].join(", ");
+
+
+const activityUser =
+  getActivityUser(req);
+
+
+await simpanActivityLog(
+  client,
+  {
+    ...activityUser,
+
+    aktivitas:
+      "CREATE",
+
+    modul:
+      "PROYEK",
+
+    entity_id:
+      proyekId,
+
+    entity_nama:
+      proyek.nama_proyek,
+
+    field_name:
+      "TIMELINE",
+
+    nilai_lama:
+      "-",
+
+    nilai_baru:
+      nilaiLog,
+
+    deskripsi:
+      "menambahkan timeline proyek"
+  }
+);
+
+
+      // =========================================
+      // COMMIT
+      // =========================================
+
+      await client.query(
+        "COMMIT"
+      );
+
+      transactionAktif =
+        false;
+
+
+      return res
+        .status(201)
+        .json({
+          message:
+            "Timeline berhasil ditambahkan",
+
+          data:
+            savedTimeline
+        });
+
 
     } catch (error) {
+
+      if (transactionAktif) {
+
+        try {
+
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (
+          rollbackError
+        ) {
+
+          console.error(
+            "ERROR ROLLBACK TIMELINE:",
+            rollbackError
+          );
+
+        }
+
+      }
+
+
       console.error(
         "ERROR TAMBAH TIMELINE:",
         error
       );
 
-      res.status(500).json({
-        error: error.message
+
+      return res.status(500).json({
+        error:
+          error.message
       });
+
+
+    } finally {
+
+      client.release();
+
     }
+
   }
 );
 
@@ -9403,8 +12636,16 @@ app.post(
 app.put(
   "/api/proyek/timeline/:id",
   async (req, res) => {
+
+    const client =
+      await pool.connect();
+
+    let transactionAktif =
+      false;
+
     try {
-      const id =
+
+      const timelineId =
         Number(req.params.id);
 
       const {
@@ -9414,65 +12655,498 @@ app.put(
         status
       } = req.body;
 
+
+      // =========================================
+      // VALIDASI
+      // =========================================
+
       if (
-        new Date(tanggal_akhir) <
-        new Date(tanggal_mulai)
+        !Number.isInteger(
+          timelineId
+        ) ||
+        timelineId <= 0
       ) {
+
+        return res.status(400).json({
+          error:
+            "ID timeline tidak valid"
+        });
+
+      }
+
+
+      if (!deskripsi?.trim()) {
+
+        return res.status(400).json({
+          error:
+            "Deskripsi wajib diisi"
+        });
+
+      }
+
+
+      if (
+        !tanggal_mulai ||
+        !tanggal_akhir
+      ) {
+
+        return res.status(400).json({
+          error:
+            "Tanggal mulai dan tanggal akhir wajib diisi"
+        });
+
+      }
+
+
+      /*
+       * Karena format input adalah YYYY-MM-DD,
+       * perbandingan string dapat digunakan dan
+       * tidak terkena masalah timezone.
+       */
+      if (
+        tanggal_akhir <
+        tanggal_mulai
+      ) {
+
         return res.status(400).json({
           error:
             "Tanggal akhir tidak boleh sebelum tanggal mulai"
         });
+
       }
 
-      const result =
-        await pool.query(
-          `
-            UPDATE public.proyek_timeline
-            SET
-              deskripsi = $1,
-              tanggal_mulai = $2,
-              tanggal_akhir = $3,
-              status = $4,
-              updated_at = NOW()
-            WHERE id = $5
-            RETURNING *
-          `,
-          [
-            deskripsi.trim(),
-            tanggal_mulai,
-            tanggal_akhir,
-            status,
-            id
-          ]
-        );
+
+      const statusValid = [
+        "Aktif",
+        "Berakhir",
+        "Diperpanjang"
+      ];
+
 
       if (
-        result.rows.length === 0
+        !statusValid.includes(status)
       ) {
+
+        return res.status(400).json({
+          error:
+            "Status Timeline tidak valid"
+        });
+
+      }
+
+
+      await client.query(
+        "BEGIN"
+      );
+
+      transactionAktif =
+        true;
+
+
+      // =========================================
+      // AMBIL DATA TIMELINE SEBELUM DIUBAH
+      // =========================================
+
+      const oldResult =
+        await client.query(
+          `
+          SELECT
+            timeline.id,
+            timeline.proyek_id,
+            timeline.deskripsi,
+            timeline.tanggal_mulai,
+            timeline.tanggal_akhir,
+            timeline.status,
+            proyek.nama_proyek
+
+          FROM public.proyek_timeline timeline
+
+          JOIN public.proyek proyek
+            ON proyek.id =
+              timeline.proyek_id
+
+          WHERE timeline.id = $1
+
+          FOR UPDATE
+          `,
+          [timelineId]
+        );
+
+
+      if (
+        oldResult.rows.length === 0
+      ) {
+
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transactionAktif =
+          false;
+
         return res.status(404).json({
           error:
             "Timeline tidak ditemukan"
         });
+
       }
 
-      res.json({
+
+      const timelineLama =
+        oldResult.rows[0];
+
+
+      // =========================================
+      // NORMALISASI NILAI
+      // =========================================
+
+      const deskripsiBaru =
+        deskripsi.trim();
+
+
+      const normalisasiTanggal =
+        value => {
+
+          if (!value) {
+            return "";
+          }
+
+          if (
+            typeof value === "string"
+          ) {
+
+            return value.slice(
+              0,
+              10
+            );
+
+          }
+
+          if (
+            value instanceof Date
+          ) {
+
+            return value
+              .toISOString()
+              .slice(0, 10);
+
+          }
+
+          return String(value)
+            .slice(0, 10);
+
+        };
+
+
+      const tanggalMulaiLama =
+        normalisasiTanggal(
+          timelineLama.tanggal_mulai
+        );
+
+
+      const tanggalAkhirLama =
+        normalisasiTanggal(
+          timelineLama.tanggal_akhir
+        );
+
+
+      const tanggalMulaiBaru =
+        normalisasiTanggal(
+          tanggal_mulai
+        );
+
+
+      const tanggalAkhirBaru =
+        normalisasiTanggal(
+          tanggal_akhir
+        );
+
+
+      // =========================================
+      // UPDATE TIMELINE
+      // =========================================
+
+      const result =
+        await client.query(
+          `
+          UPDATE public.proyek_timeline
+
+          SET
+            deskripsi = $1,
+            tanggal_mulai = $2,
+            tanggal_akhir = $3,
+            status = $4,
+            updated_at =
+              CURRENT_TIMESTAMP
+
+          WHERE id = $5
+
+          RETURNING *
+          `,
+          [
+            deskripsiBaru,
+            tanggalMulaiBaru,
+            tanggalAkhirBaru,
+            status,
+            timelineId
+          ]
+        );
+
+
+      const timelineBaru =
+        result.rows[0];
+
+
+      // =========================================
+      // FORMAT TANGGAL INDONESIA
+      // =========================================
+
+      const namaBulan = [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember"
+      ];
+
+
+      const formatTanggalIndonesia =
+        value => {
+
+          if (!value) {
+            return "-";
+          }
+
+          const [
+            tahun,
+            bulan,
+            tanggal
+          ] = normalisasiTanggal(
+            value
+          ).split("-");
+
+
+          return (
+            `${Number(tanggal)} ` +
+            `${namaBulan[
+              Number(bulan) - 1
+            ]} ` +
+            `${tahun}`
+          );
+
+        };
+
+
+      // =========================================
+      // CATAT FIELD YANG BERUBAH
+      // DALAM SATU ACTIVITY LOG
+      // =========================================
+
+      const nilaiLamaLog = [];
+      const nilaiBaruLog = [];
+
+
+      if (
+        timelineLama.deskripsi !==
+        deskripsiBaru
+      ) {
+
+        nilaiLamaLog.push(
+          `DESKRIPSI = ${timelineLama.deskripsi || "-"}`
+        );
+
+        nilaiBaruLog.push(
+          `DESKRIPSI = ${deskripsiBaru}`
+        );
+
+      }
+
+
+      if (
+        tanggalMulaiLama !==
+        tanggalMulaiBaru
+      ) {
+
+        nilaiLamaLog.push(
+          `TANGGAL MULAI = ${
+            formatTanggalIndonesia(
+              tanggalMulaiLama
+            )
+          }`
+        );
+
+        nilaiBaruLog.push(
+          `TANGGAL MULAI = ${
+            formatTanggalIndonesia(
+              tanggalMulaiBaru
+            )
+          }`
+        );
+
+      }
+
+
+      if (
+        tanggalAkhirLama !==
+        tanggalAkhirBaru
+      ) {
+
+        nilaiLamaLog.push(
+          `TANGGAL AKHIR = ${
+            formatTanggalIndonesia(
+              tanggalAkhirLama
+            )
+          }`
+        );
+
+        nilaiBaruLog.push(
+          `TANGGAL AKHIR = ${
+            formatTanggalIndonesia(
+              tanggalAkhirBaru
+            )
+          }`
+        );
+
+      }
+
+
+      if (
+        timelineLama.status !==
+        status
+      ) {
+
+        nilaiLamaLog.push(
+          `STATUS = ${
+            timelineLama.status ||
+            "-"
+          }`
+        );
+
+        nilaiBaruLog.push(
+          `STATUS = ${status}`
+        );
+
+      }
+
+
+      // =========================================
+      // SIMPAN SATU ACTIVITY LOG
+      // =========================================
+
+      if (
+        nilaiBaruLog.length > 0
+      ) {
+
+        const activityUser =
+          getActivityUser(req);
+
+
+        await simpanActivityLog(
+          client,
+          {
+            ...activityUser,
+
+            aktivitas:
+              "UPDATE",
+
+            modul:
+              "PROYEK",
+
+            /*
+             * Entity ID menggunakan
+             * proyek_id, bukan timelineId.
+             */
+            entity_id:
+              timelineLama.proyek_id,
+
+            entity_nama:
+              timelineLama.nama_proyek,
+
+            field_name:
+              "TIMELINE",
+
+            nilai_lama:
+              nilaiLamaLog.join(", "),
+
+            nilai_baru:
+              nilaiBaruLog.join(", "),
+
+            deskripsi:
+              "memperbarui timeline proyek"
+          }
+        );
+
+      }
+
+
+      await client.query(
+        "COMMIT"
+      );
+
+      transactionAktif =
+        false;
+
+
+      return res.json({
         message:
-          "Timeline berhasil diperbarui",
+          nilaiBaruLog.length > 0
+            ? "Timeline berhasil diperbarui"
+            : "Tidak ada perubahan pada timeline",
 
         data:
-          result.rows[0]
+          timelineBaru
       });
 
+
     } catch (error) {
+
+      if (transactionAktif) {
+
+        try {
+
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (
+          rollbackError
+        ) {
+
+          console.error(
+            "ERROR ROLLBACK EDIT TIMELINE:",
+            rollbackError
+          );
+
+        }
+
+      }
+
+
       console.error(
         "ERROR EDIT TIMELINE:",
         error
       );
 
-      res.status(500).json({
-        error: error.message
+
+      return res.status(500).json({
+        error:
+          error.message
       });
+
+
+    } finally {
+
+      client.release();
+
     }
+
   }
 );
 
@@ -9484,44 +13158,347 @@ app.put(
 app.delete(
   "/api/proyek/timeline/:id",
   async (req, res) => {
+
+    const client =
+      await pool.connect();
+
+    let transactionAktif =
+      false;
+
     try {
-      const id =
+
+      const timelineId =
         Number(req.params.id);
 
-      const result =
-        await pool.query(
-          `
-            DELETE FROM public.proyek_timeline
-            WHERE id = $1
-            RETURNING id
-          `,
-          [id]
-        );
+
+      // =========================================
+      // VALIDASI ID TIMELINE
+      // =========================================
 
       if (
-        result.rows.length === 0
+        !Number.isInteger(
+          timelineId
+        ) ||
+        timelineId <= 0
       ) {
+
+        return res.status(400).json({
+          error:
+            "ID timeline tidak valid"
+        });
+
+      }
+
+
+      await client.query(
+        "BEGIN"
+      );
+
+      transactionAktif =
+        true;
+
+
+      // =========================================
+      // AMBIL DATA SEBELUM DIHAPUS
+      // =========================================
+
+      const oldResult =
+        await client.query(
+          `
+          SELECT
+            timeline.id,
+            timeline.proyek_id,
+            timeline.deskripsi,
+            timeline.tanggal_mulai,
+            timeline.tanggal_akhir,
+            timeline.status,
+            proyek.nama_proyek
+
+          FROM public.proyek_timeline timeline
+
+          JOIN public.proyek proyek
+            ON proyek.id =
+              timeline.proyek_id
+
+          WHERE timeline.id = $1
+
+          FOR UPDATE OF timeline
+          `,
+          [timelineId]
+        );
+
+
+      if (
+        oldResult.rows.length === 0
+      ) {
+
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transactionAktif =
+          false;
+
         return res.status(404).json({
           error:
             "Timeline tidak ditemukan"
         });
+
       }
 
-      res.json({
+
+      const timelineLama =
+        oldResult.rows[0];
+
+
+      // =========================================
+      // FORMAT TANGGAL INDONESIA
+      // =========================================
+
+      const namaBulan = [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember"
+      ];
+
+
+      const normalisasiTanggal =
+        value => {
+
+          if (!value) {
+            return "";
+          }
+
+          if (
+            typeof value === "string"
+          ) {
+
+            return value.slice(
+              0,
+              10
+            );
+
+          }
+
+          if (
+            value instanceof Date
+          ) {
+
+            return value
+              .toISOString()
+              .slice(0, 10);
+
+          }
+
+          return String(value)
+            .slice(0, 10);
+
+        };
+
+
+      const formatTanggalIndonesia =
+        value => {
+
+          const tanggalNormal =
+            normalisasiTanggal(value);
+
+
+          if (!tanggalNormal) {
+            return "-";
+          }
+
+
+          const [
+            tahun,
+            bulan,
+            tanggal
+          ] = tanggalNormal.split("-");
+
+
+          return (
+            `${Number(tanggal)} ` +
+            `${namaBulan[
+              Number(bulan) - 1
+            ]} ` +
+            `${tahun}`
+          );
+
+        };
+
+
+      // =========================================
+      // SUSUN ISI LOG SEBELUM DIHAPUS
+      // =========================================
+
+      const nilaiLamaLog =
+        [
+          `DESKRIPSI = ${
+            timelineLama.deskripsi ||
+            "-"
+          }`,
+
+          `TANGGAL MULAI = ${
+            formatTanggalIndonesia(
+              timelineLama.tanggal_mulai
+            )
+          }`,
+
+          `TANGGAL AKHIR = ${
+            formatTanggalIndonesia(
+              timelineLama.tanggal_akhir
+            )
+          }`,
+
+          `STATUS = ${
+            timelineLama.status ||
+            "-"
+          }`
+        ].join(", ");
+
+
+      // =========================================
+      // HAPUS TIMELINE
+      // =========================================
+
+      const deleteResult =
+        await client.query(
+          `
+          DELETE FROM
+            public.proyek_timeline
+
+          WHERE id = $1
+
+          RETURNING id
+          `,
+          [timelineId]
+        );
+
+
+      if (
+        deleteResult.rows.length === 0
+      ) {
+
+        throw new Error(
+          "Timeline gagal dihapus"
+        );
+
+      }
+
+
+      // =========================================
+      // SIMPAN ACTIVITY LOG
+      // entity_id = proyek_id
+      // =========================================
+
+      const activityUser =
+        getActivityUser(req);
+
+
+      await simpanActivityLog(
+        client,
+        {
+          ...activityUser,
+
+          aktivitas:
+            "DELETE",
+
+          modul:
+            "PROYEK",
+
+          /*
+           * Entity ID menggunakan
+           * proyek_id, bukan timelineId.
+           */
+          entity_id:
+            timelineLama.proyek_id,
+
+          entity_nama:
+            timelineLama.nama_proyek,
+
+          field_name:
+            "TIMELINE",
+
+          nilai_lama:
+            nilaiLamaLog,
+
+          nilai_baru:
+            "-",
+
+          deskripsi:
+            "menghapus timeline proyek"
+        }
+      );
+
+
+      // =========================================
+      // COMMIT
+      // =========================================
+
+      await client.query(
+        "COMMIT"
+      );
+
+      transactionAktif =
+        false;
+
+
+      return res.json({
         message:
           "Timeline berhasil dihapus"
       });
 
+
     } catch (error) {
+
+      if (transactionAktif) {
+
+        try {
+
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (
+          rollbackError
+        ) {
+
+          console.error(
+            "ERROR ROLLBACK HAPUS TIMELINE:",
+            rollbackError
+          );
+
+        }
+
+      }
+
+
       console.error(
         "ERROR HAPUS TIMELINE:",
         error
       );
 
-      res.status(500).json({
-        error: error.message
+
+      return res.status(500).json({
+        error:
+          error.message
       });
+
+
+    } finally {
+
+      client.release();
+
     }
+
   }
 );
 
@@ -9712,30 +13689,31 @@ app.post(
         await client.query(
           `
           SELECT
-            pp.id,
-            pp.proyek_id,
-            p.jenis_proyek,
+  pp.id,
+  pp.proyek_id,
+  p.nama_proyek,
+  p.jenis_proyek,
 
-            COALESCE(
-              NULLIF(
-                pp.nilai_nego_3,
-                0
-              ),
-              NULLIF(
-                pp.nilai_nego_2,
-                0
-              ),
-              NULLIF(
-                pp.nilai_nego_1,
-                0
-              ),
-              NULLIF(
-                pp.nilai_submit,
-                0
-              ),
-              0
-            )::numeric
-              AS nilai_dasar_partner
+  COALESCE(
+    NULLIF(
+      pp.nilai_nego_3,
+      0
+    ),
+    NULLIF(
+      pp.nilai_nego_2,
+      0
+    ),
+    NULLIF(
+      pp.nilai_nego_1,
+      0
+    ),
+    NULLIF(
+      pp.nilai_submit,
+      0
+    ),
+    0
+  )::numeric
+    AS nilai_dasar_partner
 
           FROM public.proyek_partner pp
 
@@ -10305,7 +14283,217 @@ app.post(
           ]
         );
 
+// ==================================================
+// ACTIVITY LOG TERMIN PARTNER
+// CREATE HANYA NILAI BARU
+// ==================================================
 
+const dataTerminBaru =
+  terminResult.rows[0];
+
+
+const formatTeksTerminPartnerLog =
+  value => {
+    if (
+      value === null ||
+      value === undefined ||
+      String(value).trim() === ""
+    ) {
+      return "-";
+    }
+
+    return String(value).trim();
+  };
+
+
+const formatRupiahTerminPartnerLog =
+  value => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "-";
+    }
+
+    const angka =
+      Number(value);
+
+    if (!Number.isFinite(angka)) {
+      return String(value);
+    }
+
+    return `Rp ${new Intl.NumberFormat(
+      "id-ID",
+      {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }
+    ).format(angka)}`;
+  };
+
+
+const formatPersentaseTerminPartnerLog =
+  value => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "-";
+    }
+
+    const angka =
+      Number(value);
+
+    if (!Number.isFinite(angka)) {
+      return String(value);
+    }
+
+    return `${
+      new Intl.NumberFormat(
+        "id-ID",
+        {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }
+      ).format(angka)
+    }%`;
+  };
+
+
+const formatTanggalTerminPartnerLog =
+  value => {
+    if (!value) {
+      return "-";
+    }
+
+    const daftarBulan = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember"
+    ];
+
+    let tahun;
+    let bulan;
+    let tanggal;
+
+    if (value instanceof Date) {
+      tahun =
+        value.getUTCFullYear();
+
+      bulan =
+        value.getUTCMonth() + 1;
+
+      tanggal =
+        value.getUTCDate();
+    } else {
+      const cocok =
+        String(value).match(
+          /^(\d{4})-(\d{2})-(\d{2})/
+        );
+
+      if (!cocok) {
+        return String(value);
+      }
+
+      tahun =
+        Number(cocok[1]);
+
+      bulan =
+        Number(cocok[2]);
+
+      tanggal =
+        Number(cocok[3]);
+    }
+
+    return `${tanggal} ${
+      daftarBulan[bulan - 1]
+    } ${tahun}`;
+  };
+
+
+const nilaiBaruLog = [
+  `NAMA TERMIN = ${
+    formatTeksTerminPartnerLog(
+      dataTerminBaru.nama_termin
+    )
+  }`,
+
+  `PERSENTASE = ${
+    formatPersentaseTerminPartnerLog(
+      dataTerminBaru.persentase
+    )
+  }`,
+
+  `NOMINAL = ${
+    formatRupiahTerminPartnerLog(
+      dataTerminBaru.nominal
+    )
+  }`,
+
+  `STATUS PEMBAYARAN = ${
+    formatTeksTerminPartnerLog(
+      dataTerminBaru
+        .status_pembayaran
+    )
+  }`,
+
+  `TANGGAL JATUH TEMPO = ${
+    formatTanggalTerminPartnerLog(
+      dataTerminBaru
+        .tanggal_jatuh_tempo
+    )
+  }`,
+
+  `TANGGAL BAYAR = ${
+    formatTanggalTerminPartnerLog(
+      dataTerminBaru
+        .tanggal_bayar
+    )
+  }`
+].join(", ");
+
+
+await simpanActivityLog(
+  client,
+  {
+    ...getActivityUser(req),
+
+    aktivitas: "CREATE",
+    modul: "PROYEK",
+
+    // Entity menggunakan proyek ID
+    entity_id:
+      Number(
+        partnerData.proyek_id
+      ),
+
+    entity_nama:
+      partnerData.nama_proyek,
+
+    field_name:
+      "TERMIN PARTNER",
+
+    // CREATE hanya nilai baru
+    nilai_lama: null,
+
+    nilai_baru:
+      nilaiBaruLog,
+
+    deskripsi:
+      "menambahkan termin partner"
+  }
+);
       await client.query("COMMIT");
 
       transactionStarted =
@@ -10358,9 +14546,8 @@ app.post(
     }
   }
 );
-// ======================================================
+
 // UPDATE TERMIN PARTNER
-// ======================================================
 
 app.put(
   "/api/proyek/partner/termin/:id",
@@ -10410,38 +14597,63 @@ app.put(
       // ==================================================
 
       const terminResult =
-        await client.query(
-          `
-          SELECT
-            ppt.id,
-            ppt.proyek_partner_id,
-            pp.proyek_id,
-            p.jenis_proyek,
+  await client.query(
+    `
+      SELECT
+        ppt.id,
+        ppt.proyek_partner_id,
+        ppt.nama_termin,
+        ppt.persentase,
+        ppt.nominal,
+        ppt.status_pembayaran,
+        ppt.tanggal_jatuh_tempo,
+        ppt.tanggal_bayar,
+        ppt.syarat_pembayaran,
 
-            COALESCE(
-              NULLIF(pp.nilai_nego_3, 0),
-              NULLIF(pp.nilai_nego_2, 0),
-              NULLIF(pp.nilai_nego_1, 0),
-              NULLIF(pp.nilai_submit, 0),
-              0
-            )::numeric AS nilai_final_partner
+        pp.proyek_id,
 
-          FROM public.proyek_partner_termin ppt
+        p.nama_proyek,
+        p.jenis_proyek,
 
-          JOIN public.proyek_partner pp
-            ON pp.id =
-               ppt.proyek_partner_id
+        COALESCE(
+          NULLIF(
+            pp.nilai_nego_3,
+            0
+          ),
+          NULLIF(
+            pp.nilai_nego_2,
+            0
+          ),
+          NULLIF(
+            pp.nilai_nego_1,
+            0
+          ),
+          NULLIF(
+            pp.nilai_submit,
+            0
+          ),
+          0
+        )::numeric
+          AS nilai_final_partner
 
-          JOIN public.proyek p
-            ON p.id =
-               pp.proyek_id
+      FROM public.proyek_partner_termin ppt
 
-          WHERE ppt.id = $1
+      JOIN public.proyek_partner pp
+        ON pp.id =
+          ppt.proyek_partner_id
 
-          LIMIT 1
-          `,
-          [terminId]
-        );
+      JOIN public.proyek p
+        ON p.id =
+          pp.proyek_id
+
+      WHERE ppt.id = $1
+
+      LIMIT 1
+
+      FOR UPDATE OF ppt
+    `,
+    [terminId]
+  );
 
       if (
         terminResult.rows.length === 0
@@ -10656,7 +14868,293 @@ app.put(
             terminId
           ]
         );
+// ==================================================
+// ACTIVITY LOG TERMIN PARTNER
+// ==================================================
 
+const dataTerminBaru =
+  result.rows[0];
+
+
+const formatTeksTerminPartnerLog =
+  value => {
+    if (
+      value === null ||
+      value === undefined ||
+      String(value).trim() === ""
+    ) {
+      return "-";
+    }
+
+    return String(value).trim();
+  };
+
+
+const formatRupiahTerminPartnerLog =
+  value => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "-";
+    }
+
+    const angka =
+      Number(value);
+
+    if (!Number.isFinite(angka)) {
+      return String(value);
+    }
+
+    return `Rp ${new Intl.NumberFormat(
+      "id-ID",
+      {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }
+    ).format(angka)}`;
+  };
+
+
+const formatPersentaseTerminPartnerLog =
+  value => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "-";
+    }
+
+    const angka =
+      Number(value);
+
+    if (!Number.isFinite(angka)) {
+      return String(value);
+    }
+
+    return `${
+      new Intl.NumberFormat(
+        "id-ID",
+        {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }
+      ).format(angka)
+    }%`;
+  };
+
+
+const formatTanggalTerminPartnerLog =
+  value => {
+    if (!value) {
+      return "-";
+    }
+
+    const daftarBulan = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember"
+    ];
+
+    let tahun;
+    let bulan;
+    let tanggal;
+
+    if (value instanceof Date) {
+      tahun =
+        value.getUTCFullYear();
+
+      bulan =
+        value.getUTCMonth() + 1;
+
+      tanggal =
+        value.getUTCDate();
+    } else {
+      const cocok =
+        String(value).match(
+          /^(\d{4})-(\d{2})-(\d{2})/
+        );
+
+      if (!cocok) {
+        return String(value);
+      }
+
+      tahun =
+        Number(cocok[1]);
+
+      bulan =
+        Number(cocok[2]);
+
+      tanggal =
+        Number(cocok[3]);
+    }
+
+    return `${tanggal} ${
+      daftarBulan[bulan - 1]
+    } ${tahun}`;
+  };
+
+
+const buatDetailTerminPartnerLog =
+  data => [
+    {
+      label:
+        "NAMA TERMIN",
+
+      nilai:
+        formatTeksTerminPartnerLog(
+          data.nama_termin
+        )
+    },
+    {
+      label:
+        "PERSENTASE",
+
+      nilai:
+        formatPersentaseTerminPartnerLog(
+          data.persentase
+        )
+    },
+    {
+      label:
+        "NOMINAL",
+
+      nilai:
+        formatRupiahTerminPartnerLog(
+          data.nominal
+        )
+    },
+    {
+      label:
+        "STATUS PEMBAYARAN",
+
+      nilai:
+        formatTeksTerminPartnerLog(
+          data.status_pembayaran
+        )
+    },
+    {
+      label:
+        "TANGGAL JATUH TEMPO",
+
+      nilai:
+        formatTanggalTerminPartnerLog(
+          data.tanggal_jatuh_tempo
+        )
+    },
+    {
+      label:
+        "TANGGAL BAYAR",
+
+      nilai:
+        formatTanggalTerminPartnerLog(
+          data.tanggal_bayar
+        )
+    },
+    {
+      label:
+        "SYARAT PEMBAYARAN",
+
+      nilai:
+        formatTeksTerminPartnerLog(
+          data.syarat_pembayaran
+        )
+    }
+  ];
+
+
+const detailTerminLama =
+  buatDetailTerminPartnerLog(
+    terminData
+  );
+
+const detailTerminBaru =
+  buatDetailTerminPartnerLog(
+    dataTerminBaru
+  );
+
+
+// Hanya ambil field yang berubah
+const perubahanTermin =
+  detailTerminBaru
+    .map(
+      (
+        itemBaru,
+        index
+      ) => ({
+        label:
+          itemBaru.label,
+
+        nilai_lama:
+          detailTerminLama[index]
+            .nilai,
+
+        nilai_baru:
+          itemBaru.nilai
+      })
+    )
+    .filter(
+      item =>
+        item.nilai_lama !==
+        item.nilai_baru
+    );
+
+
+if (
+  perubahanTermin.length > 0
+) {
+  await simpanActivityLog(
+    client,
+    {
+      ...getActivityUser(req),
+
+      aktivitas: "UPDATE",
+      modul: "PROYEK",
+
+      // Entity menggunakan proyek ID
+      entity_id:
+        Number(
+          terminData.proyek_id
+        ),
+
+      entity_nama:
+        terminData.nama_proyek,
+
+      field_name:
+        "TERMIN PARTNER",
+
+      nilai_lama:
+        perubahanTermin
+          .map(
+            item =>
+              `${item.label} = ${item.nilai_lama}`
+          )
+          .join(", "),
+
+      nilai_baru:
+        perubahanTermin
+          .map(
+            item =>
+              `${item.label} = ${item.nilai_baru}`
+          )
+          .join(", "),
+
+      deskripsi:
+        "memperbarui termin partner"
+    }
+  );
+}
       await client.query(
         "COMMIT"
       );
@@ -10688,43 +15186,411 @@ app.put(
   }
 );
 
+// HAPUS TERMIN PARTNER
 
-// ======================================================
-// PARTNER - HAPUS TERMIN
-// ======================================================
-
-app.delete("/api/proyek/partner/termin/:id", 
+app.delete(
+  "/api/proyek/partner/termin/:id",
   async (req, res) => {
-  try {
-    const { id } = req.params;
+    const client =
+      await pool.connect();
 
-    const result = await pool.query(
-      `
-      DELETE FROM public.proyek_partner_termin
-      WHERE id = $1
-      RETURNING *
-      `,
-      [id]
-    );
+    let transaksiDimulai =
+      false;
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Termin partner tidak ditemukan"
+    try {
+      const terminId =
+        Number(req.params.id);
+
+
+      // ================================================
+      // VALIDASI ID
+      // ================================================
+
+      if (
+        !Number.isInteger(terminId) ||
+        terminId <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID termin partner tidak valid"
+        });
+      }
+
+
+      // ================================================
+      // MULAI TRANSAKSI
+      // ================================================
+
+      await client.query("BEGIN");
+
+      transaksiDimulai = true;
+
+
+      // ================================================
+      // AMBIL NILAI LAMA DAN INFORMASI PROYEK
+      // ================================================
+
+      const oldResult =
+        await client.query(
+          `
+            SELECT
+              ppt.id,
+              ppt.proyek_partner_id,
+              ppt.nama_termin,
+              ppt.persentase,
+              ppt.nominal,
+              ppt.status_pembayaran,
+              ppt.tanggal_jatuh_tempo,
+              ppt.tanggal_bayar,
+              ppt.syarat_pembayaran,
+
+              pp.proyek_id,
+              p.nama_proyek
+
+            FROM public.proyek_partner_termin ppt
+
+            JOIN public.proyek_partner pp
+              ON pp.id =
+                ppt.proyek_partner_id
+
+            JOIN public.proyek p
+              ON p.id =
+                pp.proyek_id
+
+            WHERE ppt.id = $1
+
+            FOR UPDATE OF ppt
+          `,
+          [terminId]
+        );
+
+
+      if (
+        oldResult.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
+
+        return res.status(404).json({
+          error:
+            "Termin partner tidak ditemukan"
+        });
+      }
+
+
+      const terminLama =
+        oldResult.rows[0];
+
+      const proyekId =
+        Number(
+          terminLama.proyek_id
+        );
+
+      const namaProyek =
+        terminLama.nama_proyek;
+
+
+      // ================================================
+      // HAPUS TERMIN PARTNER
+      // ================================================
+
+      const result =
+        await client.query(
+          `
+            DELETE FROM
+              public.proyek_partner_termin
+
+            WHERE id = $1
+
+            RETURNING *
+          `,
+          [terminId]
+        );
+
+
+      if (
+        result.rows.length === 0
+      ) {
+        await client.query(
+          "ROLLBACK"
+        );
+
+        transaksiDimulai = false;
+
+        return res.status(404).json({
+          error:
+            "Termin partner tidak ditemukan"
+        });
+      }
+
+
+      // ================================================
+      // FORMAT NILAI LOG
+      // ================================================
+
+      const formatTeksTerminLog =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+          ) {
+            return "-";
+          }
+
+          return String(value).trim();
+        };
+
+
+      const formatRupiahTerminLog =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            value === ""
+          ) {
+            return "-";
+          }
+
+          const angka =
+            Number(value);
+
+          if (!Number.isFinite(angka)) {
+            return String(value);
+          }
+
+          return `Rp ${new Intl.NumberFormat(
+            "id-ID",
+            {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
+            }
+          ).format(angka)}`;
+        };
+
+
+      const formatPersentaseTerminLog =
+        value => {
+          if (
+            value === null ||
+            value === undefined ||
+            value === ""
+          ) {
+            return "-";
+          }
+
+          const angka =
+            Number(value);
+
+          if (!Number.isFinite(angka)) {
+            return String(value);
+          }
+
+          return `${
+            new Intl.NumberFormat(
+              "id-ID",
+              {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+              }
+            ).format(angka)
+          }%`;
+        };
+
+
+      const formatTanggalTerminLog =
+        value => {
+          if (!value) {
+            return "-";
+          }
+
+          const daftarBulan = [
+            "Januari",
+            "Februari",
+            "Maret",
+            "April",
+            "Mei",
+            "Juni",
+            "Juli",
+            "Agustus",
+            "September",
+            "Oktober",
+            "November",
+            "Desember"
+          ];
+
+          let tahun;
+          let bulan;
+          let tanggal;
+
+          if (value instanceof Date) {
+            tahun =
+              value.getUTCFullYear();
+
+            bulan =
+              value.getUTCMonth() + 1;
+
+            tanggal =
+              value.getUTCDate();
+          } else {
+            const cocok =
+              String(value).match(
+                /^(\d{4})-(\d{2})-(\d{2})/
+              );
+
+            if (!cocok) {
+              return String(value);
+            }
+
+            tahun =
+              Number(cocok[1]);
+
+            bulan =
+              Number(cocok[2]);
+
+            tanggal =
+              Number(cocok[3]);
+          }
+
+          return `${tanggal} ${
+            daftarBulan[bulan - 1]
+          } ${tahun}`;
+        };
+
+
+      // ================================================
+      // SUSUN NILAI LAMA
+      // ================================================
+
+      const nilaiLamaLog = [
+        `NAMA TERMIN = ${
+          formatTeksTerminLog(
+            terminLama.nama_termin
+          )
+        }`,
+
+        `PERSENTASE = ${
+          formatPersentaseTerminLog(
+            terminLama.persentase
+          )
+        }`,
+
+        `NOMINAL = ${
+          formatRupiahTerminLog(
+            terminLama.nominal
+          )
+        }`,
+
+        `STATUS PEMBAYARAN = ${
+          formatTeksTerminLog(
+            terminLama
+              .status_pembayaran
+          )
+        }`,
+
+        `TANGGAL JATUH TEMPO = ${
+          formatTanggalTerminLog(
+            terminLama
+              .tanggal_jatuh_tempo
+          )
+        }`,
+
+        `TANGGAL BAYAR = ${
+          formatTanggalTerminLog(
+            terminLama
+              .tanggal_bayar
+          )
+        }`,
+
+        `SYARAT PEMBAYARAN = ${
+          formatTeksTerminLog(
+            terminLama
+              .syarat_pembayaran
+          )
+        }`
+      ].join(", ");
+
+
+      // ================================================
+      // SIMPAN ACTIVITY LOG
+      // DELETE HANYA NILAI LAMA
+      // ================================================
+
+      await simpanActivityLog(
+        client,
+        {
+          ...getActivityUser(req),
+
+          aktivitas: "DELETE",
+          modul: "PROYEK",
+
+          // Entity menggunakan proyek ID
+          entity_id: proyekId,
+          entity_nama: namaProyek,
+
+          field_name:
+            "TERMIN PARTNER",
+
+          nilai_lama:
+            nilaiLamaLog,
+
+          nilai_baru: null,
+
+          deskripsi:
+            "menghapus termin partner"
+        }
+      );
+
+
+      // ================================================
+      // COMMIT
+      // ================================================
+
+      await client.query("COMMIT");
+
+      transaksiDimulai = false;
+
+
+      return res.json({
+        message:
+          "Termin partner berhasil dihapus"
       });
+
+    } catch (error) {
+      if (transaksiDimulai) {
+        try {
+          await client.query(
+            "ROLLBACK"
+          );
+
+        } catch (rollbackError) {
+          console.error(
+            "ERROR ROLLBACK HAPUS TERMIN PARTNER:",
+            rollbackError
+          );
+        }
+      }
+
+
+      console.error(
+        "ERROR HAPUS TERMIN PARTNER:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
+
+    } finally {
+      client.release();
     }
-
-    res.json({
-      message: "Termin partner berhasil dihapus"
-    });
-
-  } catch (error) {
-    console.error("ERROR HAPUS TERMIN PARTNER:", error);
-
-    res.status(500).json({
-      error: error.message
-    });
   }
-});
+);
 
 
 
@@ -10811,106 +15677,474 @@ app.put("/api/proyek/:id",
         kategoriIds[0];
 
 
-      await client.query(
-        "BEGIN"
-      );
+     await client.query(
+  "BEGIN"
+);
 
 
-      // =========================================
-      // UPDATE INFORMASI PROYEK
-      // =========================================
+// =========================================
+// AMBIL DATA SEBELUM PERUBAHAN
+// =========================================
 
-      const result =
-        await client.query(
-          `
-          UPDATE public.proyek
+const oldResult =
+  await client.query(
+    `
+    SELECT
+      p.id,
+      p.nama_proyek,
+      p.jenis_proyek,
+      p.sub_jenis_proyek,
+      p.status_final,
+      p.deskripsi,
 
-          SET
-            kategori_produk_id = $1,
-            nama_proyek = $2,
-            jenis_proyek = $3,
-            sub_jenis_proyek = $4,
-            status_final = $5,
-            deskripsi = $6,
-            updated_at =
-              CURRENT_TIMESTAMP
+      COALESCE(
+        ARRAY_AGG(
+          pk.kategori_produk_id
+          ORDER BY pk.kategori_produk_id
+        ) FILTER (
+          WHERE
+            pk.kategori_produk_id
+              IS NOT NULL
+        ),
+        '{}'
+      ) AS kategori_produk_ids
 
-          WHERE id = $7
+    FROM public.proyek p
 
-          RETURNING *
-          `,
-          [
-            kategoriUtamaId,
-            nama_proyek.trim(),
-            jenis_proyek,
-            sub_jenis_proyek || null,
-            status_final || "Aktif",
-            deskripsi || null,
-            id
-          ]
-        );
+    LEFT JOIN public.proyek_kategori pk
+      ON pk.proyek_id = p.id
 
+    WHERE p.id = $1
 
-      if (
-        result.rows.length === 0
-      ) {
-
-        await client.query(
-          "ROLLBACK"
-        );
-
-        return res.status(404).json({
-          error:
-            "Proyek tidak ditemukan"
-        });
-
-      }
+    GROUP BY p.id
+    `,
+    [id]
+  );
 
 
-      // =========================================
-      // HAPUS KATEGORI LAMA
-      // =========================================
+if (
+  oldResult.rows.length === 0
+) {
 
-      await client.query(
-        `
-        DELETE FROM
-          public.proyek_kategori
+  await client.query(
+    "ROLLBACK"
+  );
 
-        WHERE proyek_id = $1
-        `,
-        [id]
-      );
+  return res.status(404).json({
+    error:
+      "Proyek tidak ditemukan"
+  });
+
+}
 
 
-      // =========================================
-      // SIMPAN KATEGORI BARU
-      // =========================================
+const proyekLama =
+  oldResult.rows[0];
 
-      for (
-        const kategoriId
-        of kategoriIds
-      ) {
 
-        await client.query(
-          `
-          INSERT INTO
-            public.proyek_kategori (
-              proyek_id,
-              kategori_produk_id
-            )
+// =========================================
+// NILAI BARU
+// =========================================
 
-          VALUES ($1, $2)
+const namaProyekBaru =
+  nama_proyek.trim();
 
-          ON CONFLICT DO NOTHING
-          `,
-          [
-            id,
-            kategoriId
-          ]
-        );
+const jenisProyekBaru =
+  jenis_proyek || null;
 
-      }
+const subJenisProyekBaru =
+  sub_jenis_proyek || null;
 
+const statusFinalBaru =
+  status_final || "Aktif";
+
+const deskripsiBaru =
+  deskripsi?.trim() || null;
+
+
+// =========================================
+// UPDATE INFORMASI PROYEK
+// =========================================
+
+const result =
+  await client.query(
+    `
+    UPDATE public.proyek
+
+    SET
+      kategori_produk_id = $1,
+      nama_proyek = $2,
+      jenis_proyek = $3,
+      sub_jenis_proyek = $4,
+      status_final = $5,
+      deskripsi = $6,
+      updated_at =
+        CURRENT_TIMESTAMP
+
+    WHERE id = $7
+
+    RETURNING *
+    `,
+    [
+      kategoriUtamaId,
+      namaProyekBaru,
+      jenisProyekBaru,
+      subJenisProyekBaru,
+      statusFinalBaru,
+      deskripsiBaru,
+      id
+    ]
+  );
+
+
+if (
+  result.rows.length === 0
+) {
+
+  await client.query(
+    "ROLLBACK"
+  );
+
+  return res.status(404).json({
+    error:
+      "Proyek tidak ditemukan"
+  });
+
+}
+
+
+// =========================================
+// HAPUS KATEGORI LAMA
+// =========================================
+
+await client.query(
+  `
+  DELETE FROM
+    public.proyek_kategori
+
+  WHERE proyek_id = $1
+  `,
+  [id]
+);
+
+
+// =========================================
+// SIMPAN KATEGORI BARU
+// =========================================
+
+for (
+  const kategoriId
+  of kategoriIds
+) {
+
+  await client.query(
+    `
+    INSERT INTO
+      public.proyek_kategori (
+        proyek_id,
+        kategori_produk_id
+      )
+
+    VALUES ($1, $2)
+
+    ON CONFLICT DO NOTHING
+    `,
+    [
+      id,
+      kategoriId
+    ]
+  );
+
+}
+
+
+// =========================================
+// SIAPKAN PERBANDINGAN DATA
+// =========================================
+
+const tampilkanNilaiLog = value => {
+
+  if (
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  ) {
+
+    return "-";
+
+  }
+
+  return String(value).trim();
+
+};
+
+
+const kategoriLama =
+  (
+    proyekLama
+      .kategori_produk_ids ||
+    []
+  )
+    .map(Number)
+    .sort(
+      (a, b) => a - b
+    );
+
+
+const kategoriBaru =
+  [...kategoriIds]
+    .map(Number)
+    .sort(
+      (a, b) => a - b
+    );
+
+
+// =========================================
+// AMBIL NAMA KATEGORI PRODUK
+// =========================================
+
+const semuaKategoriIds = [
+  ...new Set([
+    ...kategoriLama,
+    ...kategoriBaru
+  ])
+];
+
+
+const namaKategoriMap =
+  new Map();
+
+
+if (
+  semuaKategoriIds.length > 0
+) {
+
+  const kategoriResult =
+    await client.query(
+      `
+      SELECT
+        id::text AS id,
+        nama_kategori_produk
+
+      FROM public.kategori_produk
+
+      WHERE id::text =
+        ANY($1::text[])
+      `,
+      [
+        semuaKategoriIds.map(
+          value => String(value)
+        )
+      ]
+    );
+
+
+  for (
+    const kategori
+    of kategoriResult.rows
+  ) {
+
+    namaKategoriMap.set(
+      String(kategori.id),
+      kategori.nama_kategori_produk
+    );
+
+  }
+
+}
+
+
+// =========================================
+// UBAH ID KATEGORI MENJADI NAMA
+// =========================================
+
+const kategoriLamaText =
+  kategoriLama.length
+    ? kategoriLama
+        .map(
+          kategoriId =>
+            namaKategoriMap.get(
+              String(kategoriId)
+            ) ||
+            "Kategori tidak ditemukan"
+        )
+        .join(", ")
+    : "-";
+
+
+const kategoriBaruText =
+  kategoriBaru.length
+    ? kategoriBaru
+        .map(
+          kategoriId =>
+            namaKategoriMap.get(
+              String(kategoriId)
+            ) ||
+            "Kategori tidak ditemukan"
+        )
+        .join(", ")
+    : "-";
+
+// =========================================
+// DAFTAR SEMUA NILAI YANG DIPERIKSA
+// =========================================
+
+const daftarPerubahan = [
+
+  {
+    field:
+      "KATEGORI PRODUK",
+
+    lama:
+      kategoriLamaText,
+
+    baru:
+      kategoriBaruText
+  },
+
+  {
+    field:
+      "NAMA PROYEK",
+
+    lama:
+      proyekLama.nama_proyek,
+
+    baru:
+      namaProyekBaru
+  },
+
+  {
+    field:
+      "JENIS PROYEK",
+
+    lama:
+      proyekLama.jenis_proyek,
+
+    baru:
+      jenisProyekBaru
+  },
+
+  {
+    field:
+      "SUB JENIS PROYEK",
+
+    lama:
+      proyekLama.sub_jenis_proyek,
+
+    baru:
+      subJenisProyekBaru
+  },
+
+  {
+    field:
+      "STATUS FINAL",
+
+    lama:
+      proyekLama.status_final,
+
+    baru:
+      statusFinalBaru
+  },
+
+  {
+    field:
+      "DESKRIPSI",
+
+    lama:
+      proyekLama.deskripsi,
+
+    baru:
+      deskripsiBaru
+  }
+
+];
+
+
+// =========================================
+// AMBIL USER YANG MELAKUKAN PERUBAHAN
+// =========================================
+
+const activityUser =
+  getActivityUser(req);
+
+const proyekBaru =
+  result.rows[0];
+
+
+// =========================================
+// SIMPAN LOG HANYA UNTUK DATA YANG BERUBAH
+// =========================================
+
+for (
+  const perubahan
+  of daftarPerubahan
+) {
+
+  const nilaiLama =
+    tampilkanNilaiLog(
+      perubahan.lama
+    );
+
+  const nilaiBaru =
+    tampilkanNilaiLog(
+      perubahan.baru
+    );
+
+
+  // Jangan simpan log jika nilainya sama
+  if (
+    nilaiLama === nilaiBaru
+  ) {
+
+    continue;
+
+  }
+
+
+  await simpanActivityLog(
+    client,
+    {
+      ...activityUser,
+
+      aktivitas:
+        "UPDATE",
+
+      modul:
+        "PROYEK",
+
+      // ENTITY ID = PROYEK ID
+      entity_id:
+        proyekBaru.id,
+
+      entity_nama:
+        proyekBaru.nama_proyek,
+
+      field_name:
+        perubahan.field,
+
+      nilai_lama:
+        `${perubahan.field} - ${nilaiLama}`,
+
+      nilai_baru:
+        `${perubahan.field} - ${nilaiBaru}`,
+
+      // Tidak mencantumkan nama proyek
+      // agar tidak tampil dua kali
+      deskripsi:
+        `memperbarui ${perubahan.field.toLowerCase()}`
+    }
+  );
+
+}
+
+
+// =========================================
+// SIMPAN SEMUA PERUBAHAN
+// =========================================
+
+await client.query(
+  "COMMIT"
+);
 
       await client.query(
         "COMMIT"
@@ -10953,7 +16187,6 @@ app.put("/api/proyek/:id",
 
   }
 );
-
 
 
 
@@ -11055,15 +16288,6 @@ app.put("/api/proyek/:id/pic",
 
 });
 
-
-
-// ======================================================
-// UPDATE / TAMBAH KLIEN PROYEK
-// ======================================================
-
-// ======================================================
-// UPDATE INFORMASI KLIEN PROYEK
-// ======================================================
 
 // ======================================================
 // TAMBAH / EDIT DATA KLIEN PROYEK
@@ -11414,30 +16638,53 @@ app.put(
       // CARI DATA KLIEN PROYEK TERBARU
       // ================================================
 
-      const proyekKlienResult =
-        await client.query(
-          `
-          SELECT
-            id,
-            status_administrasi
-          FROM public.proyek_klien
-          WHERE proyek_id = $1
-          ORDER BY id DESC
-          LIMIT 1
-          FOR UPDATE
-          `,
-          [proyekId]
-        );
+     const proyekKlienResult =
+  await client.query(
+    `
+      SELECT
+        pk.id,
+        pk.proyek_id,
+        pk.klien_id,
+        pk.nilai_submit,
+        pk.nilai_nego_1,
+        pk.nilai_nego_2,
+        pk.nilai_nego_3,
+        pk.tanggal_mulai,
+        pk.tanggal_akhir,
+        pk.model_pembayaran,
+        pk.status_pengadaan,
+        pk.status_teknis,
+        pk.status_administrasi,
+        d.perusahaan_klien
 
+      FROM public.proyek_klien pk
 
-      let result;
-      let modeSimpan;
+      LEFT JOIN public.data d
+        ON d.id = pk.klien_id
+
+      WHERE pk.proyek_id = $1
+
+      ORDER BY pk.id DESC
+      LIMIT 1
+
+      FOR UPDATE OF pk
+    `,
+    [proyekId]
+  );
+
+const dataKlienLama =
+  proyekKlienResult.rows[0] || null;
 
 
       // ================================================
       // UPDATE JIKA DATA SUDAH ADA
       // ================================================
+if (dataKlienLama) {
+  const proyekKlienId =
+    dataKlienLama.id;
 
+  // query UPDATE tetap seperti sebelumnya
+}
       if (
         proyekKlienResult.rowCount > 0
       ) {
@@ -11445,7 +16692,6 @@ app.put(
           proyekKlienResult
             .rows[0]
             .id;
-
         result =
           await client.query(
             `
@@ -11582,15 +16828,120 @@ app.put(
       // SUSUN RESPONSE
       // ================================================
 
-      const dataKlien = {
-        ...result.rows[0],
+const dataKlien = {
+  ...result.rows[0],
 
-        perusahaan_klien:
-          masterKlienResult
-            .rows[0]
-            .perusahaan_klien
-      };
+  perusahaan_klien:
+    masterKlienResult
+      .rows[0]
+      .perusahaan_klien
+};
 
+
+// ================================================
+// SIMPAN ACTIVITY LOG
+// ================================================
+
+const namaProyek =
+  proyekResult.rows[0].nama_proyek;
+
+const detailBaru =
+  buatDetailLogKlien(dataKlien);
+
+
+if (modeSimpan === "tambah") {
+  // CREATE hanya mempunyai nilai baru
+  await simpanActivityLog(
+    client,
+    {
+      ...getActivityUser(req),
+
+      aktivitas: "CREATE",
+      modul: "PROYEK",
+
+      // Entity wajib menggunakan proyek ID
+      entity_id: proyekId,
+      entity_nama: namaProyek,
+
+      field_name: "DATA KLIEN",
+
+      nilai_lama: null,
+
+      nilai_baru:
+        gabungkanDetailLog(
+          detailBaru
+        ),
+
+      deskripsi:
+        "menambahkan data klien proyek"
+    }
+  );
+} else {
+  const detailLama =
+    buatDetailLogKlien(
+      dataKlienLama
+    );
+
+  // Hanya field yang benar-benar berubah
+  const perubahan =
+    detailBaru
+      .map(
+        (itemBaru, index) => ({
+          label:
+            itemBaru.label,
+
+          nilai_lama:
+            detailLama[index].nilai,
+
+          nilai_baru:
+            itemBaru.nilai
+        })
+      )
+      .filter(
+        item =>
+          item.nilai_lama !==
+          item.nilai_baru
+      );
+
+  // Jangan membuat log kosong
+  if (perubahan.length > 0) {
+    await simpanActivityLog(
+      client,
+      {
+        ...getActivityUser(req),
+
+        aktivitas: "UPDATE",
+        modul: "PROYEK",
+
+        // Entity tetap menggunakan proyek ID
+        entity_id: proyekId,
+        entity_nama: namaProyek,
+
+        field_name:
+          "DATA KLIEN",
+
+        nilai_lama:
+          perubahan
+            .map(
+              item =>
+                `${item.label} = ${item.nilai_lama}`
+            )
+            .join(", "),
+
+        nilai_baru:
+          perubahan
+            .map(
+              item =>
+                `${item.label} = ${item.nilai_baru}`
+            )
+            .join(", "),
+
+        deskripsi:
+          "memperbarui data klien proyek"
+      }
+    );
+  }
+}
 
       // ================================================
       // COMMIT
@@ -11761,8 +17112,12 @@ app.put(
       const proyekResult =
         await client.query(
           `
-          SELECT id
+          SELECT
+            id,
+            nama_proyek
+
           FROM public.proyek
+
           WHERE id = $1
           `,
           [proyekId]
@@ -11780,27 +17135,57 @@ app.put(
             "Proyek tidak ditemukan"
         });
       }
+      const namaProyek =
+        proyekResult.rows[0]
+          .nama_proyek;
 
       // ==================================================
       // AMBIL PARTNER LAMA
       // ==================================================
 
       const existingResult =
-        await client.query(
-          `
-          SELECT id
-          FROM public.proyek_partner
-          WHERE proyek_id = $1
-          `,
-          [proyekId]
-        );
+  await client.query(
+    `
+      SELECT
+        pp.id,
+        pp.proyek_id,
+        pp.partner_id,
+        pp.nilai_submit,
+        pp.nilai_nego_1,
+        pp.nilai_nego_2,
+        pp.nilai_nego_3,
+        pp.tanggal_mulai,
+        pp.tanggal_akhir,
+        pp.model_pembayaran,
+        pp.status_pengadaan,
+        pp.status_teknis,
 
-      const existingIds =
-        existingResult.rows.map(
-          item =>
-            Number(item.id)
-        );
+        mp.nama_partner
 
+      FROM public.proyek_partner pp
+
+      LEFT JOIN public.partner mp
+        ON mp.id = pp.partner_id
+
+      WHERE pp.proyek_id = $1
+
+      ORDER BY pp.id ASC
+
+      FOR UPDATE OF pp
+    `,
+    [proyekId]
+  );
+
+
+const partnerLama =
+  existingResult.rows;
+
+
+const existingIds =
+  partnerLama.map(
+    item =>
+      Number(item.id)
+  );
       // ==================================================
       // ID PARTNER YANG MASIH ADA
       // ==================================================
@@ -12029,7 +17414,284 @@ app.put(
           jumlahDitambah += 1;
         }
       }
+// ==================================================
+// AMBIL KONDISI PARTNER SETELAH PERUBAHAN
+// ==================================================
 
+const partnerBaruResult =
+  await client.query(
+    `
+      SELECT
+        pp.id,
+        pp.proyek_id,
+        pp.partner_id,
+        pp.nilai_submit,
+        pp.nilai_nego_1,
+        pp.nilai_nego_2,
+        pp.nilai_nego_3,
+        pp.tanggal_mulai,
+        pp.tanggal_akhir,
+        pp.model_pembayaran,
+        pp.status_pengadaan,
+        pp.status_teknis,
+
+        mp.nama_partner
+
+      FROM public.proyek_partner pp
+
+      LEFT JOIN public.partner mp
+        ON mp.id = pp.partner_id
+
+      WHERE pp.proyek_id = $1
+
+      ORDER BY pp.id ASC
+    `,
+    [proyekId]
+  );
+
+
+const partnerBaru =
+  partnerBaruResult.rows;
+
+
+// ==================================================
+// FORMAT ACTIVITY LOG
+// ==================================================
+
+const formatTeksPartnerProyek =
+  value => {
+    if (
+      value === null ||
+      value === undefined ||
+      String(value).trim() === ""
+    ) {
+      return "-";
+    }
+
+    return String(value).trim();
+  };
+
+
+const formatRupiahPartnerProyek =
+  value => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "-";
+    }
+
+    const angka =
+      Number(value);
+
+    if (!Number.isFinite(angka)) {
+      return String(value);
+    }
+
+    return `Rp ${new Intl.NumberFormat(
+      "id-ID",
+      {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }
+    ).format(angka)}`;
+  };
+
+
+const formatTanggalPartnerProyek =
+  value => {
+    if (!value) {
+      return "-";
+    }
+
+    const daftarBulan = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember"
+    ];
+
+    let tahun;
+    let bulan;
+    let tanggal;
+
+    if (value instanceof Date) {
+      tahun =
+        value.getUTCFullYear();
+
+      bulan =
+        value.getUTCMonth() + 1;
+
+      tanggal =
+        value.getUTCDate();
+    } else {
+      const cocok =
+        String(value).match(
+          /^(\d{4})-(\d{2})-(\d{2})/
+        );
+
+      if (!cocok) {
+        return String(value);
+      }
+
+      tahun =
+        Number(cocok[1]);
+
+      bulan =
+        Number(cocok[2]);
+
+      tanggal =
+        Number(cocok[3]);
+    }
+
+    return `${tanggal} ${
+      daftarBulan[bulan - 1]
+    } ${tahun}`;
+  };
+
+
+const buatRingkasanPartnerProyek =
+  daftarPartner => {
+    if (
+      !Array.isArray(
+        daftarPartner
+      ) ||
+      daftarPartner.length === 0
+    ) {
+      return "Tidak ada partner";
+    }
+
+
+    return daftarPartner
+      .map(
+        (
+          item,
+          index
+        ) => {
+          const namaPartner =
+            formatTeksPartnerProyek(
+              item.nama_partner
+            );
+
+          return [
+            `PARTNER ${index + 1}`,
+
+            `NAMA = ${namaPartner}`,
+
+            `NILAI SUBMIT = ${
+              formatRupiahPartnerProyek(
+                item.nilai_submit
+              )
+            }`,
+
+            `NILAI NEGO 1 = ${
+              formatRupiahPartnerProyek(
+                item.nilai_nego_1
+              )
+            }`,
+
+            `NILAI NEGO 2 = ${
+              formatRupiahPartnerProyek(
+                item.nilai_nego_2
+              )
+            }`,
+
+            `NILAI NEGO 3 = ${
+              formatRupiahPartnerProyek(
+                item.nilai_nego_3
+              )
+            }`,
+
+            `TANGGAL MULAI = ${
+              formatTanggalPartnerProyek(
+                item.tanggal_mulai
+              )
+            }`,
+
+            `TANGGAL AKHIR = ${
+              formatTanggalPartnerProyek(
+                item.tanggal_akhir
+              )
+            }`,
+
+            `MODEL PEMBAYARAN = ${
+              formatTeksPartnerProyek(
+                item.model_pembayaran
+              )
+            }`,
+
+            `STATUS PENGADAAN = ${
+              formatTeksPartnerProyek(
+                item.status_pengadaan
+              )
+            }`,
+
+            `STATUS TEKNIS = ${
+              formatTeksPartnerProyek(
+                item.status_teknis
+              )
+            }`
+          ].join(", ");
+        }
+      )
+      .join(" | ");
+  };
+
+
+const nilaiLamaLog =
+  buatRingkasanPartnerProyek(
+    partnerLama
+  );
+
+const nilaiBaruLog =
+  buatRingkasanPartnerProyek(
+    partnerBaru
+  );
+
+
+// ==================================================
+// SIMPAN SATU ACTIVITY LOG
+// ==================================================
+
+if (
+  nilaiLamaLog !==
+  nilaiBaruLog
+) {
+  await simpanActivityLog(
+    client,
+    {
+      ...getActivityUser(req),
+
+      aktivitas: "UPDATE",
+      modul: "PROYEK",
+
+      // Entity menggunakan proyek ID
+      entity_id: proyekId,
+      entity_nama: namaProyek,
+
+      field_name:
+        "PARTNER PROYEK",
+
+      nilai_lama:
+        nilaiLamaLog,
+
+      nilai_baru:
+        nilaiBaruLog,
+
+      deskripsi:
+        "memperbarui data partner proyek"
+    }
+  );
+}
       // ==================================================
       // COMMIT
       // ==================================================
@@ -13815,10 +19477,6 @@ app.get("/api/pendapatan",
   }
 
 });
-
-// ======================================================
-// MASTER DOKUMEN
-// ======================================================
 
 
 // ======================================================
@@ -15954,11 +21612,18 @@ app.get(
 // API total pendapatan yang lama tidak diubah.
 // ======================================================
 
-app.get("/api/pendapatan/detail",
+app.get(
+  "/api/pendapatan/detail",
   async (req, res) => {
     try {
+
+      // ================================================
+      // AMBIL SEMUA TERMIN KLIEN
+      // ================================================
+
       const result =
-        await pool.query(`
+        await pool.query(
+          `
           SELECT
             t.id AS termin_id,
 
@@ -15984,6 +21649,10 @@ app.get("/api/pendapatan/detail",
             pk.status_teknis,
             pk.model_pembayaran,
 
+            -- ==========================================
+            -- NILAI KONTRAK KLIEN
+            -- ==========================================
+
             COALESCE(
               NULLIF(
                 pk.nilai_nego_3,
@@ -16004,15 +21673,97 @@ app.get("/api/pendapatan/detail",
               0
             ) AS nilai_kontrak,
 
+            -- ==========================================
+            -- INFORMASI TERMIN
+            -- ==========================================
+
             t.nama_termin,
             t.persentase,
             t.nominal,
             t.status_pembayaran,
             t.tanggal_jatuh_tempo,
             t.tanggal_bayar,
+            t.created_at,
 
-            t.tanggal_bayar
-              AS tanggal_pendapatan,
+            -- ==========================================
+            -- TANGGAL UNTUK FILTER PENDAPATAN
+            --
+            -- Sudah Dibayar:
+            -- gunakan tanggal bayar
+            --
+            -- Belum Dibayar / Proses:
+            -- gunakan tanggal jatuh tempo
+            -- ==========================================
+
+            CASE
+              WHEN
+                LOWER(
+                  TRIM(
+                    COALESCE(
+                      t.status_pembayaran,
+                      ''
+                    )
+                  )
+                ) IN (
+                  'dibayar',
+                  'sudah dibayar',
+                  'lunas',
+                  'paid'
+                )
+
+              THEN
+                COALESCE(
+                  t.tanggal_bayar,
+                  t.tanggal_jatuh_tempo,
+                  t.created_at::date,
+                  pk.tanggal_mulai
+                )
+
+              WHEN
+                LOWER(
+                  TRIM(
+                    COALESCE(
+                      t.status_pembayaran,
+                      ''
+                    )
+                  )
+                ) IN (
+                  'belum dibayar',
+                  'belum bayar',
+                  'unpaid',
+                  'proses',
+                  'diproses',
+                  'processing'
+                )
+
+              THEN
+                COALESCE(
+                  t.tanggal_jatuh_tempo,
+                  t.created_at::date,
+                  pk.tanggal_mulai
+                )
+
+              WHEN
+                t.tanggal_bayar
+                IS NOT NULL
+
+              THEN
+                t.tanggal_bayar
+
+              ELSE
+                COALESCE(
+                  t.tanggal_jatuh_tempo,
+                  t.created_at::date,
+                  pk.tanggal_mulai
+                )
+            END AS tanggal_pendapatan,
+
+            -- ==========================================
+            -- NILAI PENDAPATAN / NILAI TERMIN
+            --
+            -- Gunakan nominal jika tersedia.
+            -- Jika nominal kosong, hitung dari persentase.
+            -- ==========================================
 
             COALESCE(
               NULLIF(
@@ -16026,6 +21777,7 @@ app.get("/api/pendapatan/detail",
                     t.persentase,
                     0
                   ) > 0
+
                 THEN
                   COALESCE(
                     NULLIF(
@@ -16057,6 +21809,10 @@ app.get("/api/pendapatan/detail",
               0
             ) AS nilai_pendapatan,
 
+            -- ==========================================
+            -- KATEGORI PROYEK
+            -- ==========================================
+
             COALESCE(
               kategori.kategori_pendapatan,
               'Tanpa Kategori'
@@ -16077,10 +21833,11 @@ app.get("/api/pendapatan/detail",
               pk.klien_id
 
           /*
-           * Kategori dibuat dalam subquery agar satu termin
-           * tidak menjadi beberapa baris ketika proyek
-           * memiliki lebih dari satu kategori.
+           * Kategori menggunakan LATERAL agar
+           * satu termin tetap menjadi satu baris
+           * meskipun proyek memiliki banyak kategori.
            */
+
           LEFT JOIN LATERAL (
             SELECT
               STRING_AGG(
@@ -16093,9 +21850,10 @@ app.get("/api/pendapatan/detail",
 
             FROM public.proyek_kategori pkat
 
-            INNER JOIN public.kategori_produk kp
-              ON kp.id =
-                pkat.kategori_produk_id
+            INNER JOIN
+              public.kategori_produk kp
+                ON kp.id =
+                  pkat.kategori_produk_id
 
             WHERE
               pkat.proyek_id =
@@ -16103,64 +21861,229 @@ app.get("/api/pendapatan/detail",
           ) kategori
             ON TRUE
 
-          WHERE
-            (
-              t.tanggal_bayar IS NOT NULL
+          /*
+           * Tidak menggunakan WHERE status pembayaran.
+           *
+           * Semua status dikirim:
+           * - Sudah Dibayar
+           * - Belum Dibayar
+           * - Proses
+           */
 
-              OR
-
-              LOWER(
-                TRIM(
-                  REGEXP_REPLACE(
+          ORDER BY
+            CASE
+              WHEN
+                LOWER(
+                  TRIM(
                     COALESCE(
                       t.status_pembayaran,
                       ''
-                    ),
-                    '\\s+',
-                    ' ',
-                    'g'
+                    )
                   )
+                ) IN (
+                  'dibayar',
+                  'sudah dibayar',
+                  'lunas',
+                  'paid'
                 )
-              ) IN (
-                'dibayar',
-                'sudah dibayar',
-                'lunas',
-                'paid'
-              )
-            )
 
-          ORDER BY
-            t.tanggal_bayar DESC NULLS LAST,
+              THEN
+                COALESCE(
+                  t.tanggal_bayar,
+                  t.tanggal_jatuh_tempo,
+                  t.created_at::date,
+                  pk.tanggal_mulai
+                )
+
+              ELSE
+                COALESCE(
+                  t.tanggal_jatuh_tempo,
+                  t.created_at::date,
+                  pk.tanggal_mulai
+                )
+            END DESC NULLS LAST,
+
             p.nama_proyek ASC,
             t.id ASC
-        `);
+          `
+        );
+
+      const rows =
+        result.rows;
+
+      // ================================================
+      // NORMALISASI STATUS PEMBAYARAN
+      // ================================================
+
+      const getStatusPembayaran =
+        item => {
+          const status =
+            String(
+              item.status_pembayaran ||
+              ""
+            )
+              .trim()
+              .replace(/\s+/g, " ")
+              .toLowerCase();
+
+          /*
+           * Dahulukan status yang tersimpan
+           * di database.
+           */
+
+          if (
+            status ===
+              "belum dibayar" ||
+            status ===
+              "belum bayar" ||
+            status ===
+              "unpaid"
+          ) {
+            return "Belum Dibayar";
+          }
+
+          if (
+            status.includes(
+              "proses"
+            ) ||
+            status === "diproses" ||
+            status === "processing"
+          ) {
+            return "Proses";
+          }
+
+          if (
+            status === "dibayar" ||
+            status ===
+              "sudah dibayar" ||
+            status === "lunas" ||
+            status === "paid"
+          ) {
+            return "Sudah Dibayar";
+          }
+
+          /*
+           * Tanggal bayar digunakan sebagai
+           * fallback jika status kosong.
+           */
+
+          if (item.tanggal_bayar) {
+            return "Sudah Dibayar";
+          }
+
+          return "Belum Dibayar";
+        };
+
+      // ================================================
+      // KELOMPOKKAN TERMIN
+      // ================================================
+
+      const terminDibayar =
+        rows.filter(
+          item =>
+            getStatusPembayaran(
+              item
+            ) ===
+              "Sudah Dibayar"
+        );
+
+      const terminBelumDibayar =
+        rows.filter(
+          item =>
+            getStatusPembayaran(
+              item
+            ) ===
+              "Belum Dibayar"
+        );
+
+      const terminProses =
+        rows.filter(
+          item =>
+            getStatusPembayaran(
+              item
+            ) ===
+              "Proses"
+        );
+
+      // ================================================
+      // HITUNG TOTAL NOMINAL
+      // ================================================
+
+      const hitungTotal =
+        data =>
+          data.reduce(
+            (
+              total,
+              item
+            ) =>
+              total +
+              Number(
+                item.nilai_pendapatan ||
+                0
+              ),
+            0
+          );
+
+      // ================================================
+      // JUMLAH PROYEK
+      // ================================================
+
+      const jumlahProyek =
+        new Set(
+          rows
+            .map(
+              item =>
+                Number(
+                  item.proyek_id
+                )
+            )
+            .filter(
+              value =>
+                Number.isInteger(
+                  value
+                ) &&
+                value > 0
+            )
+        ).size;
+
+      // ================================================
+      // RESPONSE
+      // ================================================
 
       return res.json({
         pendapatan:
-          result.rows,
+          rows,
 
         summary: {
           total_pendapatan:
-            result.rows.reduce(
-              (total, item) =>
-                total +
-                Number(
-                  item.nilai_pendapatan ||
-                  0
-                ),
-              0
+            hitungTotal(
+              terminDibayar
+            ),
+
+          total_belum_dibayar:
+            hitungTotal(
+              terminBelumDibayar
+            ),
+
+          total_proses:
+            hitungTotal(
+              terminProses
             ),
 
           jumlah_termin:
-            result.rows.length,
+            rows.length,
+
+          jumlah_termin_dibayar:
+            terminDibayar.length,
+
+          jumlah_termin_belum_dibayar:
+            terminBelumDibayar.length,
+
+          jumlah_termin_proses:
+            terminProses.length,
 
           jumlah_proyek:
-            new Set(
-              result.rows.map(
-                item =>
-                  Number(item.proyek_id)
-              )
-            ).size
+            jumlahProyek
         }
       });
 
@@ -16867,7 +22790,6 @@ function parseNominalKpi(value) {
     ? number
     : 0;
 }
-
 
 // ======================================================
 // GET MASTER KPI

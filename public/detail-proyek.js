@@ -118,6 +118,37 @@ function tanggalInput(value) {
 }
 
 // ======================================================
+// FORMAT TEKS TASK
+// Mempertahankan Enter dan baris kosong
+// ======================================================
+
+function escapeTaskHtml(value) {
+
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
+}
+
+function formatTaskNote(value) {
+
+  const catatan = String(value ?? "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map(baris => baris.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return catatan
+    ? escapeTaskHtml(catatan)
+    : "-";
+
+}
+// ======================================================
 // FORMAT LAST UPDATE
 // Contoh: Senin, 19 Januari 2026 14:30
 // ======================================================
@@ -8757,6 +8788,10 @@ function formatTaskDateTime(value) {
 // LOAD TASK LIST DETAIL PROYEK
 // ======================================================
 
+// ======================================================
+// LOAD DETAIL PROJECT TASK
+// ======================================================
+
 async function loadDetailProjectTask() {
 
   const tbody =
@@ -8793,7 +8828,7 @@ async function loadDetailProjectTask() {
 
     const response =
       await fetch(
-        `/api/proyek/${proyekId}/task-list`
+        `/api/proyek/${encodeURIComponent(proyekId)}/task-list`
       );
 
     const data =
@@ -8804,6 +8839,14 @@ async function loadDetailProjectTask() {
       throw new Error(
         data.error ||
         "Gagal mengambil task"
+      );
+
+    }
+
+    if (!Array.isArray(data)) {
+
+      throw new Error(
+        "Format data task tidak valid"
       );
 
     }
@@ -8829,101 +8872,161 @@ async function loadDetailProjectTask() {
     }
 
     tbody.innerHTML =
-      data.map(
-        item => {
+      data.map(item => {
 
-          const statusClass =
-            String(
-              item.status || ""
-            )
-              .toLowerCase()
-              .replaceAll(
-                " ",
-                "-"
-              );
+        const statusClass =
+          String(item.status || "")
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, "-");
 
-          return `
-            <tr>
+        const catatan =
+          formatTaskNote(
+            item.catatan
+          );
 
-              <td>
-                <strong>
-                  ${item.nama_pic || "-"}
-                </strong>
-              </td>
+        const link =
+          String(item.link || "").trim();
 
-              <td>
-                <strong>
-                  ${item.task || "-"}
-                </strong>
-              </td>
+        let linkHtml = "-";
 
-              <td>
-                <div
-                  class="detail-task-note"
-                  title="${item.catatan || ""}"
+        if (link) {
+
+          try {
+
+            const url =
+              new URL(link);
+
+            if (
+              url.protocol === "http:" ||
+              url.protocol === "https:"
+            ) {
+
+              linkHtml = `
+                <a
+                  href="${escapeTaskHtml(url.href)}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="detail-task-link"
                 >
-                  ${item.catatan || "-"}
-                </div>
-              </td>
+                  ↗
+                </a>
+              `;
 
-              <td>
-                ${
-                  item.link
-                    ? `
-                      <a
-                        href="${item.link}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="detail-task-link"
-                      >
-                        ↗
-                      </a>
-                    `
-                    : "-"
-                }
-              </td>
+            }
 
-              <td>
-                <span
-                  class="
-                    detail-task-status
-                    detail-task-status-${statusClass}
-                  "
-                >
-                  ${item.status || "-"}
-                </span>
-              </td>
+          } catch (error) {
 
-              <td>
-                ${formatTaskDate(
-                  item.tanggal_mulai
-                )}
-              </td>
+            linkHtml = "-";
 
-              <td>
-                ${formatTaskDate(
-                  item.target_date
-                )}
-              </td>
-
-              <td>
-                ${formatTaskDate(
-                  item.tanggal_selesai
-                )}
-              </td>
-
-              <td>
-                ${formatTaskDateTime(
-                  item.created_at
-                )}
-              </td>
-
-            </tr>
-          `;
+          }
 
         }
-      )
-      .join("");
+
+        return `
+          <tr>
+
+            <!-- PIC -->
+
+            <td class="task-cell-pic">
+
+              <strong>
+                ${escapeTaskHtml(
+                  item.nama_pic || "-"
+                )}
+              </strong>
+
+            </td>
+
+            <!-- TASK -->
+
+            <td class="task-cell-name">
+
+              <strong>
+                ${escapeTaskHtml(
+                  item.task || "-"
+                )}
+              </strong>
+
+            </td>
+
+            <!-- CATATAN -->
+
+            <td class="task-cell-catatan">
+
+  <div class="detail-task-note">${catatan}</div>
+
+</td>
+
+            <!-- LINK -->
+
+            <td class="task-cell-link">
+
+              ${linkHtml}
+
+            </td>
+
+            <!-- STATUS -->
+
+            <td class="task-cell-status">
+
+              <span
+                class="
+                  detail-task-status
+                  detail-task-status-${statusClass}
+                "
+              >
+                ${escapeTaskHtml(
+                  item.status || "-"
+                )}
+              </span>
+
+            </td>
+
+            <!-- TANGGAL MULAI -->
+
+            <td class="task-cell-date">
+
+              ${formatTaskDate(
+                item.tanggal_mulai
+              )}
+
+            </td>
+
+            <!-- TARGET DATE -->
+
+            <td class="task-cell-date">
+
+              ${formatTaskDate(
+                item.target_date
+              )}
+
+            </td>
+
+            <!-- TANGGAL SELESAI -->
+
+            <td class="task-cell-date">
+
+              ${formatTaskDate(
+                item.tanggal_selesai
+              )}
+
+            </td>
+
+            <!-- DIBUAT -->
+
+            <td class="task-cell-date">
+
+              ${formatTaskDateTime(
+                item.created_at
+              )}
+
+            </td>
+
+          </tr>
+        `;
+
+      }).join("");
 
   } catch (error) {
 

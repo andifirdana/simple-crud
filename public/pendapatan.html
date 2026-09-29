@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
-
   <meta charset="UTF-8">
 
   <meta
@@ -18,297 +16,770 @@
   >
 
   <style>
+    :root {
+      --page-bg: #f3f6fb;
+      --surface: #ffffff;
+      --line: #e5eaf2;
+      --line-strong: #d7deea;
+      --text: #172033;
+      --muted: #6b768a;
+      --indigo: #4f46e5;
+      --indigo-soft: #eef2ff;
+      --green: #059669;
+      --green-soft: #ecfdf5;
+      --amber: #d97706;
+      --amber-soft: #fffbeb;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --rose: #e11d48;
+      --rose-soft: #fff1f2;
+
+      --shadow-sm:
+        0 8px 24px
+        rgba(15, 23, 42, 0.05);
+
+      --shadow-md:
+        0 18px 45px
+        rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
-      background: #f5f7fb;
-      color: #1f2937;
-      font-family: Inter, Arial, sans-serif;
+
+      color: var(--text);
+
+      background:
+        radial-gradient(
+          circle at 88% 2%,
+          rgba(79, 70, 229, 0.08),
+          transparent 26rem
+        ),
+        var(--page-bg);
+
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
     }
 
     .pendapatan-page {
       width: calc(100% - 260px);
       min-height: 100vh;
       margin-left: 260px;
-      padding: 32px;
-      box-sizing: border-box;
+      padding: 28px;
     }
 
     .pendapatan-content {
       width: 100%;
-      max-width: 1600px;
+      max-width: 1680px;
       margin: 0 auto;
     }
 
-
-    /* HEADER */
+    /* ================================================
+       HEADER
+    ================================================ */
 
     .pendapatan-header {
-      margin-bottom: 24px;
+      position: relative;
+
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+
+      overflow: hidden;
+
+      margin-bottom: 20px;
+      padding: 28px 30px;
+
+      color: #ffffff;
+
+      background:
+        linear-gradient(
+          125deg,
+          #111c44 0%,
+          #26347a 56%,
+          #4f46e5 100%
+        );
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.1);
+
+      border-radius: 22px;
+
+      box-shadow:
+        var(--shadow-md);
+    }
+
+    .pendapatan-header::before,
+    .pendapatan-header::after {
+      position: absolute;
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.11);
+
+      border-radius: 999px;
+
+      content: "";
+
+      pointer-events: none;
+    }
+
+    .pendapatan-header::before {
+      top: -80px;
+      right: -45px;
+
+      width: 240px;
+      height: 240px;
+    }
+
+    .pendapatan-header::after {
+      right: 90px;
+      bottom: -130px;
+
+      width: 220px;
+      height: 220px;
+
+      background:
+        rgba(255, 255, 255, 0.04);
+    }
+
+    .header-copy,
+    .header-status {
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      margin-bottom: 12px;
+      padding: 6px 10px;
+
+      color: #dbeafe;
+
+      background:
+        rgba(255, 255, 255, 0.1);
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.14);
+
+      border-radius: 999px;
+
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .header-eyebrow::before {
+      width: 7px;
+      height: 7px;
+
+      background: #6ee7b7;
+      border-radius: 50%;
+
+      box-shadow:
+        0 0 0 4px
+        rgba(110, 231, 183, 0.14);
+
+      content: "";
     }
 
     .pendapatan-header h1 {
-      margin: 0 0 6px;
-      color: #111827;
-      font-size: 30px;
+      margin: 0 0 8px;
+
+      font-size:
+        clamp(28px, 3vw, 40px);
+
       font-weight: 800;
-      letter-spacing: -0.6px;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
     }
 
     .pendapatan-header p {
+      max-width: 760px;
       margin: 0;
-      color: #6b7280;
-      font-size: 14px;
+
+      color:
+        rgba(255, 255, 255, 0.72);
+
+      font-size: 13px;
+      line-height: 1.65;
     }
 
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
 
-    /* SUMMARY */
+      flex: 0 0 auto;
+
+      padding: 11px 14px;
+
+      color: #ffffff;
+
+      background:
+        rgba(15, 23, 42, 0.24);
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.15);
+
+      border-radius: 13px;
+
+      backdrop-filter: blur(10px);
+
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .header-status svg {
+      width: 17px;
+      height: 17px;
+
+      color: #a7f3d0;
+    }
+
+    /* ================================================
+       SUMMARY
+    ================================================ */
 
     .pendapatan-summary {
       display: grid;
+
       grid-template-columns:
-        repeat(3, minmax(0, 1fr));
-      gap: 16px;
+        repeat(5, minmax(0, 1fr));
+
+      gap: 14px;
+
       margin-bottom: 20px;
     }
 
     .summary-card {
       position: relative;
+
+      min-width: 0;
       overflow: hidden;
 
-      padding: 20px;
+      padding: 18px;
 
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
+      background: var(--surface);
+
+      border:
+        1px solid
+        var(--line);
+
+      border-radius: 17px;
 
       box-shadow:
-        0 3px 12px
-        rgba(15, 23, 42, 0.04);
+        var(--shadow-sm);
+
+      transition:
+        transform 180ms ease,
+        box-shadow 180ms ease,
+        border-color 180ms ease;
     }
 
-    .summary-card::before {
+    .summary-card:hover {
+      transform:
+        translateY(-3px);
+
+      border-color: #cfd7e6;
+
+      box-shadow:
+        0 15px 35px
+        rgba(15, 23, 42, 0.09);
+    }
+
+    .summary-card.primary {
+      color: #ffffff;
+
+      background:
+        linear-gradient(
+          145deg,
+          #172554,
+          #3730a3
+        );
+
+      border-color: transparent;
+    }
+
+    .summary-card.primary::after {
       position: absolute;
-      top: 0;
-      right: 0;
-      left: 0;
+      right: -34px;
+      bottom: -55px;
 
-      height: 4px;
+      width: 135px;
+      height: 135px;
 
-      background: #4f46e5;
+      background:
+        rgba(255, 255, 255, 0.06);
+
+      border-radius: 50%;
 
       content: "";
     }
 
-    .summary-card:nth-child(2)::before {
-      background: #2563eb;
+    .summary-top {
+      position: relative;
+      z-index: 1;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+
+      margin-bottom: 18px;
     }
 
-    .summary-card:nth-child(3)::before {
-      background: #16a34a;
+    .summary-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      width: 38px;
+      height: 38px;
+
+      border-radius: 11px;
+    }
+
+    .summary-icon svg {
+      width: 19px;
+      height: 19px;
+
+      fill: none;
+      stroke: currentColor;
+
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.9;
+    }
+
+    .summary-icon.green {
+      color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .summary-icon.amber {
+      color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .summary-icon.blue {
+      color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .summary-icon.indigo {
+      color: var(--indigo);
+      background: var(--indigo-soft);
+    }
+
+    .summary-icon.rose {
+      color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .summary-card.primary
+    .summary-icon {
+      color: #ffffff;
+
+      background:
+        rgba(255, 255, 255, 0.13);
+    }
+
+    .summary-tag {
+      padding: 4px 7px;
+
+      color: #64748b;
+      background: #f1f5f9;
+
+      border-radius: 7px;
+
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .summary-card.primary
+    .summary-tag {
+      color: #c7d2fe;
+
+      background:
+        rgba(255, 255, 255, 0.1);
     }
 
     .summary-label {
+      position: relative;
+      z-index: 1;
+
       display: block;
-      margin-bottom: 8px;
 
-      color: #6b7280;
-      font-size: 12px;
-      font-weight: 700;
+      margin-bottom: 7px;
 
+      color: var(--muted);
+
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.07em;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
+    }
+
+    .summary-card.primary
+    .summary-label {
+      color: #c7d2fe;
     }
 
     .summary-value {
-      color: #111827;
-      font-size: 23px;
+      position: relative;
+      z-index: 1;
+
+      display: block;
+
+      overflow: hidden;
+
+      color: var(--text);
+
+      font-size:
+        clamp(19px, 1.45vw, 27px);
+
+      font-weight: 850;
+      letter-spacing: -0.04em;
+      line-height: 1.2;
+
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .summary-card.primary
+    .summary-value {
+      color: #ffffff;
+    }
+
+    /* ================================================
+       FILTER
+    ================================================ */
+
+    .filter-panel {
+      margin-bottom: 20px;
+      padding: 18px;
+
+      background:
+        rgba(255, 255, 255, 0.92);
+
+      border:
+        1px solid
+        var(--line);
+
+      border-radius: 18px;
+
+      box-shadow:
+        var(--shadow-sm);
+
+      backdrop-filter: blur(14px);
+    }
+
+    .filter-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+
+      margin-bottom: 15px;
+    }
+
+    .filter-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+
+      margin: 0;
+
+      color: #27344d;
+
+      font-size: 14px;
       font-weight: 800;
     }
 
+    .filter-title svg {
+      width: 18px;
+      height: 18px;
 
-    /* ======================================================
-   FILTER PENDAPATAN - SATU BARIS
-====================================================== */
+      fill: none;
+      stroke: var(--indigo);
 
-.filter-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  margin-bottom: 20px;
-  padding: 14px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2;
+    }
 
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
+    .filter-note {
+      color: #94a3b8;
 
-  box-sizing: border-box;
-  overflow-x: auto;
-}
+      font-size: 11px;
+    }
 
+    .filter-card {
+      display: grid;
 
-/* Semua input dan select */
+      grid-template-columns:
+        minmax(270px, 1.8fr)
+        repeat(
+          4,
+          minmax(145px, 1fr)
+        )
+        auto;
 
-.filter-card input,
-.filter-card select {
-  flex: 0 0 170px;
-  width: 170px;
-  min-width: 170px;
-  height: 42px;
-  padding: 8px 11px;
+      align-items: end;
 
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+      gap: 11px;
+    }
 
-  box-sizing: border-box;
-  color: #374151;
-  font: inherit;
-  font-size: 12px;
-}
+    .filter-field {
+      min-width: 0;
+    }
 
+    .filter-field label {
+      display: block;
 
-/* Kolom pencarian dibuat lebih lebar */
+      margin:
+        0 0 7px 2px;
 
-#searchPendapatan {
-  flex: 1 1 280px;
-  width: auto;
-  min-width: 240px;
-}
+      color: #64748b;
 
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
 
-/* Dropdown tahun lebih kecil */
+    .filter-input-wrap {
+      position: relative;
+    }
 
-#filterTahunPendapatan {
-  flex-basis: 130px;
-  width: 130px;
-  min-width: 130px;
-}
+    .filter-input-wrap svg {
+      position: absolute;
 
+      top: 50%;
+      left: 13px;
 
-/* Jenis proyek */
+      width: 17px;
+      height: 17px;
 
-#filterJenisPendapatan {
-  flex-basis: 170px;
-  width: 170px;
-  min-width: 170px;
-}
+      fill: none;
+      stroke: #94a3b8;
 
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2;
 
-/* Status pengadaan dan teknis */
+      transform:
+        translateY(-50%);
 
-#filterStatusPengadaanPendapatan,
-#filterStatusTeknisPendapatan {
-  flex-basis: 185px;
-  width: 185px;
-  min-width: 185px;
-}
+      pointer-events: none;
+    }
 
+    .filter-card input,
+    .filter-card select {
+      width: 100%;
+      height: 44px;
 
-/* Tombol reset */
+      padding: 0 12px;
 
-#resetPendapatanFilter {
-  flex: 0 0 auto;
-  height: 42px;
-  min-width: 80px;
-  padding: 0 16px;
+      color: #334155;
+      background: #ffffff;
 
-  background: #f8fafc;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+      border:
+        1px solid
+        var(--line-strong);
 
-  color: #475569;
-  font-size: 12px;
-  font-weight: 700;
+      border-radius: 11px;
 
-  cursor: pointer;
-  white-space: nowrap;
-}
+      outline: none;
 
-#resetPendapatanFilter:hover {
-  color: #4338ca;
-  background: #eef2ff;
-  border-color: #a5b4fc;
-}
+      font-size: 12px;
+      font-weight: 600;
 
+      transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease;
+    }
 
-/* Fokus input */
+    .filter-card input {
+      padding-left: 40px;
+    }
 
-.filter-card input:focus,
-.filter-card select:focus {
-  outline: none;
-  border-color: #818cf8;
-  box-shadow:
-    0 0 0 3px
-    rgba(99, 102, 241, 0.12);
-}
+    .filter-card
+    input::placeholder {
+      color: #9ca7b8;
 
+      font-weight: 500;
+    }
 
-/* Layar kecil tetap satu baris dan dapat digeser */
+    .filter-card input:hover,
+    .filter-card select:hover {
+      border-color: #bcc6d7;
+    }
 
-@media (max-width: 1100px) {
-  .filter-card {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 15px;
-  }
+    .filter-card input:focus,
+    .filter-card select:focus {
+      background: #ffffff;
+      border-color: #818cf8;
 
-  #searchPendapatan {
-    flex: 0 0 260px;
-    width: 260px;
-  }
-}
+      box-shadow:
+        0 0 0 4px
+        rgba(99, 102, 241, 0.11);
+    }
 
-    /* GROUP JENIS */
+    #resetPendapatanFilter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+
+      height: 44px;
+
+      padding: 0 15px;
+
+      color: #475569;
+      background: #f8fafc;
+
+      border:
+        1px solid
+        var(--line-strong);
+
+      border-radius: 11px;
+
+      font-size: 12px;
+      font-weight: 800;
+
+      cursor: pointer;
+
+      transition: 160ms ease;
+
+      white-space: nowrap;
+    }
+
+    #resetPendapatanFilter svg {
+      width: 16px;
+      height: 16px;
+
+      fill: none;
+      stroke: currentColor;
+
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2;
+    }
+
+    #resetPendapatanFilter:hover {
+      color: #4338ca;
+      background:
+        var(--indigo-soft);
+
+      border-color: #a5b4fc;
+    }
+
+    /* ================================================
+       GROUP JENIS
+    ================================================ */
 
     .jenis-group {
       overflow: hidden;
 
-      margin-bottom: 22px;
+      margin-bottom: 20px;
 
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 16px;
+      background: var(--surface);
+
+      border:
+        1px solid
+        var(--line);
+
+      border-radius: 19px;
 
       box-shadow:
-        0 5px 18px
-        rgba(15, 23, 42, 0.04);
+        var(--shadow-sm);
     }
 
     .jenis-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 15px;
+      gap: 16px;
 
-      padding: 18px 20px;
+      padding: 17px 20px;
 
       color: #ffffff;
-      background: #111827;
+
+      background:
+        linear-gradient(
+          100deg,
+          #172033,
+          #263657
+        );
     }
 
     .jenis-title {
-      font-size: 17px;
-      font-weight: 800;
+      font-size: 14px;
+      font-weight: 850;
+      letter-spacing: 0.035em;
       text-transform: uppercase;
     }
 
     .jenis-total {
-      font-size: 14px;
-      font-weight: 700;
+      padding: 7px 11px;
+
+      color: #e0e7ff;
+
+      background:
+        rgba(255, 255, 255, 0.08);
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.09);
+
+      border-radius: 9px;
+
+      font-size: 12px;
+      font-weight: 800;
+
       white-space: nowrap;
     }
 
-
-    /* SUB JENIS */
+    /* ================================================
+       SUB JENIS DAN KATEGORI
+    ================================================ */
 
     .subjenis-group {
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom:
+        1px solid
+        var(--line);
     }
 
     .subjenis-group:last-child {
-      border-bottom: none;
+      border-bottom: 0;
     }
 
     .subjenis-header {
@@ -317,35 +788,43 @@
       justify-content: space-between;
       gap: 15px;
 
-      padding: 14px 20px;
+      padding: 13px 20px;
 
       background: #f8fafc;
-      border-bottom: 1px solid #e5e7eb;
+
+      border-bottom:
+        1px solid
+        var(--line);
     }
 
     .subjenis-title {
       color: #334155;
-      font-size: 14px;
-      font-weight: 700;
+
+      font-size: 13px;
+      font-weight: 800;
     }
 
     .subjenis-total {
       color: #64748b;
-      font-size: 13px;
-      font-weight: 600;
+
+      font-size: 12px;
+      font-weight: 750;
+
       white-space: nowrap;
     }
-
-
-    /* KATEGORI */
 
     .kategori-group {
       overflow: hidden;
 
       margin: 14px;
 
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
+      background: #ffffff;
+
+      border:
+        1px solid
+        var(--line);
+
+      border-radius: 13px;
     }
 
     .kategori-header {
@@ -354,134 +833,243 @@
       justify-content: space-between;
       gap: 15px;
 
-      padding: 13px 16px;
+      padding: 12px 15px;
 
       color: #3730a3;
-      background: #eef2ff;
+
+      background:
+        linear-gradient(
+          90deg,
+          #eef2ff,
+          #f8faff
+        );
+
+      border-bottom:
+        1px solid
+        #e0e7ff;
     }
 
     .kategori-title {
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 800;
     }
 
     .kategori-total {
-      font-size: 12px;
-      font-weight: 700;
+      font-size: 11px;
+      font-weight: 800;
+
       white-space: nowrap;
     }
 
-
-    /* TABLE */
+    /* ================================================
+       TABLE DARI PENDAPATAN.JS
+    ================================================ */
 
     .table-wrapper {
       width: 100%;
+
       overflow-x: auto;
+
+      scrollbar-color:
+        #cbd5e1 transparent;
+
+      scrollbar-width: thin;
     }
 
+    .table-wrapper::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+
+      border:
+        2px solid
+        #ffffff;
+
+      border-radius: 999px;
+    }
+
+    .prognosa-table,
     .pendapatan-table {
       width: 100%;
       min-width: 1450px;
-      border-collapse: collapse;
+
+      border-collapse: separate;
+      border-spacing: 0;
     }
 
+    .prognosa-table th,
     .pendapatan-table th {
-      padding: 12px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
 
-      color: #64748b;
-      background: #f9fafb;
-      border-bottom: 1px solid #e5e7eb;
+      padding: 11px 13px;
 
-      font-size: 11px;
-      font-weight: 700;
+      color: #6b768a;
+      background: #fbfcfe;
+
+      border-bottom:
+        1px solid
+        var(--line);
+
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: 0.045em;
       text-align: left;
       text-transform: uppercase;
 
       white-space: nowrap;
     }
 
+    .prognosa-table td,
     .pendapatan-table td {
-      padding: 14px;
+      padding: 13px;
 
-      color: #374151;
-      border-bottom: 1px solid #f1f5f9;
+      color: #3d485c;
+      background: #ffffff;
 
-      font-size: 12px;
+      border-bottom:
+        1px solid
+        #edf1f6;
+
+      font-size: 11px;
+      line-height: 1.5;
       vertical-align: middle;
     }
 
-    .pendapatan-table tbody tr:hover {
-      background: #fafafa;
+    .prognosa-table
+    tbody tr:last-child td,
+    .pendapatan-table
+    tbody tr:last-child td {
+      border-bottom: 0;
     }
 
-    .pendapatan-table tbody tr:last-child td {
-      border-bottom: none;
+    .prognosa-table
+    tbody tr:hover td,
+    .pendapatan-table
+    tbody tr:hover td {
+      background: #fafbff;
     }
 
     .proyek-name {
       min-width: 190px;
-      color: #111827;
-      font-weight: 700;
+
+      color: var(--text);
+
+      font-weight: 800;
     }
 
+    .project-link,
     .proyek-link {
       color: #4338ca;
-      font-weight: 700;
+
+      font-weight: 800;
       text-decoration: none;
     }
 
+    .project-link:hover,
     .proyek-link:hover {
+      color: #312e81;
+
       text-decoration: underline;
+      text-underline-offset: 3px;
     }
 
     .nilai {
-      font-weight: 700;
-      white-space: nowrap;
-    }
+      color: #1e293b;
 
-    .nilai-pendapatan {
-      color: #166534;
       font-weight: 800;
+
       white-space: nowrap;
     }
-
-
-    /* BADGE */
 
     .badge {
       display: inline-flex;
-      padding: 5px 9px;
+      align-items: center;
+
+      padding: 5px 8px;
 
       color: #4338ca;
-      background: #eef2ff;
+      background:
+        var(--indigo-soft);
+
+      border:
+        1px solid
+        #e0e7ff;
+
       border-radius: 999px;
 
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 10px;
+      font-weight: 750;
+
       white-space: nowrap;
     }
 
-    .badge-dibayar {
-      color: #166534;
-      background: #dcfce7;
+    .detail-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      min-height: 32px;
+
+      padding: 0 11px;
+
+      color: #4338ca;
+      background:
+        var(--indigo-soft);
+
+      border:
+        1px solid
+        #dfe3ff;
+
+      border-radius: 8px;
+
+      font-size: 10px;
+      font-weight: 800;
+
+      text-decoration: none;
+
+      transition: 150ms ease;
     }
 
+    .detail-button:hover {
+      color: #ffffff;
+      background: var(--indigo);
 
-    /* EMPTY */
+      border-color:
+        var(--indigo);
+    }
+
+    /* ================================================
+       EMPTY STATE
+    ================================================ */
 
     .empty-state {
-      padding: 50px 20px;
+      padding: 58px 20px;
 
-      color: #9ca3af;
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
+      color: #94a3b8;
 
+      background:
+        rgba(255, 255, 255, 0.88);
+
+      border:
+        1px dashed
+        #cbd5e1;
+
+      border-radius: 17px;
+
+      box-shadow:
+        var(--shadow-sm);
+
+      font-size: 13px;
       text-align: center;
     }
 
-
-    /* PAGINATION */
+    /* ================================================
+       PAGINATION
+    ================================================ */
 
     .pagination {
       display: flex;
@@ -490,64 +1078,158 @@
       gap: 15px;
 
       margin-top: 20px;
-      padding: 15px 18px;
+      padding: 14px 16px;
 
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 13px;
+      background:
+        rgba(255, 255, 255, 0.9);
+
+      border:
+        1px solid
+        var(--line);
+
+      border-radius: 14px;
+
+      box-shadow:
+        var(--shadow-sm);
     }
 
     .pagination-info {
       color: #64748b;
-      font-size: 12px;
+
+      font-size: 11px;
+      font-weight: 650;
     }
 
     .pagination-buttons {
       display: flex;
-      gap: 7px;
+      flex-wrap: wrap;
+
+      gap: 6px;
     }
 
     .page-button {
-      min-width: 38px;
-      height: 38px;
-      padding: 0 10px;
+      min-width: 36px;
+      height: 36px;
 
-      color: #334155;
+      padding: 0 9px;
+
+      color: #475569;
       background: #ffffff;
-      border: 1px solid #dbe2ea;
+
+      border:
+        1px solid
+        var(--line-strong);
+
       border-radius: 9px;
 
-      font-weight: 700;
+      font-size: 11px;
+      font-weight: 800;
+
       cursor: pointer;
+
+      transition: 150ms ease;
     }
 
+    .page-button:hover:not(:disabled),
     .page-button.active {
       color: #ffffff;
-      background: #4f46e5;
-      border-color: #4f46e5;
+      background: var(--indigo);
+
+      border-color:
+        var(--indigo);
+
+      box-shadow:
+        0 7px 16px
+        rgba(79, 70, 229, 0.2);
     }
 
     .page-button:disabled {
-      opacity: 0.45;
+      opacity: 0.42;
+
       cursor: not-allowed;
     }
 
+    /* ================================================
+       RESPONSIVE
+    ================================================ */
 
-    /* RESPONSIVE */
+    @media (max-width: 1450px) {
+      .pendapatan-summary {
+        grid-template-columns:
+          repeat(3, minmax(0, 1fr));
+      }
 
-    @media (max-width: 900px) {
+      .filter-card {
+        grid-template-columns:
+          repeat(4, minmax(145px, 1fr));
+      }
+
+      .filter-field.search-field {
+        grid-column: span 2;
+      }
+    }
+
+    @media (max-width: 1100px) {
       .pendapatan-page {
         width: 100%;
         margin-left: 0;
         padding: 20px;
       }
 
-      .pendapatan-summary {
-        grid-template-columns: 1fr;
+      .filter-card {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+
+      .filter-field.search-field {
+        grid-column: 1 / -1;
       }
     }
 
-    @media (max-width: 650px) {
+    @media (max-width: 760px) {
+      .pendapatan-page {
+        padding: 14px;
+      }
+
+      .pendapatan-header {
+        align-items: flex-start;
+        flex-direction: column;
+
+        padding: 23px 20px;
+
+        border-radius: 18px;
+      }
+
+      .header-status {
+        width: 100%;
+      }
+
+      .pendapatan-summary {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+
+      .summary-card.primary {
+        grid-column: 1 / -1;
+      }
+
+      .filter-heading {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .filter-card {
+        grid-template-columns: 1fr;
+      }
+
+      .filter-field.search-field {
+        grid-column: auto;
+      }
+
+      #resetPendapatanFilter {
+        width: 100%;
+      }
+
       .jenis-header,
       .subjenis-header,
       .kategori-header {
@@ -565,49 +1247,136 @@
       }
     }
 
-  </style>
+    @media (max-width: 480px) {
+      .pendapatan-summary {
+        grid-template-columns: 1fr;
+      }
 
+      .summary-card.primary {
+        grid-column: auto;
+      }
+    }
+
+    /* ================================================
+   PERBAIKAN SUMMARY AGAR ANGKA TERLIHAT
+================================================ */
+
+.pendapatan-summary .summary-card {
+  display: block !important;
+  min-width: 0;
+}
+
+.pendapatan-summary .summary-top {
+  display: flex !important;
+  width: 100%;
+}
+
+.pendapatan-summary .summary-label {
+  display: block !important;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.pendapatan-summary .summary-value {
+  display: block !important;
+
+  width: 100%;
+  max-width: 100%;
+
+  overflow: visible;
+
+  font-size:
+    clamp(17px, 1.35vw, 26px);
+
+  line-height: 1.25;
+  letter-spacing: -0.04em;
+
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+/* Nominal dibuat sedikit lebih kecil agar tidak terpotong */
+#totalPendapatan,
+#totalBelumDibayar,
+#totalProses {
+  font-size:
+    clamp(16px, 1.2vw, 24px);
+}
+
+/* Jumlah termin tetap besar */
+#jumlahTerminDibayar,
+#jumlahTerminBelumDibayar {
+  font-size:
+    clamp(24px, 2vw, 32px);
+}
+
+/* Tablet */
+@media (max-width: 1450px) {
+  .pendapatan-summary {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  #totalPendapatan,
+  #totalBelumDibayar,
+  #totalProses {
+    font-size:
+      clamp(18px, 2vw, 26px);
+  }
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .pendapatan-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .pendapatan-summary
+  .summary-card.primary {
+    grid-column: auto;
+  }
+
+  #totalPendapatan,
+  #totalBelumDibayar,
+  #totalProses {
+    font-size: 24px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+  </style>
 </head>
 
-
 <body>
-
   <div class="app-layout">
-
     <!-- SIDEBAR -->
-
     <div id="sidebarContainer"></div>
 
-
     <!-- MAIN CONTENT -->
-
     <main class="pendapatan-page">
-
       <div class="pendapatan-content">
 
 
-        <!-- HEADER -->
-
-        <div class="pendapatan-header">
-
-          <h1>
-            Pendapatan
-          </h1>
-
-          <p>
-            Realisasi pendapatan berdasarkan jenis proyek,
-            sub jenis proyek, kategori, dan termin Klien
-            yang sudah dibayar.
-          </p>
-
-        </div>
-
-
         <!-- SUMMARY -->
-
         <section class="pendapatan-summary">
 
-          <div class="summary-card">
+          <!-- TOTAL PENDAPATAN -->
+          <article class="summary-card primary">
+            <div class="summary-top">
+              <span class="summary-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M3 3v18h18"></path>
+                  <path d="m7 15 4-4 3 3 5-7"></path>
+                </svg>
+              </span>
+
+              <span class="summary-tag">
+                Realisasi
+              </span>
+            </div>
 
             <span class="summary-label">
               Total Pendapatan
@@ -619,27 +1388,100 @@
             >
               Rp 0
             </span>
+          </article>
 
-          </div>
+          <!-- TOTAL BELUM DIBAYAR -->
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-icon amber">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                  ></circle>
 
+                  <path d="M12 7v5l3 2"></path>
+                </svg>
+              </span>
 
-          <div class="summary-card">
+              <span class="summary-tag">
+                Outstanding
+              </span>
+            </div>
 
             <span class="summary-label">
-              Jumlah Proyek
+              Total Belum Dibayar
             </span>
 
             <span
               class="summary-value"
-              id="jumlahProyekPendapatan"
+              id="totalBelumDibayar"
             >
-              0
+              Rp 0
+            </span>
+          </article>
+
+          <!-- TOTAL PROSES -->
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-icon blue">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M20 12a8 8 0 1 1-2.34-5.66"
+                  ></path>
+
+                  <path d="M20 4v6h-6"></path>
+                </svg>
+              </span>
+
+              <span class="summary-tag">
+                On Process
+              </span>
+            </div>
+
+            <span class="summary-label">
+              Total Proses
             </span>
 
-          </div>
+            <span
+              class="summary-value"
+              id="totalProses"
+            >
+              Rp 0
+            </span>
+          </article>
 
+          <!-- TERMIN DIBAYAR -->
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-icon green">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                  ></circle>
 
-          <div class="summary-card">
+                  <path
+                    d="m8 12 2.5 2.5L16 9"
+                  ></path>
+                </svg>
+              </span>
+
+              <span class="summary-tag">
+                Paid
+              </span>
+            </div>
 
             <span class="summary-label">
               Termin Dibayar
@@ -651,108 +1493,187 @@
             >
               0
             </span>
+          </article>
 
-          </div>
+          <!-- TERMIN BELUM DIBAYAR -->
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-icon rose">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                  ></circle>
 
+                  <path d="M12 8v5"></path>
+                  <path d="M12 17h.01"></path>
+                </svg>
+              </span>
+
+              <span class="summary-tag">
+                Unpaid
+              </span>
+            </div>
+
+            <span class="summary-label">
+              Termin Belum Dibayar
+            </span>
+
+            <span
+              class="summary-value"
+              id="jumlahTerminBelumDibayar"
+            >
+              0
+            </span>
+          </article>
         </section>
-
 
         <!-- FILTER -->
+        <section class="filter-panel">
+          <div class="filter-heading">
+            <h2 class="filter-title">
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M4 6h16"></path>
+                <path d="M7 12h10"></path>
+                <path d="M10 18h4"></path>
+              </svg>
 
-        <section class="filter-card">
+              Filter dan Pencarian
+            </h2>
 
-          <input
-            type="search"
-            id="searchPendapatan"
-            placeholder="Cari proyek, klien, kategori atau termin..."
-          >
+            <span class="filter-note">
+              Default: tahun berjalan dan sudah dibayar
+            </span>
+          </div>
 
-         <select id="filterBulanPendapatan">
+          <div class="filter-card">
 
-          <option value="">
-            Semua Bulan
-          </option>
+            <!-- PENCARIAN -->
+            <div class="filter-field search-field">
+              <label for="searchPendapatan">
+                Pencarian
+              </label>
 
-          <option value="1">Januari</option>
-          <option value="2">Februari</option>
-          <option value="3">Maret</option>
-          <option value="4">April</option>
-          <option value="5">Mei</option>
-          <option value="6">Juni</option>
-          <option value="7">Juli</option>
-          <option value="8">Agustus</option>
-          <option value="9">September</option>
-          <option value="10">Oktober</option>
-          <option value="11">November</option>
-          <option value="12">Desember</option>
+              <div class="filter-input-wrap">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="11"
+                    cy="11"
+                    r="7"
+                  ></circle>
 
-        </select>
-          <select id="filterTahunPendapatan">
+                  <path d="m20 20-4-4"></path>
+                </svg>
 
-            <option value="">
-              Semua Tahun
-            </option>
+                <input
+                  type="search"
+                  id="searchPendapatan"
+                  placeholder="Cari proyek, klien, kategori atau termin..."
+                  autocomplete="off"
+                >
+              </div>
+            </div>
 
-          </select>
+            <!-- BULAN -->
+            <div class="filter-field">
+              <label for="filterBulanPendapatan">
+                Bulan
+              </label>
 
+              <select id="filterBulanPendapatan">
+                <option value="">
+                  Semua Bulan
+                </option>
+              </select>
+            </div>
 
-          <select id="filterJenisPendapatan">
+            <!-- TAHUN -->
+            <div class="filter-field">
+              <label for="filterTahunPendapatan">
+                Tahun
+              </label>
 
-            <option value="">
-              Semua Jenis Proyek
-            </option>
+              <select id="filterTahunPendapatan">
+                <option value="">
+                  Semua Tahun
+                </option>
+              </select>
+            </div>
 
-          </select>
+            <!-- JENIS PROYEK -->
+            <div class="filter-field">
+              <label for="filterJenisPendapatan">
+                Jenis Proyek
+              </label>
 
+              <select id="filterJenisPendapatan">
+                <option value="">
+                  Semua Jenis Proyek
+                </option>
+              </select>
+            </div>
 
-          <select id="filterStatusPengadaanPendapatan">
+            <!-- STATUS PEMBAYARAN -->
+            <div class="filter-field">
+              <label
+                for="filterStatusPembayaranPendapatan"
+              >
+                Status Pembayaran
+              </label>
 
-            <option value="">
-              Semua Status Pengadaan
-            </option>
+              <select
+                id="filterStatusPembayaranPendapatan"
+              >
+                <option value="">
+                  Semua Status Pembayaran
+                </option>
+              </select>
+            </div>
 
-          </select>
+            <!-- RESET -->
+            <button
+              type="button"
+              id="resetPendapatanFilter"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 12a9 9 0 1 0 3-6.7"
+                ></path>
 
+                <path d="M3 4v6h6"></path>
+              </svg>
 
-          <select id="filterStatusTeknisPendapatan">
-
-            <option value="">
-              Semua Status Teknis
-            </option>
-
-          </select>
-
-
-          <button
-            type="button"
-            class="filter-reset"
-            id="resetPendapatanFilter"
-          >
-            Reset
-          </button>
-
+              Reset
+            </button>
+          </div>
         </section>
 
-
-        <!-- GROUPING -->
-
+        <!-- GROUPING DAN TABLE -->
         <div id="pendapatanGroup">
-
           <div class="empty-state">
             Memuat data pendapatan...
           </div>
-
         </div>
 
-
         <!-- PAGINATION -->
-
         <div
           class="pagination"
           id="pendapatanPagination"
-          style="display:none;"
+          style="display: none;"
         >
-
           <div
             class="pagination-info"
             id="pendapatanPaginationInfo"
@@ -764,20 +1685,13 @@
             class="pagination-buttons"
             id="pendapatanPaginationButtons"
           ></div>
-
         </div>
-
       </div>
-
     </main>
-
   </div>
-
 
   <script src="/layout.js"></script>
   <script src="/sidebar.js"></script>
   <script src="/pendapatan.js"></script>
-
 </body>
-
 </html>

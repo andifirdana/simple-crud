@@ -882,16 +882,44 @@ function renderActivity(data) {
             );
 
 
-          const showChange =
-            item.aktivitas ===
-              "UPDATE" &&
-            (
-              item.nilai_lama !==
-                null ||
-              item.nilai_baru !==
-                null
-            );
+          const aktivitas =
+  String(
+    item.aktivitas || ""
+  ).toUpperCase();
 
+
+const adaNilaiLama =
+  item.nilai_lama !== null &&
+  item.nilai_lama !== undefined &&
+  String(
+    item.nilai_lama
+  ).trim() !== "";
+
+
+const adaNilaiBaru =
+  item.nilai_baru !== null &&
+  item.nilai_baru !== undefined &&
+  String(
+    item.nilai_baru
+  ).trim() !== "";
+
+
+const showCreate =
+  aktivitas === "CREATE" &&
+  adaNilaiBaru;
+
+
+const showUpdate =
+  aktivitas === "UPDATE" &&
+  (
+    adaNilaiLama ||
+    adaNilaiBaru
+  );
+
+
+const showDelete =
+  aktivitas === "DELETE" &&
+  adaNilaiLama;
 
           let badgeClass = "";
 
@@ -1023,48 +1051,96 @@ function renderActivity(data) {
 
 
                 ${
-                  showChange
-                    ? `
-                      <div class="change-box">
+  showCreate
+    ? `
+      <div class="change-box single-change">
 
-                        <div class="change-value">
+        <div class="change-value">
 
-                          <span class="change-label">
-                            Semula
-                          </span>
+          <span class="change-label">
+            Isi
+          </span>
 
-                          <span class="change-text">
-                            ${escapeHtml(
-                              oldValue
-                            )}
-                          </span>
+          <span class="change-text">
+            ${escapeHtml(
+              newValue
+            )}
+          </span>
 
-                        </div>
+        </div>
+
+      </div>
+    `
+    : ""
+}
 
 
-                        <div class="change-arrow">
-                          →
-                        </div>
+${
+  showUpdate
+    ? `
+      <div class="change-box">
+
+        <div class="change-value">
+
+          <span class="change-label">
+            Semula
+          </span>
+
+          <span class="change-text">
+            ${escapeHtml(
+              oldValue
+            )}
+          </span>
+
+        </div>
+
+        <div class="change-arrow">
+          →
+        </div>
+
+        <div class="change-value">
+
+          <span class="change-label">
+            Menjadi
+          </span>
+
+          <span class="change-text">
+            ${escapeHtml(
+              newValue
+            )}
+          </span>
+
+        </div>
+
+      </div>
+    `
+    : ""
+}
 
 
-                        <div class="change-value">
+${
+  showDelete
+    ? `
+      <div class="change-box single-change">
 
-                          <span class="change-label">
-                            Menjadi
-                          </span>
+        <div class="change-value">
 
-                          <span class="change-text">
-                            ${escapeHtml(
-                              newValue
-                            )}
-                          </span>
+          <span class="change-label">
+            Isi
+          </span>
 
-                        </div>
+          <span class="change-text">
+            ${escapeHtml(
+              oldValue
+            )}
+          </span>
 
-                      </div>
-                    `
-                    : ""
-                }
+        </div>
+
+      </div>
+    `
+    : ""
+}
 
               </div>
 
