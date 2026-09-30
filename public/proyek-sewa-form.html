@@ -1360,77 +1360,101 @@
        TEMPLATE PEMBAYARAN
   ====================================================== -->
 
-  <template id="paymentTemplate">
+<template id="paymentTemplate">
+  <div class="payment-item">
+    <!-- DESKRIPSI -->
 
-    <div class="payment-item">
+    <div class="form-group">
+      <label>
+        Deskripsi
+        <span class="required">*</span>
+      </label>
 
+      <input
+        type="text"
+        class="form-control deskripsiPembayaran"
+        placeholder="Contoh: Pembayaran sewa Januari"
+        required
+      >
+    </div>
 
-      <!-- =============================================
-           DESKRIPSI
-      ============================================== -->
+    <!-- NOMINAL -->
 
-      <div class="form-group">
+    <div class="form-group">
+      <label>
+        Nominal
+        <span class="required">*</span>
+      </label>
 
-        <label>
-          Deskripsi
-          <span class="required">*</span>
-        </label>
+      <input
+        type="text"
+        inputmode="numeric"
+        class="form-control nominalPembayaran"
+        placeholder="Rp 0"
+        autocomplete="off"
+        required
+      >
+    </div>
 
-        <input
-          type="text"
-          class="form-control deskripsiPembayaran"
-          placeholder="Contoh: Pembayaran Januari 2027"
-          required
-        >
+    <!-- STATUS PEMBAYARAN -->
 
-      </div>
+    <div class="form-group">
+      <label>
+        Status Pembayaran
+        <span class="required">*</span>
+      </label>
 
+      <select
+        class="form-control statusPembayaran"
+        required
+      >
+        <option value="Belum Dibayar">
+          Belum Dibayar
+        </option>
 
-      <!-- =============================================
-           NOMINAL
-      ============================================== -->
+        <option value="Proses">
+          Proses
+        </option>
 
-      <div class="form-group">
+        <option value="Sudah Dibayar">
+          Sudah Dibayar
+        </option>
+      </select>
+    </div>
 
-        <label>
-          Nominal Pembayaran
-          <span class="required">*</span>
-        </label>
+    <!-- TANGGAL BAYAR -->
 
-        <input
-          type="text"
-          class="form-control nominalPembayaran"
-          placeholder="Rp 0"
-          inputmode="numeric"
-          required
-        >
+    <div class="form-group">
+      <label>
+        Tanggal Bayar
+      </label>
 
-      </div>
+      <input
+        type="date"
+        class="form-control tanggalBayar"
+      >
+    </div>
 
+    <!-- SYARAT PEMBAYARAN -->
 
-      <!-- =============================================
-           TANGGAL BAYAR
-      ============================================== -->
+    <div class="form-group">
+      <label>
+        Syarat Pembayaran
+      </label>
 
-      <div class="form-group">
+      <textarea
+        class="form-control syaratPembayaran"
+        rows="2"
+        placeholder="Masukkan syarat pembayaran"
+      ></textarea>
+    </div>
 
-        <label>
-          Tanggal Bayar
-          <span class="required">*</span>
-        </label>
+    <!-- AKSI -->
 
-        <input
-          type="date"
-          class="form-control tanggalBayar"
-          required
-        >
-
-      </div>
-
-
-      <!-- =============================================
-           HAPUS
-      ============================================== -->
+    <div class="form-group payment-action">
+      <label>
+        &nbsp;
+      </label>
 
       <button
         type="button"
@@ -1438,11 +1462,9 @@
       >
         Hapus
       </button>
-
-
     </div>
-
-  </template>
+  </div>
+</template>
 
 
   <!-- =====================================================

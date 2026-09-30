@@ -542,62 +542,119 @@ async function loadMasterKlien() {
 }
 
 
+
 // =====================================================
 // LOAD MASTER PROYEK
+// HANYA JENIS PROYEK SEWA
 // =====================================================
 
 async function loadMasterProyek() {
+  try {
+    const result =
+      await fetchJSON(
+        "/api/proyek-sewa/master/proyek"
+      );
 
-  const result =
-    await fetchJSON(
-      "/api/proyek-sewa/master/proyek"
-    );
+    const dataProyek =
+      Array.isArray(result)
+        ? result
+        : Array.isArray(result?.data)
+          ? result.data
+          : [];
 
+    /*
+     * Filter ulang di frontend sebagai pengamanan.
+     * Dropdown hanya boleh berisi proyek Sewa.
+     */
 
-  masterProyek =
-    Array.isArray(result)
-      ? result
-      : [];
+    masterProyek =
+      dataProyek.filter(
+        item =>
+          String(
+            item.jenis_proyek || ""
+          )
+            .trim()
+            .toLowerCase() ===
+          "sewa"
+      );
 
+    if (!proyekId) {
+      return;
+    }
 
-  if (!proyekId) {
-    return;
-  }
-
-
-  proyekId.innerHTML =
-    `
+    proyekId.innerHTML = `
       <option value="">
         Pilih Nama Proyek
       </option>
     `;
 
+    masterProyek.forEach(
+      item => {
+        const option =
+          document.createElement(
+            "option"
+          );
 
-  masterProyek.forEach(
-    item => {
+        option.value =
+          String(item.id);
 
-      const option =
+        option.textContent =
+          item.nama_proyek ||
+          `Proyek ${item.id}`;
+
+        /*
+         * Simpan informasi klien pada option
+         * untuk kebutuhan pemilihan otomatis.
+         */
+
+        option.dataset.klienId =
+          item.klien_id || "";
+
+        proyekId.appendChild(
+          option
+        );
+      }
+    );
+
+    /*
+     * Jika tidak ada proyek Sewa.
+     */
+
+    if (
+      masterProyek.length === 0
+    ) {
+      const optionKosong =
         document.createElement(
           "option"
         );
 
+      optionKosong.value = "";
+      optionKosong.disabled = true;
 
-      option.value =
-        item.id;
-
-
-      option.textContent =
-        item.nama_proyek ||
-        `Proyek ${item.id}`;
-
+      optionKosong.textContent =
+        "Tidak ada proyek dengan jenis Sewa";
 
       proyekId.appendChild(
-        option
+        optionKosong
       );
-
     }
-  );
 
+  } catch (error) {
+    console.error(
+      "ERROR LOAD MASTER PROYEK SEWA:",
+      error
+    );
+
+    masterProyek = [];
+
+    if (proyekId) {
+      proyekId.innerHTML = `
+        <option value="">
+          Gagal memuat proyek Sewa
+        </option>
+      `;
+    }
+  }
 }
 
 
@@ -1790,7 +1847,38 @@ function tambahProduk(
   return productItem;
 
 }
+// =====================================================
+// NORMALISASI STATUS PEMBAYARAN
+// =====================================================
 
+function normalisasiStatusPembayaranSewa(
+  value
+) {
+  const status =
+    String(value || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+
+  if (
+    status === "sudah dibayar" ||
+    status === "dibayar" ||
+    status === "lunas" ||
+    status === "paid"
+  ) {
+    return "Sudah Dibayar";
+  }
+
+  if (
+    status === "proses" ||
+    status === "diproses" ||
+    status === "processing"
+  ) {
+    return "Proses";
+  }
+
+  return "Belum Dibayar";
+}
 
 // =====================================================
 // TAMBAH PEMBAYARAN
@@ -1799,114 +1887,152 @@ function tambahProduk(
 function tambahPembayaran(
   data = null
 ) {
-
   if (
     !paymentTemplate ||
     !paymentContainer
   ) {
-
     return null;
-
   }
-
 
   const fragment =
     paymentTemplate
       .content
       .cloneNode(true);
 
-
   const paymentItem =
     fragment.querySelector(
       ".payment-item"
     );
 
-
-  if (data) {
-
-    paymentItem.dataset.paymentId =
-      data.id ||
-      "";
-
-
-    const deskripsi =
-      paymentItem.querySelector(
-        ".deskripsiPembayaran"
-      );
-
-
-    const nominal =
-      paymentItem.querySelector(
-        ".nominalPembayaran"
-      );
-
-
-    const tanggalBayar =
-      paymentItem.querySelector(
-        ".tanggalBayar"
-      );
-
-
-    if (deskripsi) {
-
-      deskripsi.value =
-        data.deskripsi ||
-        "";
-
-    }
-
-
-    if (nominal) {
-
-      nominal.value =
-        rupiah(
-          data.nominal
-        );
-
-    }
-
-
-    if (tanggalBayar) {
-
-      tanggalBayar.value =
-        tanggalInput(
-          data.tanggal_bayar
-        );
-
-    }
-
+  if (!paymentItem) {
+    return null;
   }
 
+  paymentItem.dataset.paymentId =
+    data?.id || "";
 
   // ===============================================
-  // FORMAT NOMINAL
+  // ELEMENT
   // ===============================================
+
+  const deskripsiInput =
+    paymentItem.querySelector(
+      ".deskripsiPembayaran"
+    );
 
   const nominalInput =
     paymentItem.querySelector(
       ".nominalPembayaran"
     );
 
+  const statusInput =
+    paymentItem.querySelector(
+      ".statusPembayaran"
+    );
+
+  const tanggalBayarInput =
+    paymentItem.querySelector(
+      ".tanggalBayar"
+    );
+
+  const syaratInput =
+    paymentItem.querySelector(
+      ".syaratPembayaran"
+    );
+
+  // ===============================================
+  // ISI DATA
+  // ===============================================
+
+  if (deskripsiInput) {
+    deskripsiInput.value =
+      data?.deskripsi || "";
+  }
+
+  if (nominalInput) {
+    const nominal =
+      angka(
+        data?.nominal
+      );
+
+    nominalInput.value =
+      nominal > 0
+        ? rupiah(nominal)
+        : "";
+  }
+
+  if (statusInput) {
+    statusInput.value =
+      normalisasiStatusPembayaranSewa(
+        data?.status_pembayaran
+      );
+  }
+
+  if (tanggalBayarInput) {
+    tanggalBayarInput.value =
+      tanggalInput(
+        data?.tanggal_bayar
+      );
+  }
+
+  if (syaratInput) {
+    syaratInput.value =
+      data?.syarat_pembayaran ||
+      "";
+  }
+
+  // ===============================================
+  // ATUR TANGGAL BAYAR BERDASARKAN STATUS
+  // ===============================================
+
+  function aturTanggalBayar() {
+    if (
+      !statusInput ||
+      !tanggalBayarInput
+    ) {
+      return;
+    }
+
+    const sudahDibayar =
+      statusInput.value ===
+      "Sudah Dibayar";
+
+    tanggalBayarInput.required =
+      sudahDibayar;
+
+    tanggalBayarInput.classList.toggle(
+      "required-payment-date",
+      sudahDibayar
+    );
+  }
+
+  statusInput
+    ?.addEventListener(
+      "change",
+      aturTanggalBayar
+    );
+
+  aturTanggalBayar();
+
+  // ===============================================
+  // FORMAT NOMINAL
+  // ===============================================
 
   nominalInput
     ?.addEventListener(
       "input",
       event => {
-
         const value =
           angka(
             event.target.value
           );
 
-
         event.target.value =
-          value
+          value > 0
             ? rupiah(value)
             : "";
-
       }
     );
-
 
   // ===============================================
   // HAPUS PEMBAYARAN
@@ -1919,20 +2045,24 @@ function tambahPembayaran(
     ?.addEventListener(
       "click",
       () => {
+        const yakin =
+          window.confirm(
+            "Hapus data pembayaran ini?"
+          );
+
+        if (!yakin) {
+          return;
+        }
 
         paymentItem.remove();
-
       }
     );
-
 
   paymentContainer.appendChild(
     fragment
   );
 
-
   return paymentItem;
-
 }
 
 
@@ -2369,62 +2499,144 @@ function buildProdukPayload() {
 // =====================================================
 
 function buildPembayaranPayload() {
-
   const result = [];
 
+  if (!paymentContainer) {
+    return result;
+  }
 
-  const paymentItems =
-    [
-      ...paymentContainer
-        .querySelectorAll(
-          ".payment-item"
-        )
-    ];
-
+  const paymentItems = [
+    ...paymentContainer
+      .querySelectorAll(
+        ".payment-item"
+      )
+  ];
 
   paymentItems.forEach(
-    item => {
+    (
+      item,
+      index
+    ) => {
+      const id =
+        Number(
+          item.dataset
+            .paymentId
+        ) || null;
 
       const deskripsi =
-        item.querySelector(
-          ".deskripsiPembayaran"
-        )?.value?.trim() ||
-        "";
-
+        item
+          .querySelector(
+            ".deskripsiPembayaran"
+          )
+          ?.value
+          ?.trim() || "";
 
       const nominal =
         angka(
-          item.querySelector(
-            ".nominalPembayaran"
-          )?.value
+          item
+            .querySelector(
+              ".nominalPembayaran"
+            )
+            ?.value
         );
 
+      const statusPembayaran =
+        normalisasiStatusPembayaranSewa(
+          item
+            .querySelector(
+              ".statusPembayaran"
+            )
+            ?.value
+        );
 
       const tanggalBayar =
-        item.querySelector(
-          ".tanggalBayar"
-        )?.value ||
+        item
+          .querySelector(
+            ".tanggalBayar"
+          )
+          ?.value ||
         null;
 
+      const syaratPembayaran =
+        item
+          .querySelector(
+            ".syaratPembayaran"
+          )
+          ?.value
+          ?.trim() || "";
 
-      // Abaikan pembayaran benar-benar kosong.
+      // =============================================
+      // ABAIKAN BARIS BARU YANG KOSONG
+      // =============================================
 
       if (
+        id === null &&
         !deskripsi &&
         nominal === 0 &&
-        !tanggalBayar
+        !tanggalBayar &&
+        !syaratPembayaran
       ) {
-
         return;
-
       }
 
+      // =============================================
+      // VALIDASI
+      // =============================================
+
+      if (!deskripsi) {
+        throw new Error(
+          `Deskripsi pembayaran ke-${
+            index + 1
+          } wajib diisi.`
+        );
+      }
+
+      if (
+        !Number.isFinite(
+          nominal
+        ) ||
+        nominal < 0
+      ) {
+        throw new Error(
+          `Nominal pembayaran ke-${
+            index + 1
+          } tidak valid.`
+        );
+      }
+
+      const statusValid = [
+        "Belum Dibayar",
+        "Proses",
+        "Sudah Dibayar"
+      ];
+
+      if (
+        !statusValid.includes(
+          statusPembayaran
+        )
+      ) {
+        throw new Error(
+          `Status pembayaran ke-${
+            index + 1
+          } tidak valid.`
+        );
+      }
+
+      if (
+        statusPembayaran ===
+          "Sudah Dibayar" &&
+        !tanggalBayar
+      ) {
+        throw new Error(
+          `Tanggal bayar pembayaran ke-${
+            index + 1
+          } wajib diisi karena statusnya Sudah Dibayar.`
+        );
+      }
 
       result.push({
-
         id:
-          item.dataset.paymentId ||
-          null,
+          id,
 
         deskripsi:
           deskripsi,
@@ -2432,19 +2644,21 @@ function buildPembayaranPayload() {
         nominal:
           nominal,
 
+        status_pembayaran:
+          statusPembayaran,
+
         tanggal_bayar:
-          tanggalBayar
+          tanggalBayar,
 
+        syarat_pembayaran:
+          syaratPembayaran ||
+          null
       });
-
     }
   );
 
-
   return result;
-
 }
-
 
 // =====================================================
 // BUILD RUJUKAN DARI PAYLOAD PRODUK

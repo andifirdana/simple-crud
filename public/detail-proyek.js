@@ -282,6 +282,43 @@ function formatInputNominal(value) {
     : "";
 }
 
+// ======================================================
+// FORMAT NOMINAL DARI DATABASE
+// PostgreSQL NUMERIC dapat mengirim 1200000.000
+// ======================================================
+
+function formatNominalDatabase(
+  value
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  ) {
+    return "";
+  }
+
+  /*
+   * Number("1200000.000")
+   * menghasilkan 1200000.
+   *
+   * Jadi .000 dari PostgreSQL tidak dianggap
+   * sebagai separator ribuan.
+   */
+  const number =
+    Number(value);
+
+  if (!Number.isFinite(number)) {
+    return "";
+  }
+
+  return new Intl.NumberFormat(
+    "id-ID",
+    {
+      maximumFractionDigits: 0
+    }
+  ).format(number);
+}
 
 function nominalOrNull(value) {
   if (
@@ -7431,7 +7468,7 @@ function buatPartnerCard(
             type="text"
             inputmode="numeric"
             class="edit-partner-submit input-rupiah"
-            value="${formatInputNominal(
+            value="${formatNominalDatabase(
               item.nilai_submit
             )}"
             autocomplete="off"
@@ -7447,7 +7484,7 @@ function buatPartnerCard(
             type="text"
             inputmode="numeric"
             class="edit-partner-nego1 input-rupiah"
-            value="${formatInputNominal(
+            value="${formatNominalDatabase(
               item.nilai_nego_1
             )}"
             autocomplete="off"
@@ -7463,7 +7500,7 @@ function buatPartnerCard(
             type="text"
             inputmode="numeric"
             class="edit-partner-nego2 input-rupiah"
-            value="${formatInputNominal(
+           value="${formatNominalDatabase(
               item.nilai_nego_2
             )}"
             autocomplete="off"
@@ -7479,9 +7516,9 @@ function buatPartnerCard(
             type="text"
             inputmode="numeric"
             class="edit-partner-nego3 input-rupiah"
-            value="${formatInputNominal(
-              item.nilai_nego_3
-            )}"
+           value="${formatNominalDatabase(
+            item.nilai_nego_3
+          )}"
             autocomplete="off"
           >
         </div>

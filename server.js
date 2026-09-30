@@ -25184,17 +25184,29 @@ app.get(
 // 2. GET MASTER PROYEK
 // =====================================================
 
+// =====================================================
+// MASTER PROYEK SEWA
+// HANYA JENIS PROYEK = SEWA
+// TETAP FILTER BERDASARKAN ADMIN / PIC
+// =====================================================
+
 app.get(
   "/api/proyek-sewa/master/proyek",
   async (req, res) => {
 
-    if (!req.session?.user) {
+    // ================================================
+    // VALIDASI LOGIN
+    // ================================================
 
+    if (!req.session?.user) {
       return res.status(401).json({
         error: "Belum login"
       });
-
     }
+
+    // ================================================
+    // DATA USER
+    // ================================================
 
     const user =
       req.session.user;
@@ -25202,12 +25214,19 @@ app.get(
     const isAdmin =
       String(
         user.role || ""
-      ).toLowerCase() === "admin";
+      )
+        .trim()
+        .toLowerCase() ===
+      "admin";
 
     const picId =
-      user.id;
+      Number(user.id);
 
     try {
+
+      // ================================================
+      // AMBIL PROYEK JENIS SEWA
+      // ================================================
 
       const { rows } =
         await pool.query(
@@ -25215,29 +25234,102 @@ app.get(
           SELECT
             p.id,
             p.nama_proyek,
+            p.jenis_proyek,
+            p.sub_jenis_proyek,
+            p.status_final,
+
+            /*
+             * Ambil klien terakhir dari proyek.
+             */
 
             (
-              SELECT pk.klien_id
+              SELECT
+                pk.klien_id
+
               FROM public.proyek_klien pk
-              WHERE pk.proyek_id = p.id
-              ORDER BY pk.id DESC
+
+              WHERE
+                pk.proyek_id =
+                  p.id
+
+              ORDER BY
+                pk.id DESC
+
               LIMIT 1
-            ) AS klien_id
+            ) AS klien_id,
+
+            /*
+             * Ambil nama klien terakhir.
+             */
+
+            (
+              SELECT
+                d.perusahaan_klien
+
+              FROM public.proyek_klien pk
+
+              LEFT JOIN public.data d
+                ON d.id =
+                  pk.klien_id
+
+              WHERE
+                pk.proyek_id =
+                  p.id
+
+              ORDER BY
+                pk.id DESC
+
+              LIMIT 1
+            ) AS nama_klien
 
           FROM public.proyek p
 
           WHERE
-            $1::boolean = TRUE
+            /*
+             * Hanya proyek dengan jenis Sewa.
+             */
 
-            OR EXISTS (
-              SELECT 1
-              FROM public.proyek_pic pp
-              WHERE pp.proyek_id = p.id
-                AND pp.pic_id = $2
+            LOWER(
+              TRIM(
+                COALESCE(
+                  p.jenis_proyek,
+                  ''
+                )
+              )
+            ) = 'sewa'
+
+            AND
+
+            /*
+             * Admin dapat melihat semua proyek Sewa.
+             * PIC hanya dapat melihat proyek yang
+             * ditugaskan kepadanya.
+             */
+
+            (
+              $1::boolean = TRUE
+
+              OR
+
+              EXISTS (
+                SELECT 1
+
+                FROM public.proyek_pic pp
+
+                WHERE
+                  pp.proyek_id =
+                    p.id
+
+                  AND
+
+                  pp.pic_id =
+                    $2
+              )
             )
 
           ORDER BY
-            p.nama_proyek ASC
+            p.nama_proyek ASC,
+            p.id DESC
           `,
           [
             isAdmin,
@@ -25245,21 +25337,23 @@ app.get(
           ]
         );
 
-      res.json(rows);
+      // ================================================
+      // RESPONSE
+      // ================================================
+
+      return res.json(rows);
 
     } catch (error) {
-
       console.error(
         "ERROR GET MASTER PROYEK UNTUK SEWA:",
         error
       );
 
-      res.status(500).json({
-        error: error.message
+      return res.status(500).json({
+        error:
+          error.message
       });
-
     }
-
   }
 );
 
@@ -26362,123 +26456,165 @@ app.post(
 
 
       // =================================================
-      // INSERT PEMBAYARAN
-      // =================================================
+// INSERT PEMBAYARAN
+// =================================================
 
-      if (
-        Array.isArray(
-          pembayaran
+if (
+  Array.isArray(pembayaran)
+) {
+  const statusValid = [
+    "Belum Dibayar",
+    "Proses",
+    "Sudah Dibayar"
+  ];
+
+  for (
+    let i = 0;
+    i < pembayaran.length;
+    i += 1
+  ) {
+    const bayar =
+      pembayaran[i] || {};
+
+    const deskripsi =
+      String(
+        bayar.deskripsi || ""
+      ).trim();
+
+    const nominal =
+      bayar.nominal === null ||
+      bayar.nominal === undefined ||
+      bayar.nominal === ""
+        ? 0
+        : Number(bayar.nominal);
+
+    const tanggalBayarInput =
+      bayar.tanggal_bayar
+        ? String(
+            bayar.tanggal_bayar
+          )
+            .trim()
+            .slice(0, 10)
+        : null;
+
+    const syaratPembayaran =
+      String(
+        bayar.syarat_pembayaran ||
+        ""
+      ).trim();
+
+    /*
+     * Untuk kompatibilitas:
+     * jika status belum dikirim tetapi tanggal bayar
+     * tersedia, status dianggap Sudah Dibayar.
+     */
+    const statusPembayaran =
+      String(
+        bayar.status_pembayaran ||
+        (
+          tanggalBayarInput
+            ? "Sudah Dibayar"
+            : "Belum Dibayar"
         )
-      ) {
+      ).trim();
 
-        for (
-          let i = 0;
-          i < pembayaran.length;
-          i++
-        ) {
+    // Abaikan baris kosong
+    if (
+      !deskripsi &&
+      nominal === 0 &&
+      !tanggalBayarInput &&
+      !syaratPembayaran
+    ) {
+      continue;
+    }
 
-          const bayar =
-            pembayaran[i];
+    if (!deskripsi) {
+      throw new Error(
+        `Deskripsi Pembayaran ${
+          i + 1
+        } wajib diisi.`
+      );
+    }
 
+    if (
+      !Number.isFinite(nominal) ||
+      nominal < 0
+    ) {
+      throw new Error(
+        `Nominal Pembayaran ${
+          i + 1
+        } tidak valid.`
+      );
+    }
 
-          const deskripsi =
-            String(
-              bayar.deskripsi ||
-              ""
-            ).trim();
+    if (
+      !statusValid.includes(
+        statusPembayaran
+      )
+    ) {
+      throw new Error(
+        `Status Pembayaran ${
+          i + 1
+        } tidak valid.`
+      );
+    }
 
+    if (
+      statusPembayaran ===
+        "Sudah Dibayar" &&
+      !tanggalBayarInput
+    ) {
+      throw new Error(
+        `Tanggal Bayar Pembayaran ${
+          i + 1
+        } wajib diisi karena statusnya Sudah Dibayar.`
+      );
+    }
 
-          const tanggalBayar =
-            bayar.tanggal_bayar ||
-            null;
+    const tanggalBayarSimpan =
+      statusPembayaran ===
+        "Sudah Dibayar"
+        ? tanggalBayarInput
+        : null;
 
+    await client.query(
+      `
+        INSERT INTO
+          public.proyek_sewa_pembayaran
+        (
+          proyek_sewa_id,
+          deskripsi,
+          nominal,
+          status_pembayaran,
+          tanggal_bayar,
+          syarat_pembayaran,
+          created_at,
+          updated_at
+        )
 
-          const nominal =
-            Number(
-              bayar.nominal ||
-              0
-            );
-
-
-          if (!deskripsi) {
-
-            throw new Error(
-              `Deskripsi Pembayaran ${i + 1} wajib diisi.`
-            );
-
-          }
-
-
-          if (!tanggalBayar) {
-
-            throw new Error(
-              `Tanggal Pembayaran ${i + 1} wajib diisi.`
-            );
-
-          }
-
-
-          if (
-            !Number.isFinite(
-              nominal
-            ) ||
-            nominal < 0
-          ) {
-
-            throw new Error(
-              `Nominal Pembayaran ${i + 1} tidak valid.`
-            );
-
-          }
-
-
-          await client.query(
-            `
-              INSERT INTO public.proyek_sewa_pembayaran (
-
-                proyek_sewa_id,
-
-                deskripsi,
-
-                nominal,
-
-                tanggal_bayar,
-
-                created_at,
-
-                updated_at
-
-              )
-
-              VALUES (
-
-                $1,
-                $2,
-                $3,
-                $4,
-
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-
-              )
-            `,
-            [
-
-              proyekSewa.id,
-
-              deskripsi,
-
-              nominal,
-
-              tanggalBayar
-
-            ]
-          );
-
-        }
-
-      }
-
+        VALUES
+        (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+      `,
+      [
+        proyekSewa.id,
+        deskripsi,
+        nominal,
+        statusPembayaran,
+        tanggalBayarSimpan,
+        syaratPembayaran || null
+      ]
+    );
+  }
+}
 
       // =================================================
       // COMMIT
@@ -26877,71 +27013,52 @@ app.get(
   "/api/proyek-sewa/:id/detail",
   async (req, res) => {
 
-    // =================================================
+    // ================================================
     // CEK LOGIN
-    // =================================================
+    // ================================================
 
     if (!req.session?.user) {
-
       return res.status(401).json({
         error: "Belum login"
       });
-
     }
 
-
-    // =================================================
-    // ID PROYEK SEWA
-    // =================================================
+    // ================================================
+    // VALIDASI ID
+    // ================================================
 
     const id =
-      Number(
-        req.params.id
-      );
-
+      Number(req.params.id);
 
     if (
       !Number.isInteger(id) ||
       id <= 0
     ) {
-
       return res.status(400).json({
         error:
           "ID Proyek Sewa tidak valid."
       });
-
     }
-
 
     try {
 
-      // =================================================
+      // ==============================================
       // HEADER PROYEK SEWA
-      // =================================================
+      // ==============================================
 
       const proyekResult =
         await pool.query(
           `
             SELECT
-
               ps.id,
-
               ps.nomor_pr,
-
               ps.tanggal_pr,
-
               ps.nomor_rujukan,
-
               ps.proyek_id,
-
               ps.klien_id,
-
               ps.total_nilai_per_bulan,
-
               ps.total_nilai,
-
               ps.created_at,
-
               ps.updated_at,
 
               d.perusahaan_klien
@@ -26964,50 +27081,34 @@ app.get(
           [id]
         );
 
-
-      // =================================================
-      // TIDAK DITEMUKAN
-      // =================================================
-
       if (
         proyekResult.rowCount === 0
       ) {
-
         return res.status(404).json({
           error:
             "Proyek sewa tidak ditemukan."
         });
-
       }
 
-
-      // =================================================
+      // ==============================================
       // PRODUK
-      // =================================================
+      // ==============================================
 
       const produkResult =
         await pool.query(
           `
             SELECT
-
               psp.id,
-
               psp.proyek_sewa_id,
-
               psp.produk_id,
 
               mps.item_produk,
 
               psp.harga_per_item,
-
               psp.jenis_proyek,
-
               psp.sub_jenis_proyek,
-
               psp.durasi_bulan,
-
               psp.created_at,
-
               psp.updated_at
 
             FROM public.proyek_sewa_produk psp
@@ -27024,47 +27125,26 @@ app.get(
           [id]
         );
 
-
-      // =================================================
+      // ==============================================
       // ORDER
-      //
-      // FIELD BARU:
-      // - no_req_klien
-      // - tanggal_req_klien
-      // - tanggal_do
-      // - no_do
-      // - end_date
-      // =================================================
+      // ==============================================
 
       const orderResult =
         await pool.query(
           `
             SELECT
-
               pso.id,
-
               pso.proyek_sewa_produk_id,
-
               pso.cabang_id,
-
               pso.quantity,
-
               pso.harga_per_bulan,
-
               pso.total_harga,
-
               pso.no_req_klien,
-
               pso.tanggal_req_klien,
-
               pso.tanggal_do,
-
               pso.no_do,
-
               pso.end_date,
-
               pso.created_at,
-
               pso.updated_at,
 
               mc.nama_cabang
@@ -27077,7 +27157,6 @@ app.get(
             WHERE
               pso.proyek_sewa_produk_id
               IN (
-
                 SELECT
                   id
 
@@ -27085,7 +27164,6 @@ app.get(
 
                 WHERE
                   proyek_sewa_id = $1
-
               )
 
             ORDER BY
@@ -27094,10 +27172,9 @@ app.get(
           [id]
         );
 
-
-      // =================================================
-      // GABUNGKAN ORDER KE MASING-MASING PRODUK
-      // =================================================
+      // ==============================================
+      // GABUNGKAN ORDER KE PRODUK
+      // ==============================================
 
       const produk =
         produkResult.rows.map(
@@ -27109,45 +27186,73 @@ app.get(
                   Number(
                     order.proyek_sewa_produk_id
                   ) ===
-                  Number(
-                    item.id
-                  )
+                  Number(item.id)
               );
 
-
             return {
-
               ...item,
-
               orders
-
             };
-
           }
         );
 
-
-      // =================================================
+      // ==============================================
       // PEMBAYARAN
-      // =================================================
+      // ==============================================
 
       const pembayaranResult =
         await pool.query(
           `
             SELECT
-
               id,
-
               proyek_sewa_id,
-
               deskripsi,
-
               nominal,
 
+              CASE
+                WHEN LOWER(
+                  TRIM(
+                    COALESCE(
+                      status_pembayaran,
+                      ''
+                    )
+                  )
+                ) IN (
+                  'sudah dibayar',
+                  'dibayar',
+                  'lunas',
+                  'paid'
+                )
+                THEN 'Sudah Dibayar'
+
+                WHEN LOWER(
+                  TRIM(
+                    COALESCE(
+                      status_pembayaran,
+                      ''
+                    )
+                  )
+                ) IN (
+                  'proses',
+                  'diproses',
+                  'processing'
+                )
+                THEN 'Proses'
+
+                /*
+                 * Kompatibilitas data lama:
+                 * apabila tanggal bayar sudah ada,
+                 * dianggap sudah dibayar.
+                 */
+                WHEN tanggal_bayar IS NOT NULL
+                THEN 'Sudah Dibayar'
+
+                ELSE 'Belum Dibayar'
+              END AS status_pembayaran,
+
               tanggal_bayar,
-
+              syarat_pembayaran,
               created_at,
-
               updated_at
 
             FROM public.proyek_sewa_pembayaran
@@ -27156,71 +27261,71 @@ app.get(
               proyek_sewa_id = $1
 
             ORDER BY
-              tanggal_bayar ASC NULLS LAST,
               id ASC
           `,
           [id]
         );
 
+      const pembayaran =
+        pembayaranResult.rows;
 
-      // =================================================
-      // HITUNG TOTAL PEMBAYARAN
-      // =================================================
+      // ==============================================
+      // TOTAL DIBAYAR
+      // HANYA STATUS SUDAH DIBAYAR
+      // ==============================================
 
       const totalDibayar =
-        pembayaranResult.rows.reduce(
-          (
-            total,
-            item
-          ) => {
-
-            return (
+        pembayaran
+          .filter(
+            item =>
+              item.status_pembayaran ===
+              "Sudah Dibayar"
+          )
+          .reduce(
+            (
+              total,
+              item
+            ) =>
               total +
               Number(
-                item.nominal ||
-                0
-              )
-            );
+                item.nominal || 0
+              ),
+            0
+          );
 
-          },
-          0
-        );
-
-
-      // =================================================
-      // TOTAL PROYEK
-      // =================================================
+      // ==============================================
+      // TOTAL PROYEK DAN SISA
+      // ==============================================
 
       const totalNilai =
         Number(
           proyekResult
             .rows[0]
-            .total_nilai ||
-          0
+            .total_nilai || 0
         );
 
-
       const sisaPembayaran =
-        totalNilai -
-        totalDibayar;
+        Math.max(
+          0,
+          totalNilai -
+          totalDibayar
+        );
 
-
-      // =================================================
+      // ==============================================
       // RESPONSE
-      // =================================================
+      // ==============================================
 
       return res.json({
-
         proyek:
           proyekResult.rows[0],
 
-        produk,
+        produk:
+          produk,
 
         pembayaran:
-          pembayaranResult.rows,
+          pembayaran,
 
         summary: {
-
           total_nilai_per_bulan:
             Number(
               proyekResult
@@ -27237,11 +27342,8 @@ app.get(
 
           sisa_pembayaran:
             sisaPembayaran
-
         }
-
       });
-
 
     } catch (error) {
 
@@ -27250,15 +27352,12 @@ app.get(
         error
       );
 
-
       return res.status(500).json({
         error:
           error.message ||
           "Gagal mengambil Detail Proyek Sewa."
       });
-
     }
-
   }
 );
 
@@ -28451,11 +28550,19 @@ app.put(
   "/api/proyek-sewa/:id/pembayaran",
   async (req, res) => {
 
+    // ===============================================
+    // VALIDASI LOGIN
+    // ===============================================
+
     if (!req.session?.user) {
       return res.status(401).json({
         error: "Belum login."
       });
     }
+
+    // ===============================================
+    // AMBIL DATA
+    // ===============================================
 
     const proyekSewaId =
       Number(req.params.id);
@@ -28466,6 +28573,10 @@ app.put(
       )
         ? req.body.pembayaran
         : [];
+
+    // ===============================================
+    // VALIDASI ID PROYEK SEWA
+    // ===============================================
 
     if (
       !Number.isInteger(proyekSewaId) ||
@@ -28480,23 +28591,40 @@ app.put(
     const client =
       await pool.connect();
 
+    let transaksiDimulai =
+      false;
+
     try {
 
-      await client.query("BEGIN");
+      await client.query(
+        "BEGIN"
+      );
+
+      transaksiDimulai =
+        true;
 
       // =============================================
-      // LOCK PROYEK
+      // LOCK PROYEK SEWA
+      // SEKALIGUS AMBIL PROYEK ID DAN NAMA PROYEK
       // =============================================
 
       const proyekResult =
         await client.query(
           `
             SELECT
-              id,
-              total_nilai
-            FROM public.proyek_sewa
-            WHERE id = $1
-            FOR UPDATE
+              ps.id,
+              ps.proyek_id,
+              ps.total_nilai,
+              p.nama_proyek
+
+            FROM public.proyek_sewa ps
+
+            INNER JOIN public.proyek p
+              ON p.id = ps.proyek_id
+
+            WHERE ps.id = $1
+
+            FOR UPDATE OF ps
           `,
           [proyekSewaId]
         );
@@ -28504,8 +28632,12 @@ app.put(
       if (
         proyekResult.rowCount === 0
       ) {
+        await client.query(
+          "ROLLBACK"
+        );
 
-        await client.query("ROLLBACK");
+        transaksiDimulai =
+          false;
 
         return res.status(404).json({
           error:
@@ -28513,9 +28645,55 @@ app.put(
         });
       }
 
+      const proyekSewa =
+        proyekResult.rows[0];
+
+      const proyekId =
+        Number(
+          proyekSewa.proyek_id
+        );
+
+      const namaProyek =
+        proyekSewa.nama_proyek ||
+        `Proyek ${proyekId}`;
+
       // =============================================
-      // VALIDASI
+      // AMBIL PEMBAYARAN LAMA UNTUK LOG
       // =============================================
+
+      const pembayaranLamaResult =
+        await client.query(
+          `
+            SELECT
+              id,
+              deskripsi,
+              nominal,
+              status_pembayaran,
+              tanggal_bayar,
+              syarat_pembayaran
+
+            FROM public.proyek_sewa_pembayaran
+
+            WHERE proyek_sewa_id = $1
+
+            ORDER BY
+              id ASC
+          `,
+          [proyekSewaId]
+        );
+
+      const pembayaranLama =
+        pembayaranLamaResult.rows;
+
+      // =============================================
+      // VALIDASI DATA PEMBAYARAN
+      // =============================================
+
+      const statusValid = [
+        "Belum Dibayar",
+        "Proses",
+        "Sudah Dibayar"
+      ];
 
       const pembayaranValid =
         [];
@@ -28523,9 +28701,8 @@ app.put(
       for (
         let i = 0;
         i < pembayaran.length;
-        i++
+        i += 1
       ) {
-
         const item =
           pembayaran[i] || {};
 
@@ -28534,48 +28711,134 @@ app.put(
             item.deskripsi || ""
           ).trim();
 
-        const nominal =
-          Number(
-            item.nominal
-          ) || 0;
+        const nominalInput =
+          item.nominal === null ||
+          item.nominal === undefined ||
+          item.nominal === ""
+            ? 0
+            : Number(item.nominal);
 
-        const tanggalBayar =
+        const statusPembayaran =
+          String(
+            item.status_pembayaran ||
+            "Belum Dibayar"
+          ).trim();
+
+        const tanggalBayarInput =
           item.tanggal_bayar
             ? String(
                 item.tanggal_bayar
               )
+                .trim()
+                .slice(0, 10)
             : null;
 
-        if (
-          nominal < 0
-        ) {
-          throw new Error(
-            `Nominal pembayaran ${i + 1} tidak boleh negatif.`
-          );
-        }
+        const syaratPembayaran =
+          String(
+            item.syarat_pembayaran ||
+            ""
+          ).trim();
 
-        if (
-          nominal > 0 &&
-          !tanggalBayar
-        ) {
-          throw new Error(
-            `Tanggal pembayaran ${i + 1} wajib diisi.`
-          );
-        }
+        // ===========================================
+        // ABAIKAN BARIS BENAR-BENAR KOSONG
+        // ===========================================
 
-        // Abaikan baris kosong
         if (
           !deskripsi &&
-          nominal === 0 &&
-          !tanggalBayar
+          nominalInput === 0 &&
+          !tanggalBayarInput &&
+          !syaratPembayaran
         ) {
           continue;
         }
 
+        // ===========================================
+        // VALIDASI DESKRIPSI
+        // ===========================================
+
+        if (!deskripsi) {
+          throw new Error(
+            `Deskripsi pembayaran ${
+              i + 1
+            } wajib diisi.`
+          );
+        }
+
+        // ===========================================
+        // VALIDASI NOMINAL
+        // ===========================================
+
+        if (
+          !Number.isFinite(
+            nominalInput
+          ) ||
+          nominalInput < 0
+        ) {
+          throw new Error(
+            `Nominal pembayaran ${
+              i + 1
+            } tidak valid.`
+          );
+        }
+
+        // ===========================================
+        // VALIDASI STATUS PEMBAYARAN
+        // ===========================================
+
+        if (
+          !statusValid.includes(
+            statusPembayaran
+          )
+        ) {
+          throw new Error(
+            `Status pembayaran ${
+              i + 1
+            } tidak valid.`
+          );
+        }
+
+        // ===========================================
+        // TANGGAL WAJIB JIKA SUDAH DIBAYAR
+        // ===========================================
+
+        if (
+          statusPembayaran ===
+            "Sudah Dibayar" &&
+          !tanggalBayarInput
+        ) {
+          throw new Error(
+            `Tanggal bayar pembayaran ${
+              i + 1
+            } wajib diisi karena statusnya Sudah Dibayar.`
+          );
+        }
+
+        /*
+         * Tanggal bayar hanya disimpan ketika
+         * status pembayaran Sudah Dibayar.
+         */
+        const tanggalBayarSimpan =
+          statusPembayaran ===
+            "Sudah Dibayar"
+            ? tanggalBayarInput
+            : null;
+
         pembayaranValid.push({
-          deskripsi,
-          nominal,
-          tanggalBayar
+          deskripsi:
+            deskripsi,
+
+          nominal:
+            nominalInput,
+
+          status_pembayaran:
+            statusPembayaran,
+
+          tanggal_bayar:
+            tanggalBayarSimpan,
+
+          syarat_pembayaran:
+            syaratPembayaran ||
+            null
         });
       }
 
@@ -28585,55 +28848,82 @@ app.put(
 
       await client.query(
         `
-          DELETE
-          FROM public.proyek_sewa_pembayaran
+          DELETE FROM
+            public.proyek_sewa_pembayaran
+
           WHERE proyek_sewa_id = $1
         `,
         [proyekSewaId]
       );
 
       // =============================================
-      // INSERT ULANG
+      // INSERT ULANG PEMBAYARAN
       // =============================================
+
+      const pembayaranTersimpan =
+        [];
 
       for (
         const item
         of pembayaranValid
       ) {
+        const insertResult =
+          await client.query(
+            `
+              INSERT INTO
+                public.proyek_sewa_pembayaran
+              (
+                proyek_sewa_id,
+                deskripsi,
+                nominal,
+                status_pembayaran,
+                tanggal_bayar,
+                syarat_pembayaran,
+                created_at,
+                updated_at
+              )
 
-        await client.query(
-          `
-            INSERT INTO public.proyek_sewa_pembayaran
-            (
-              proyek_sewa_id,
-              deskripsi,
-              nominal,
-              tanggal_bayar,
-              created_at,
-              updated_at
-            )
+              VALUES
+              (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+              )
 
-            VALUES
-            (
-              $1,
-              $2,
-              $3,
-              $4,
-              CURRENT_TIMESTAMP,
-              CURRENT_TIMESTAMP
-            )
-          `,
-          [
-            proyekSewaId,
-            item.deskripsi,
-            item.nominal,
-            item.tanggalBayar
-          ]
+              RETURNING
+                id,
+                proyek_sewa_id,
+                deskripsi,
+                nominal,
+                status_pembayaran,
+                tanggal_bayar,
+                syarat_pembayaran,
+                created_at,
+                updated_at
+            `,
+            [
+              proyekSewaId,
+              item.deskripsi,
+              item.nominal,
+              item.status_pembayaran,
+              item.tanggal_bayar,
+              item.syarat_pembayaran
+            ]
+          );
+
+        pembayaranTersimpan.push(
+          insertResult.rows[0]
         );
       }
 
       // =============================================
       // TOTAL DIBAYAR
+      // HANYA STATUS SUDAH DIBAYAR
       // =============================================
 
       const totalBayarResult =
@@ -28643,9 +28933,26 @@ app.put(
               COALESCE(
                 SUM(nominal),
                 0
-              ) AS total_dibayar
+              )::numeric
+                AS total_dibayar
+
             FROM public.proyek_sewa_pembayaran
+
             WHERE proyek_sewa_id = $1
+
+              AND LOWER(
+                TRIM(
+                  COALESCE(
+                    status_pembayaran,
+                    ''
+                  )
+                )
+              ) IN (
+                'sudah dibayar',
+                'dibayar',
+                'lunas',
+                'paid'
+              )
           `,
           [proyekSewaId]
         );
@@ -28659,9 +28966,7 @@ app.put(
 
       const totalNilai =
         Number(
-          proyekResult
-            .rows[0]
-            .total_nilai
+          proyekSewa.total_nilai
         ) || 0;
 
       const sisaPembayaran =
@@ -28672,27 +28977,242 @@ app.put(
         );
 
       // =============================================
-      // UPDATE HEADER
+      // FORMAT TANGGAL UNTUK LOG
+      // =============================================
+
+      const formatTanggalLog =
+        value => {
+
+          if (!value) {
+            return "-";
+          }
+
+          const namaBulan = [
+            "Januari",
+            "Februari",
+            "Maret",
+            "April",
+            "Mei",
+            "Juni",
+            "Juli",
+            "Agustus",
+            "September",
+            "Oktober",
+            "November",
+            "Desember"
+          ];
+
+          let tahun;
+          let bulan;
+          let tanggal;
+
+          if (
+            value instanceof Date
+          ) {
+            tahun =
+              value.getFullYear();
+
+            bulan =
+              value.getMonth() + 1;
+
+            tanggal =
+              value.getDate();
+
+          } else {
+            const tanggalString =
+              String(value)
+                .slice(0, 10);
+
+            const bagian =
+              tanggalString.split("-");
+
+            if (
+              bagian.length !== 3
+            ) {
+              return tanggalString;
+            }
+
+            tahun =
+              Number(bagian[0]);
+
+            bulan =
+              Number(bagian[1]);
+
+            tanggal =
+              Number(bagian[2]);
+          }
+
+          if (
+            !tahun ||
+            !bulan ||
+            !tanggal
+          ) {
+            return "-";
+          }
+
+          return (
+            `${tanggal} ` +
+            `${namaBulan[bulan - 1]} ` +
+            `${tahun}`
+          );
+        };
+
+      // =============================================
+      // FORMAT PEMBAYARAN UNTUK LOG
+      // =============================================
+
+      const buatDetailPembayaranLog =
+        daftar => {
+
+          if (
+            !Array.isArray(daftar) ||
+            daftar.length === 0
+          ) {
+            return "-";
+          }
+
+          return daftar
+            .map(
+              (
+                item,
+                index
+              ) => {
+
+                const status =
+                  String(
+                    item.status_pembayaran ||
+                    "Belum Dibayar"
+                  ).trim();
+
+                const tanggalBayar =
+                  status ===
+                    "Sudah Dibayar"
+                    ? formatTanggalLog(
+                        item.tanggal_bayar
+                      )
+                    : "-";
+
+                return [
+                  `Pembayaran ${index + 1}`,
+
+                  `Deskripsi = ${
+                    item.deskripsi ||
+                    "-"
+                  }`,
+
+                  `Nominal = Rp ${Number(
+                    item.nominal || 0
+                  ).toLocaleString(
+                    "id-ID"
+                  )}`,
+
+                  `Status = ${status}`,
+
+                  `Tanggal Bayar = ${
+                    tanggalBayar
+                  }`,
+
+                  `Syarat Pembayaran = ${
+                    item.syarat_pembayaran ||
+                    "-"
+                  }`
+                ].join(", ");
+              }
+            )
+            .join(" | ");
+        };
+
+      const nilaiLama =
+        buatDetailPembayaranLog(
+          pembayaranLama
+        );
+
+      const nilaiBaru =
+        buatDetailPembayaranLog(
+          pembayaranTersimpan
+        );
+
+      // =============================================
+      // SIMPAN ACTIVITY LOG
+      // ENTITY ID MENGGUNAKAN PROYEK ID
+      // =============================================
+
+      if (
+        nilaiLama !== nilaiBaru
+      ) {
+        await simpanActivityLog(
+          client,
+          {
+            ...getActivityUser(req),
+
+            aktivitas:
+              "UPDATE",
+
+            modul:
+              "PROYEK",
+
+            entity_id:
+              proyekId,
+
+            entity_nama:
+              namaProyek,
+
+            field_name:
+              "PEMBAYARAN SEWA",
+
+            nilai_lama:
+              nilaiLama,
+
+            nilai_baru:
+              nilaiBaru,
+
+            deskripsi:
+              "memperbarui pembayaran proyek sewa"
+          }
+        );
+      }
+
+      // =============================================
+      // UPDATE HEADER PROYEK SEWA
       // =============================================
 
       await client.query(
         `
           UPDATE public.proyek_sewa
+
           SET
             updated_at =
               CURRENT_TIMESTAMP
+
           WHERE id = $1
         `,
         [proyekSewaId]
       );
 
-      await client.query("COMMIT");
+      // =============================================
+      // COMMIT
+      // =============================================
+
+      await client.query(
+        "COMMIT"
+      );
+
+      transaksiDimulai =
+        false;
+
+      // =============================================
+      // RESPONSE
+      // =============================================
 
       return res.json({
-        success: true,
+        success:
+          true,
 
         message:
           "Riwayat pembayaran berhasil diperbarui.",
+
+        pembayaran:
+          pembayaranTersimpan,
 
         total_dibayar:
           totalDibayar,
@@ -28703,7 +29223,11 @@ app.put(
 
     } catch (error) {
 
-      await client.query("ROLLBACK");
+      if (transaksiDimulai) {
+        await client.query(
+          "ROLLBACK"
+        );
+      }
 
       console.error(
         "ERROR UPDATE PEMBAYARAN SEWA:",
@@ -28711,7 +29235,8 @@ app.put(
       );
 
       return res.status(500).json({
-        error: error.message
+        error:
+          error.message
       });
 
     } finally {
@@ -29346,359 +29871,6 @@ app.put(
   }
 );
 
-
-// =====================================================
-// UPDATE PEMBAYARAN PROYEK SEWA
-// PUT /api/proyek-sewa/:id/pembayaran
-// =====================================================
-
-app.put(
-  "/api/proyek-sewa/:id/pembayaran",
-  async (req, res) => {
-
-    if (!req.session?.user) {
-
-      return res.status(401).json({
-        error: "Belum login."
-      });
-
-    }
-
-
-    const proyekSewaId =
-      Number(req.params.id);
-
-
-    const pembayaran =
-      Array.isArray(
-        req.body.pembayaran
-      )
-        ? req.body.pembayaran
-        : [];
-
-
-    if (
-      !Number.isInteger(proyekSewaId) ||
-      proyekSewaId <= 0
-    ) {
-
-      return res.status(400).json({
-        error:
-          "ID proyek sewa tidak valid."
-      });
-
-    }
-
-
-    const client =
-      await pool.connect();
-
-
-    try {
-
-      await client.query(
-        "BEGIN"
-      );
-
-
-      // =============================================
-      // LOCK PROYEK SEWA
-      // =============================================
-
-      const proyekResult =
-        await client.query(
-          `
-            SELECT
-              id,
-              total_nilai
-
-            FROM public.proyek_sewa
-
-            WHERE id = $1
-
-            FOR UPDATE
-          `,
-          [
-            proyekSewaId
-          ]
-        );
-
-
-      if (
-        proyekResult.rowCount === 0
-      ) {
-
-        await client.query(
-          "ROLLBACK"
-        );
-
-
-        return res.status(404).json({
-          error:
-            "Proyek sewa tidak ditemukan."
-        });
-
-      }
-
-
-      // =============================================
-      // VALIDASI PEMBAYARAN
-      // =============================================
-
-      const pembayaranValid =
-        [];
-
-
-      for (
-        let i = 0;
-        i < pembayaran.length;
-        i++
-      ) {
-
-        const item =
-          pembayaran[i];
-
-
-        const deskripsi =
-          String(
-            item.deskripsi ||
-            ""
-          ).trim();
-
-
-        const nominal =
-          Number(
-            item.nominal
-          ) || 0;
-
-
-        const tanggalBayar =
-          item.tanggal_bayar
-            ? String(
-                item.tanggal_bayar
-              )
-            : null;
-
-
-        if (
-          nominal < 0
-        ) {
-
-          throw new Error(
-            `Nominal pembayaran ${i + 1} tidak boleh negatif.`
-          );
-
-        }
-
-
-        if (
-          nominal > 0 &&
-          !tanggalBayar
-        ) {
-
-          throw new Error(
-            `Tanggal pembayaran ${i + 1} wajib diisi.`
-          );
-
-        }
-
-
-        // Baris kosong tidak perlu disimpan
-        if (
-          !deskripsi &&
-          nominal === 0 &&
-          !tanggalBayar
-        ) {
-
-          continue;
-
-        }
-
-
-        pembayaranValid.push({
-
-          deskripsi,
-
-          nominal,
-
-          tanggalBayar
-
-        });
-
-      }
-
-
-      // =============================================
-      // HAPUS PEMBAYARAN LAMA
-      // =============================================
-
-      await client.query(
-        `
-          DELETE FROM public.proyek_sewa_pembayaran
-          WHERE proyek_sewa_id = $1
-        `,
-        [
-          proyekSewaId
-        ]
-      );
-
-
-      // =============================================
-      // INSERT ULANG PEMBAYARAN
-      // =============================================
-
-      for (
-        const item
-        of pembayaranValid
-      ) {
-
-        await client.query(
-          `
-            INSERT INTO public.proyek_sewa_pembayaran
-            (
-              proyek_sewa_id,
-              deskripsi,
-              nominal,
-              tanggal_bayar,
-              created_at,
-              updated_at
-            )
-
-            VALUES
-            (
-              $1,
-              $2,
-              $3,
-              $4,
-              CURRENT_TIMESTAMP,
-              CURRENT_TIMESTAMP
-            )
-          `,
-          [
-            proyekSewaId,
-            item.deskripsi,
-            item.nominal,
-            item.tanggalBayar
-          ]
-        );
-
-      }
-
-
-      // =============================================
-      // UPDATE UPDATED_AT HEADER
-      // =============================================
-
-      await client.query(
-        `
-          UPDATE public.proyek_sewa
-
-          SET
-            updated_at =
-              CURRENT_TIMESTAMP
-
-          WHERE id = $1
-        `,
-        [
-          proyekSewaId
-        ]
-      );
-
-
-      // =============================================
-      // HITUNG TOTAL DIBAYAR
-      // =============================================
-
-      const totalBayarResult =
-        await client.query(
-          `
-            SELECT
-              COALESCE(
-                SUM(nominal),
-                0
-              )
-                AS total_dibayar
-
-            FROM public.proyek_sewa_pembayaran
-
-            WHERE proyek_sewa_id = $1
-          `,
-          [
-            proyekSewaId
-          ]
-        );
-
-
-      const totalDibayar =
-        Number(
-          totalBayarResult
-            .rows[0]
-            .total_dibayar
-        ) || 0;
-
-
-      const totalNilai =
-        Number(
-          proyekResult
-            .rows[0]
-            .total_nilai
-        ) || 0;
-
-
-      const sisaPembayaran =
-        Math.max(
-          0,
-          totalNilai -
-          totalDibayar
-        );
-
-
-      await client.query(
-        "COMMIT"
-      );
-
-
-      return res.json({
-
-        message:
-          "Riwayat pembayaran berhasil diperbarui.",
-
-        total_dibayar:
-          totalDibayar,
-
-        sisa_pembayaran:
-          sisaPembayaran
-
-      });
-
-
-    } catch (error) {
-
-      await client.query(
-        "ROLLBACK"
-      );
-
-
-      console.error(
-        "ERROR UPDATE PEMBAYARAN SEWA:",
-        error
-      );
-
-
-      return res.status(500).json({
-        error:
-          error.message
-      });
-
-
-    } finally {
-
-      client.release();
-
-    }
-
-  }
-);
 
 // =====================================================
 // GET ACTIVITY LOG

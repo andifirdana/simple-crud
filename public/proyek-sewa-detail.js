@@ -129,6 +129,27 @@ function rupiah(value) {
 }
 
 // =====================================================
+// FORMAT ANGKA DENGAN SEPARATOR TITIK
+// =====================================================
+
+function formatAngkaTitik(
+  value
+) {
+  const nilai =
+    Math.max(
+      0,
+      Math.trunc(
+        angka(value)
+      )
+    );
+
+  return String(nilai)
+    .replace(
+      /\B(?=(\d{3})+(?!\d))/g,
+      "."
+    );
+}
+// =====================================================
 // FORMAT TANGGAL
 // AMAN TIMEZONE - TIDAK MUNDUR 1 HARI
 // =====================================================
@@ -3170,7 +3191,6 @@ document
     }
   );
 
-
 // =====================================================
 // RENDER PEMBAYARAN
 // =====================================================
@@ -3179,7 +3199,6 @@ function renderPembayaran(
   pembayaran,
   totalProyek
 ) {
-
   const tbody =
     document.getElementById(
       "paymentBody"
@@ -3189,36 +3208,51 @@ function renderPembayaran(
     return;
   }
 
+  const dataPembayaran =
+    Array.isArray(pembayaran)
+      ? pembayaran
+      : [];
+
+  /*
+   * Total Dibayar hanya menghitung pembayaran
+   * dengan status Sudah Dibayar.
+   */
+
   const totalDibayar =
-    pembayaran.reduce(
-      (
-        total,
-        item
-      ) =>
-        total +
-        angka(
-          item.nominal
-        ),
-      0
-    );
+    dataPembayaran
+      .filter(
+        item =>
+          normalisasiStatusPembayaranSewa(
+            item.status_pembayaran
+          ) ===
+          "Sudah Dibayar"
+      )
+      .reduce(
+        (
+          total,
+          item
+        ) =>
+          total +
+          angka(
+            item.nominal
+          ),
+        0
+      );
 
   const sisa =
     Math.max(
       0,
-      angka(
-        totalProyek
-      ) -
+      angka(totalProyek) -
       totalDibayar
     );
 
   if (
-    pembayaran.length === 0
+    dataPembayaran.length === 0
   ) {
-
     tbody.innerHTML = `
       <tr>
         <td
-          colspan="4"
+          colspan="6"
           class="message"
         >
           Belum ada pembayaran.
@@ -3227,44 +3261,88 @@ function renderPembayaran(
     `;
 
   } else {
-
     tbody.innerHTML =
-      pembayaran
+      dataPembayaran
         .map(
           (
             item,
             index
-          ) => `
-            <tr>
+          ) => {
+            const status =
+              normalisasiStatusPembayaranSewa(
+                item.status_pembayaran
+              );
 
-              <td>
-                ${index + 1}
-              </td>
+            let statusClass =
+              "payment-status-unpaid";
 
-              <td>
-                ${escapeHtml(
-                  item.deskripsi ||
-                  "-"
-                )}
-              </td>
+            if (
+              status ===
+              "Sudah Dibayar"
+            ) {
+              statusClass =
+                "payment-status-paid";
 
-              <td class="currency">
-                ${rupiah(
-                  item.nominal
-                )}
-              </td>
+            } else if (
+              status === "Proses"
+            ) {
+              statusClass =
+                "payment-status-process";
+            }
 
-              <td>
-                ${formatTanggal(
-                  item.tanggal_bayar
-                )}
-              </td>
+            return `
+              <tr>
+                <td>
+                  ${index + 1}
+                </td>
 
-            </tr>
-          `
+                <td>
+                  ${escapeHtml(
+                    item.deskripsi ||
+                    "-"
+                  )}
+                </td>
+
+                <td class="currency">
+                  ${rupiah(
+                    item.nominal
+                  )}
+                </td>
+
+                <td>
+                  <span
+                    class="
+                      payment-status
+                      ${statusClass}
+                    "
+                  >
+                    ${escapeHtml(
+                      status
+                    )}
+                  </span>
+                </td>
+
+                <td>
+                  ${
+                    item.tanggal_bayar
+                      ? formatTanggal(
+                          item.tanggal_bayar
+                        )
+                      : "-"
+                  }
+                </td>
+
+                <td>
+                  ${escapeHtml(
+                    item.syarat_pembayaran ||
+                    "-"
+                  )}
+                </td>
+              </tr>
+            `;
+          }
         )
         .join("");
-
   }
 
   setText(
@@ -3287,7 +3365,6 @@ function renderPembayaran(
       sisa
     )
   );
-
 }
 
 
@@ -3664,105 +3741,230 @@ document
 
 
 // =====================================================
+// NORMALISASI STATUS PEMBAYARAN
+// =====================================================
+
+function normalisasiStatusPembayaranSewa(
+  value
+) {
+  const status =
+    String(value || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+
+  if (
+    status === "sudah dibayar" ||
+    status === "dibayar" ||
+    status === "lunas" ||
+    status === "paid"
+  ) {
+    return "Sudah Dibayar";
+  }
+
+  if (
+    status === "proses" ||
+    status === "diproses" ||
+    status === "processing"
+  ) {
+    return "Proses";
+  }
+
+  return "Belum Dibayar";
+}
+
+// =====================================================
 // HTML PEMBAYARAN EDIT
 // =====================================================
 
 function buatEditPembayaranHtml(
   item = {}
 ) {
+  const statusPembayaran =
+    normalisasiStatusPembayaranSewa(
+      item.status_pembayaran
+    );
+
+  const belumDibayarSelected =
+    statusPembayaran ===
+      "Belum Dibayar"
+      ? "selected"
+      : "";
+
+  const prosesSelected =
+    statusPembayaran ===
+      "Proses"
+      ? "selected"
+      : "";
+
+  const sudahDibayarSelected =
+    statusPembayaran ===
+      "Sudah Dibayar"
+      ? "selected"
+      : "";
+
+  const tanggalBayarWajib =
+    statusPembayaran ===
+      "Sudah Dibayar"
+      ? "required"
+      : "";
 
   return `
     <div
       class="edit-payment-row"
       data-payment-id="${
-        item.id ||
-        ""
+        item.id || ""
       }"
     >
-
+      <!-- DESKRIPSI -->
 
       <div class="modal-form-group">
-
         <label>
           Deskripsi
+          <span class="required">*</span>
         </label>
 
         <input
           type="text"
-          class="modal-form-control editPaymentDeskripsi"
+          class="
+            modal-form-control
+            editPaymentDeskripsi
+          "
           value="${escapeHtml(
-            item.deskripsi ||
-            ""
+            item.deskripsi || ""
           )}"
-          placeholder="Contoh: Pembayaran Januari"
+          placeholder="Contoh: Pembayaran sewa Januari"
+          required
         >
-
       </div>
 
+      <!-- NOMINAL -->
 
       <div class="modal-form-group">
-
         <label>
           Nominal
+          <span class="required">*</span>
         </label>
-
-        <input
-          type="number"
-          min="0"
-          class="modal-form-control editPaymentNominal"
-          value="${angka(
-            item.nominal
-          )}"
-          placeholder="0"
-        >
-
+    <input
+      type="text"
+      inputmode="numeric"
+      autocomplete="off"
+      class="
+        modal-form-control
+        editPaymentNominal
+      "
+      value="${formatAngkaTitik(
+        item.nominal
+      )}"
+      placeholder="0"
+      required
+    >
       </div>
 
+      <!-- STATUS PEMBAYARAN -->
 
       <div class="modal-form-group">
+        <label>
+          Status Pembayaran
+          <span class="required">*</span>
+        </label>
 
+        <select
+          class="
+            modal-form-control
+            editPaymentStatus
+          "
+          required
+        >
+          <option
+            value="Belum Dibayar"
+            ${belumDibayarSelected}
+          >
+            Belum Dibayar
+          </option>
+
+          <option
+            value="Proses"
+            ${prosesSelected}
+          >
+            Proses
+          </option>
+
+          <option
+            value="Sudah Dibayar"
+            ${sudahDibayarSelected}
+          >
+            Sudah Dibayar
+          </option>
+        </select>
+      </div>
+
+      <!-- TANGGAL BAYAR -->
+
+      <div class="modal-form-group">
         <label>
           Tanggal Bayar
         </label>
 
         <input
           type="date"
-          class="modal-form-control editPaymentTanggal"
+          class="
+            modal-form-control
+            editPaymentTanggal
+          "
           value="${tanggalInput(
             item.tanggal_bayar
           )}"
+          ${tanggalBayarWajib}
         >
-
       </div>
 
+      <!-- SYARAT PEMBAYARAN -->
 
       <div class="modal-form-group">
+        <label>
+          Syarat Pembayaran
+        </label>
 
+        <textarea
+          class="
+            modal-form-control
+            editPaymentSyarat
+          "
+          rows="2"
+          placeholder="Masukkan syarat pembayaran"
+        >${escapeHtml(
+          item.syarat_pembayaran || ""
+        )}</textarea>
+      </div>
+
+      <!-- AKSI -->
+
+      <div class="modal-form-group">
         <label>
           &nbsp;
         </label>
 
         <button
           type="button"
-          class="btn btn-danger btnHapusPayment"
+          class="
+            btn
+            btn-danger
+            btnHapusPayment
+          "
         >
           Hapus
         </button>
-
       </div>
-
     </div>
   `;
-
 }
-
 
 // =====================================================
 // RENDER EDIT PEMBAYARAN
 // =====================================================
 
 function renderEditPembayaran() {
-
   const container =
     document.getElementById(
       "editPaymentContainer"
@@ -3773,14 +3975,17 @@ function renderEditPembayaran() {
   }
 
   const pembayaran =
-    detailProyekSewa
-      ?.pembayaran ||
-    [];
+    Array.isArray(
+      detailProyekSewa
+        ?.pembayaran
+    )
+      ? detailProyekSewa
+          .pembayaran
+      : [];
 
   if (
     pembayaran.length === 0
   ) {
-
     container.innerHTML = `
       <div class="message">
         Belum ada pembayaran.
@@ -3789,7 +3994,6 @@ function renderEditPembayaran() {
     `;
 
     return;
-
   }
 
   container.innerHTML =
@@ -3801,9 +4005,7 @@ function renderEditPembayaran() {
           )
       )
       .join("");
-
 }
-
 
 // =====================================================
 // OPEN EDIT PEMBAYARAN
@@ -3816,16 +4018,13 @@ document
   ?.addEventListener(
     "click",
     () => {
-
       renderEditPembayaran();
 
       bukaModal(
         "modalEditPembayaran"
       );
-
     }
   );
-
 
 // =====================================================
 // TAMBAH PEMBAYARAN
@@ -3838,7 +4037,6 @@ document
   ?.addEventListener(
     "click",
     () => {
-
       const container =
         document.getElementById(
           "editPaymentContainer"
@@ -3857,15 +4055,17 @@ document
       container
         .insertAdjacentHTML(
           "beforeend",
-          buatEditPembayaranHtml()
+          buatEditPembayaranHtml({
+            status_pembayaran:
+              "Belum Dibayar"
+          })
         );
-
+        
     }
   );
 
-
 // =====================================================
-// HAPUS PEMBAYARAN
+// HAPUS PEMBAYARAN DARI FORM
 // =====================================================
 
 document
@@ -3875,7 +4075,6 @@ document
   ?.addEventListener(
     "click",
     event => {
-
       const button =
         event.target.closest(
           ".btnHapusPayment"
@@ -3885,70 +4084,224 @@ document
         return;
       }
 
-      button
-        .closest(
+      const row =
+        button.closest(
           ".edit-payment-row"
-        )
-        ?.remove();
+        );
 
+      if (!row) {
+        return;
+      }
+
+      const yakin =
+        window.confirm(
+          "Hapus data pembayaran ini?"
+        );
+
+      if (!yakin) {
+        return;
+      }
+
+      row.remove();
+
+      const container =
+        document.getElementById(
+          "editPaymentContainer"
+        );
+
+      if (
+        container &&
+        container.querySelectorAll(
+          ".edit-payment-row"
+        ).length === 0
+      ) {
+        container.innerHTML = `
+          <div class="message">
+            Belum ada pembayaran.
+            Klik "+ Tambah Pembayaran".
+          </div>
+        `;
+      }
     }
   );
 
+// =====================================================
+// STATUS PEMBAYARAN -> TANGGAL BAYAR
+// =====================================================
+
+document
+  .getElementById(
+    "editPaymentContainer"
+  )
+  ?.addEventListener(
+    "change",
+    event => {
+      const statusInput =
+        event.target.closest(
+          ".editPaymentStatus"
+        );
+
+      if (!statusInput) {
+        return;
+      }
+
+      const row =
+        statusInput.closest(
+          ".edit-payment-row"
+        );
+
+      const tanggalInput =
+        row?.querySelector(
+          ".editPaymentTanggal"
+        );
+
+      if (!tanggalInput) {
+        return;
+      }
+
+      tanggalInput.required =
+        statusInput.value ===
+        "Sudah Dibayar";
+    }
+  );
 
 // =====================================================
-// BUILD PEMBAYARAN
+// SEPARATOR NOMINAL PEMBAYARAN
+// =====================================================
+
+document
+  .getElementById(
+    "editPaymentContainer"
+  )
+  ?.addEventListener(
+    "input",
+    event => {
+      const input =
+        event.target.closest(
+          ".editPaymentNominal"
+        );
+
+      if (!input) {
+        return;
+      }
+
+      const angkaMurni =
+        String(input.value || "")
+          .replace(/\D/g, "")
+          .replace(
+            /^0+(?=\d)/,
+            ""
+          );
+
+      input.value =
+        angkaMurni
+          ? angkaMurni.replace(
+              /\B(?=(\d{3})+(?!\d))/g,
+              "."
+            )
+          : "";
+    }
+  );
+// =====================================================
+// BUILD PAYLOAD PEMBAYARAN
 // =====================================================
 
 function buildPembayaranPayload() {
-
-  return [
+  const rows = [
     ...document
       .querySelectorAll(
         "#editPaymentContainer .edit-payment-row"
       )
-  ]
-    .map(
-      row => ({
+  ];
 
-        id:
+  return rows
+    .map(
+      row => {
+        const id =
           Number(
             row.dataset
               .paymentId
-          ) ||
-          null,
+          ) || null;
 
-        deskripsi:
+        const deskripsi =
           row
             .querySelector(
               ".editPaymentDeskripsi"
             )
             ?.value
-            ?.trim() ||
-          "",
+            ?.trim() || "";
 
-        nominal:
+        const nominal =
           angka(
             row
               .querySelector(
                 ".editPaymentNominal"
               )
               ?.value
-          ),
+          );
 
-        tanggal_bayar:
+        const statusPembayaran =
+          normalisasiStatusPembayaranSewa(
+            row
+              .querySelector(
+                ".editPaymentStatus"
+              )
+              ?.value
+          );
+
+        const tanggalBayar =
           row
             .querySelector(
               ".editPaymentTanggal"
             )
             ?.value ||
-          null
+          null;
 
-      })
+        const syaratPembayaran =
+          row
+            .querySelector(
+              ".editPaymentSyarat"
+            )
+            ?.value
+            ?.trim() || "";
+
+        return {
+          id:
+            id,
+
+          deskripsi:
+            deskripsi,
+
+          nominal:
+            nominal,
+
+          status_pembayaran:
+            statusPembayaran,
+
+          tanggal_bayar:
+            tanggalBayar,
+
+          syarat_pembayaran:
+            syaratPembayaran ||
+            null
+        };
+      }
+    )
+    .filter(
+      item =>
+        item.id !== null ||
+        Boolean(
+          item.deskripsi
+        ) ||
+        item.nominal > 0 ||
+        Boolean(
+          item.tanggal_bayar
+        ) ||
+        Boolean(
+          item.syarat_pembayaran
+        )
     );
-
 }
-
-
 // =====================================================
 // SIMPAN PEMBAYARAN
 // =====================================================
@@ -3960,47 +4313,102 @@ document
   ?.addEventListener(
     "submit",
     async event => {
-
       event.preventDefault();
-
 
       const pembayaran =
         buildPembayaranPayload();
 
+      // =============================================
+      // VALIDASI PEMBAYARAN
+      // =============================================
+
+      const statusValid = [
+        "Belum Dibayar",
+        "Proses",
+        "Sudah Dibayar"
+      ];
 
       for (
-        const item
-        of pembayaran
+        let index = 0;
+        index < pembayaran.length;
+        index += 1
       ) {
+        const item =
+          pembayaran[index];
+
+        // ===========================================
+        // VALIDASI DESKRIPSI
+        // ===========================================
+
+        if (!item.deskripsi) {
+          alert(
+            `Deskripsi pembayaran ke-${
+              index + 1
+            } wajib diisi.`
+          );
+
+          return;
+        }
+
+        // ===========================================
+        // VALIDASI NOMINAL
+        // ===========================================
 
         if (
+          !Number.isFinite(
+            item.nominal
+          ) ||
           item.nominal < 0
         ) {
-
           alert(
-            "Nominal pembayaran tidak boleh negatif."
+            `Nominal pembayaran ke-${
+              index + 1
+            } tidak valid.`
           );
 
           return;
-
         }
 
+        // ===========================================
+        // VALIDASI STATUS PEMBAYARAN
+        // ===========================================
 
         if (
-          item.nominal > 0 &&
-          !item.tanggal_bayar
+          !statusValid.includes(
+            item.status_pembayaran
+          )
         ) {
-
           alert(
-            "Tanggal bayar wajib diisi jika nominal pembayaran diisi."
+            `Status pembayaran ke-${
+              index + 1
+            } tidak valid.`
           );
 
           return;
-
         }
 
+        // ===========================================
+        // VALIDASI TANGGAL BAYAR
+        // ===========================================
+
+        if (
+          item.status_pembayaran ===
+            "Sudah Dibayar" &&
+          !item.tanggal_bayar
+        ) {
+          alert(
+            `Tanggal bayar pembayaran ke-${
+              index + 1
+            } wajib diisi karena statusnya Sudah Dibayar.`
+          );
+
+          return;
+        }
       }
 
+      // =============================================
+      // BUTTON LOADING
+      // =============================================
 
       const button =
         document.getElementById(
@@ -4011,19 +4419,17 @@ document
         button?.textContent ||
         "Simpan Pembayaran";
 
-
       try {
-
         if (button) {
-
-          button.disabled =
-            true;
+          button.disabled = true;
 
           button.textContent =
             "Menyimpan...";
-
         }
 
+        // ===========================================
+        // REQUEST SIMPAN
+        // ===========================================
 
         await fetchJSON(
           `/api/proyek-sewa/${encodeURIComponent(
@@ -4045,22 +4451,17 @@ document
           }
         );
 
-
         tutupModal(
           "modalEditPembayaran"
         );
 
-
         alert(
-          "Riwayat pembayaran berhasil disimpan."
+          "Data pembayaran berhasil disimpan."
         );
-
 
         await loadDetail();
 
-
       } catch (error) {
-
         console.error(
           "ERROR SAVE PEMBAYARAN:",
           error
@@ -4070,21 +4471,14 @@ document
           error.message
         );
 
-
       } finally {
-
         if (button) {
-
-          button.disabled =
-            false;
+          button.disabled = false;
 
           button.textContent =
             textAwal;
-
         }
-
       }
-
     }
   );
 
