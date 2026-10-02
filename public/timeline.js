@@ -1,59 +1,167 @@
-let timelinePage = 1;
-let timelineTotalPages = 1;
-let timelineSearchValue = "";
-let timelineBulan = "";
+// ======================================================
+// FILTER DARI URL DASHBOARD
+// ======================================================
 
-const timelineLimit = 10;
+const timelineUrlParams =
+  new URLSearchParams(
+    window.location.search
+  );
+
+const bulanUrl =
+  Number(
+    timelineUrlParams.get(
+      "bulan"
+    )
+  );
+
+const statusUrl =
+  String(
+    timelineUrlParams.get(
+      "status"
+    ) || ""
+  )
+    .trim()
+    .toLowerCase();
+
+const modeUrl =
+  String(
+    timelineUrlParams.get(
+      "mode"
+    ) || ""
+  )
+    .trim()
+    .toLowerCase();
+
+const searchUrl =
+  String(
+    timelineUrlParams.get(
+      "search"
+    ) || ""
+  ).trim();
+
+
+// ======================================================
+// STATE
+// ======================================================
+
+let timelinePage = 1;
+
+let timelineTotalPages = 1;
+
+let timelineSearchValue =
+  searchUrl;
+
+let timelineBulan =
+  [1, 3, 6].includes(
+    bulanUrl
+  )
+    ? String(bulanUrl)
+    : "";
+
+let timelineStatus =
+  statusUrl === "expired"
+    ? "expired"
+    : "";
+
+let timelineMode =
+  modeUrl ===
+  "contract-overview"
+    ? "contract-overview"
+    : "";
+
+const timelineLimit = 25;
+
+
+// ======================================================
+// ELEMENT
+// ======================================================
 
 const timelineGroupedContainer =
   document.getElementById(
     "timelineGroupedContainer"
   );
 
+const timelineSearchElement =
+  document.getElementById(
+    "timelineSearch"
+  );
+
+const filterBerakhirElement =
+  document.getElementById(
+    "filterBerakhir"
+  );
+
+const resetTimelineFilterElement =
+  document.getElementById(
+    "resetTimelineFilter"
+  );
+
+const timelinePaginationElement =
+  document.getElementById(
+    "timelinePagination"
+  );
+
+const timelinePaginationInfoElement =
+  document.getElementById(
+    "timelinePaginationInfo"
+  );
+
+const timelinePaginationButtonsElement =
+  document.getElementById(
+    "timelinePaginationButtons"
+  );
+
+
 // ======================================================
-// FORMAT
+// ESCAPE HTML
 // ======================================================
 
 function escapeHtml(value) {
   return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-
-function formatTanggal(value) {
-  if (!value) {
-    return "-";
-  }
-
-  const date =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime()
+    .replaceAll(
+      "&",
+      "&amp;"
     )
-  ) {
-    return "-";
-  }
-
-  return date.toLocaleDateString(
-    "id-ID",
-    {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    }
-  );
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
 }
 
+
+// ======================================================
+// TANGGAL INPUT
+// ======================================================
 
 function tanggalInput(value) {
   if (!value) {
     return "";
+  }
+
+  const text =
+    String(value).slice(
+      0,
+      10
+    );
+
+  if (
+    /^\d{4}-\d{2}-\d{2}$/.test(
+      text
+    )
+  ) {
+    return text;
   }
 
   const date =
@@ -82,6 +190,92 @@ function tanggalInput(value) {
 
 
 // ======================================================
+// FORMAT TANGGAL
+// ======================================================
+
+function formatTanggal(value) {
+  const tanggal =
+    tanggalInput(value);
+
+  if (!tanggal) {
+    return "-";
+  }
+
+  const [
+    tahun,
+    bulan,
+    hari
+  ] = tanggal
+    .split("-")
+    .map(Number);
+
+  const date =
+    new Date(
+      tahun,
+      bulan - 1,
+      hari
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(
+    "id-ID",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    }
+  ).format(date);
+}
+
+
+// ======================================================
+// TANGGAL HARI INI JAKARTA
+// ======================================================
+
+function tanggalHariIniJakarta() {
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone:
+          "Asia/Jakarta",
+
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit"
+      }
+    ).formatToParts(
+      new Date()
+    );
+
+  const hasil = {};
+
+  parts.forEach(part => {
+    hasil[part.type] =
+      part.value;
+  });
+
+  return [
+    hasil.year,
+    hasil.month,
+    hasil.day
+  ].join("-");
+}
+
+
+// ======================================================
 // SELISIH HARI
 // ======================================================
 
@@ -96,27 +290,48 @@ function selisihHari(
     return null;
   }
 
-  const awal =
-    new Date(
-      `${tanggalAwal}T00:00:00`
-    );
+  const awalBagian =
+    tanggalAwal
+      .split("-")
+      .map(Number);
 
-  const akhir =
-    new Date(
-      `${tanggalAkhir}T00:00:00`
-    );
+  const akhirBagian =
+    tanggalAkhir
+      .split("-")
+      .map(Number);
 
   if (
-    Number.isNaN(awal.getTime()) ||
-    Number.isNaN(akhir.getTime())
+    awalBagian.length !== 3 ||
+    akhirBagian.length !== 3
   ) {
     return null;
   }
 
-  return Math.ceil(
+  const awal =
+    Date.UTC(
+      awalBagian[0],
+      awalBagian[1] - 1,
+      awalBagian[2]
+    );
+
+  const akhir =
+    Date.UTC(
+      akhirBagian[0],
+      akhirBagian[1] - 1,
+      akhirBagian[2]
+    );
+
+  if (
+    !Number.isFinite(awal) ||
+    !Number.isFinite(akhir)
+  ) {
+    return null;
+  }
+
+  return Math.round(
     (
-      akhir.getTime() -
-      awal.getTime()
+      akhir -
+      awal
     ) /
     86400000
   );
@@ -124,41 +339,560 @@ function selisihHari(
 
 
 // ======================================================
+// NORMALISASI KATEGORI
+// ======================================================
+
+function getTimelineKategori(item) {
+  const sumberKategori =
+    item.kategori ??
+    item.nama_kategori_produk_list ??
+    item.nama_kategori_produk ??
+    item.kategori_proyek ??
+    [];
+
+  let kategoriList = [];
+
+  if (
+    Array.isArray(
+      sumberKategori
+    )
+  ) {
+    kategoriList =
+      sumberKategori.map(
+        kategori => {
+          if (
+            typeof kategori ===
+            "string"
+          ) {
+            return kategori.trim();
+          }
+
+          return String(
+            kategori
+              ?.nama_kategori_produk ||
+            kategori?.nama ||
+            ""
+          ).trim();
+        }
+      );
+
+  } else if (
+    sumberKategori &&
+    typeof sumberKategori ===
+      "object"
+  ) {
+    kategoriList = [
+      String(
+        sumberKategori
+          ?.nama_kategori_produk ||
+        sumberKategori?.nama ||
+        ""
+      ).trim()
+    ];
+
+  } else {
+    kategoriList =
+      String(
+        sumberKategori || ""
+      )
+        .split(",")
+        .map(kategori =>
+          kategori.trim()
+        );
+  }
+
+  kategoriList =
+    kategoriList.filter(Boolean);
+
+  return kategoriList.length > 0
+    ? kategoriList.join(", ")
+    : "Tanpa Kategori";
+}
+
+
+// ======================================================
+// INFORMASI PROYEK
+// ======================================================
+
+function getTimelineProject(item) {
+  const adalahProyekSewa =
+    String(
+      item.sumber_timeline || ""
+    )
+      .trim()
+      .toLowerCase() ===
+      "sewa";
+
+  /*
+   * Proyek biasa:
+   * tampilkan nama proyek.
+   *
+   * Proyek sewa:
+   * tampilkan nomor PR.
+   */
+
+  const namaProyek =
+    adalahProyekSewa
+      ? (
+          String(
+            item.nomor_pr || ""
+          ).trim() ||
+          "PR Belum Diisi"
+        )
+      : (
+          String(
+            item.nama_proyek || ""
+          ).trim() ||
+          "-"
+        );
+
+  /*
+   * Proyek sewa menuju detail
+   * proyek sewa.
+   *
+   * Proyek biasa menuju detail
+   * proyek reguler.
+   */
+
+  let detailUrl = "#";
+
+  if (
+    adalahProyekSewa &&
+    Number(
+      item.proyek_sewa_id
+    ) > 0
+  ) {
+    detailUrl =
+      `/proyek-sewa-detail.html?id=${encodeURIComponent(
+        item.proyek_sewa_id
+      )}`;
+
+  } else if (
+    !adalahProyekSewa &&
+    Number(
+      item.proyek_id
+    ) > 0
+  ) {
+    detailUrl =
+      `/detail-proyek.html?id=${encodeURIComponent(
+        item.proyek_id
+      )}`;
+  }
+
+  return {
+    namaProyek,
+    detailUrl,
+    adalahProyekSewa
+  };
+}
+
+
+// ======================================================
+// INFORMASI JENIS PROYEK
+// ======================================================
+
+function getTimelineJenis(item) {
+  const jenisProyek =
+    String(
+      item.jenis_proyek || ""
+    ).trim() || "-";
+
+  const subJenisProyek =
+    String(
+      item.sub_jenis_proyek || ""
+    ).trim();
+
+  return {
+    jenisProyek,
+    subJenisProyek
+  };
+}
+
+
+// ======================================================
+// INFORMASI BERAKHIR
+// ======================================================
+
+function getTimelineExpiry(
+  item,
+  hariIni
+) {
+  const tanggalAkhir =
+    tanggalInput(
+      item.tanggal_akhir
+    );
+
+  const statusFinal =
+    String(
+      item.status_final || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  /*
+   * Jika proyek sudah Done,
+   * tampilkan status selesai
+   * berwarna biru.
+   */
+
+  if (
+    statusFinal === "done" ||
+    statusFinal === "selesai"
+  ) {
+    return {
+      text:
+        "Kontrak telah selesai",
+
+      className:
+        "expiry-finished"
+    };
+  }
+
+  const sisaHari =
+    selisihHari(
+      hariIni,
+      tanggalAkhir
+    );
+
+  if (sisaHari === null) {
+    return {
+      text: "-",
+
+      className:
+        "expiry-neutral"
+    };
+  }
+
+  if (sisaHari < 0) {
+    return {
+      text:
+        "Telah berakhir",
+
+      className:
+        "expiry-expired"
+    };
+  }
+
+  if (sisaHari === 0) {
+    return {
+      text:
+        "Berakhir hari ini",
+
+      className:
+        "expiry-warning"
+    };
+  }
+
+  if (sisaHari <= 90) {
+    return {
+      text:
+        `${sisaHari} hari lagi`,
+
+      className:
+        "expiry-warning"
+    };
+  }
+
+  return {
+    text:
+      `${sisaHari} hari lagi`,
+
+    className:
+      "expiry-safe"
+  };
+}
+
+
+// ======================================================
+// SINKRONKAN FILTER KE URL
+// ======================================================
+
+function updateTimelineUrl() {
+  const params =
+    new URLSearchParams();
+
+  if (timelineSearchValue) {
+    params.set(
+      "search",
+      timelineSearchValue
+    );
+  }
+
+  if (timelineBulan) {
+    params.set(
+      "bulan",
+      timelineBulan
+    );
+  }
+
+  if (timelineStatus) {
+    params.set(
+      "status",
+      timelineStatus
+    );
+  }
+
+  if (timelineMode) {
+    params.set(
+      "mode",
+      timelineMode
+    );
+  }
+
+  const query =
+    params.toString();
+
+  const urlBaru =
+    query
+      ? `${window.location.pathname}?${query}`
+      : window.location.pathname;
+
+  window.history.replaceState(
+    {},
+    "",
+    urlBaru
+  );
+}
+
+// ======================================================
+// INFORMASI FILTER AKTIF
+// ======================================================
+
+function renderTimelineFilterInfo(
+  totalData
+) {
+  let banner =
+    document.getElementById(
+      "timelineFilterInfo"
+    );
+
+  const filterAktif = [];
+
+  if (timelineBulan) {
+    filterAktif.push(
+      `Jatuh tempo dalam ${timelineBulan} bulan`
+    );
+  }
+
+  if (
+    timelineStatus ===
+    "expired"
+  ) {
+    filterAktif.push(
+      "Sudah jatuh tempo"
+    );
+  }
+
+  if (
+    timelineMode ===
+    "contract-overview"
+  ) {
+    filterAktif.push(
+      "Status Final Aktif"
+    );
+  }
+
+  if (timelineSearchValue) {
+    filterAktif.push(
+      `Pencarian: ${timelineSearchValue}`
+    );
+  }
+
+  if (
+    filterAktif.length === 0
+  ) {
+    if (banner) {
+      banner.remove();
+    }
+
+    return;
+  }
+
+  if (!banner) {
+    banner =
+      document.createElement(
+        "div"
+      );
+
+    banner.id =
+      "timelineFilterInfo";
+
+    banner.style.cssText = `
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:16px;
+      padding:13px 16px;
+      border:1px solid #c7d2fe;
+      border-radius:12px;
+      background:#eef2ff;
+      color:#3730a3;
+      font-size:12px;
+      font-weight:700;
+    `;
+
+    if (
+      timelineGroupedContainer
+        ?.parentElement
+    ) {
+      timelineGroupedContainer
+        .parentElement
+        .insertBefore(
+          banner,
+          timelineGroupedContainer
+        );
+    }
+  }
+
+  banner.innerHTML = `
+    <span>
+      Filter aktif:
+      ${escapeHtml(
+        filterAktif.join(" • ")
+      )}
+      —
+      ${Number(
+        totalData || 0
+      ).toLocaleString(
+        "id-ID"
+      )}
+      data ditemukan
+    </span>
+
+    <a
+      href="/timeline.html"
+      style="
+        color:#4338ca;
+        font-weight:800;
+        text-decoration:none;
+        white-space:nowrap;
+      "
+    >
+      Hapus Filter
+    </a>
+  `;
+}
+// ======================================================
 // LOAD DATA
 // ======================================================
 
+// ======================================================
+// LOAD DATA TIMELINE
+// ======================================================
+
 async function loadTimelinePage() {
-  timelineGroupedContainer.innerHTML = `
-    <tr>
-      <td
-        colspan="11"
-        class="empty-state"
-      >
+  if (!timelineGroupedContainer) {
+    console.error(
+      "Element #timelineGroupedContainer tidak ditemukan."
+    );
+
+    return;
+  }
+
+  timelineGroupedContainer
+    .innerHTML = `
+      <div class="empty-state">
         Memuat Timeline...
-      </td>
-    </tr>
-  `;
+      </div>
+    `;
+
+  if (
+    timelinePaginationElement
+  ) {
+    timelinePaginationElement
+      .style.display =
+        "none";
+  }
 
   try {
     const query =
       new URLSearchParams({
         page:
-          String(timelinePage),
+          String(
+            timelinePage
+          ),
 
         limit:
-          String(timelineLimit),
-
-        search:
-          timelineSearchValue,
-
-        bulan:
-          timelineBulan
+          String(
+            timelineLimit
+          )
       });
+
+    if (timelineSearchValue) {
+      query.set(
+        "search",
+        timelineSearchValue
+      );
+    }
+
+    if (timelineBulan) {
+      query.set(
+        "bulan",
+        timelineBulan
+      );
+    }
+
+    if (timelineStatus) {
+      query.set(
+        "status",
+        timelineStatus
+      );
+    }
+
+    if (timelineMode) {
+      query.set(
+        "mode",
+        timelineMode
+      );
+    }
 
     const response =
       await fetch(
-        `/api/timeline?${query}`
+        `/api/timeline?${query.toString()}`,
+        {
+          headers: {
+            Accept:
+              "application/json"
+          },
+
+          credentials:
+            "include",
+
+          cache:
+            "no-store"
+        }
       );
+
+    if (
+      response.status === 401
+    ) {
+      window.location.href =
+        "/login.html";
+
+      throw new Error(
+        "Belum login"
+      );
+    }
+
+    const contentType =
+      response.headers.get(
+        "content-type"
+      ) || "";
+
+    if (
+      !contentType.includes(
+        "application/json"
+      )
+    ) {
+      const text =
+        await response.text();
+
+      throw new Error(
+        text ||
+        `Server menghasilkan status ${response.status}`
+      );
+    }
 
     const result =
       await response.json();
@@ -170,26 +904,66 @@ async function loadTimelinePage() {
       );
     }
 
-    renderTimelineTable(
-      result.data || []
-    );
+    const data =
+      Array.isArray(
+        result.data
+      )
+        ? result.data
+        : [];
 
     timelinePage =
-      Number(
-        result.pagination?.page ||
+      Math.max(
+        Number(
+          result.pagination
+            ?.page || 1
+        ),
         1
       );
 
     timelineTotalPages =
-      Number(
-        result.pagination
-          ?.total_pages ||
+      Math.max(
+        Number(
+          result.pagination
+            ?.total_pages || 1
+        ),
         1
       );
 
-    renderTimelinePagination(
-      result.pagination || {}
+    const totalData =
+      Number(
+        result.pagination
+          ?.total_data || 0
+      );
+
+    renderTimelineTable(
+      data
     );
+
+    renderTimelinePagination(
+      {
+        page:
+          timelinePage,
+
+        limit:
+          Number(
+            result.pagination
+              ?.limit ||
+            timelineLimit
+          ),
+
+        total_data:
+          totalData,
+
+        total_pages:
+          timelineTotalPages
+      }
+    );
+
+    renderTimelineFilterInfo(
+      totalData
+    );
+
+    updateTimelineUrl();
 
   } catch (error) {
     console.error(
@@ -197,14 +971,24 @@ async function loadTimelinePage() {
       error
     );
 
-   timelineGroupedContainer.innerHTML = `
-  <div class="empty-state">
-    ${escapeHtml(error.message)}
-  </div>
-`;
+    timelineGroupedContainer
+      .innerHTML = `
+        <div class="empty-state">
+          ${escapeHtml(
+            error.message
+          )}
+        </div>
+      `;
+
+    if (
+      timelinePaginationElement
+    ) {
+      timelinePaginationElement
+        .style.display =
+          "none";
+    }
   }
 }
-
 
 // ======================================================
 // RENDER TABLE
@@ -224,249 +1008,39 @@ function renderTimelineTable(data) {
     return;
   }
 
-  // ====================================================
-  // TANGGAL HARI INI
-  // ====================================================
+  const hariIni =
+    tanggalHariIniJakarta();
 
-  const sekarang =
-    new Date();
+  timelineGroupedContainer.innerHTML = `
+    <section class="contract-table-card">
 
-  const hariIni = [
-    sekarang.getFullYear(),
-
-    String(
-      sekarang.getMonth() + 1
-    ).padStart(2, "0"),
-
-    String(
-      sekarang.getDate()
-    ).padStart(2, "0")
-  ].join("-");
-
-
-  // ====================================================
-  // KELOMPOKKAN:
-  // JENIS > SUB PROYEK > KATEGORI
-  // ====================================================
-
-  const grouped = {};
-
-  data.forEach(item => {
-    const jenis =
-      String(
-        item.jenis_proyek ||
-        "Tanpa Jenis Proyek"
-      ).trim();
-
-    const subProyek =
-      String(
-        item.sub_jenis_proyek ||
-        "Tanpa Sub Proyek"
-      ).trim();
-
-    const kategoriList =
-      Array.isArray(item.kategori) &&
-      item.kategori.length > 0
-        ? item.kategori
-        : ["Tanpa Kategori"];
-
-    /*
-     * Jika satu proyek memiliki beberapa kategori,
-     * gabungkan sebagai satu nama kelompok.
-     */
-    const kategori =
-      kategoriList
-        .map(value =>
-          String(value).trim()
-        )
-        .filter(Boolean)
-        .join(", ") ||
-      "Tanpa Kategori";
-
-    if (!grouped[jenis]) {
-      grouped[jenis] = {};
-    }
-
-    if (!grouped[jenis][subProyek]) {
-      grouped[jenis][subProyek] = {};
-    }
-
-    if (
-      !grouped[jenis][subProyek][kategori]
-    ) {
-      grouped[jenis][subProyek][kategori] =
-        [];
-    }
-
-    grouped[jenis][subProyek][kategori]
-      .push(item);
-  });
-
-
-  // ====================================================
-  // RENDER KELOMPOK
-  // ====================================================
-
-  timelineGroupedContainer.innerHTML =
-    Object.entries(grouped)
-      .map(
-        ([
-          jenis,
-          daftarSubProyek
-        ]) => {
-          const totalJenis =
-            Object.values(
-              daftarSubProyek
-            ).reduce(
-              (
-                total,
-                daftarKategori
-              ) => {
-                return (
-                  total +
-                  Object.values(
-                    daftarKategori
-                  ).reduce(
-                    (
-                      subtotal,
-                      daftarTimeline
-                    ) =>
-                      subtotal +
-                      daftarTimeline.length,
-                    0
-                  )
-                );
-              },
-              0
-            );
-
-          return `
-            <section class="timeline-type-group">
-
-              <div class="timeline-type-header">
-
-                <div>
-                  ${escapeHtml(jenis)}
-                </div>
-
-                <div>
-                  ${totalJenis} Timeline
-                </div>
-
-              </div>
-
-              ${Object.entries(
-                daftarSubProyek
-              )
-                .map(
-                  ([
-                    subProyek,
-                    daftarKategori
-                  ]) => {
-                    const totalSub =
-                      Object.values(
-                        daftarKategori
-                      ).reduce(
-                        (
-                          total,
-                          daftarTimeline
-                        ) =>
-                          total +
-                          daftarTimeline.length,
-                        0
-                      );
-
-                    return `
-                      <div class="timeline-sub-group">
-
-                        <div class="timeline-sub-header">
-
-                          <div>
-                            ${escapeHtml(
-                              subProyek
-                            )}
-                          </div>
-
-                          <div>
-                            ${totalSub} Timeline
-                          </div>
-
-                        </div>
-
-                        <div class="timeline-category-list">
-
-                          ${Object.entries(
-                            daftarKategori
-                          )
-                            .map(
-                              ([
-                                kategori,
-                                daftarTimeline
-                              ]) =>
-                                renderTimelineCategory(
-                                  kategori,
-                                  daftarTimeline,
-                                  hariIni
-                                )
-                            )
-                            .join("")}
-
-                        </div>
-
-                      </div>
-                    `;
-                  }
-                )
-                .join("")}
-
-            </section>
-          `;
-        }
-      )
-      .join("");
-}
-
-function renderTimelineCategory(
-  kategori,
-  daftarTimeline,
-  hariIni
-) {
-  return `
-    <div class="timeline-category-card">
-
-      <div class="timeline-category-header">
-
+      <div class="contract-table-header">
         <div>
-          ${escapeHtml(kategori)}
-        </div>
+          <h2>Daftar Timeline</h2>
 
-        <div>
-          ${daftarTimeline.length}
-          Timeline
+          <p>
+            Informasi periode kontrak,
+            lisensi, dan proyek sewa.
+          </p>
         </div>
-
       </div>
 
-      <div class="timeline-table-wrapper">
-
-        <table class="timeline-detail-table">
+      <div class="table-wrapper">
+        <table class="contract-table">
 
           <thead>
             <tr>
-              <th>Nama Proyek</th>
+              <th>Proyek</th>
               <th>Deskripsi</th>
+              <th>Jenis Proyek</th>
               <th>Tanggal Mulai</th>
               <th>Tanggal Akhir</th>
-              <th>Durasi</th>
               <th>Berakhir Pada</th>
-              <th>Status</th>
-              <th>Aksi</th>
             </tr>
           </thead>
 
           <tbody>
-
-            ${daftarTimeline
+            ${data
               .map(item =>
                 renderTimelineRow(
                   item,
@@ -474,168 +1048,149 @@ function renderTimelineCategory(
                 )
               )
               .join("")}
-
           </tbody>
 
         </table>
-
       </div>
 
-    </div>
+    </section>
   `;
 }
+
+
+// ======================================================
+// RENDER ROW
+// ======================================================
+
 function renderTimelineRow(
   item,
   hariIni
 ) {
-  const tanggalMulai =
-    tanggalInput(
-      item.tanggal_mulai
+  const project =
+    getTimelineProject(item);
+
+  const jenis =
+    getTimelineJenis(item);
+
+  const kategori =
+    getTimelineKategori(item);
+
+  const expiry =
+    getTimelineExpiry(
+      item,
+      hariIni
     );
 
-  const tanggalAkhir =
-    tanggalInput(
-      item.tanggal_akhir
-    );
+  /*
+   * Proyek reguler:
+   * ambil dari deskripsi Timeline.
+   *
+   * Proyek sewa:
+   * ambil dari nama cabang.
+   */
+  const deskripsi =
+    project.adalahProyekSewa
+      ? (
+          String(
+            item.nama_cabang || ""
+          ).trim() ||
+          "-"
+        )
+      : (
+          String(
+            item.deskripsi || ""
+          ).trim() ||
+          "-"
+        );
 
-  const durasi =
-    selisihHari(
-      tanggalMulai,
-      tanggalAkhir
-    );
 
-  const sisaHari =
-    selisihHari(
-      hariIni,
-      tanggalAkhir
-    );
-
-  let berakhirPada = "-";
-  let expiryClass = "";
-
-  if (sisaHari !== null) {
-    if (sisaHari < 0) {
-      berakhirPada =
-        `${Math.abs(
-          sisaHari
-        )} hari lalu`;
-
-      expiryClass =
-        "expiry-expired";
-
-    } else if (sisaHari === 0) {
-      berakhirPada =
-        "Hari ini";
-
-      expiryClass =
-        "expiry-warning";
-
-    } else {
-      berakhirPada =
-        `${sisaHari} hari lagi`;
-
-      expiryClass =
-        sisaHari <= 90
-          ? "expiry-warning"
-          : "expiry-safe";
-    }
-  }
-
-  const status =
-    String(
-      item.status || "-"
-    ).trim();
-
-  const statusClass =
-    status
-      .toLowerCase()
-      .replaceAll(
-        " ",
-        "-"
-      );
-
-  return `
-    <tr>
-
-      <td class="project-cell">
-
+  const projectLink =
+    project.detailUrl === "#"
+      ? `
+        <span class="project-link">
+          ${escapeHtml(
+            project.namaProyek
+          )}
+        </span>
+      `
+      : `
         <a
-          href="/detail-proyek.html?id=${Number(
-            item.proyek_id
+          href="${escapeHtml(
+            project.detailUrl
           )}"
           class="project-link"
         >
           ${escapeHtml(
-            item.nama_proyek ||
-            "-"
+            project.namaProyek
           )}
         </a>
+      `;
 
+  return `
+    <tr>
+
+      <td class="project-column">
+        ${projectLink}
+
+        <div class="project-category">
+          ${escapeHtml(
+            kategori
+          )}
+        </div>
       </td>
 
-      <td class="description-cell">
+      <td class="description-column">
         ${escapeHtml(
-          item.deskripsi ||
-          "-"
+          deskripsi
         )}
       </td>
 
-      <td>
+      <td class="project-type">
+        <div class="project-type-main">
+          ${escapeHtml(
+            jenis.jenisProyek
+          )}
+        </div>
+
+        ${
+          jenis.subJenisProyek
+            ? `
+              <div class="project-type-sub">
+                ${escapeHtml(
+                  jenis.subJenisProyek
+                )}
+              </div>
+            `
+            : ""
+        }
+      </td>
+
+      <td class="date-column">
         ${formatTanggal(
           item.tanggal_mulai
         )}
       </td>
 
-      <td>
+      <td class="date-column">
         ${formatTanggal(
           item.tanggal_akhir
         )}
       </td>
 
-      <td>
-        ${
-          durasi !== null
-            ? `${durasi} hari`
-            : "-"
-        }
-      </td>
-
-      <td>
+      <td class="expiry-column">
         <span
-          class="
-            expiry-badge
-            ${expiryClass}
-          "
+          class="expiry-status ${expiry.className}"
         >
-          ${berakhirPada}
+          ${escapeHtml(
+            expiry.text
+          )}
         </span>
-      </td>
-
-      <td>
-        <span
-          class="
-            status-badge
-            status-${statusClass}
-          "
-        >
-          ${escapeHtml(status)}
-        </span>
-      </td>
-
-      <td>
-        <a
-          href="/detail-proyek.html?id=${Number(
-            item.proyek_id
-          )}"
-          class="detail-button"
-        >
-          Detail
-        </a>
       </td>
 
     </tr>
   `;
 }
+
 
 // ======================================================
 // PAGINATION
@@ -644,10 +1199,13 @@ function renderTimelineRow(
 function renderTimelinePagination(
   pagination = {}
 ) {
-  const paginationElement =
-    document.getElementById(
-      "timelinePagination"
-    );
+  if (
+    !timelinePaginationElement ||
+    !timelinePaginationInfoElement ||
+    !timelinePaginationButtonsElement
+  ) {
+    return;
+  }
 
   const totalData =
     Number(
@@ -655,14 +1213,17 @@ function renderTimelinePagination(
     );
 
   if (totalData === 0) {
-    paginationElement.style.display =
-      "none";
+    timelinePaginationElement
+      .style.display =
+        "none";
 
     return;
   }
 
   const page =
-    Number(pagination.page || 1);
+    Number(
+      pagination.page || 1
+    );
 
   const limit =
     Number(
@@ -673,16 +1234,20 @@ function renderTimelinePagination(
   timelineTotalPages =
     Math.max(
       Number(
-        pagination.total_pages || 1
+        pagination.total_pages ||
+        1
       ),
       1
     );
 
-  paginationElement.style.display =
-    "flex";
+  timelinePaginationElement
+    .style.display =
+      "flex";
 
   const mulai =
-    (page - 1) * limit + 1;
+    (
+      page - 1
+    ) * limit + 1;
 
   const akhir =
     Math.min(
@@ -690,30 +1255,9 @@ function renderTimelinePagination(
       totalData
     );
 
-  document.getElementById(
-    "timelinePaginationInfo"
-  ).textContent =
-    `Menampilkan ${mulai}-${akhir} dari ${totalData} Timeline`;
-
-  const buttons =
-    document.getElementById(
-      "timelinePaginationButtons"
-    );
-
-  let html = `
-    <button
-      type="button"
-      class="page-button"
-      ${page <= 1 ? "disabled" : ""}
-      onclick="
-        ubahTimelinePage(
-          ${page - 1}
-        )
-      "
-    >
-      ‹
-    </button>
-  `;
+  timelinePaginationInfoElement
+    .textContent =
+      `Menampilkan ${mulai}-${akhir} dari ${totalData} Timeline`;
 
   const awalPage =
     Math.max(
@@ -727,6 +1271,42 @@ function renderTimelinePagination(
       page + 2
     );
 
+  let html = `
+    <button
+      type="button"
+      class="page-button"
+      data-page="${page - 1}"
+      ${page <= 1 ? "disabled" : ""}
+      aria-label="Halaman sebelumnya"
+    >
+      ‹
+    </button>
+  `;
+
+  if (awalPage > 1) {
+    html += `
+      <button
+        type="button"
+        class="page-button"
+        data-page="1"
+      >
+        1
+      </button>
+    `;
+
+    if (awalPage > 2) {
+      html += `
+        <button
+          type="button"
+          class="page-button"
+          disabled
+        >
+          ...
+        </button>
+      `;
+    }
+  }
+
   for (
     let nomor = awalPage;
     nomor <= akhirPage;
@@ -739,11 +1319,39 @@ function renderTimelinePagination(
           page-button
           ${nomor === page ? "active" : ""}
         "
-        onclick="
-          ubahTimelinePage(${nomor})
-        "
+        data-page="${nomor}"
       >
         ${nomor}
+      </button>
+    `;
+  }
+
+  if (
+    akhirPage <
+    timelineTotalPages
+  ) {
+    if (
+      akhirPage <
+      timelineTotalPages - 1
+    ) {
+      html += `
+        <button
+          type="button"
+          class="page-button"
+          disabled
+        >
+          ...
+        </button>
+      `;
+    }
+
+    html += `
+      <button
+        type="button"
+        class="page-button"
+        data-page="${timelineTotalPages}"
+      >
+        ${timelineTotalPages}
       </button>
     `;
   }
@@ -752,109 +1360,247 @@ function renderTimelinePagination(
     <button
       type="button"
       class="page-button"
+      data-page="${page + 1}"
       ${
         page >= timelineTotalPages
           ? "disabled"
           : ""
       }
-      onclick="
-        ubahTimelinePage(
-          ${page + 1}
-        )
-      "
+      aria-label="Halaman berikutnya"
     >
       ›
     </button>
   `;
 
-  buttons.innerHTML = html;
-}
-
-
-function ubahTimelinePage(page) {
-  if (
-    page < 1 ||
-    page > timelineTotalPages
-  ) {
-    return;
-  }
-
-  timelinePage = page;
-
-  loadTimelinePage();
+  timelinePaginationButtonsElement
+    .innerHTML =
+      html;
 }
 
 
 // ======================================================
-// FILTER
+// EVENT PAGINATION
 // ======================================================
 
-let timelineSearchTimer = null;
+timelinePaginationButtonsElement
+  ?.addEventListener(
+    "click",
+    event => {
+      const button =
+        event.target.closest(
+          "[data-page]"
+        );
 
-document.getElementById(
-  "timelineSearch"
-).addEventListener(
-  "input",
-  event => {
-    clearTimeout(
-      timelineSearchTimer
-    );
+      if (
+        !button ||
+        button.disabled
+      ) {
+        return;
+      }
 
-    timelineSearchTimer =
-      setTimeout(
-        () => {
-          timelineSearchValue =
-            event.target.value.trim();
+      const page =
+        Number(
+          button.dataset.page
+        );
 
-          timelinePage = 1;
+      if (
+        !Number.isInteger(page) ||
+        page < 1 ||
+        page > timelineTotalPages ||
+        page === timelinePage
+      ) {
+        return;
+      }
 
-          loadTimelinePage();
-        },
-        400
+      timelinePage = page;
+
+      loadTimelinePage();
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
+  );
+
+
+// ======================================================
+// FILTER PENCARIAN
+// ======================================================
+
+let timelineSearchTimer =
+  null;
+
+timelineSearchElement
+  ?.addEventListener(
+    "input",
+    event => {
+      clearTimeout(
+        timelineSearchTimer
       );
+
+      timelineSearchTimer =
+        setTimeout(
+          () => {
+            timelineSearchValue =
+              String(
+                event.target
+                  .value || ""
+              ).trim();
+
+            timelinePage = 1;
+
+            updateTimelineUrl();
+
+            loadTimelinePage();
+          },
+          400
+        );
+    }
+  );
+
+// ======================================================
+// FILTER BERAKHIR
+// ======================================================
+
+filterBerakhirElement
+  ?.addEventListener(
+    "change",
+    event => {
+      const value =
+        String(
+          event.target.value ||
+          ""
+        )
+          .trim()
+          .toLowerCase();
+
+      if (
+        value === "expired"
+      ) {
+        timelineStatus =
+          "expired";
+
+        timelineBulan =
+          "";
+
+      } else {
+        timelineStatus =
+          "";
+
+        timelineBulan =
+          [
+            "1",
+            "3",
+            "6"
+          ].includes(value)
+            ? value
+            : "";
+      }
+
+      timelinePage = 1;
+
+      updateTimelineUrl();
+
+      loadTimelinePage();
+    }
+  );
+
+
+// ======================================================
+// RESET FILTER
+// ======================================================
+
+resetTimelineFilterElement
+  ?.addEventListener(
+    "click",
+    () => {
+      if (
+        timelineSearchElement
+      ) {
+        timelineSearchElement
+          .value = "";
+      }
+
+      if (
+        filterBerakhirElement
+      ) {
+        filterBerakhirElement
+          .value = "";
+      }
+
+      timelineSearchValue =
+        "";
+
+      timelineBulan =
+        "";
+
+      timelineStatus =
+        "";
+
+      timelineMode =
+        "";
+
+      timelinePage =
+        1;
+
+      const banner =
+        document.getElementById(
+          "timelineFilterInfo"
+        );
+
+      if (banner) {
+        banner.remove();
+      }
+
+      updateTimelineUrl();
+
+      loadTimelinePage();
+    }
+  );// ======================================================
+// INITIAL FILTER
+// ======================================================
+
+function initializeTimelineFilter() {
+  if (
+    timelineSearchElement
+  ) {
+    timelineSearchElement
+      .value =
+        timelineSearchValue;
   }
-);
 
+  if (
+    filterBerakhirElement
+  ) {
+    if (
+      timelineStatus ===
+      "expired"
+    ) {
+      filterBerakhirElement
+        .value =
+          "expired";
 
-document.getElementById(
-  "filterBerakhir"
-).addEventListener(
-  "change",
-  event => {
-    timelineBulan =
-      event.target.value;
+    } else if (
+      timelineBulan
+    ) {
+      filterBerakhirElement
+        .value =
+          timelineBulan;
 
-    timelinePage = 1;
-
-    loadTimelinePage();
+    } else {
+      filterBerakhirElement
+        .value =
+          "";
+    }
   }
-);
-
-
-document.getElementById(
-  "resetTimelineFilter"
-).addEventListener(
-  "click",
-  () => {
-    document.getElementById(
-      "timelineSearch"
-    ).value = "";
-
-    document.getElementById(
-      "filterBerakhir"
-    ).value = "";
-
-    timelineSearchValue = "";
-    timelineBulan = "";
-    timelinePage = 1;
-
-    loadTimelinePage();
-  }
-);
+}
 
 
 // ======================================================
 // START
 // ======================================================
+
+initializeTimelineFilter();
 
 loadTimelinePage();

@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Pengeluaran - Portopro</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+  <style>
+    :root {
+      --page-bg: #f3f6fb;
+      --surface: #ffffff;
+      --line: #e5eaf2;
+      --line-strong: #d7deea;
+      --text: #172033;
+      --muted: #6b768a;
+
+      --indigo: #4f46e5;
+      --indigo-soft: #eef2ff;
+
+      --green: #059669;
+      --green-soft: #ecfdf5;
+
+      --amber: #d97706;
+      --amber-soft: #fffbeb;
+
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+
+      --rose: #e11d48;
+      --rose-soft: #fff1f2;
+
+      --shadow-sm:
+        0 8px 24px
+        rgba(15, 23, 42, 0.05);
+
+      --shadow-md:
+        0 18px 45px
+        rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+
+      color: var(--text);
+
+      background:
+        radial-gradient(
+          circle at 88% 2%,
+          rgba(79, 70, 229, 0.08),
+          transparent 26rem
+        ),
+        var(--page-bg);
+
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .pengeluaran-page {
+      width: calc(100% - 260px);
+      min-height: 100vh;
+
+      margin-left: 260px;
+      padding: 28px;
+    }
+
+    .pengeluaran-content {
+      width: 100%;
+      max-width: 1680px;
+
+      margin: 0 auto;
+    }
+
+    /* ================================================
+       HEADER
+    ================================================ */
+
+    .pengeluaran-header {
+      position: relative;
+
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+
+      overflow: hidden;
+
+      margin-bottom: 20px;
+      padding: 28px 30px;
+
+      color: #ffffff;
+
+      background:
+        linear-gradient(
+          125deg,
+          #111c44 0%,
+          #26347a 56%,
+          #4f46e5 100%
+        );
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.1);
+
+      border-radius: 22px;
+
+      box-shadow: var(--shadow-md);
+    }
+
+    .pengeluaran-header::before,
+    .pengeluaran-header::after {
+      position: absolute;
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.11);
+
+      border-radius: 999px;
+
+      content: "";
+
+      pointer-events: none;
+    }
+
+    .pengeluaran-header::before {
+      top: -80px;
+      right: -45px;
+
+      width: 240px;
+      height: 240px;
+    }
+
+    .pengeluaran-header::after {
+      right: 90px;
+      bottom: -130px;
+
+      width: 220px;
+      height: 220px;
+
+      background:
+        rgba(255, 255, 255, 0.04);
+    }
+
+    .header-copy,
+    .header-status {
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      margin-bottom: 12px;
+      padding: 6px 10px;
+
+      color: #dbeafe;
+
+      background:
+        rgba(255, 255, 255, 0.1);
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.14);
+
+      border-radius: 999px;
+
+      font-size: 11px;
+      font-weight: 800;
+
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .header-eyebrow::before {
+      width: 7px;
+      height: 7px;
+
+      background: #fbbf24;
+      border-radius: 50%;
+
+      box-shadow:
+        0 0 0 4px
+        rgba(251, 191, 36, 0.14);
+
+      content: "";
+    }
+
+    .pengeluaran-header h1 {
+      margin: 0 0 8px;
+
+      font-size:
+        clamp(
+          28px,
+          3vw,
+          40px
+        );
+
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+    }
+
+    .pengeluaran-header p {
+      max-width: 760px;
+      margin: 0;
+
+      color:
+        rgba(255, 255, 255, 0.72);
+
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+
+      flex: 0 0 auto;
+
+      padding: 11px 14px;
+
+      color: #ffffff;
+
+      background:
+        rgba(15, 23, 42, 0.24);
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.15);
+
+      border-radius: 13px;
+
+      backdrop-filter: blur(10px);
+
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .header-status::before {
+      width: 8px;
+      height: 8px;
+
+      background: #fbbf24;
+      border-radius: 50%;
+
+      content: "";
+    }
+
+    /* ================================================
+       ERROR
+    ================================================ */
+
+    .error-banner {
+      display: none;
+
+      margin-bottom: 18px;
+      padding: 13px 15px;
+
+      color: #b91c1c;
+      background: var(--rose-soft);
+
+      border:
+        1px solid
+        #fecdd3;
+
+      border-radius: 13px;
+
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* ================================================
+   SUMMARY PENGELUARAN
+   Nama class dibuat khusus agar tidak bentrok
+   dengan /style.css
+================================================ */
+
+.pengeluaran-summary-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(0, 1fr)
+    );
+
+  align-items: stretch;
+  gap: 14px;
+
+  margin-bottom: 20px;
+}
+
+.pengeluaran-stat-card {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+  min-height: 185px;
+
+  overflow: hidden;
+
+  padding: 18px;
+
+  background: #ffffff;
+
+  border:
+    1px solid
+    var(--line);
+
+  border-radius: 17px;
+
+  box-shadow:
+    0 8px 24px
+    rgba(15, 23, 42, 0.05);
+
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.pengeluaran-stat-card:hover {
+  transform:
+    translateY(-3px);
+
+  border-color: #cfd7e6;
+
+  box-shadow:
+    0 15px 35px
+    rgba(15, 23, 42, 0.09);
+}
+
+.pengeluaran-stat-card::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+
+  height: 4px;
+
+  background:
+    var(
+      --card-accent,
+      #4f46e5
+    );
+
+  content: "";
+}
+
+.pengeluaran-stat-card.primary {
+  color: #ffffff;
+
+  background:
+    linear-gradient(
+      145deg,
+      #172554 0%,
+      #312e81 55%,
+      #4338ca 100%
+    );
+
+  border-color: transparent;
+}
+
+.pengeluaran-stat-card.primary::before {
+  background: #818cf8;
+}
+
+.pengeluaran-stat-card.primary::after {
+  position: absolute;
+  right: -45px;
+  bottom: -65px;
+
+  width: 150px;
+  height: 150px;
+
+  background:
+    rgba(255, 255, 255, 0.07);
+
+  border-radius: 50%;
+
+  content: "";
+}
+
+.pengeluaran-card-top {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  width: 100%;
+
+  margin-bottom: 18px;
+}
+
+.pengeluaran-card-icon {
+  width: 38px;
+  height: 38px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 auto;
+
+  border-radius: 11px;
+
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.pengeluaran-card-icon.indigo {
+  color: #4f46e5;
+  background: #eef2ff;
+}
+
+.pengeluaran-card-icon.rose {
+  color: #e11d48;
+  background: #fff1f2;
+}
+
+.pengeluaran-card-icon.amber {
+  color: #d97706;
+  background: #fffbeb;
+}
+
+.pengeluaran-card-icon.green {
+  color: #059669;
+  background: #ecfdf5;
+}
+
+.pengeluaran-card-icon.blue {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.pengeluaran-stat-card.primary
+.pengeluaran-card-icon {
+  color: #ffffff;
+
+  background:
+    rgba(255, 255, 255, 0.14);
+}
+
+.pengeluaran-card-tag {
+  flex: 0 0 auto;
+
+  padding: 5px 8px;
+
+  color: #64748b;
+  background: #f1f5f9;
+
+  border-radius: 7px;
+
+  font-size: 9px;
+  font-weight: 850;
+
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pengeluaran-stat-card.primary
+.pengeluaran-card-tag {
+  color: #c7d2fe;
+
+  background:
+    rgba(255, 255, 255, 0.11);
+}
+
+.pengeluaran-card-label {
+  position: relative;
+  z-index: 1;
+
+  display: block;
+
+  width: 100%;
+  margin-bottom: 8px;
+
+  color: #64748b;
+
+  font-size: 10px;
+  font-weight: 850;
+
+  line-height: 1.35;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.pengeluaran-stat-card.primary
+.pengeluaran-card-label {
+  color:
+    rgba(255, 255, 255, 0.72);
+}
+
+.pengeluaran-card-value {
+  position: relative;
+  z-index: 1;
+
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+
+  margin: 0;
+
+  color: #172033;
+
+  font-size:
+    clamp(
+      19px,
+      1.55vw,
+      27px
+    );
+
+  font-weight: 850;
+
+  line-height: 1.18;
+  letter-spacing: -0.04em;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pengeluaran-stat-card.primary
+.pengeluaran-card-value {
+  color: #ffffff;
+}
+
+.pengeluaran-card-note {
+  position: relative;
+  z-index: 1;
+
+  width: 100%;
+
+  margin-top: auto;
+  padding-top: 12px;
+
+  color: #94a3b8;
+
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.pengeluaran-stat-card.primary
+.pengeluaran-card-note {
+  color:
+    rgba(255, 255, 255, 0.6);
+}
+
+/* Warna garis atas */
+
+.pengeluaran-stat-card.card-unpaid {
+  --card-accent: #e11d48;
+}
+
+.pengeluaran-stat-card.card-process {
+  --card-accent: #d97706;
+}
+
+.pengeluaran-stat-card.card-paid {
+  --card-accent: #059669;
+}
+
+.pengeluaran-stat-card.card-outstanding {
+  --card-accent: #2563eb;
+}
+
+/* ================================================
+   RESPONSIVE CARD
+================================================ */
+
+@media (max-width: 1450px) {
+  .pengeluaran-summary-grid {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+  }
+
+  .pengeluaran-stat-card {
+    min-height: 175px;
+  }
+}
+
+@media (max-width: 850px) {
+  .pengeluaran-summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+}
+
+@media (max-width: 520px) {
+  .pengeluaran-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pengeluaran-stat-card {
+    min-height: 160px;
+  }
+
+  .pengeluaran-card-value {
+    font-size: 24px;
+  }
+}
+    /* ================================================
+       FILTER
+    ================================================ */
+
+    .filter-card {
+      margin-bottom: 20px;
+      padding: 18px;
+
+      background:
+        rgba(255, 255, 255, 0.9);
+
+      border:
+        1px solid
+        var(--line);
+
+      border-radius: 17px;
+
+      box-shadow: var(--shadow-sm);
+    }
+
+    .filter-grid {
+      display: grid;
+
+      grid-template-columns:
+        minmax(210px, 1.5fr)
+        repeat(
+          4,
+          minmax(135px, 1fr)
+        )
+        auto;
+
+      align-items: end;
+      gap: 13px;
+    }
+
+    .filter-field {
+      min-width: 0;
+    }
+
+    .filter-field label {
+      display: block;
+
+      margin: 0 0 7px 2px;
+
+      color: #64748b;
+
+      font-size: 10px;
+      font-weight: 800;
+
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .filter-control {
+      width: 100%;
+      min-height: 43px;
+
+      padding: 0 12px;
+
+      color: var(--text);
+      background: #ffffff;
+
+      border:
+        1px solid
+        var(--line-strong);
+
+      border-radius: 10px;
+
+      outline: none;
+
+      font-size: 12px;
+
+      transition:
+        border-color 180ms ease,
+        box-shadow 180ms ease;
+    }
+
+    .filter-control:focus {
+      border-color: var(--indigo);
+
+      box-shadow:
+        0 0 0 3px
+        rgba(79, 70, 229, 0.1);
+    }
+
+    .reset-button {
+      min-height: 43px;
+
+      padding: 0 17px;
+
+      color: var(--indigo);
+      background: var(--indigo-soft);
+
+      border: 0;
+      border-radius: 10px;
+
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .reset-button:hover {
+      background: #e0e7ff;
+    }
+
+    /* ================================================
+       TABLE
+    ================================================ */
+
+    .table-card {
+      overflow: hidden;
+
+      background:
+        rgba(255, 255, 255, 0.92);
+
+      border:
+        1px solid
+        var(--line);
+
+      border-radius: 17px;
+
+      box-shadow: var(--shadow-sm);
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+
+      padding: 18px 20px;
+
+      border-bottom:
+        1px solid
+        var(--line);
+    }
+
+    .table-header h2 {
+      margin: 0;
+
+      color: var(--text);
+
+      font-size: 16px;
+      font-weight: 850;
+
+      letter-spacing: -0.02em;
+    }
+
+    .table-header p {
+      margin: 5px 0 0;
+
+      color: var(--muted);
+
+      font-size: 11px;
+    }
+
+    .table-count {
+      flex: 0 0 auto;
+
+      padding: 7px 11px;
+
+      color: var(--indigo);
+      background: var(--indigo-soft);
+
+      border-radius: 999px;
+
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .table-wrapper {
+      width: 100%;
+
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1180px;
+
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 14px 15px;
+
+      border-bottom:
+        1px solid
+        #edf1f6;
+
+      text-align: left;
+      vertical-align: middle;
+
+      white-space: nowrap;
+    }
+
+    th {
+      color: #64748b;
+      background: #f8fafc;
+
+      font-size: 10px;
+      font-weight: 850;
+
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    td {
+      color: #334155;
+
+      font-size: 12px;
+    }
+
+    tbody tr:hover {
+      background: #fafbff;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .project-link {
+      display: block;
+
+      max-width: 260px;
+
+      overflow: hidden;
+
+      color: #3730a3;
+
+      font-weight: 750;
+      text-decoration: none;
+      text-overflow: ellipsis;
+    }
+
+    a.project-link:hover {
+      color: var(--indigo);
+      text-decoration: underline;
+    }
+
+    .subtext {
+      display: block;
+
+      margin-top: 4px;
+
+      color: #94a3b8;
+
+      font-size: 10px;
+    }
+
+    .amount {
+      color: var(--text);
+
+      font-weight: 800;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+
+      padding: 6px 9px;
+
+      border-radius: 999px;
+
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .status-badge::before {
+      width: 6px;
+      height: 6px;
+
+      background: currentColor;
+      border-radius: 50%;
+
+      content: "";
+    }
+
+    .status-paid {
+      color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .status-process {
+      color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .status-unpaid {
+      color: var(--rose);
+      background: var(--rose-soft);
+    }
+
+    .empty-table {
+      padding: 55px 20px;
+
+      color: #94a3b8;
+
+      text-align: center;
+    }
+
+    /* ================================================
+       PAGINATION
+    ================================================ */
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+
+      margin-top: 20px;
+      padding: 14px 16px;
+
+      background:
+        rgba(255, 255, 255, 0.9);
+
+      border:
+        1px solid
+        var(--line);
+
+      border-radius: 14px;
+
+      box-shadow: var(--shadow-sm);
+    }
+
+    .pagination-info {
+      color: #64748b;
+
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .pagination-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .page-button {
+      min-width: 36px;
+      height: 36px;
+
+      padding: 0 9px;
+
+      color: #475569;
+      background: #ffffff;
+
+      border:
+        1px solid
+        var(--line-strong);
+
+      border-radius: 9px;
+
+      font-size: 11px;
+      font-weight: 750;
+
+      transition:
+        color 180ms ease,
+        border-color 180ms ease,
+        background 180ms ease;
+    }
+
+    .page-button:hover:not(:disabled) {
+      color: var(--indigo);
+      border-color: var(--indigo);
+    }
+
+    .page-button.active {
+      color: #ffffff;
+      background: var(--indigo);
+      border-color: var(--indigo);
+    }
+
+    .page-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    /* ================================================
+       LOADING
+    ================================================ */
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+
+      display: grid;
+      place-items: center;
+
+      background:
+        rgba(248, 250, 252, 0.72);
+
+      backdrop-filter: blur(2px);
+
+      z-index: 999;
+    }
+
+    .loading-overlay[hidden] {
+      display: none;
+    }
+
+    .loading-box {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+
+      padding: 15px 18px;
+
+      color: var(--text);
+      background: #ffffff;
+
+      border:
+        1px solid
+        var(--line);
+
+      border-radius: 13px;
+
+      box-shadow: var(--shadow-md);
+
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+
+      border:
+        2px solid
+        #e0e7ff;
+
+      border-top-color:
+        var(--indigo);
+
+      border-radius: 50%;
+
+      animation:
+        spin 700ms linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform:
+          rotate(360deg);
+      }
+    }
+
+    /* ================================================
+       RESPONSIVE
+    ================================================ */
+
+    @media (
+      max-width: 1280px
+    ) {
+      .pengeluaran-summary {
+        grid-template-columns:
+          repeat(
+            3,
+            minmax(0, 1fr)
+          );
+      }
+
+      .filter-grid {
+        grid-template-columns:
+          repeat(
+            3,
+            minmax(0, 1fr)
+          );
+      }
+    }
+
+    @media (
+      max-width: 900px
+    ) {
+      .pengeluaran-page {
+        width: 100%;
+
+        margin-left: 0;
+        padding: 20px;
+      }
+
+      .pengeluaran-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .header-status {
+        align-self: flex-start;
+      }
+    }
+
+    @media (
+      max-width: 720px
+    ) {
+      .pengeluaran-summary {
+        grid-template-columns:
+          repeat(
+            2,
+            minmax(0, 1fr)
+          );
+      }
+
+      .filter-grid {
+        grid-template-columns:
+          repeat(
+            2,
+            minmax(0, 1fr)
+          );
+      }
+
+      .pagination {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    @media (
+      max-width: 480px
+    ) {
+      .pengeluaran-page {
+        padding: 15px;
+      }
+
+      .pengeluaran-header {
+        padding: 23px 20px;
+      }
+
+      .pengeluaran-summary,
+      .filter-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .table-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app-layout">
+
+    <!-- SIDEBAR DARI sidebar.js -->
+
+    <div id="sidebarContainer"></div>
+
+
+    <main class="pengeluaran-page">
+
+      <div class="pengeluaran-content">
+
+        <!-- HEADER -->
+
+        <header class="pengeluaran-header">
+
+          <div class="header-copy">
+
+            <div class="header-eyebrow">
+              Financial Overview
+            </div>
+
+            <h1>
+              Pengeluaran Partner
+            </h1>
+
+            <p>
+              Monitoring pengeluaran partner dari termin proyek
+              Reguler, Transaksi, dan pembayaran partner Proyek Sewa.
+            </p>
+
+          </div>
+
+
+          <div class="header-status">
+            Tahun berjalan · Default sudah dibayar
+          </div>
+
+        </header>
+
+
+        <!-- ERROR -->
+
+        <div
+          class="error-banner"
+          id="pengeluaranError"
+        ></div>
+
+
+        <!-- =============================================
+     SUMMARY PENGELUARAN
+============================================== -->
+
+<section class="pengeluaran-summary-grid">
+
+  <!-- TOTAL PENGELUARAN -->
+
+  <article
+    class="
+      pengeluaran-stat-card
+      primary
+    "
+  >
+
+    <div class="pengeluaran-card-top">
+
+      <span
+        class="
+          pengeluaran-card-icon
+          indigo
+        "
+      >
+        Rp
+      </span>
+
+      <span class="pengeluaran-card-tag">
+        Paid
+      </span>
+
+    </div>
+
+
+    <span class="pengeluaran-card-label">
+      Total Pengeluaran
+    </span>
+
+
+    <strong
+      class="pengeluaran-card-value"
+      id="totalPengeluaran"
+    >
+      Rp 0
+    </strong>
+
+
+    <div class="pengeluaran-card-note">
+      Pengeluaran berstatus sudah dibayar
+    </div>
+
+  </article>
+
+
+  <!-- TOTAL BELUM DIBAYAR -->
+
+  <article
+    class="
+      pengeluaran-stat-card
+      card-unpaid
+    "
+  >
+
+    <div class="pengeluaran-card-top">
+
+      <span
+        class="
+          pengeluaran-card-icon
+          rose
+        "
+      >
+        !
+      </span>
+
+      <span class="pengeluaran-card-tag">
+        Unpaid
+      </span>
+
+    </div>
+
+
+    <span class="pengeluaran-card-label">
+      Total Belum Dibayar
+    </span>
+
+
+    <strong
+      class="pengeluaran-card-value"
+      id="totalBelumDibayar"
+    >
+      Rp 0
+    </strong>
+
+
+    <div class="pengeluaran-card-note">
+      Kewajiban yang belum dibayar
+    </div>
+
+  </article>
+
+
+  <!-- TOTAL PROSES -->
+
+  <article
+    class="
+      pengeluaran-stat-card
+      card-process
+    "
+  >
+
+    <div class="pengeluaran-card-top">
+
+      <span
+        class="
+          pengeluaran-card-icon
+          amber
+        "
+      >
+        …
+      </span>
+
+      <span class="pengeluaran-card-tag">
+        Process
+      </span>
+
+    </div>
+
+
+    <span class="pengeluaran-card-label">
+      Total Proses
+    </span>
+
+
+    <strong
+      class="pengeluaran-card-value"
+      id="totalProses"
+    >
+      Rp 0
+    </strong>
+
+
+    <div class="pengeluaran-card-note">
+      Pembayaran sedang diproses
+    </div>
+
+  </article>
+
+
+  <!-- TERMIN DIBAYAR -->
+
+  <article
+    class="
+      pengeluaran-stat-card
+      card-paid
+    "
+  >
+
+    <div class="pengeluaran-card-top">
+
+      <span
+        class="
+          pengeluaran-card-icon
+          green
+        "
+      >
+        ✓
+      </span>
+
+      <span class="pengeluaran-card-tag">
+        Termin
+      </span>
+
+    </div>
+
+
+    <span class="pengeluaran-card-label">
+      Termin Dibayar
+    </span>
+
+
+    <strong
+      class="pengeluaran-card-value"
+      id="terminDibayar"
+    >
+      0
+    </strong>
+
+
+    <div class="pengeluaran-card-note">
+      Jumlah termin selesai dibayar
+    </div>
+
+  </article>
+
+
+  <!-- TERMIN BELUM DIBAYAR -->
+
+  <article
+    class="
+      pengeluaran-stat-card
+      card-outstanding
+    "
+  >
+
+    <div class="pengeluaran-card-top">
+
+      <span
+        class="
+          pengeluaran-card-icon
+          blue
+        "
+      >
+        #
+      </span>
+
+      <span class="pengeluaran-card-tag">
+        Outstanding
+      </span>
+
+    </div>
+
+
+    <span class="pengeluaran-card-label">
+      Termin Belum Dibayar
+    </span>
+
+
+    <strong
+      class="pengeluaran-card-value"
+      id="terminBelumDibayar"
+    >
+      0
+    </strong>
+
+
+    <div class="pengeluaran-card-note">
+      Jumlah belum dibayar dan proses
+    </div>
+
+  </article>
+
+</section>
+
+
+        <!-- FILTER -->
+
+        <section class="filter-card">
+
+          <div class="filter-grid">
+
+            <div class="filter-field">
+
+              <label for="searchPengeluaran">
+                Pencarian
+              </label>
+
+              <input
+                type="search"
+                class="filter-control"
+                id="searchPengeluaran"
+                placeholder="Cari proyek, partner, atau termin..."
+              >
+
+            </div>
+
+
+            <div class="filter-field">
+
+              <label for="filterBulan">
+                Bulan
+              </label>
+
+              <select
+                class="filter-control"
+                id="filterBulan"
+              >
+                <option value="">
+                  Semua Bulan
+                </option>
+
+                <option value="1">Januari</option>
+                <option value="2">Februari</option>
+                <option value="3">Maret</option>
+                <option value="4">April</option>
+                <option value="5">Mei</option>
+                <option value="6">Juni</option>
+                <option value="7">Juli</option>
+                <option value="8">Agustus</option>
+                <option value="9">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+              </select>
+
+            </div>
+
+
+            <div class="filter-field">
+
+              <label for="filterTahun">
+                Tahun
+              </label>
+
+              <select
+                class="filter-control"
+                id="filterTahun"
+              ></select>
+
+            </div>
+
+
+            <div class="filter-field">
+
+              <label for="filterJenisProyek">
+                Jenis Proyek
+              </label>
+
+              <select
+                class="filter-control"
+                id="filterJenisProyek"
+              >
+                <option value="">
+                  Semua Jenis
+                </option>
+
+                <option value="Reguler">
+                  Reguler
+                </option>
+
+                <option value="Transaksi">
+                  Transaksi
+                </option>
+
+                <option value="Sewa">
+                  Sewa
+                </option>
+              </select>
+
+            </div>
+
+
+            <div class="filter-field">
+
+              <label for="filterStatusPembayaran">
+                Status Pembayaran
+              </label>
+
+              <select
+                class="filter-control"
+                id="filterStatusPembayaran"
+              >
+                <option value="">
+                  Semua Status
+                </option>
+
+                <option
+                  value="Sudah Dibayar"
+                  selected
+                >
+                  Sudah Dibayar
+                </option>
+
+                <option value="Belum Dibayar">
+                  Belum Dibayar
+                </option>
+
+                <option value="Proses">
+                  Proses
+                </option>
+
+                <option value="Selain Dibayar">
+                  Selain Dibayar
+                </option>
+              </select>
+
+            </div>
+
+
+            <button
+              type="button"
+              class="reset-button"
+              id="resetPengeluaranFilter"
+            >
+              Reset
+            </button>
+
+          </div>
+
+        </section>
+
+
+        <!-- TABLE -->
+
+        <section class="table-card">
+
+          <div class="table-header">
+
+            <div>
+
+              <h2>
+                Daftar Pengeluaran
+              </h2>
+
+              <p>
+                Termin partner proyek dan pembayaran partner Proyek Sewa.
+              </p>
+
+            </div>
+
+            <span
+              class="table-count"
+              id="jumlahDataPengeluaran"
+            >
+              0 data
+            </span>
+
+          </div>
+
+
+          <div class="table-wrapper">
+
+            <table>
+
+              <thead>
+
+                <tr>
+                  <th>No.</th>
+                  <th>Proyek</th>
+                  <th>Partner</th>
+                  <th>Jenis Proyek</th>
+                  <th>Deskripsi / Termin</th>
+                  <th>Nominal</th>
+                  <th>Status</th>
+                  <th>Tanggal Bayar</th>
+                  <th>Syarat Pembayaran</th>
+                </tr>
+
+              </thead>
+
+
+              <tbody id="pengeluaranTableBody">
+
+                <tr>
+
+                  <td
+                    colspan="9"
+                    class="empty-table"
+                  >
+                    Memuat data pengeluaran...
+                  </td>
+
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </section>
+
+
+        <!-- PAGINATION SESUAI FORMAT PENDAPATAN -->
+
+        <div
+          class="pagination"
+          id="pengeluaranPagination"
+          style="display: none;"
+        >
+
+          <div
+            class="pagination-info"
+            id="pengeluaranPaginationInfo"
+          >
+            -
+          </div>
+
+
+          <div
+            class="pagination-buttons"
+            id="pengeluaranPaginationButtons"
+          ></div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+
+  <div
+    class="loading-overlay"
+    id="pengeluaranLoading"
+    hidden
+  >
+
+    <div class="loading-box">
+
+      <span class="spinner"></span>
+
+      Memuat data pengeluaran...
+
+    </div>
+
+  </div>
+
+
+  <!-- FORMAT SIDEBAR SAMA DENGAN PENDAPATAN -->
+
+  <script src="/layout.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/pengeluaran.js"></script>
+
+</body>
+
+</html>

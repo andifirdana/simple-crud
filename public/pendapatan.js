@@ -299,38 +299,86 @@ function getNilaiPendapatan(item) {
   ) || 0;
 }
 
-function statusSudahDibayar(item) {
-  const status =
-    String(
-      item.status_pembayaran || ""
-    )
-      .trim()
-      .replace(/\s+/g, " ")
-      .toLowerCase();
+function normalisasiStatusPembayaran(
+  item
+) {
 
-  return (
-    Boolean(item.tanggal_bayar) ||
-    status === "dibayar" ||
-    status === "sudah dibayar" ||
-    status === "lunas" ||
-    status === "paid"
-  );
+  return String(
+    item?.status_pembayaran || ""
+  )
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
 }
+
+
+function statusSudahDibayar(item) {
+
+  const status =
+    normalisasiStatusPembayaran(
+      item
+    );
+
+  const statusDibayar = [
+    "dibayar",
+    "sudah dibayar",
+    "lunas",
+    "paid"
+  ];
+
+  if (
+    statusDibayar.includes(status)
+  ) {
+    return true;
+  }
+
+  /*
+   * Jika status sudah menyatakan belum dibayar
+   * atau proses, tanggal bayar tidak boleh
+   * mengubahnya otomatis menjadi dibayar.
+   */
+
+  const statusBelumDibayar = [
+    "belum dibayar",
+    "belum bayar",
+    "unpaid"
+  ];
+
+  if (
+    statusBelumDibayar.includes(status) ||
+    status.includes("proses") ||
+    status === "processing"
+  ) {
+    return false;
+  }
+
+  return Boolean(
+    item?.tanggal_bayar
+  );
+
+}
+
 
 function getStatusPembayaranPendapatan(
   item
 ) {
-  if (statusSudahDibayar(item)) {
-    return "Sudah Dibayar";
-  }
 
   const status =
-    String(
-      item.status_pembayaran || ""
-    )
-      .trim()
-      .replace(/\s+/g, " ")
-      .toLowerCase();
+    normalisasiStatusPembayaran(
+      item
+    );
+
+  if (
+    [
+      "dibayar",
+      "sudah dibayar",
+      "lunas",
+      "paid"
+    ].includes(status)
+  ) {
+    return "Sudah Dibayar";
+  }
 
   if (
     status.includes("proses") ||
@@ -339,7 +387,51 @@ function getStatusPembayaranPendapatan(
     return "Proses";
   }
 
-  return "Belum Dibayar";
+  if (
+    [
+      "belum dibayar",
+      "belum bayar",
+      "unpaid"
+    ].includes(status)
+  ) {
+    return "Belum Dibayar";
+  }
+
+  return item?.tanggal_bayar
+    ? "Sudah Dibayar"
+    : "Belum Dibayar";
+
+}
+function getKategoriPendapatan(item) {
+
+  const sumber =
+    String(
+      item?.sumber_pendapatan || ""
+    )
+      .trim()
+      .toUpperCase();
+
+  /*
+   * Pada Sewa, posisi kategori digantikan
+   * oleh proyek yang sudah dipilih.
+   */
+
+  if (sumber === "SEWA") {
+
+    return (
+      item.nama_proyek ||
+      "Proyek Sewa"
+    );
+
+  }
+
+  return (
+    item.kategori_pendapatan ||
+    item.kategori_proyek ||
+    item.nama_kategori_produk ||
+    "Tanpa Kategori"
+  );
+
 }
 
 // ======================================================
@@ -359,102 +451,173 @@ function escapeHtml(value) {
 // LOAD PENDAPATAN
 // ======================================================
 
+async function fetchSumberPendapatan(
+  url
+) {
+
+  const response =
+    await fetch(
+      url,
+      {
+        headers: {
+          Accept:
+            "application/json"
+        },
+
+        credentials:
+          "include",
+
+        cache:
+          "no-store"
+      }
+    );
+
+  if (response.status === 401) {
+
+    window.location.href =
+      "/login.html";
+
+    throw new Error(
+      "Belum login"
+    );
+
+  }
+
+  const contentType =
+    response.headers.get(
+      "content-type"
+    ) || "";
+
+  if (
+    !contentType.includes(
+      "application/json"
+    )
+  ) {
+
+    const responseText =
+      await response.text();
+
+    console.error(
+      `RESPONSE BUKAN JSON ${url}:`,
+      responseText
+    );
+
+    throw new Error(
+      `${url} tidak mengembalikan JSON. ` +
+      `Status: ${response.status}`
+    );
+
+  }
+
+  const result =
+    await response.json();
+
+  if (!response.ok) {
+
+    throw new Error(
+      result.error ||
+      `Gagal mengambil data dari ${url}`
+    );
+
+  }
+
+  if (
+    Array.isArray(
+      result.pendapatan
+    )
+  ) {
+    return result.pendapatan;
+  }
+
+  if (
+    Array.isArray(result.data)
+  ) {
+    return result.data;
+  }
+
+  if (Array.isArray(result)) {
+    return result;
+  }
+
+  return [];
+
+}
+
+
 async function loadPendapatan() {
+
   if (!pendapatanGroup) {
+
     console.error(
       "Element #pendapatanGroup tidak ditemukan."
     );
 
     return;
+
   }
 
   try {
+
     pendapatanGroup.innerHTML = `
       <div class="empty-state">
         Memuat data pendapatan...
       </div>
     `;
 
-    const response =
-      await fetch(
-        "/api/pendapatan/detail",
-        {
-          headers: {
-            Accept: "application/json"
-          },
-
-          cache: "no-store"
-        }
-      );
-
-    if (response.status === 401) {
-      window.location.href =
-        "/login.html";
-
-      return;
-    }
-
-    const contentType =
-      response.headers.get(
-        "content-type"
-      ) || "";
-
-    if (
-      !contentType.includes(
-        "application/json"
-      )
-    ) {
-      const responseText =
-        await response.text();
-
-      console.error(
-        "RESPONSE BUKAN JSON:",
-        responseText
-      );
-
-      throw new Error(
-        `Endpoint /api/pendapatan/detail tidak mengembalikan JSON. Status: ${response.status}`
-      );
-    }
-
-    const result =
-      await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        result.error ||
-        "Gagal mengambil data pendapatan."
-      );
-    }
-
-    const dataApi =
-      Array.isArray(
-        result.pendapatan
-      )
-        ? result.pendapatan
-        : Array.isArray(result.data)
-          ? result.data
-          : Array.isArray(result)
-            ? result
-            : [];
-
     /*
-     * Semua status pembayaran dimasukkan.
+     * Kedua sumber diambil terpisah karena
+     * tabel penyimpanannya memang berbeda.
      */
 
-    allPendapatan =
-      dataApi.filter(item =>
+    const [
+      pendapatanRegulerTransaksi,
+      pendapatanSewa
+    ] =
+      await Promise.all([
+        fetchSumberPendapatan(
+          "/api/pendapatan/detail"
+        ),
+
+        fetchSumberPendapatan(
+          "/api/pendapatan/sewa/detail"
+        )
+      ]);
+
+    allPendapatan = [
+      ...pendapatanRegulerTransaksi.map(
+        item => ({
+          ...item,
+
+          sumber_pendapatan:
+            item.sumber_pendapatan ||
+            "REGULER_TRANSAKSI"
+        })
+      ),
+
+      ...pendapatanSewa.map(
+        item => ({
+          ...item,
+
+          sumber_pendapatan:
+            "SEWA",
+
+          jenis_proyek:
+            "Sewa"
+        })
+      )
+    ].filter(
+      item =>
         Boolean(
           getTanggalPendapatan(item)
         )
-      );
+    );
 
     loadPendapatanFilters();
 
     /*
      * Default:
-     * Tahun berjalan
-     * Status Sudah Dibayar
+     * - Tahun berjalan
+     * - Status Sudah Dibayar
      */
 
     setDefaultPendapatanFilter();
@@ -464,6 +627,7 @@ async function loadPendapatan() {
     applyPendapatanFilter();
 
   } catch (error) {
+
     console.error(
       "ERROR LOAD PENDAPATAN:",
       error
@@ -477,12 +641,15 @@ async function loadPendapatan() {
     `;
 
     if (pendapatanPagination) {
+
       pendapatanPagination.style.display =
         "none";
-    }
-  }
-}
 
+    }
+
+  }
+
+}
 // ======================================================
 // ISI SELECT
 // ======================================================
@@ -1069,189 +1236,322 @@ function flattenPendapatanJenis(
     );
 }
 
+function isPendapatanSewa(item) {
+
+  const sumber =
+    String(
+      item?.sumber_pendapatan || ""
+    )
+      .trim()
+      .toUpperCase();
+
+  const jenis =
+    String(
+      item?.jenis_proyek || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  return (
+    sumber === "SEWA" ||
+    jenis === "sewa"
+  );
+
+}
+
 // ======================================================
 // RENDER TABLE
 // STRUKTUR TABEL TETAP
 // ======================================================
 
 function renderPendapatanTable(data) {
+
+  const tabelSewa =
+    data.length > 0 &&
+    data.every(
+      item =>
+        isPendapatanSewa(item)
+    );
+
+  const judulKolomPertama =
+    tabelSewa
+      ? "Nomor PR"
+      : "Proyek";
+
   return `
     <div class="table-wrapper">
+
       <table class="prognosa-table">
+
         <thead>
+
           <tr>
-            <th>Proyek</th>
+
+            <th>
+              ${escapeHtml(
+                judulKolomPertama
+              )}
+            </th>
+
             <th>Klien</th>
+
             <th>Periode Kontrak</th>
+
             <th>Nilai Kontrak</th>
+
             <th>Status Pengadaan</th>
+
             <th>Status Teknis</th>
+
             <th>Termin</th>
+
             <th>Persentase</th>
+
             <th>Jatuh Tempo</th>
+
             <th>Tanggal Bayar</th>
+
             <th>Nilai Pendapatan</th>
+
             <th>Aksi</th>
+
           </tr>
+
         </thead>
 
+
         <tbody>
+
           ${
-            data
-              .map(item => {
-                const nilaiPersentase =
-                  Number(
-                    item.persentase
-                  );
+            data.map(item => {
 
-                const persentase =
-                  item.persentase !== null &&
-                  item.persentase !== undefined &&
-                  Number.isFinite(
-                    nilaiPersentase
-                  )
-                    ? `${nilaiPersentase.toFixed(2)}%`
-                    : "-";
+              const pendapatanSewa =
+                isPendapatanSewa(
+                  item
+                );
 
-                const proyekId =
-                  Number(
-                    item.proyek_id
-                  );
+              /*
+               * Reguler/Transaksi:
+               * menampilkan nama proyek.
+               *
+               * Sewa:
+               * menampilkan nomor PR.
+               */
 
-                const proyekValid =
-                  Number.isInteger(
-                    proyekId
-                  ) &&
-                  proyekId > 0;
+              const namaKolomPertama =
+                pendapatanSewa
+                  ? (
+                      item.nomor_pr ||
+                      "-"
+                    )
+                  : (
+                      item.nama_proyek ||
+                      "-"
+                    );
 
-                const detailLink =
-                  proyekValid
-                    ? `/detail-proyek.html?id=${encodeURIComponent(
-                        proyekId
+              const nilaiPersentase =
+                Number(
+                  item.persentase
+                );
+
+              const persentase =
+                item.persentase !== null &&
+                item.persentase !== undefined &&
+                Number.isFinite(
+                  nilaiPersentase
+                )
+                  ? `${nilaiPersentase.toFixed(2)}%`
+                  : "-";
+
+              const detailId =
+                pendapatanSewa
+                  ? Number(
+                      item.proyek_sewa_id
+                    )
+                  : Number(
+                      item.proyek_id
+                    );
+
+              const proyekValid =
+                Number.isInteger(
+                  detailId
+                ) &&
+                detailId > 0;
+
+              const detailLink =
+                proyekValid
+                  ? pendapatanSewa
+                    ? `/proyek-sewa-detail.html?id=${encodeURIComponent(
+                        detailId
                       )}`
-                    : "#";
+                    : `/detail-proyek.html?id=${encodeURIComponent(
+                        detailId
+                      )}`
+                  : "#";
 
-                return `
-                  <tr>
-                    <td class="proyek-name">
-                      ${
-                        proyekValid
-                          ? `
-                            <a
-                              href="${detailLink}"
-                              class="project-link"
-                            >
-                              ${escapeHtml(
-                                item.nama_proyek ||
-                                "-"
-                              )}
-                            </a>
-                          `
-                          : escapeHtml(
-                              item.nama_proyek ||
-                              "-"
-                            )
-                      }
-                    </td>
+              return `
+                <tr>
 
-                    <td>
+                  <td class="proyek-name">
+
+                    ${
+                      proyekValid
+                        ? `
+                          <a
+                            href="${detailLink}"
+                            class="project-link"
+                          >
+                            ${escapeHtml(
+                              namaKolomPertama
+                            )}
+                          </a>
+                        `
+                        : escapeHtml(
+                            namaKolomPertama
+                          )
+                    }
+
+                  </td>
+
+
+                  <td>
+
+                    ${escapeHtml(
+                      item.nama_klien ||
+                      item.perusahaan_klien ||
+                      "-"
+                    )}
+
+                  </td>
+
+
+                  <td>
+
+                    ${formatTanggal(
+                      item.tanggal_mulai_kontrak
+                    )}
+
+                    -
+
+                    ${formatTanggal(
+                      item.tanggal_akhir_kontrak
+                    )}
+
+                  </td>
+
+
+                  <td class="nilai">
+
+                    ${formatRupiah(
+                      item.nilai_kontrak
+                    )}
+
+                  </td>
+
+
+                  <td>
+
+                    <span class="badge">
+
                       ${escapeHtml(
-                        item.nama_klien ||
-                        item.perusahaan_klien ||
+                        item.status_pengadaan ||
                         "-"
                       )}
-                    </td>
 
-                    <td>
-                      ${formatTanggal(
-                        item.tanggal_mulai_kontrak
-                      )}
-                      -
-                      ${formatTanggal(
-                        item.tanggal_akhir_kontrak
-                      )}
-                    </td>
+                    </span>
 
-                    <td class="nilai">
-                      ${formatRupiah(
-                        item.nilai_kontrak
-                      )}
-                    </td>
+                  </td>
 
-                    <td>
-                      <span class="badge">
-                        ${escapeHtml(
-                          item.status_pengadaan ||
-                          "-"
-                        )}
-                      </span>
-                    </td>
 
-                    <td>
-                      <span class="badge">
-                        ${escapeHtml(
-                          item.status_teknis ||
-                          "-"
-                        )}
-                      </span>
-                    </td>
+                  <td>
 
-                    <td>
+                    <span class="badge">
+
                       ${escapeHtml(
-                        item.nama_termin ||
+                        item.status_teknis ||
                         "-"
                       )}
-                    </td>
 
-                    <td>
-                      ${persentase}
-                    </td>
+                    </span>
 
-                    <td>
-                      ${formatTanggal(
-                        item.tanggal_jatuh_tempo
-                      )}
-                    </td>
+                  </td>
 
-                    <td>
-                      ${formatTanggal(
-                        item.tanggal_bayar
-                      )}
-                    </td>
 
-                    <td class="nilai">
-                      ${formatRupiah(
-                        getNilaiPendapatan(
-                          item
-                        )
-                      )}
-                    </td>
+                  <td>
 
-                    <td>
-                      ${
-                        proyekValid
-                          ? `
-                            <a
-                              href="${detailLink}"
-                              class="detail-button"
-                            >
-                              Detail
-                            </a>
-                          `
-                          : "-"
-                      }
-                    </td>
-                  </tr>
-                `;
-              })
-              .join("")
+                    ${escapeHtml(
+                      item.nama_termin ||
+                      "-"
+                    )}
+
+                  </td>
+
+
+                  <td>
+                    ${persentase}
+                  </td>
+
+
+                  <td>
+
+                    ${formatTanggal(
+                      item.tanggal_jatuh_tempo
+                    )}
+
+                  </td>
+
+
+                  <td>
+
+                    ${formatTanggal(
+                      item.tanggal_bayar
+                    )}
+
+                  </td>
+
+
+                  <td class="nilai">
+
+                    ${formatRupiah(
+                      getNilaiPendapatan(
+                        item
+                      )
+                    )}
+
+                  </td>
+
+
+                  <td>
+
+                    ${
+                      proyekValid
+                        ? `
+                          <a
+                            href="${detailLink}"
+                            class="detail-button"
+                          >
+                            Detail
+                          </a>
+                        `
+                        : "-"
+                    }
+
+                  </td>
+
+                </tr>
+              `;
+
+            }).join("")
           }
+
         </tbody>
+
       </table>
+
     </div>
   `;
-}
 
+}
 // ======================================================
 // RENDER GROUPING
 // ======================================================

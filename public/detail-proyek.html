@@ -1985,6 +1985,132 @@ and (
   padding: 16px 12px;
   vertical-align: top;
 }
+
+/* =====================================================
+   PERBAIKAN MODAL TERTIMPA SIDEBAR
+===================================================== */
+
+.app-layout {
+  position: relative;
+  z-index: 1;
+}
+
+/* Batasi lapisan sidebar */
+#sidebarContainer,
+.sidebar,
+.app-sidebar,
+#sidebar {
+  position: relative;
+  z-index: 1000 !important;
+}
+
+/* Root khusus seluruh modal */
+#modalRoot {
+  position: relative;
+  z-index: 2147483000 !important;
+}
+
+/* Semua overlay modal */
+#modalRoot > .modal {
+  display: none;
+
+  position: fixed !important;
+
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+
+  margin: 0 !important;
+  padding: 20px !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: rgba(
+    15,
+    23,
+    42,
+    0.62
+  ) !important;
+
+  backdrop-filter: blur(4px);
+
+  box-sizing: border-box;
+
+  z-index: 2147483000 !important;
+}
+
+/* Modal ketika dibuka */
+#modalRoot > .modal.show {
+  display: flex !important;
+}
+
+/* Isi modal */
+#modalRoot .modal-content,
+#modalRoot .modal-dialog,
+#modalRoot .modal-box {
+  position: relative !important;
+
+  max-height: calc(
+    100vh - 40px
+  );
+
+  overflow-y: auto;
+
+  z-index: 2147483001 !important;
+}
+
+/* Ukuran modal normal */
+#modalRoot .modal-content {
+  width: min(
+    560px,
+    100%
+  );
+}
+
+/* Ukuran modal besar */
+#modalRoot .modal-content.modal-large {
+  width: min(
+    760px,
+    100%
+  );
+}
+
+/* Ukuran modal pembayaran */
+#modalRoot .payment-modal-content {
+  width: min(
+    760px,
+    100%
+  );
+}
+
+/* Cegah halaman ikut bergeser */
+body.modal-open {
+  overflow: hidden;
+}
+
+@media (max-width: 650px) {
+  #modalRoot > .modal {
+    padding: 12px !important;
+  }
+
+  #modalRoot .modal-content,
+  #modalRoot .modal-dialog,
+  #modalRoot .modal-box {
+    max-height: calc(
+      100vh - 24px
+    );
+  }
+}
+
+/* CEGAH HALAMAN BERGESER SAAT MODAL TERBUKA */
+body.modal-open {
+  overflow: hidden;
+}
   </style>
 </head>
 
@@ -2839,7 +2965,1222 @@ and (
 </div>
 
 
-<!-- MODAL TERMIN KLIEN/PARTNER -->
+<!-- ================================================= -->
+<!-- SELURUH MODAL BERADA DI LUAR APP-LAYOUT           -->
+<!-- MODAL AKAN BERADA DI ATAS SIDEBAR                  -->
+<!-- ================================================= -->
+
+<div id="modalRoot">
+
+
+<!-- =====================================================
+     MODAL TERMIN KLIEN/PARTNER
+===================================================== -->
+
+<div
+  class="modal"
+  id="terminModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h3 id="terminModalTitle">
+        Tambah Termin
+      </h3>
+
+    </div>
+
+
+    <form id="terminForm">
+
+      <input
+        type="hidden"
+        id="terminId"
+      >
+
+
+      <div class="form-group">
+
+        <label for="namaTermin">
+          Nama Termin
+        </label>
+
+        <input
+          type="text"
+          id="namaTermin"
+          placeholder="Contoh: Termin 1"
+          required
+        >
+
+      </div>
+
+
+      <div
+        class="form-group"
+        id="persentaseTerminGroup"
+      >
+
+        <label for="persentaseTermin">
+          Persentase
+        </label>
+
+        <input
+          type="number"
+          id="persentaseTermin"
+          min="0.01"
+          max="100"
+          step="0.01"
+          placeholder="Contoh: 30"
+        >
+
+      </div>
+
+
+      <div
+        class="form-group"
+        id="nominalTerminGroup"
+      >
+
+        <label for="nominalTermin">
+          Nominal
+        </label>
+
+        <input
+          type="number"
+          id="nominalTermin"
+          min="0"
+          step="0.01"
+          placeholder="Contoh: 50000000"
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="statusPembayaran">
+          Status Pembayaran
+        </label>
+
+        <select
+          id="statusPembayaran"
+          required
+        >
+
+          <option value="Belum Dibayar">
+            Belum Dibayar
+          </option>
+
+          <option value="Proses">
+            Proses
+          </option>
+
+          <option value="Dibayar">
+            Dibayar
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="tanggalJatuhTempo">
+            Tanggal Jatuh Tempo
+          </label>
+
+          <input
+            type="date"
+            id="tanggalJatuhTempo"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="tanggalBayar">
+            Tanggal Bayar
+          </label>
+
+          <input
+            type="date"
+            id="tanggalBayar"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="syaratPembayaran">
+          Syarat Pembayaran
+        </label>
+
+        <textarea
+          id="syaratPembayaran"
+          rows="3"
+          placeholder="Contoh: Pembayaran setelah BAST ditandatangani"
+        ></textarea>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalTermin"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL DOKUMEN KLIEN/PARTNER
+===================================================== -->
+
+<div
+  class="modal"
+  id="dokumenModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <div>
+
+        <h3 id="dokumenModalTitle">
+          Tambah Dokumen
+        </h3>
+
+        <div
+          class="sub-section-description"
+          id="dokumenModalDescription"
+        >
+          Tambahkan dokumen proyek.
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <form
+      id="dokumenForm"
+      enctype="multipart/form-data"
+    >
+
+      <div class="form-group">
+
+        <label for="namaDokumen">
+          Nama Dokumen
+        </label>
+
+        <select
+          id="namaDokumen"
+          name="nama_dokumen"
+          required
+        >
+
+          <option value="">
+            Pilih Kode Dokumen
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="nomorDokumen">
+          Nomor Dokumen
+        </label>
+
+        <input
+          type="text"
+          id="nomorDokumen"
+          name="nomor_dokumen"
+          placeholder="Contoh: PKS/001/IX/2026"
+        >
+
+      </div>
+
+
+      <div
+        id="dokumenFileLama"
+        class="dokumen-file-lama"
+        hidden
+      ></div>
+
+
+      <div class="form-group">
+
+        <label for="fileDokumen">
+          Upload Dokumen
+        </label>
+
+        <input
+          type="file"
+          id="fileDokumen"
+          name="file_dokumen"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+        >
+
+        <small class="form-hint">
+
+          PDF, Word, Excel, JPG, atau PNG.
+          Maksimal 10 MB.
+
+          <br>
+
+          Saat Edit, kosongkan upload jika
+          file lama tidak ingin diganti.
+
+        </small>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalDokumen"
+        >
+          Batal
+        </button>
+
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+          id="simpanDokumenButton"
+        >
+          Simpan Dokumen
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL EDIT PROYEK
+===================================================== -->
+
+<div
+  class="modal"
+  id="editProyekModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <h3>
+        Edit Informasi Proyek
+      </h3>
+
+    </div>
+
+
+    <form id="editProyekForm">
+
+      <div class="form-group">
+
+        <label for="editNamaProyek">
+          Nama Proyek
+        </label>
+
+        <input
+          type="text"
+          id="editNamaProyek"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label>
+          Kategori
+        </label>
+
+        <div
+          style="
+            display:flex;
+            gap:8px;
+            align-items:center;
+          "
+        >
+
+          <select id="editKategoriSelect">
+
+            <option value="">
+              Pilih Kategori
+            </option>
+
+          </select>
+
+          <button
+            type="button"
+            id="tambahEditKategori"
+          >
+            + Tambah
+          </button>
+
+        </div>
+
+        <div
+          id="editKategoriTerpilih"
+          style="
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            margin-top:10px;
+          "
+        ></div>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editJenisProyek">
+            Jenis Proyek
+          </label>
+
+          <select id="editJenisProyek">
+
+            <option value="">
+              Pilih Jenis
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editSubJenisProyek">
+            Sub Jenis Proyek
+          </label>
+
+          <select id="editSubJenisProyek">
+
+            <option value="">
+              Pilih Sub Jenis
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="editStatusFinal">
+          Status
+        </label>
+
+        <select id="editStatusFinal">
+
+          <option value="">
+            Pilih Status
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="editDeskripsi">
+          Deskripsi
+        </label>
+
+        <textarea
+          id="editDeskripsi"
+          rows="5"
+        ></textarea>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalEditProyek"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Perubahan
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL EDIT PIC
+===================================================== -->
+
+<div
+  class="modal"
+  id="editPicModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h3>
+        Edit PIC Proyek
+      </h3>
+
+    </div>
+
+
+    <form id="editPicForm">
+
+      <div id="editPicContainer">
+
+        <div class="empty">
+          Memuat daftar PIC...
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalEditPic"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan PIC
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL EDIT KLIEN
+===================================================== -->
+
+<div
+  class="modal"
+  id="editKlienModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <h3>
+        Edit Data Klien
+      </h3>
+
+    </div>
+
+
+    <form id="editKlienForm">
+
+      <div class="form-group">
+
+        <label for="editKlienId">
+          Klien
+        </label>
+
+        <select id="editKlienId">
+
+          <option value="">
+            Pilih Klien
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editNilaiSubmitKlien">
+            Nilai Submit
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiSubmitKlien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editNilaiNego1Klien">
+            Nilai Nego 1
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiNego1Klien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editNilaiNego2Klien">
+            Nilai Nego 2
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiNego2Klien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editNilaiNego3Klien">
+            Nilai Nego 3
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiNego3Klien"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editTanggalMulaiKlien">
+            Tanggal Mulai
+          </label>
+
+          <input
+            type="date"
+            id="editTanggalMulaiKlien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editTanggalAkhirKlien">
+            Tanggal Akhir
+          </label>
+
+          <input
+            type="date"
+            id="editTanggalAkhirKlien"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="editModelPembayaranKlien">
+          Model Pembayaran
+        </label>
+
+        <select id="editModelPembayaranKlien">
+
+          <option value="">
+            Pilih Model Pembayaran
+          </option>
+
+          <option value="Tahunan">
+            Tahunan
+          </option>
+
+          <option value="Bulanan">
+            Bulanan
+          </option>
+
+          <option value="Termin">
+            Termin
+          </option>
+
+          <option value="One Time Charge">
+            One Time Charge
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editStatusPengadaanKlien">
+            Status Pengadaan
+          </label>
+
+          <select id="editStatusPengadaanKlien">
+
+            <option value="">
+              Pilih Status Pengadaan
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editStatusTeknisKlien">
+            Status Teknis
+          </label>
+
+          <select id="editStatusTeknisKlien">
+
+            <option value="">
+              Pilih Status Teknis
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalEditKlien"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Perubahan
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL KELOLA PARTNER
+===================================================== -->
+
+<div
+  class="modal"
+  id="editPartnerModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <h3>
+        Kelola Partner Proyek
+      </h3>
+
+    </div>
+
+
+    <div id="editPartnerContainer">
+
+      <div class="empty">
+        Memuat data partner...
+      </div>
+
+    </div>
+
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        id="batalEditPartner"
+      >
+        Tutup
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL RINGKASAN PEMBAYARAN
+===================================================== -->
+
+<div
+  class="modal"
+  id="pembayaranModal"
+>
+
+  <div class="modal-content payment-modal-content">
+
+    <div class="modal-header payment-modal-header">
+
+      <div>
+
+        <div class="payment-modal-subtitle">
+          FINANCIAL SUMMARY
+        </div>
+
+        <h3>
+          Ringkasan Pembayaran
+        </h3>
+
+        <p>
+          Informasi pembayaran Klien dan Partner
+        </p>
+
+      </div>
+
+
+      <button
+        type="button"
+        class="modal-close-button"
+        id="tutupPembayaranButton"
+        aria-label="Tutup"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <div class="payment-group">
+
+      <div class="payment-group-header">
+
+        <div class="payment-group-icon client">
+          K
+        </div>
+
+        <div>
+
+          <h4>
+            Pembayaran Klien
+          </h4>
+
+          <p>
+            Pembayaran yang diterima dari Klien
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="payment-stat-grid">
+
+        <div class="payment-stat-card paid">
+
+          <div class="payment-stat-label">
+            Dibayar Klien
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="dibayarKlien"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Sudah diterima
+          </div>
+
+        </div>
+
+
+        <div class="payment-stat-card unpaid">
+
+          <div class="payment-stat-label">
+            Belum Dibayar Klien
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="belumDibayarKlien"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Belum diterima
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="payment-group">
+
+      <div class="payment-group-header">
+
+        <div class="payment-group-icon partner">
+          P
+        </div>
+
+        <div>
+
+          <h4>
+            Pembayaran Partner
+          </h4>
+
+          <p>
+            Pembayaran yang dilakukan kepada Partner
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="payment-stat-grid">
+
+        <div class="payment-stat-card paid">
+
+          <div class="payment-stat-label">
+            Dibayar Partner
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="dibayarPartner"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Sudah dibayarkan
+          </div>
+
+        </div>
+
+
+        <div class="payment-stat-card unpaid">
+
+          <div class="payment-stat-label">
+            Belum Dibayar Partner
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="belumDibayarPartner"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Belum dibayarkan
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        id="tutupPembayaranButtonBawah"
+      >
+        Tutup
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL TIMELINE
+===================================================== -->
+
+<div
+  class="modal"
+  id="timelineModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h3 id="timelineModalTitle">
+        Tambah Timeline
+      </h3>
+
+    </div>
+
+
+    <form id="timelineForm">
+
+      <input
+        type="hidden"
+        id="timelineId"
+      >
+
+
+      <div class="form-group">
+
+        <label for="timelineDeskripsi">
+          Deskripsi
+        </label>
+
+        <textarea
+          id="timelineDeskripsi"
+          rows="4"
+          placeholder="Masukkan deskripsi Timeline"
+          required
+        ></textarea>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="timelineTanggalMulai">
+            Tanggal Mulai
+          </label>
+
+          <input
+            type="date"
+            id="timelineTanggalMulai"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="timelineTanggalAkhir">
+            Tanggal Akhir
+          </label>
+
+          <input
+            type="date"
+            id="timelineTanggalAkhir"
+            required
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="timelineDurasi">
+            Durasi
+          </label>
+
+          <input
+            type="text"
+            id="timelineDurasi"
+            value="-"
+            readonly
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="timelineBerakhirDalam">
+            Berakhir Dalam
+          </label>
+
+          <input
+            type="text"
+            id="timelineBerakhirDalam"
+            value="-"
+            readonly
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="timelineStatus">
+          Status
+        </label>
+
+        <select
+          id="timelineStatus"
+          required
+        >
+
+          <option value="Aktif">
+            Aktif
+          </option>
+
+          <option value="Berakhir">
+            Berakhir
+          </option>
+
+          <option value="Diperpanjang">
+            Diperpanjang
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalTimeline"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Timeline
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- AKHIR SELURUH MODAL                               -->
+<!-- ================================================= -->
+
+</div>
+
+
+<script src="/layout.js"></script>
+<script src="/sidebar.js"></script>
+<script src="/detail-proyek.js"></script>
+
+</body>
+
+</html>
 
 <div
   class="modal"

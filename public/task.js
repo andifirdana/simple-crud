@@ -410,7 +410,104 @@ adaDokumenInput.addEventListener(
   }
 );
 
+// ======================================================
+// ESCAPE HTML
+// ======================================================
 
+function escapeTaskHtml(
+  value
+) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+
+// ======================================================
+// NORMALISASI CATATAN
+// ======================================================
+
+function normalisasiCatatanTask(
+  value
+) {
+  return String(value ?? "")
+    .replace(
+      /\r\n?/g,
+      "\n"
+    )
+    .split("\n")
+    .map(
+      baris =>
+        baris.trim()
+    )
+    .join("\n")
+    .replace(
+      /\n{3,}/g,
+      "\n\n"
+    )
+    .trim();
+}
+
+// ======================================================
+// TAMPILKAN CATATAN MAKSIMAL 200 KARAKTER
+// ======================================================
+
+// ======================================================
+// CATATAN MAKSIMAL 200 KARAKTER
+// TANPA SPASI / ENTER DI ATAS
+// ======================================================
+
+function renderCatatanTask(
+  value,
+  taskId
+) {
+  const catatan =
+    normalisasiCatatanTask(
+      value
+    );
+
+  if (!catatan) {
+    return `
+      <span class="task-note-empty">-</span>
+    `;
+  }
+
+  const karakter =
+    Array.from(catatan);
+
+  if (
+    karakter.length <= 100
+  ) {
+    return `
+      <div class="task-note-text">${escapeTaskHtml(catatan)}</div>
+    `;
+  }
+
+  const catatanPendek =
+    karakter
+      .slice(0, 100)
+      .join("")
+      .trim();
+
+  return `
+    <div
+      class="task-note-wrapper"
+      data-task-note="${escapeTaskHtml(taskId)}"
+    >
+      <div class="task-note-text" data-task-note-short>${escapeTaskHtml(catatanPendek)}...</div>
+      <div class="task-note-text" data-task-note-full hidden>${escapeTaskHtml(catatan)}</div>
+      <button
+        type="button"
+        class="task-note-toggle"
+        data-toggle-task-note
+        aria-expanded="false"
+      >Lihat selengkapnya</button>
+    </div>
+  `;
+}
 // ======================================================
 // RENDER TASK
 // ======================================================
@@ -457,7 +554,11 @@ function renderTask() {
                 "-"
               );
 
-
+        const catatanHtml =
+        renderCatatanTask(
+          item.catatan,
+          item.id
+        );
           return `
             <tr>
 
@@ -486,10 +587,7 @@ function renderTask() {
 
 
               <td class="catatan-cell">
-                ${
-                  item.catatan ||
-                  "-"
-                }
+                ${catatanHtml}
               </td>
 
 
@@ -698,7 +796,86 @@ function renderTask() {
 
 }
 
+// ======================================================
+// EXPAND / TUTUP CATATAN TASK
+// ======================================================
 
+document.addEventListener(
+  "click",
+  event => {
+
+    const button =
+      event.target.closest(
+        "[data-toggle-task-note]"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const wrapper =
+      button.closest(
+        "[data-task-note]"
+      );
+
+    if (!wrapper) {
+      return;
+    }
+
+    const catatanPendek =
+      wrapper.querySelector(
+        "[data-task-note-short]"
+      );
+
+    const catatanLengkap =
+      wrapper.querySelector(
+        "[data-task-note-full]"
+      );
+
+    if (
+      !catatanPendek ||
+      !catatanLengkap
+    ) {
+      return;
+    }
+
+    const sedangTerbuka =
+      button.getAttribute(
+        "aria-expanded"
+      ) === "true";
+
+    if (sedangTerbuka) {
+      catatanPendek.hidden =
+        false;
+
+      catatanLengkap.hidden =
+        true;
+
+      button.textContent =
+        "Lihat selengkapnya";
+
+      button.setAttribute(
+        "aria-expanded",
+        "false"
+      );
+
+    } else {
+      catatanPendek.hidden =
+        true;
+
+      catatanLengkap.hidden =
+        false;
+
+      button.textContent =
+        "Tutup catatan";
+
+      button.setAttribute(
+        "aria-expanded",
+        "true"
+      );
+    }
+  }
+);
 
 // ======================================================
 // UPDATE STATUS LANGSUNG DARI TABLE

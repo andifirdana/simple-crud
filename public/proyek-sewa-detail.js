@@ -744,7 +744,12 @@ function renderDetail(result) {
       ? result.pembayaran
       : [];
 
-
+    const dokumen =
+      Array.isArray(
+        result?.dokumen
+      )
+        ? result.dokumen
+        : [];
   // =================================================
   // HEADER
   // =================================================
@@ -916,6 +921,28 @@ function renderDetail(result) {
     pembayaran,
     totalProyek
   );
+
+  renderInformasiPartnerSewa(
+  result?.partner || {}
+);
+
+renderPembayaranPartnerSewa(
+  Array.isArray(
+    result?.pembayaran_partner
+  )
+    ? result.pembayaran_partner
+    : [],
+
+  result?.partner || {}
+);
+
+renderDokumenSewa(
+  Array.isArray(
+    result?.dokumen
+  )
+    ? result.dokumen
+    : []
+);
 
 }
 
@@ -4602,6 +4629,1521 @@ function buatSummaryProyek(
 
 }
 
+// =====================================================
+// INFORMASI PARTNER SEWA
+// =====================================================
+
+function renderInformasiPartnerSewa(
+  partner = {}
+) {
+  setText(
+    "detailPartnerSewa",
+    partner.nama_partner ||
+    "Belum memilih partner"
+  );
+
+  setText(
+    "detailNilaiPartnerSewa",
+    rupiah(
+      partner.nilai_final_partner ||
+      0
+    )
+  );
+
+  setText(
+    "modalPartnerPaymentName",
+    partner.nama_partner ||
+    "Belum memilih partner"
+  );
+
+  const button =
+    document.getElementById(
+      "btnEditPembayaranPartner"
+    );
+
+  if (button) {
+    button.disabled =
+      !Number(
+        partner.proyek_partner_id
+      );
+  }
+}
+
+
+// =====================================================
+// RENDER PEMBAYARAN PARTNER
+// =====================================================
+
+function renderPembayaranPartnerSewa(
+  pembayaran = [],
+  partner = {}
+) {
+  const tbody =
+    document.getElementById(
+      "partnerPaymentBody"
+    );
+
+  if (!tbody) {
+    return;
+  }
+
+  const data =
+    Array.isArray(pembayaran)
+      ? pembayaran
+      : [];
+
+  const totalPartner =
+    angka(
+      partner.nilai_final_partner
+    );
+
+  const totalDibayar =
+    data
+      .filter(
+        item =>
+          normalisasiStatusPembayaranSewa(
+            item.status_pembayaran
+          ) ===
+          "Sudah Dibayar"
+      )
+      .reduce(
+        (total, item) =>
+          total +
+          angka(item.nominal),
+        0
+      );
+
+  if (data.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td
+          colspan="6"
+          class="message"
+        >
+          Belum ada pembayaran partner.
+        </td>
+      </tr>
+    `;
+
+  } else {
+    tbody.innerHTML =
+      data
+        .map((item, index) => {
+          const status =
+            normalisasiStatusPembayaranSewa(
+              item.status_pembayaran
+            );
+
+          const statusClass =
+            status === "Sudah Dibayar"
+              ? "payment-status-paid"
+              : status === "Proses"
+                ? "payment-status-process"
+                : "payment-status-unpaid";
+
+          return `
+            <tr>
+              <td>${index + 1}</td>
+
+              <td>
+                ${escapeHtml(
+                  item.deskripsi || "-"
+                )}
+              </td>
+
+              <td class="currency">
+                ${rupiah(item.nominal)}
+              </td>
+
+              <td>
+                <span
+                  class="
+                    payment-status
+                    ${statusClass}
+                  "
+                >
+                  ${escapeHtml(status)}
+                </span>
+              </td>
+
+              <td>
+                ${
+                  item.tanggal_bayar
+                    ? formatTanggal(
+                        item.tanggal_bayar
+                      )
+                    : "-"
+                }
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  item.syarat_pembayaran ||
+                  "-"
+                )}
+              </td>
+            </tr>
+          `;
+        })
+        .join("");
+  }
+
+  setText(
+    "partnerPaymentTotal",
+    rupiah(totalPartner)
+  );
+
+  setText(
+    "partnerPaymentDibayar",
+    rupiah(totalDibayar)
+  );
+
+  setText(
+    "partnerPaymentSisa",
+    rupiah(
+      Math.max(
+        0,
+        totalPartner -
+        totalDibayar
+      )
+    )
+  );
+}
+
+
+// =====================================================
+// FORM BARIS PEMBAYARAN PARTNER
+// =====================================================
+
+function buatPembayaranPartnerHtml(
+  item = {}
+) {
+  const status =
+    normalisasiStatusPembayaranSewa(
+      item.status_pembayaran
+    );
+
+  return `
+    <div class="edit-payment-row partner-payment-row">
+
+      <div class="modal-form-group">
+        <label>
+          Deskripsi
+          <span class="required">*</span>
+        </label>
+
+        <input
+          type="text"
+          class="
+            modal-form-control
+            partnerPaymentDeskripsi
+          "
+          value="${escapeHtml(
+            item.deskripsi || ""
+          )}"
+          placeholder="Contoh: Pembayaran Partner Januari"
+          required
+        >
+      </div>
+
+      <div class="modal-form-group">
+        <label>
+          Nominal
+          <span class="required">*</span>
+        </label>
+
+        <input
+          type="number"
+          min="0"
+          step="1"
+          class="
+            modal-form-control
+            partnerPaymentNominal
+          "
+          value="${angka(
+            item.nominal
+          )}"
+          required
+        >
+      </div>
+
+      <div class="modal-form-group">
+        <label>Status Pembayaran</label>
+
+        <select
+          class="
+            modal-form-control
+            partnerPaymentStatus
+          "
+          required
+        >
+          <option
+            value="Belum Dibayar"
+            ${
+              status === "Belum Dibayar"
+                ? "selected"
+                : ""
+            }
+          >
+            Belum Dibayar
+          </option>
+
+          <option
+            value="Proses"
+            ${
+              status === "Proses"
+                ? "selected"
+                : ""
+            }
+          >
+            Proses
+          </option>
+
+          <option
+            value="Sudah Dibayar"
+            ${
+              status === "Sudah Dibayar"
+                ? "selected"
+                : ""
+            }
+          >
+            Sudah Dibayar
+          </option>
+        </select>
+      </div>
+
+      <div class="modal-form-group">
+        <label>Tanggal Bayar</label>
+
+        <input
+          type="date"
+          class="
+            modal-form-control
+            partnerPaymentTanggal
+          "
+          value="${tanggalInput(
+            item.tanggal_bayar
+          )}"
+          ${
+            status === "Sudah Dibayar"
+              ? "required"
+              : ""
+          }
+        >
+      </div>
+
+      <div class="modal-form-group">
+        <label>Syarat Pembayaran</label>
+
+        <textarea
+          class="
+            modal-form-control
+            partnerPaymentSyarat
+          "
+          rows="2"
+        >${escapeHtml(
+          item.syarat_pembayaran || ""
+        )}</textarea>
+      </div>
+
+      <div class="modal-form-group">
+        <label>&nbsp;</label>
+
+        <button
+          type="button"
+          class="
+            btn
+            btn-danger
+            btnHapusPartnerPayment
+          "
+        >
+          Hapus
+        </button>
+      </div>
+
+    </div>
+  `;
+}
+
+
+// =====================================================
+// BUKA PEMBAYARAN PARTNER
+// =====================================================
+
+document
+  .getElementById(
+    "btnEditPembayaranPartner"
+  )
+  ?.addEventListener(
+    "click",
+    () => {
+      const container =
+        document.getElementById(
+          "partnerPaymentEditContainer"
+        );
+
+      const pembayaran =
+        Array.isArray(
+          detailProyekSewa
+            ?.pembayaran_partner
+        )
+          ? detailProyekSewa
+              .pembayaran_partner
+          : [];
+
+      container.innerHTML =
+        pembayaran.length > 0
+          ? pembayaran
+              .map(
+                buatPembayaranPartnerHtml
+              )
+              .join("")
+          : `
+            <div class="message">
+              Belum ada pembayaran partner.
+            </div>
+          `;
+
+      bukaModal(
+        "modalPembayaranPartner"
+      );
+    }
+  );
+
+
+// =====================================================
+// TAMBAH BARIS PEMBAYARAN PARTNER
+// =====================================================
+
+document
+  .getElementById(
+    "btnTambahPembayaranPartner"
+  )
+  ?.addEventListener(
+    "click",
+    () => {
+      const container =
+        document.getElementById(
+          "partnerPaymentEditContainer"
+        );
+
+      container
+        ?.querySelector(".message")
+        ?.remove();
+
+      container?.insertAdjacentHTML(
+        "beforeend",
+
+        buatPembayaranPartnerHtml({
+          status_pembayaran:
+            "Belum Dibayar"
+        })
+      );
+    }
+  );
+
+
+document
+  .getElementById(
+    "partnerPaymentEditContainer"
+  )
+  ?.addEventListener(
+    "click",
+    event => {
+      const button =
+        event.target.closest(
+          ".btnHapusPartnerPayment"
+        );
+
+      if (!button) {
+        return;
+      }
+
+      button
+        .closest(
+          ".partner-payment-row"
+        )
+        ?.remove();
+    }
+  );
+
+
+document
+  .getElementById(
+    "partnerPaymentEditContainer"
+  )
+  ?.addEventListener(
+    "change",
+    event => {
+      if (
+        !event.target.classList
+          .contains(
+            "partnerPaymentStatus"
+          )
+      ) {
+        return;
+      }
+
+      const row =
+        event.target.closest(
+          ".partner-payment-row"
+        );
+
+      const tanggal =
+        row?.querySelector(
+          ".partnerPaymentTanggal"
+        );
+
+      if (!tanggal) {
+        return;
+      }
+
+      tanggal.required =
+        event.target.value ===
+        "Sudah Dibayar";
+
+      if (
+        event.target.value !==
+        "Sudah Dibayar"
+      ) {
+        tanggal.value = "";
+      }
+    }
+  );
+
+
+// =====================================================
+// SIMPAN PEMBAYARAN PARTNER
+// =====================================================
+
+document
+  .getElementById(
+    "formPembayaranPartner"
+  )
+  ?.addEventListener(
+    "submit",
+    async event => {
+      event.preventDefault();
+
+      const rows = [
+        ...document
+          .querySelectorAll(
+            "#partnerPaymentEditContainer .partner-payment-row"
+          )
+      ];
+
+      const pembayaran =
+        rows.map(row => ({
+          deskripsi:
+            row
+              .querySelector(
+                ".partnerPaymentDeskripsi"
+              )
+              ?.value
+              ?.trim() || "",
+
+          nominal:
+            angka(
+              row
+                .querySelector(
+                  ".partnerPaymentNominal"
+                )
+                ?.value
+            ),
+
+          status_pembayaran:
+            row
+              .querySelector(
+                ".partnerPaymentStatus"
+              )
+              ?.value ||
+            "Belum Dibayar",
+
+          tanggal_bayar:
+            row
+              .querySelector(
+                ".partnerPaymentTanggal"
+              )
+              ?.value ||
+            null,
+
+          syarat_pembayaran:
+            row
+              .querySelector(
+                ".partnerPaymentSyarat"
+              )
+              ?.value
+              ?.trim() ||
+            null
+        }));
+
+      const button =
+        document.getElementById(
+          "btnSimpanPembayaranPartner"
+        );
+
+      try {
+        button.disabled = true;
+
+        button.textContent =
+          "Menyimpan...";
+
+        await fetchJSON(
+          `/api/proyek-sewa/${encodeURIComponent(
+            proyekSewaId
+          )}/pembayaran-partner`,
+          {
+            method: "PUT",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+                pembayaran
+              })
+          }
+        );
+
+        tutupModal(
+          "modalPembayaranPartner"
+        );
+
+        await loadDetail();
+
+      } catch (error) {
+        alert(error.message);
+
+      } finally {
+        button.disabled = false;
+
+        button.textContent =
+          "Simpan Pembayaran Partner";
+      }
+    }
+  );
+
+// =====================================================
+// DOKUMEN PROYEK SEWA
+// =====================================================
+
+let dokumenSewaEditId = null;
+
+
+// =====================================================
+// FORMAT UKURAN FILE
+// =====================================================
+
+function formatUkuranFile(
+  value
+) {
+  const ukuran =
+    Number(value || 0);
+
+  if (
+    !Number.isFinite(ukuran) ||
+    ukuran <= 0
+  ) {
+    return "";
+  }
+
+  if (ukuran < 1024) {
+    return `${ukuran} B`;
+  }
+
+  if (
+    ukuran <
+    1024 * 1024
+  ) {
+    return `${
+      (
+        ukuran / 1024
+      ).toFixed(1)
+    } KB`;
+  }
+
+  return `${
+    (
+      ukuran /
+      1024 /
+      1024
+    ).toFixed(1)
+  } MB`;
+}
+
+
+// =====================================================
+// LOAD MASTER DOKUMEN
+// =====================================================
+
+async function loadMasterDokumenSewa(
+  selectedValue = ""
+) {
+  const select =
+    document.getElementById(
+      "namaDokumenSewa"
+    );
+
+  if (!select) {
+    return;
+  }
+
+  select.disabled = true;
+
+  select.innerHTML = `
+    <option value="">
+      Memuat dokumen...
+    </option>
+  `;
+
+  try {
+    const result =
+      await fetchJSON(
+        "/api/master-dokumen"
+      );
+
+    const data =
+      Array.isArray(result)
+        ? result
+        : Array.isArray(
+            result?.data
+          )
+          ? result.data
+          : [];
+
+    select.innerHTML = `
+      <option value="">
+        Pilih Dokumen
+      </option>
+    `;
+
+    data.forEach(item => {
+      const kode =
+        String(
+          item.kode_dokumen ||
+          item.kode ||
+          item.name ||
+          item.nama_dokumen ||
+          ""
+        ).trim();
+
+      const deskripsi =
+        String(
+          item.deskripsi ||
+          item.nama_dokumen ||
+          item.nama ||
+          ""
+        ).trim();
+
+      const value =
+        kode || deskripsi;
+
+      if (!value) {
+        return;
+      }
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+      option.value =
+        value;
+
+      option.textContent =
+        kode && deskripsi
+          ? `${kode} - ${deskripsi}`
+          : value;
+
+      select.appendChild(
+        option
+      );
+    });
+
+    // ==============================================
+    // PILIH DATA LAMA SAAT EDIT
+    // ==============================================
+
+    if (selectedValue) {
+      const nilaiLama =
+        String(selectedValue)
+          .trim()
+          .toLowerCase();
+
+      const optionCocok =
+        Array.from(
+          select.options
+        ).find(option => {
+          const value =
+            String(
+              option.value || ""
+            )
+              .trim()
+              .toLowerCase();
+
+          const text =
+            String(
+              option.textContent || ""
+            )
+              .trim()
+              .toLowerCase();
+
+          return (
+            value === nilaiLama ||
+            text === nilaiLama ||
+            text.startsWith(
+              `${nilaiLama} -`
+            )
+          );
+        });
+
+      if (optionCocok) {
+        select.value =
+          optionCocok.value;
+
+      } else {
+        /*
+         * Jika data lama sudah tidak ada
+         * di master, tetap munculkan supaya
+         * dokumen masih dapat diedit.
+         */
+
+        const optionLama =
+          document.createElement(
+            "option"
+          );
+
+        optionLama.value =
+          selectedValue;
+
+        optionLama.textContent =
+          `${selectedValue} (data lama)`;
+
+        select.appendChild(
+          optionLama
+        );
+
+        select.value =
+          selectedValue;
+      }
+    }
+
+  } catch (error) {
+    console.error(
+      "ERROR LOAD MASTER DOKUMEN SEWA:",
+      error
+    );
+
+    select.innerHTML = `
+      <option value="">
+        Gagal memuat dokumen
+      </option>
+    `;
+
+    throw error;
+
+  } finally {
+    select.disabled = false;
+  }
+}
+
+
+// =====================================================
+// RENDER DOKUMEN
+// =====================================================
+
+function renderDokumenSewa(
+  dokumen = []
+) {
+  const tbody =
+    document.getElementById(
+      "dokumenSewaBody"
+    );
+
+  if (!tbody) {
+    return;
+  }
+
+  const daftar =
+    Array.isArray(dokumen)
+      ? dokumen
+      : [];
+
+  if (daftar.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td
+          colspan="5"
+          class="message"
+        >
+          Belum ada dokumen proyek sewa.
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  tbody.innerHTML =
+    daftar
+      .map(
+        (
+          item,
+          index
+        ) => {
+          const id =
+            Number(item.id);
+
+          const memilikiFile =
+            Boolean(
+              String(
+                item.path_file ||
+                item.nama_file_simpan ||
+                ""
+              ).trim()
+            );
+
+          const ukuran =
+            formatUkuranFile(
+              item.ukuran_file
+            );
+
+          const urlFile =
+            `/api/proyek-sewa/dokumen/` +
+            `${encodeURIComponent(id)}/file`;
+
+          return `
+            <tr>
+
+              <td>
+                ${index + 1}
+              </td>
+
+              <td>
+                <strong class="document-name">
+                  ${escapeHtml(
+                    item.nama_dokumen ||
+                    "-"
+                  )}
+                </strong>
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  item.nomor_dokumen ||
+                  "-"
+                )}
+              </td>
+
+              <td>
+                ${
+                  memilikiFile
+                    ? `
+                      <div class="document-file-info">
+
+                        <span class="document-file-name">
+                          ${escapeHtml(
+                            item.nama_file_asli ||
+                            item.nama_file_simpan ||
+                            "Dokumen"
+                          )}
+                        </span>
+
+                        ${
+                          ukuran
+                            ? `
+                              <small>
+                                ${escapeHtml(
+                                  ukuran
+                                )}
+                              </small>
+                            `
+                            : ""
+                        }
+
+                      </div>
+                    `
+                    : `
+                      <span class="document-no-file">
+                        Belum ada file
+                      </span>
+                    `
+                }
+              </td>
+
+              <td>
+                <div class="document-actions">
+
+                  ${
+                    memilikiFile
+                      ? `
+                        <a
+                          href="${urlFile}"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="
+                            document-action-btn
+                            document-action-view
+                          "
+                        >
+                          Lihat
+                        </a>
+
+                        <a
+                          href="${urlFile}?download=1"
+                          class="
+                            document-action-btn
+                            document-action-download
+                          "
+                        >
+                          Unduh
+                        </a>
+                      `
+                      : ""
+                  }
+
+                  <button
+                    type="button"
+                    class="
+                      document-action-btn
+                      document-action-edit
+                    "
+                    data-edit-dokumen-sewa="${id}"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    class="
+                      document-action-btn
+                      document-action-delete
+                    "
+                    data-delete-dokumen-sewa="${id}"
+                  >
+                    Hapus
+                  </button>
+
+                </div>
+              </td>
+
+            </tr>
+          `;
+        }
+      )
+      .join("");
+}
+
+
+// =====================================================
+// BUKA MODAL TAMBAH DOKUMEN
+// =====================================================
+
+async function bukaTambahDokumenSewa() {
+  try {
+    dokumenSewaEditId =
+      null;
+
+    const form =
+      document.getElementById(
+        "formDokumenSewa"
+      );
+
+    form?.reset();
+
+    setText(
+      "judulModalDokumenSewa",
+      "Tambah Dokumen"
+    );
+
+    const fileLama =
+      document.getElementById(
+        "fileDokumenSewaLama"
+      );
+
+    if (fileLama) {
+      fileLama.innerHTML = "";
+    }
+
+    const fileInput =
+      document.getElementById(
+        "fileDokumenSewa"
+      );
+
+    if (fileInput) {
+      fileInput.value = "";
+      fileInput.required = false;
+    }
+
+    await loadMasterDokumenSewa();
+
+    bukaModal(
+      "modalDokumenSewa"
+    );
+
+  } catch (error) {
+    console.error(
+      "ERROR BUKA TAMBAH DOKUMEN:",
+      error
+    );
+
+    alert(
+      error.message
+    );
+  }
+}
+
+
+// =====================================================
+// BUKA MODAL EDIT DOKUMEN
+// =====================================================
+
+async function bukaEditDokumenSewa(
+  id
+) {
+  try {
+    const dokumenId =
+      Number(id);
+
+    const daftarDokumen =
+      Array.isArray(
+        detailProyekSewa?.dokumen
+      )
+        ? detailProyekSewa.dokumen
+        : [];
+
+    const dokumen =
+      daftarDokumen.find(
+        item =>
+          Number(item.id) ===
+          dokumenId
+      );
+
+    if (!dokumen) {
+      throw new Error(
+        "Data dokumen tidak ditemukan."
+      );
+    }
+
+    dokumenSewaEditId =
+      dokumenId;
+
+    const form =
+      document.getElementById(
+        "formDokumenSewa"
+      );
+
+    form?.reset();
+
+    setText(
+      "judulModalDokumenSewa",
+      "Edit Dokumen"
+    );
+
+    // Master harus selesai dimuat
+    // sebelum menentukan pilihan lama.
+    await loadMasterDokumenSewa(
+      dokumen.nama_dokumen || ""
+    );
+
+    const nomorInput =
+      document.getElementById(
+        "nomorDokumenSewa"
+      );
+
+    if (nomorInput) {
+      nomorInput.value =
+        dokumen.nomor_dokumen ||
+        "";
+    }
+
+    const fileInput =
+      document.getElementById(
+        "fileDokumenSewa"
+      );
+
+    if (fileInput) {
+      fileInput.value = "";
+      fileInput.required = false;
+    }
+
+    const fileLama =
+      document.getElementById(
+        "fileDokumenSewaLama"
+      );
+
+    if (fileLama) {
+      const memilikiFile =
+        Boolean(
+          dokumen.path_file ||
+          dokumen.nama_file_simpan
+        );
+
+      if (memilikiFile) {
+        const urlFile =
+          `/api/proyek-sewa/dokumen/` +
+          `${encodeURIComponent(
+            dokumenId
+          )}/file`;
+
+        fileLama.innerHTML = `
+          <div
+            style="
+              margin-top: 10px;
+              padding: 12px 14px;
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 9px;
+            "
+          >
+            <div
+              style="
+                margin-bottom: 5px;
+                color: #64748b;
+                font-size: 11px;
+              "
+            >
+              File saat ini
+            </div>
+
+            <strong>
+              ${escapeHtml(
+                dokumen.nama_file_asli ||
+                dokumen.nama_file_simpan ||
+                "Dokumen"
+              )}
+            </strong>
+
+            <a
+              href="${urlFile}"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="
+                margin-left: 8px;
+                color: #4f46e5;
+                font-weight: 700;
+                text-decoration: none;
+              "
+            >
+              Lihat
+            </a>
+
+            <div
+              style="
+                margin-top: 7px;
+                color: #94a3b8;
+                font-size: 11px;
+              "
+            >
+              Kosongkan upload file jika tidak
+              ingin mengganti file lama.
+            </div>
+          </div>
+        `;
+
+      } else {
+        fileLama.innerHTML = `
+          <div
+            style="
+              margin-top: 10px;
+              color: #94a3b8;
+              font-size: 11px;
+            "
+          >
+            Dokumen ini belum memiliki file.
+          </div>
+        `;
+      }
+    }
+
+    bukaModal(
+      "modalDokumenSewa"
+    );
+
+  } catch (error) {
+    console.error(
+      "ERROR EDIT DOKUMEN SEWA:",
+      error
+    );
+
+    alert(
+      error.message
+    );
+  }
+}
+
+
+// =====================================================
+// HAPUS DOKUMEN
+// =====================================================
+
+async function hapusDokumenSewa(
+  id
+) {
+  const dokumenId =
+    Number(id);
+
+  if (
+    !Number.isInteger(dokumenId) ||
+    dokumenId <= 0
+  ) {
+    alert(
+      "ID dokumen tidak valid."
+    );
+
+    return;
+  }
+
+  const konfirmasi =
+    confirm(
+      "Hapus dokumen proyek sewa ini?"
+    );
+
+  if (!konfirmasi) {
+    return;
+  }
+
+  try {
+    await fetchJSON(
+      `/api/proyek-sewa/dokumen/${encodeURIComponent(
+        dokumenId
+      )}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    await loadDetail();
+
+  } catch (error) {
+    console.error(
+      "ERROR HAPUS DOKUMEN SEWA:",
+      error
+    );
+
+    alert(
+      error.message
+    );
+  }
+}
+
+
+// =====================================================
+// EVENT TOMBOL DOKUMEN
+// EVENT DELEGATION UNTUK TOMBOL DINAMIS
+// =====================================================
+
+document.addEventListener(
+  "click",
+  async event => {
+
+    const tombolTambah =
+      event.target.closest(
+        "#btnTambahDokumenSewa"
+      );
+
+    if (tombolTambah) {
+      event.preventDefault();
+
+      await bukaTambahDokumenSewa();
+
+      return;
+    }
+
+    const tombolEdit =
+      event.target.closest(
+        "[data-edit-dokumen-sewa]"
+      );
+
+    if (tombolEdit) {
+      event.preventDefault();
+
+      const id =
+        tombolEdit.getAttribute(
+          "data-edit-dokumen-sewa"
+        );
+
+      await bukaEditDokumenSewa(
+        id
+      );
+
+      return;
+    }
+
+    const tombolHapus =
+      event.target.closest(
+        "[data-delete-dokumen-sewa]"
+      );
+
+    if (tombolHapus) {
+      event.preventDefault();
+
+      const id =
+        tombolHapus.getAttribute(
+          "data-delete-dokumen-sewa"
+        );
+
+      await hapusDokumenSewa(
+        id
+      );
+    }
+  }
+);
+
+
+// =====================================================
+// SUBMIT TAMBAH / EDIT DOKUMEN
+// =====================================================
+
+const formDokumenSewa =
+  document.getElementById(
+    "formDokumenSewa"
+  );
+
+formDokumenSewa?.addEventListener(
+  "submit",
+  async event => {
+    event.preventDefault();
+
+    const namaDokumen =
+      String(
+        document.getElementById(
+          "namaDokumenSewa"
+        )?.value || ""
+      ).trim();
+
+    const nomorDokumen =
+      String(
+        document.getElementById(
+          "nomorDokumenSewa"
+        )?.value || ""
+      ).trim();
+
+    const fileInput =
+      document.getElementById(
+        "fileDokumenSewa"
+      );
+
+    if (!namaDokumen) {
+      alert(
+        "Pilih dokumen terlebih dahulu."
+      );
+
+      return;
+    }
+
+    const formData =
+      new FormData();
+
+    formData.append(
+      "nama_dokumen",
+      namaDokumen
+    );
+
+    formData.append(
+      "nomor_dokumen",
+      nomorDokumen
+    );
+
+    if (
+      fileInput?.files?.[0]
+    ) {
+      formData.append(
+        "file_dokumen",
+        fileInput.files[0]
+      );
+    }
+
+    const sedangEdit =
+      Number.isInteger(
+        dokumenSewaEditId
+      ) &&
+      dokumenSewaEditId > 0;
+
+    const url =
+      sedangEdit
+        ? `/api/proyek-sewa/dokumen/${encodeURIComponent(
+            dokumenSewaEditId
+          )}`
+        : `/api/proyek-sewa/${encodeURIComponent(
+            proyekSewaId
+          )}/dokumen`;
+
+    const method =
+      sedangEdit
+        ? "PUT"
+        : "POST";
+
+    const button =
+      document.getElementById(
+        "btnSimpanDokumenSewa"
+      );
+
+    const textAwal =
+      button?.textContent ||
+      "Simpan Dokumen";
+
+    try {
+      if (button) {
+        button.disabled = true;
+
+        button.textContent =
+          sedangEdit
+            ? "Menyimpan Perubahan..."
+            : "Menyimpan Dokumen...";
+      }
+
+      const result =
+        await fetchJSON(
+          url,
+          {
+            method,
+            body: formData
+          }
+        );
+
+      alert(
+        result.message ||
+        (
+          sedangEdit
+            ? "Dokumen berhasil diperbarui."
+            : "Dokumen berhasil ditambahkan."
+        )
+      );
+
+      tutupModal(
+        "modalDokumenSewa"
+      );
+
+      dokumenSewaEditId =
+        null;
+
+      formDokumenSewa.reset();
+
+      await loadDetail();
+
+    } catch (error) {
+      console.error(
+        "ERROR SIMPAN DOKUMEN SEWA:",
+        error
+      );
+
+      alert(
+        error.message
+      );
+
+    } finally {
+      if (button) {
+        button.disabled = false;
+
+        button.textContent =
+          textAwal;
+      }
+    }
+  }
+);
 // =====================================================
 // INITIALIZE
 // =====================================================

@@ -325,6 +325,97 @@ app.post("/api/logout",
   }
 );
 
+
+// =====================================================
+// PIC PENGGUNA YANG SEDANG LOGIN
+// =====================================================
+
+app.get(
+  "/api/proyek/pic-saya",
+  async (req, res) => {
+    try {
+
+      if (!req.session?.user) {
+        return res.status(401).json({
+          error: "Belum login"
+        });
+      }
+
+      const user =
+        req.session.user;
+
+      /*
+       * Jika session sudah memiliki pic_id,
+       * gunakan pic_id.
+       *
+       * Jika tidak, gunakan user.id karena pada
+       * aplikasi ini user.id digunakan sebagai PIC ID.
+       */
+
+      const picId =
+        Number(
+          user.pic_id ||
+          user.id
+        );
+
+      if (
+        !Number.isInteger(picId) ||
+        picId <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "PIC pengguna login tidak valid"
+        });
+      }
+
+      const result =
+        await pool.query(
+          `
+          SELECT
+            id,
+            nama,
+            nik,
+            jabatan,
+            email,
+            no_hp
+
+          FROM public.pic
+
+          WHERE id = $1
+
+          LIMIT 1
+          `,
+          [picId]
+        );
+
+      /*
+       * Admin mungkin tidak terdaftar sebagai PIC.
+       * Karena itu response tetap 200 dengan pic null.
+       */
+
+      if (result.rowCount === 0) {
+        return res.json({
+          pic: null
+        });
+      }
+
+      return res.json({
+        pic:
+          result.rows[0]
+      });
+
+    } catch (error) {
+      console.error(
+        "ERROR GET PIC LOGIN:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+    }
+  }
+);
 // ======================================================
 // MIDDLEWARE LOGIN
 // ======================================================
@@ -347,6 +438,146 @@ function wajibLogin(
   next();
 }
 
+
+// =====================================================
+// TENTUKAN CAKUPAN AKSES TASK LIST
+//
+// KABAG / KADIV : LIHAT SEMUA
+// SELAIN ITU    : HANYA PROYEK MILIKNYA
+// =====================================================
+
+async function setTaskListAccess(
+  req,
+  res,
+  next
+) {
+  try {
+
+    // ================================================
+    // VALIDASI LOGIN
+    // ================================================
+
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
+    const user =
+      req.session.user;
+
+    const picId =
+      Number(
+        user.pic_id ||
+        user.id
+      );
+
+    if (
+      !Number.isInteger(picId) ||
+      picId <= 0
+    ) {
+      return res.status(403).json({
+        error:
+          "Data PIC pengguna tidak valid"
+      });
+    }
+
+    // ================================================
+    // AMBIL JABATAN DARI DATABASE
+    // ================================================
+
+    const picResult =
+      await pool.query(
+        `
+        SELECT
+          id,
+          nama,
+          jabatan
+
+        FROM public.pic
+
+        WHERE id = $1
+
+        LIMIT 1
+        `,
+        [picId]
+      );
+
+    if (
+      picResult.rowCount === 0
+    ) {
+      return res.status(403).json({
+        error:
+          "Data PIC pengguna tidak ditemukan"
+      });
+    }
+
+    const pic =
+      picResult.rows[0];
+
+    const jabatan =
+      String(
+        pic.jabatan || ""
+      )
+        .trim()
+        .toLowerCase()
+        .replace(
+          /\s+/g,
+          " "
+        );
+
+    // ================================================
+    // KABAG DAN KADIV DAPAT MELIHAT SEMUA
+    // ================================================
+
+    const dapatMelihatSemua =
+      jabatan === "kabag" ||
+      jabatan.startsWith(
+        "kabag "
+      ) ||
+      jabatan === "kadiv" ||
+      jabatan.startsWith(
+        "kadiv "
+      ) ||
+      jabatan ===
+        "kepala bagian" ||
+      jabatan.startsWith(
+        "kepala bagian "
+      ) ||
+      jabatan ===
+        "kepala divisi" ||
+      jabatan.startsWith(
+        "kepala divisi "
+      );
+
+    req.taskListAccess = {
+      pic_id:
+        Number(pic.id),
+
+      nama:
+        pic.nama,
+
+      jabatan:
+        pic.jabatan,
+
+      dapat_melihat_semua:
+        dapatMelihatSemua
+    };
+
+    next();
+
+  } catch (error) {
+    console.error(
+      "ERROR SET TASK LIST ACCESS:",
+      error
+    );
+
+    return res.status(500).json({
+      error:
+        "Gagal memeriksa hak akses Task List"
+    });
+  }
+}
 
 // ======================================================
 // CEK ROLE ADMIN
@@ -3008,1061 +3239,1741 @@ app.delete("/api/kategori-produk/:id",
   }
 );
 
+
 // ======================================================
-// TAMPILAN DASHBOARD
+// HELPER DASHBOARD
 // ======================================================
+
+function dashboardRequireLogin(
+  req,
+  res,
+  next
+) {
+  if (!req.session?.user) {
+    return res.status(401).json({
+      error: "Belum login"
+    });
+  }
+
+  next();
+}
+
+function dashboardGetContext(req) {
+  const tahunInput =
+    Number(req.query.tahun);
+
+  const tahunJakarta =
+    Number(
+      new Intl.DateTimeFormat(
+        "en-US",
+        {
+          timeZone: "Asia/Jakarta",
+          year: "numeric"
+        }
+      ).format(new Date())
+    );
+
+  const tahun =
+    Number.isInteger(tahunInput) &&
+    tahunInput >= 2020 &&
+    tahunInput <= 2100
+      ? tahunInput
+      : tahunJakarta;
+
+  const user =
+    req.session.user;
+
+  const role =
+    String(user.role || "")
+      .trim()
+      .toLowerCase();
+
+  const jabatan =
+    String(
+      user.jabatan ||
+      user.nama_jabatan ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const bolehLihatSemua =
+    role === "admin" ||
+    jabatan.includes("kabag") ||
+    jabatan.includes(
+      "kepala bagian"
+    ) ||
+    jabatan.includes("kadiv") ||
+    jabatan.includes(
+      "kepala divisi"
+    );
+
+  const picIdInput =
+    Number(user.id);
+
+  const picId =
+    Number.isInteger(picIdInput) &&
+    picIdInput > 0
+      ? picIdInput
+      : 0;
+
+  return {
+    tahun,
+    bolehLihatSemua,
+    picId
+  };
+}
+
+function dashboardAngka(value) {
+  const hasil =
+    Number(value);
+
+  return Number.isFinite(hasil)
+    ? hasil
+    : 0;
+}
+
+
 // ======================================================
-// DASHBOARD UTAMA
+// 1. DASHBOARD PROJECT
 // ======================================================
 
 app.get(
-  "/api/dashboard",
+  "/api/dashboard/project",
+
+  dashboardRequireLogin,
+
   async (req, res) => {
     try {
-      // ================================================
-      // LOGIN
-      // ================================================
+      // ==================================================
+      // KONTEKS LOGIN
+      // ==================================================
 
-      if (
-        !req.session ||
-        !req.session.user
-      ) {
-        return res.status(401).json({
-          error:
-            "Belum login"
-        });
+      const context =
+        dashboardGetContext(req);
+
+      const bolehLihatSemua =
+        context.bolehLihatSemua;
+
+      const picLoginId =
+        context.picId;
+
+      // ==================================================
+      // TAHUN LAPORAN
+      // ==================================================
+
+      const tahunBerjalan =
+        Number(
+          new Intl.DateTimeFormat(
+            "en-US",
+            {
+              timeZone: "Asia/Jakarta",
+              year: "numeric"
+            }
+          ).format(new Date())
+        );
+
+      const tahunInput =
+        Number(req.query.tahun);
+
+      const tahun =
+        Number.isInteger(tahunInput) &&
+        tahunInput >= 2020 &&
+        tahunInput <= 2100
+          ? tahunInput
+          : tahunBerjalan;
+
+      // ==================================================
+      // FILTER JENIS PROYEK
+      // ==================================================
+
+      const jenisProyek =
+        String(
+          req.query.jenis_proyek || ""
+        ).trim();
+
+      // ==================================================
+      // FILTER PIC
+      // ==================================================
+
+      const picFilterRaw =
+        String(
+          req.query.pic_id || ""
+        ).trim();
+
+      let picFilterId = null;
+
+      if (picFilterRaw) {
+        const parsedPicId =
+          Number(picFilterRaw);
+
+        if (
+          !Number.isInteger(parsedPicId) ||
+          parsedPicId <= 0
+        ) {
+          return res.status(400).json({
+            error:
+              "Filter PIC tidak valid"
+          });
+        }
+
+        picFilterId =
+          parsedPicId;
       }
 
-      const user =
-        req.session.user;
+      // ==================================================
+      // QUERY PROJECT OVERVIEW
+      // ==================================================
 
-      const isAdmin =
-        String(
-          user.role || ""
-        )
-          .trim()
-          .toLowerCase() ===
-        "admin";
-
-      const picId =
-        Number(user.id);
-
-
-      // ================================================
-      // PROJECTS
-      // ================================================
-
-      const proyekResult =
+      const result =
         await pool.query(
           `
-          SELECT
-            p.id AS proyek_id,
-            p.nama_proyek,
-            p.deskripsi,
-            p.jenis_proyek,
-            p.sub_jenis_proyek,
-            p.status_final,
-            p.created_at,
-            p.updated_at,
-
-            kategori.kategori,
-            kategori.kategori_list,
-
-            klien.proyek_klien_id,
-            klien.klien_id,
-            klien.nama_klien,
-            klien.tanggal_mulai,
-            klien.tanggal_akhir,
-            klien.status_pengadaan,
-            klien.status_teknis,
-            klien.model_pembayaran,
-            klien.nilai_klien,
-
-            COALESCE(
-              partner.nilai_partner,
-              0
-            ) AS nilai_partner,
-
-            COALESCE(
-              partner.nama_partner,
-              ''
-            ) AS nama_partner,
-
-            COALESCE(
-              pic.nama_pic,
-              ''
-            ) AS nama_pic,
-
-            COALESCE(
-              pic.nama_pic_list,
-              ARRAY[]::TEXT[]
-            ) AS nama_pic_list,
-
-            COALESCE(
-              pic.pic_ids,
-              ARRAY[]::INTEGER[]
-            ) AS pic_ids
-
-          FROM public.proyek p
-
-
-          -- ============================================
-          -- KATEGORI
-          -- ============================================
-
-          LEFT JOIN LATERAL (
+          WITH periode AS (
             SELECT
-              MIN(
-                kp.nama_kategori_produk
-              ) AS kategori,
+              MAKE_DATE(
+                $1::INTEGER,
+                1,
+                1
+              ) AS awal_tahun,
 
-              ARRAY_AGG(
-                DISTINCT
-                kp.nama_kategori_produk
-                ORDER BY
-                kp.nama_kategori_produk
-              ) AS kategori_list
+              MAKE_DATE(
+                $1::INTEGER + 1,
+                1,
+                1
+              ) AS akhir_tahun
+          ),
 
-            FROM public.proyek_kategori pkategori
-
-            INNER JOIN public.kategori_produk kp
-              ON kp.id =
-                pkategori.kategori_produk_id
-
-            WHERE
-              pkategori.proyek_id =
-                p.id
-          ) kategori
-            ON TRUE
-
-
-          -- ============================================
-          -- KLIEN TERBARU
-          -- ============================================
-
-          LEFT JOIN LATERAL (
+          proyek_base AS (
             SELECT
-              pk.id AS proyek_klien_id,
-              pk.klien_id,
-              d.perusahaan_klien
-                AS nama_klien,
+              p.id,
+              p.nama_proyek,
+              p.jenis_proyek,
+              p.created_at,
+
+              LOWER(
+                BTRIM(
+                  COALESCE(
+                    p.status_final,
+                    ''
+                  )
+                )
+              ) AS status_final,
+
+              LOWER(
+                BTRIM(
+                  REGEXP_REPLACE(
+                    COALESCE(
+                      pk.status_pengadaan,
+                      ''
+                    ),
+                    '\\s+',
+                    ' ',
+                    'g'
+                  )
+                )
+              ) AS status_pengadaan,
+
+              LOWER(
+                BTRIM(
+                  REGEXP_REPLACE(
+                    COALESCE(
+                      pk.status_teknis,
+                      ''
+                    ),
+                    '\\s+',
+                    ' ',
+                    'g'
+                  )
+                )
+              ) AS status_teknis,
 
               pk.tanggal_mulai,
               pk.tanggal_akhir,
-              pk.status_pengadaan,
-              pk.status_teknis,
-              pk.model_pembayaran,
 
-              CASE
-                WHEN
-                  COALESCE(
-                    NULLIF(
-                      pk.nilai_nego_3,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_nego_2,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_nego_1,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_submit,
-                      0
-                    ),
-                    0
-                  ) > 0
-                THEN
-                  COALESCE(
-                    NULLIF(
-                      pk.nilai_nego_3,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_nego_2,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_nego_1,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_submit,
-                      0
-                    ),
-                    0
-                  )
+              /*
+               * Proyek masuk tahun laporan jika kontrak
+               * klien bersinggungan dengan tahun terpilih.
+               */
+              EXISTS (
+                SELECT 1
+                FROM public.proyek_klien kontrak
+                CROSS JOIN periode
 
-                ELSE
-                  COALESCE(
-                    (
-                      SELECT
-                        SUM(
-                          COALESCE(
-                            pkt.nominal,
-                            0
-                          )
-                        )
+                WHERE
+                  kontrak.proyek_id = p.id
 
-                      FROM public.proyek_klien_termin pkt
+                  AND kontrak.tanggal_mulai
+                    IS NOT NULL
 
-                      WHERE
-                        pkt.proyek_klien_id =
-                          pk.id
-                    ),
-                    0
-                  )
-              END AS nilai_klien
+                  AND kontrak.tanggal_akhir
+                    IS NOT NULL
 
-            FROM public.proyek_klien pk
+                  AND kontrak.tanggal_mulai <
+                    periode.akhir_tahun
 
-            LEFT JOIN public.data d
-              ON d.id =
-                pk.klien_id
+                  AND kontrak.tanggal_akhir >=
+                    periode.awal_tahun
+              ) AS masuk_tahun,
 
-            WHERE
-              pk.proyek_id =
-                p.id
+              /*
+               * Nilai proyek:
+               * Nego 3 → Nego 2 → Nego 1
+               * → Submit → Total Termin.
+               */
+              COALESCE(
+                NULLIF(
+                  pk.nilai_nego_3,
+                  0
+                ),
 
-            ORDER BY
-              pk.id DESC
+                NULLIF(
+                  pk.nilai_nego_2,
+                  0
+                ),
 
-            LIMIT 1
-          ) klien
-            ON TRUE
+                NULLIF(
+                  pk.nilai_nego_1,
+                  0
+                ),
 
+                NULLIF(
+                  pk.nilai_submit,
+                  0
+                ),
 
-          -- ============================================
-          -- PARTNER
-          -- ============================================
-
-          LEFT JOIN LATERAL (
-            SELECT
-              STRING_AGG(
-                DISTINCT
-                pr.nama_partner,
-                ', '
-                ORDER BY
-                pr.nama_partner
-              ) AS nama_partner,
-
-              SUM(
-                CASE
-                  WHEN
-                    COALESCE(
-                      NULLIF(
-                        pp.nilai_nego_3,
+                (
+                  SELECT
+                    SUM(
+                      COALESCE(
+                        termin.nominal,
                         0
-                      ),
-                      NULLIF(
-                        pp.nilai_nego_2,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_nego_1,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_submit,
-                        0
-                      ),
-                      0
-                    ) > 0
-                  THEN
-                    COALESCE(
-                      NULLIF(
-                        pp.nilai_nego_3,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_nego_2,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_nego_1,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_submit,
-                        0
-                      ),
-                      0
+                      )
                     )
 
-                  ELSE
-                    COALESCE(
-                      (
-                        SELECT
-                          SUM(
-                            COALESCE(
-                              ppt.nominal,
-                              0
-                            )
-                          )
+                  FROM public.proyek_klien_termin
+                    termin
 
-                        FROM public.proyek_partner_termin ppt
+                  WHERE
+                    termin.proyek_klien_id =
+                      pk.id
+                ),
 
-                        WHERE
-                          ppt.proyek_partner_id =
-                            pp.id
-                      ),
-                      0
-                    )
-                END
-              ) AS nilai_partner
+                0
+              )::NUMERIC AS nilai_proyek
 
-            FROM public.proyek_partner pp
+            FROM public.proyek p
 
-            LEFT JOIN public.partner pr
-              ON pr.id =
-                pp.partner_id
+            /*
+             * Gunakan informasi klien terbaru
+             * untuk setiap proyek.
+             */
+            LEFT JOIN LATERAL (
+              SELECT
+                klien.id,
+                klien.status_pengadaan,
+                klien.status_teknis,
+                klien.tanggal_mulai,
+                klien.tanggal_akhir,
+                klien.nilai_submit,
+                klien.nilai_nego_1,
+                klien.nilai_nego_2,
+                klien.nilai_nego_3
 
-            WHERE
-              pp.proyek_id =
-                p.id
-          ) partner
-            ON TRUE
-
-
-          -- ============================================
-          -- PIC
-          -- ============================================
-
-          LEFT JOIN LATERAL (
-            SELECT
-              MIN(
-                master_pic.nama
-              ) AS nama_pic,
-
-              ARRAY_AGG(
-                DISTINCT
-                master_pic.nama
-                ORDER BY
-                master_pic.nama
-              ) AS nama_pic_list,
-
-              ARRAY_AGG(
-                DISTINCT
-                master_pic.id
-                ORDER BY
-                master_pic.id
-              ) AS pic_ids
-
-            FROM public.proyek_pic proyek_pic
-
-            INNER JOIN public.pic master_pic
-              ON master_pic.id =
-                proyek_pic.pic_id
-
-            WHERE
-              proyek_pic.proyek_id =
-                p.id
-          ) pic
-            ON TRUE
-
-          WHERE
-            $1::BOOLEAN = TRUE
-
-            OR EXISTS (
-              SELECT 1
-
-              FROM public.proyek_pic akses_pic
+              FROM public.proyek_klien klien
 
               WHERE
-                akses_pic.proyek_id =
+                klien.proyek_id =
                   p.id
 
-                AND akses_pic.pic_id =
-                  $2
-            )
+              ORDER BY
+                klien.id DESC
 
-          ORDER BY
-            p.id DESC
+              LIMIT 1
+            ) pk
+              ON TRUE
+
+            WHERE
+              /*
+               * Hak akses pengguna login.
+               */
+              (
+                $2::BOOLEAN = TRUE
+
+                OR EXISTS (
+                  SELECT 1
+                  FROM public.proyek_pic akses_login
+
+                  WHERE
+                    akses_login.proyek_id =
+                      p.id
+
+                    AND akses_login.pic_id =
+                      $3
+                )
+              )
+
+              /*
+               * Filter jenis proyek.
+               */
+              AND (
+                $4::TEXT = ''
+
+                OR LOWER(
+                  BTRIM(
+                    COALESCE(
+                      p.jenis_proyek,
+                      ''
+                    )
+                  )
+                ) =
+                LOWER(
+                  BTRIM($4::TEXT)
+                )
+              )
+
+              /*
+               * Filter PIC dashboard.
+               */
+              AND (
+                $5::INTEGER IS NULL
+
+                OR EXISTS (
+                  SELECT 1
+                  FROM public.proyek_pic filter_pic
+
+                  WHERE
+                    filter_pic.proyek_id =
+                      p.id
+
+                    AND filter_pic.pic_id =
+                      $5
+                )
+              )
+          )
+
+          SELECT
+            /* ============================================
+             * PROJECT OVERVIEW — PIPELINE
+             * ============================================ */
+
+            COUNT(*) FILTER (
+              WHERE
+                status_final = 'aktif'
+
+                AND status_pengadaan
+                  LIKE '%pipeline%'
+            )::INTEGER AS total_pipeline,
+
+            COALESCE(
+              SUM(nilai_proyek) FILTER (
+                WHERE
+                  status_final = 'aktif'
+
+                  AND status_pengadaan
+                    LIKE '%pipeline%'
+              ),
+              0
+            )::NUMERIC AS nilai_pipeline,
+
+            /* ============================================
+             * PROJECT OVERVIEW — SUBMIT PENAWARAN
+             * ============================================ */
+
+            COUNT(*) FILTER (
+              WHERE
+                status_final = 'aktif'
+
+                AND status_pengadaan
+                  LIKE '%submit penawaran%'
+            )::INTEGER AS total_submit_penawaran,
+
+            COALESCE(
+              SUM(nilai_proyek) FILTER (
+                WHERE
+                  status_final = 'aktif'
+
+                  AND status_pengadaan
+                    LIKE '%submit penawaran%'
+              ),
+              0
+            )::NUMERIC AS nilai_submit_penawaran,
+
+            /* ============================================
+             * PROJECT OVERVIEW — PROSES PENGADAAN
+             *
+             * Mengambil:
+             * 1. Submit Pengadaan
+             * 2. Negosiasi/Nego
+             * ============================================ */
+
+            COUNT(*) FILTER (
+              WHERE
+                status_final = 'aktif'
+
+                AND (
+                  status_pengadaan
+                    LIKE '%submit%pengadaan%'
+
+                  OR status_pengadaan
+                    LIKE '%negosiasi%'
+
+                  OR status_pengadaan
+                    LIKE '%nego%'
+                )
+            )::INTEGER AS total_submit_pengadaan,
+
+            COALESCE(
+              SUM(nilai_proyek) FILTER (
+                WHERE
+                  status_final = 'aktif'
+
+                  AND (
+                    status_pengadaan
+                      LIKE '%submit%pengadaan%'
+
+                    OR status_pengadaan
+                      LIKE '%negosiasi%'
+
+                    OR status_pengadaan
+                      LIKE '%nego%'
+                  )
+              ),
+              0
+            )::NUMERIC AS nilai_submit_pengadaan,
+
+            /* ============================================
+             * PROJECT OVERVIEW — PROSES KONTRAK
+             * ============================================ */
+
+            COUNT(*) FILTER (
+              WHERE
+                status_final = 'aktif'
+
+                AND (
+                  status_pengadaan
+                    LIKE '%proses%kontrak%'
+
+                  OR status_pengadaan =
+                    'kontrak'
+                )
+            )::INTEGER AS total_kontrak,
+
+            COALESCE(
+              SUM(nilai_proyek) FILTER (
+                WHERE
+                  status_final = 'aktif'
+
+                  AND (
+                    status_pengadaan
+                      LIKE '%proses%kontrak%'
+
+                    OR status_pengadaan =
+                      'kontrak'
+                  )
+              ),
+              0
+            )::NUMERIC AS nilai_kontrak,
+
+            /* ============================================
+             * PROJECT OVERVIEW — PROYEK AKTIF
+             *
+             * Status final Aktif
+             * Status pengadaan Done
+             * Masuk tahun laporan
+             * ============================================ */
+
+            COUNT(*) FILTER (
+              WHERE
+                status_final = 'aktif'
+
+                AND status_pengadaan =
+                  'done'
+
+                AND masuk_tahun
+            )::INTEGER AS total_proyek_aktif,
+
+            COALESCE(
+              SUM(nilai_proyek) FILTER (
+                WHERE
+                  status_final = 'aktif'
+
+                  AND status_pengadaan =
+                    'done'
+
+                  AND masuk_tahun
+              ),
+              0
+            )::NUMERIC AS nilai_proyek_aktif,
+
+            /* ============================================
+             * PROJECT OVERVIEW — PROYEK SELESAI
+             * ============================================ */
+
+            COUNT(*) FILTER (
+              WHERE
+                status_final IN (
+                  'done',
+                  'selesai'
+                )
+
+                AND masuk_tahun
+            )::INTEGER AS total_proyek_done,
+
+            COALESCE(
+              SUM(nilai_proyek) FILTER (
+                WHERE
+                  status_final IN (
+                    'done',
+                    'selesai'
+                  )
+
+                  AND masuk_tahun
+              ),
+              0
+            )::NUMERIC AS nilai_proyek_done,
+
+            /* ============================================
+             * PROJECT OVERVIEW — PROYEK TERLAMBAT
+             *
+             * Status final Aktif
+             * Status pengadaan Done
+             * Tanggal akhir telah lewat
+             * Status teknis bukan Done/Selesai
+             * ============================================ */
+
+            COUNT(*) FILTER (
+              WHERE
+                status_final = 'aktif'
+
+                AND status_pengadaan =
+                  'done'
+
+                AND tanggal_akhir
+                  IS NOT NULL
+
+                AND tanggal_akhir <
+                  CURRENT_DATE
+
+                AND status_teknis NOT IN (
+                  'done',
+                  'selesai'
+                )
+            )::INTEGER AS total_proyek_terlambat,
+
+            COALESCE(
+              SUM(nilai_proyek) FILTER (
+                WHERE
+                  status_final = 'aktif'
+
+                  AND status_pengadaan =
+                    'done'
+
+                  AND tanggal_akhir
+                    IS NOT NULL
+
+                  AND tanggal_akhir <
+                    CURRENT_DATE
+
+                  AND status_teknis NOT IN (
+                    'done',
+                    'selesai'
+                  )
+              ),
+              0
+            )::NUMERIC AS nilai_proyek_terlambat
+
+          FROM proyek_base
           `,
           [
-            isAdmin,
-            picId
+            tahun,
+            bolehLihatSemua,
+            picLoginId,
+            jenisProyek,
+            picFilterId
           ]
         );
 
-
-      const projects =
-        proyekResult.rows.map(item => ({
-          ...item,
-
-          proyek_id:
-            Number(item.proyek_id),
-
-          nilai_klien:
-            Number(
-              item.nilai_klien ||
-              0
-            ),
-
-          nilai_partner:
-            Number(
-              item.nilai_partner ||
-              0
-            )
-        }));
-
-
-      const proyekIds =
-        projects.map(
-          item =>
-            item.proyek_id
-        );
-
-
-      // ================================================
-      // JIKA TIDAK ADA PROYEK
-      // ================================================
-
-      if (proyekIds.length === 0) {
-        return res.json({
-          projects: [],
-          revenue: [],
-          forecast: [],
-          termins: [],
-          timelines: [],
-          progress: [],
-          tasks: [],
-          workload: [],
-          attention: []
-        });
-      }
-
-
-      // ================================================
-      // TERMIN KLIEN DAN PARTNER
-      // ================================================
-
-      const terminResult =
-        await pool.query(
-          `
-          SELECT
-            p.id AS proyek_id,
-            p.nama_proyek,
-
-            'Klien'::TEXT AS pihak,
-
-            pkt.id AS termin_id,
-            pkt.nama_termin,
-            pkt.persentase,
-            pkt.nominal,
-            pkt.status_pembayaran,
-            pkt.tanggal_jatuh_tempo,
-            pkt.tanggal_bayar,
-
-            COALESCE(
-              NULLIF(
-                pkt.nominal,
-                0
-              ),
-
-              (
-                COALESCE(
-                  NULLIF(
-                    pk.nilai_nego_3,
-                    0
-                  ),
-                  NULLIF(
-                    pk.nilai_nego_2,
-                    0
-                  ),
-                  NULLIF(
-                    pk.nilai_nego_1,
-                    0
-                  ),
-                  NULLIF(
-                    pk.nilai_submit,
-                    0
-                  ),
-                  0
-                )
-                *
-                COALESCE(
-                  pkt.persentase,
-                  0
-                )
-                /
-                100
-              ),
-
-              0
-            ) AS nilai_termin
-
-          FROM public.proyek_klien_termin pkt
-
-          INNER JOIN public.proyek_klien pk
-            ON pk.id =
-              pkt.proyek_klien_id
-
-          INNER JOIN public.proyek p
-            ON p.id =
-              pk.proyek_id
-
-          WHERE
-            p.id =
-              ANY($1::INTEGER[])
-
-
-          UNION ALL
-
-
-          SELECT
-            p.id AS proyek_id,
-            p.nama_proyek,
-
-            'Partner'::TEXT AS pihak,
-
-            ppt.id AS termin_id,
-            ppt.nama_termin,
-            ppt.persentase,
-            ppt.nominal,
-            ppt.status_pembayaran,
-            ppt.tanggal_jatuh_tempo,
-            ppt.tanggal_bayar,
-
-            COALESCE(
-              NULLIF(
-                ppt.nominal,
-                0
-              ),
-
-              (
-                COALESCE(
-                  NULLIF(
-                    pp.nilai_nego_3,
-                    0
-                  ),
-                  NULLIF(
-                    pp.nilai_nego_2,
-                    0
-                  ),
-                  NULLIF(
-                    pp.nilai_nego_1,
-                    0
-                  ),
-                  NULLIF(
-                    pp.nilai_submit,
-                    0
-                  ),
-                  0
-                )
-                *
-                COALESCE(
-                  ppt.persentase,
-                  0
-                )
-                /
-                100
-              ),
-
-              0
-            ) AS nilai_termin
-
-          FROM public.proyek_partner_termin ppt
-
-          INNER JOIN public.proyek_partner pp
-            ON pp.id =
-              ppt.proyek_partner_id
-
-          INNER JOIN public.proyek p
-            ON p.id =
-              pp.proyek_id
-
-          WHERE
-            p.id =
-              ANY($1::INTEGER[])
-
-          ORDER BY
-            tanggal_jatuh_tempo ASC
-              NULLS LAST
-          `,
-          [proyekIds]
-        );
-
-
-      const termins =
-        terminResult.rows.map(item => ({
-          ...item,
-
-          proyek_id:
-            Number(item.proyek_id),
-
-          termin_id:
-            Number(item.termin_id),
-
-          nominal:
-            Number(
-              item.nilai_termin ||
-              item.nominal ||
-              0
-            ),
-
-          persentase:
-            Number(
-              item.persentase ||
-              0
-            )
-        }));
-
-
-      // ================================================
-      // PENDAPATAN AKTUAL BULANAN
-      // ================================================
-
-      const revenueMap =
-        new Map();
-
-      termins
-        .filter(item =>
-          String(
-            item.pihak
-          ).toLowerCase() ===
-            "klien" &&
-
-          (
-            item.tanggal_bayar ||
-
-            [
-              "dibayar",
-              "sudah dibayar",
-              "lunas",
-              "paid"
-            ].includes(
-              String(
-                item.status_pembayaran ||
-                ""
-              )
-                .trim()
-                .toLowerCase()
-            )
-          )
-        )
-        .forEach(item => {
-          if (!item.tanggal_bayar) {
-            return;
-          }
-
-          const date =
-            new Date(
-              item.tanggal_bayar
-            );
-
-          if (
-            Number.isNaN(
-              date.getTime()
-            )
-          ) {
-            return;
-          }
-
-          const key =
-            `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}`;
-
-          const nilaiSebelumnya =
-            revenueMap.get(key) || {
-              tahun:
-                date.getUTCFullYear(),
-
-              bulan:
-                date.getUTCMonth() + 1,
-
-              nilai:
-                0
-            };
-
-          nilaiSebelumnya.nilai +=
-            Number(
-              item.nominal ||
-              0
-            );
-
-          revenueMap.set(
-            key,
-            nilaiSebelumnya
-          );
-        });
-
-
-      const revenue =
-        [...revenueMap.values()];
-
-
-      // ================================================
-      // PROGNOSA BULANAN
-      // Termin klien yang belum dibayar
-      // ================================================
-
-      const forecastMap =
-        new Map();
-
-      termins
-        .filter(item => {
-          const status =
-            String(
-              item.status_pembayaran ||
-              ""
-            )
-              .trim()
-              .toLowerCase();
-
-          return (
-            String(
-              item.pihak
-            ).toLowerCase() ===
-              "klien" &&
-
-            ![
-              "dibayar",
-              "sudah dibayar",
-              "lunas",
-              "paid"
-            ].includes(status)
-          );
-        })
-        .forEach(item => {
-          if (
-            !item.tanggal_jatuh_tempo
-          ) {
-            return;
-          }
-
-          const date =
-            new Date(
-              item.tanggal_jatuh_tempo
-            );
-
-          if (
-            Number.isNaN(
-              date.getTime()
-            )
-          ) {
-            return;
-          }
-
-          const key =
-            `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}`;
-
-          const nilaiSebelumnya =
-            forecastMap.get(key) || {
-              tahun:
-                date.getUTCFullYear(),
-
-              bulan:
-                date.getUTCMonth() + 1,
-
-              nilai:
-                0
-            };
-
-          nilaiSebelumnya.nilai +=
-            Number(
-              item.nominal ||
-              0
-            );
-
-          forecastMap.set(
-            key,
-            nilaiSebelumnya
-          );
-        });
-
-
-      const forecast =
-        [...forecastMap.values()];
-
-
-      // ================================================
-      // TIMELINE
-      // ================================================
-
-      let timelines = [];
-
-      try {
-        const timelineResult =
-          await pool.query(
-            `
-            SELECT
-              pt.id,
-              pt.proyek_id,
-              p.nama_proyek,
-              pt.deskripsi,
-              pt.tanggal_mulai,
-              pt.tanggal_akhir,
-              pt.status,
-
-              (
-                pt.tanggal_akhir -
-                CURRENT_DATE
-              ) AS sisa_hari
-
-            FROM public.proyek_timeline pt
-
-            INNER JOIN public.proyek p
-              ON p.id =
-                pt.proyek_id
-
-            WHERE
-              pt.proyek_id =
-                ANY($1::INTEGER[])
-
-            ORDER BY
-              pt.tanggal_akhir ASC
-                NULLS LAST
-            `,
-            [proyekIds]
-          );
-
-        timelines =
-          timelineResult.rows.map(
-            item => {
-              const sisaHari =
-                Number(
-                  item.sisa_hari
-                );
-
-              let berakhirDalam =
-                "-";
-
-              if (
-                Number.isFinite(
-                  sisaHari
-                )
-              ) {
-                if (sisaHari < 0) {
-                  berakhirDalam =
-                    "Sudah berakhir";
-                } else if (
-                  sisaHari === 0
-                ) {
-                  berakhirDalam =
-                    "Hari ini";
-                } else {
-                  berakhirDalam =
-                    `${sisaHari} hari`;
-                }
-              }
-
-              return {
-                ...item,
-
-                proyek_id:
-                  Number(
-                    item.proyek_id
-                  ),
-
-                berakhir_dalam:
-                  berakhirDalam
-              };
-            }
-          );
-
-      } catch (timelineError) {
-        console.error(
-          "ERROR TIMELINE DASHBOARD:",
-          timelineError.message
-        );
-
-        timelines = [];
-      }
-
-
-      // ================================================
-      // ATTENTION
-      // ================================================
-
-      const attention = [];
-
-
-      // Proyek tanpa klien
-
-      projects
-        .filter(item =>
-          !item.proyek_klien_id
-        )
-        .forEach(item => {
-          attention.push({
-            proyek_id:
-              item.proyek_id,
-
-            nama_proyek:
-              item.nama_proyek,
-
-            judul:
-              `${item.nama_proyek} belum memiliki klien`,
-
-            deskripsi:
-              "Tambahkan data klien agar nilai dan termin dapat dihitung.",
-
-            level:
-              "warning",
-
-            label:
-              "Klien"
-          });
-        });
-
-
-      // Margin negatif
-
-      projects
-        .filter(item =>
-          Number(item.nilai_partner) >
-          Number(item.nilai_klien)
-        )
-        .forEach(item => {
-          attention.push({
-            proyek_id:
-              item.proyek_id,
-
-            nama_proyek:
-              item.nama_proyek,
-
-            judul:
-              `${item.nama_proyek} memiliki margin negatif`,
-
-            deskripsi:
-              `Nilai partner ${formatAngkaDashboard(
-                item.nilai_partner
-              )} lebih besar daripada nilai klien ${formatAngkaDashboard(
-                item.nilai_klien
-              )}.`,
-
-            level:
-              "danger",
-
-            label:
-              "Margin"
-          });
-        });
-
-
-      // Termin lewat jatuh tempo
-
-      const hariIni =
-        new Date();
-
-      hariIni.setHours(
-        0,
-        0,
-        0,
-        0
-      );
-
-      termins
-        .filter(item => {
-          if (
-            !item.tanggal_jatuh_tempo
-          ) {
-            return false;
-          }
-
-          const sudahDibayar =
-            [
-              "dibayar",
-              "sudah dibayar",
-              "lunas",
-              "paid"
-            ].includes(
-              String(
-                item.status_pembayaran ||
-                ""
-              )
-                .trim()
-                .toLowerCase()
-            );
-
-          const jatuhTempo =
-            new Date(
-              item.tanggal_jatuh_tempo
-            );
-
-          return (
-            !sudahDibayar &&
-            jatuhTempo < hariIni
-          );
-        })
-        .forEach(item => {
-          attention.push({
-            proyek_id:
-              item.proyek_id,
-
-            nama_proyek:
-              item.nama_proyek,
-
-            judul:
-              `${item.nama_termin} melewati jatuh tempo`,
-
-            deskripsi:
-              `${item.nama_proyek} • ${item.pihak}`,
-
-            level:
-              "danger",
-
-            label:
-              "Terlambat"
-          });
-        });
-
-
-      // Timeline akan berakhir
-
-      timelines
-        .filter(item =>
-          Number(item.sisa_hari) >= 0 &&
-          Number(item.sisa_hari) <= 30
-        )
-        .forEach(item => {
-          attention.push({
-            proyek_id:
-              item.proyek_id,
-
-            nama_proyek:
-              item.nama_proyek,
-
-            judul:
-              `${item.nama_proyek} akan berakhir`,
-
-            deskripsi:
-              item.berakhir_dalam,
-
-            level:
-              "warning",
-
-            label:
-              "Timeline"
-          });
-        });
-
-
-      // ================================================
+      const data =
+        result.rows[0] || {};
+
+      // ==================================================
+      // NORMALISASI ANGKA
+      // ==================================================
+
+      const angka = value => {
+        const hasil =
+          Number(value);
+
+        return Number.isFinite(hasil)
+          ? hasil
+          : 0;
+      };
+
+      // ==================================================
+      // PERHITUNGAN TOTAL PROYEK
+      //
+      // Total merupakan penjumlahan seluruh card:
+      // Pipeline
+      // Submit Penawaran
+      // Proses Pengadaan
+      // Proses Kontrak
+      // Proyek Aktif
+      // Proyek Selesai
+      // Proyek Terlambat
+      // ==================================================
+
+      const totalSemuaProyek =
+        angka(data.total_pipeline) +
+        angka(data.total_submit_penawaran) +
+        angka(data.total_submit_pengadaan) +
+        angka(data.total_kontrak) +
+        angka(data.total_proyek_aktif) +
+        angka(data.total_proyek_done) +
+        angka(data.total_proyek_terlambat);
+
+      const nilaiTotalProyek =
+        angka(data.nilai_pipeline) +
+        angka(data.nilai_submit_penawaran) +
+        angka(data.nilai_submit_pengadaan) +
+        angka(data.nilai_kontrak) +
+        angka(data.nilai_proyek_aktif) +
+        angka(data.nilai_proyek_done) +
+        angka(data.nilai_proyek_terlambat);
+
+      // ==================================================
       // RESPONSE
-      // Progress dan task sementara array kosong.
-      // Dapat diisi setelah nama tabel dipastikan.
-      // ================================================
+      // ==================================================
 
       return res.json({
-        projects,
-        revenue,
-        forecast,
-        termins,
-        timelines,
+        tahun,
 
-        progress: [],
-        tasks: [],
-        workload: [],
+        filter: {
+          jenis_proyek:
+            jenisProyek || null,
 
-        attention
+          pic_id:
+            picFilterId
+        },
+
+        generated_at:
+          new Date().toISOString(),
+
+        project_overview: {
+          total_pipeline:
+            dashboardAngka(
+              data.total_pipeline
+            ),
+
+          nilai_pipeline:
+            dashboardAngka(
+              data.nilai_pipeline
+            ),
+
+          total_submit_penawaran:
+            dashboardAngka(
+              data.total_submit_penawaran
+            ),
+
+          nilai_submit_penawaran:
+            dashboardAngka(
+              data.nilai_submit_penawaran
+            ),
+
+          /*
+           * Field tetap menggunakan nama lama
+           * agar dashboard.js tidak perlu diubah.
+           */
+          total_submit_pengadaan:
+            dashboardAngka(
+              data.total_submit_pengadaan
+            ),
+
+          nilai_submit_pengadaan:
+            dashboardAngka(
+              data.nilai_submit_pengadaan
+            ),
+
+          total_kontrak:
+            dashboardAngka(
+              data.total_kontrak
+            ),
+
+          nilai_kontrak:
+            dashboardAngka(
+              data.nilai_kontrak
+            ),
+
+          total_proyek_aktif:
+            dashboardAngka(
+              data.total_proyek_aktif
+            ),
+
+          nilai_proyek_aktif:
+            dashboardAngka(
+              data.nilai_proyek_aktif
+            ),
+
+          total_proyek_done:
+            dashboardAngka(
+              data.total_proyek_done
+            ),
+
+          nilai_proyek_done:
+            dashboardAngka(
+              data.nilai_proyek_done
+            ),
+
+          total_proyek_terlambat:
+            dashboardAngka(
+              data.total_proyek_terlambat
+            ),
+
+          nilai_proyek_terlambat:
+            dashboardAngka(
+              data.nilai_proyek_terlambat
+            ),
+
+          total_semua_proyek:
+            dashboardAngka(
+              totalSemuaProyek
+            ),
+
+          nilai_total_proyek:
+            dashboardAngka(
+              nilaiTotalProyek
+            )
+        }
       });
 
     } catch (error) {
       console.error(
-        "ERROR DASHBOARD:",
+        "ERROR DASHBOARD PROJECT:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
+    }
+  }
+);
+// ======================================================
+// 2. DASHBOARD FINANCIAL
+// ======================================================
+
+app.get(
+  "/api/dashboard/financial",
+
+  dashboardRequireLogin,
+
+  async (req, res) => {
+    try {
+      const {
+        tahun,
+        bolehLihatSemua,
+        picId
+      } = dashboardGetContext(req);
+
+      const result =
+        await pool.query(
+          `
+          WITH pengaturan AS (
+            SELECT
+              MAKE_DATE(
+                $1::integer,
+                1,
+                1
+              ) AS awal_tahun,
+
+              MAKE_DATE(
+                $1::integer + 1,
+                1,
+                1
+              ) AS akhir_tahun,
+
+              MAKE_DATE(
+                $1::integer,
+
+                EXTRACT(
+                  MONTH FROM (
+                    CURRENT_TIMESTAMP
+                    AT TIME ZONE
+                      'Asia/Jakarta'
+                  )
+                )::integer,
+
+                1
+              ) AS awal_bulan
+          ),
+
+          pendapatan_reguler AS (
+            SELECT
+              CASE
+                WHEN LOWER(
+                  COALESCE(
+                    p.jenis_proyek,
+                    ''
+                  )
+                ) LIKE '%transaksi%'
+                THEN 'Transaksi'
+
+                ELSE 'Reguler'
+              END AS jenis,
+
+              termin.tanggal_bayar::date
+                AS tanggal_bayar,
+
+              COALESCE(
+                termin.tanggal_bayar::date,
+                termin.tanggal_jatuh_tempo::date,
+                termin.created_at::date
+              ) AS tanggal_acuan,
+
+              COALESCE(
+                NULLIF(
+                  termin.nominal,
+                  0
+                ),
+                (
+                  COALESCE(
+                    NULLIF(
+                      klien.nilai_nego_3,
+                      0
+                    ),
+                    NULLIF(
+                      klien.nilai_nego_2,
+                      0
+                    ),
+                    NULLIF(
+                      klien.nilai_nego_1,
+                      0
+                    ),
+                    NULLIF(
+                      klien.nilai_submit,
+                      0
+                    ),
+                    0
+                  )
+                  *
+                  COALESCE(
+                    termin.persentase,
+                    0
+                  )
+                  / 100
+                ),
+                0
+              )::numeric AS nilai,
+
+              LOWER(
+                BTRIM(
+                  REGEXP_REPLACE(
+                    COALESCE(
+                      termin.status_pembayaran,
+                      ''
+                    ),
+                    '\\s+',
+                    ' ',
+                    'g'
+                  )
+                )
+              ) AS status
+
+            FROM
+              public.proyek_klien_termin
+                termin
+
+            INNER JOIN
+              public.proyek_klien
+                klien
+
+              ON klien.id =
+                termin.proyek_klien_id
+
+            INNER JOIN
+              public.proyek p
+
+              ON p.id =
+                klien.proyek_id
+
+            WHERE
+              LOWER(
+                COALESCE(
+                  p.jenis_proyek,
+                  ''
+                )
+              ) NOT LIKE '%sewa%'
+
+              AND (
+                $2::boolean = TRUE
+
+                OR EXISTS (
+                  SELECT 1
+
+                  FROM public.proyek_pic
+                    akses
+
+                  WHERE
+                    akses.proyek_id =
+                      p.id
+
+                    AND akses.pic_id =
+                      $3
+                )
+              )
+          ),
+
+          pendapatan_sewa AS (
+            SELECT
+              'Sewa'::text AS jenis,
+
+              pembayaran.tanggal_bayar::date
+                AS tanggal_bayar,
+
+              COALESCE(
+                pembayaran.tanggal_bayar::date,
+                pembayaran.created_at::date
+              ) AS tanggal_acuan,
+
+              COALESCE(
+                pembayaran.nominal,
+                0
+              )::numeric AS nilai,
+
+              LOWER(
+                BTRIM(
+                  REGEXP_REPLACE(
+                    COALESCE(
+                      pembayaran.status_pembayaran,
+                      ''
+                    ),
+                    '\\s+',
+                    ' ',
+                    'g'
+                  )
+                )
+              ) AS status
+
+            FROM
+              public.proyek_sewa_pembayaran
+                pembayaran
+
+            INNER JOIN
+              public.proyek_sewa
+                sewa
+
+              ON sewa.id =
+                pembayaran.proyek_sewa_id
+
+            WHERE
+              $2::boolean = TRUE
+
+              OR EXISTS (
+                SELECT 1
+
+                FROM public.proyek_pic
+                  akses
+
+                WHERE
+                  akses.proyek_id =
+                    sewa.proyek_id
+
+                  AND akses.pic_id =
+                    $3
+              )
+          ),
+
+          pendapatan AS (
+            SELECT *
+            FROM pendapatan_reguler
+
+            UNION ALL
+
+            SELECT *
+            FROM pendapatan_sewa
+          ),
+
+          pengeluaran_reguler AS (
+            SELECT
+              termin.tanggal_bayar::date
+                AS tanggal_bayar,
+
+              COALESCE(
+                termin.tanggal_bayar::date,
+                termin.tanggal_jatuh_tempo::date,
+                termin.created_at::date
+              ) AS tanggal_acuan,
+
+              COALESCE(
+                NULLIF(
+                  termin.nominal,
+                  0
+                ),
+                (
+                  COALESCE(
+                    NULLIF(
+                      partner.nilai_nego_3,
+                      0
+                    ),
+                    NULLIF(
+                      partner.nilai_nego_2,
+                      0
+                    ),
+                    NULLIF(
+                      partner.nilai_nego_1,
+                      0
+                    ),
+                    NULLIF(
+                      partner.nilai_submit,
+                      0
+                    ),
+                    0
+                  )
+                  *
+                  COALESCE(
+                    termin.persentase,
+                    0
+                  )
+                  / 100
+                ),
+                0
+              )::numeric AS nilai,
+
+              LOWER(
+                BTRIM(
+                  REGEXP_REPLACE(
+                    COALESCE(
+                      termin.status_pembayaran,
+                      ''
+                    ),
+                    '\\s+',
+                    ' ',
+                    'g'
+                  )
+                )
+              ) AS status
+
+            FROM
+              public.proyek_partner_termin
+                termin
+
+            INNER JOIN
+              public.proyek_partner
+                partner
+
+              ON partner.id =
+                termin.proyek_partner_id
+
+            WHERE
+              $2::boolean = TRUE
+
+              OR EXISTS (
+                SELECT 1
+
+                FROM public.proyek_pic
+                  akses
+
+                WHERE
+                  akses.proyek_id =
+                    partner.proyek_id
+
+                  AND akses.pic_id =
+                    $3
+              )
+          ),
+
+          pengeluaran_sewa AS (
+            SELECT
+              pembayaran.tanggal_bayar::date
+                AS tanggal_bayar,
+
+              COALESCE(
+                pembayaran.tanggal_bayar::date,
+                pembayaran.created_at::date
+              ) AS tanggal_acuan,
+
+              COALESCE(
+                pembayaran.nominal,
+                0
+              )::numeric AS nilai,
+
+              LOWER(
+                BTRIM(
+                  REGEXP_REPLACE(
+                    COALESCE(
+                      pembayaran.status_pembayaran,
+                      ''
+                    ),
+                    '\\s+',
+                    ' ',
+                    'g'
+                  )
+                )
+              ) AS status
+
+            FROM
+              public.proyek_sewa_pembayaran_partner
+                pembayaran
+
+            INNER JOIN
+              public.proyek_sewa
+                sewa
+
+              ON sewa.id =
+                pembayaran.proyek_sewa_id
+
+            WHERE
+              $2::boolean = TRUE
+
+              OR EXISTS (
+                SELECT 1
+
+                FROM public.proyek_pic
+                  akses
+
+                WHERE
+                  akses.proyek_id =
+                    sewa.proyek_id
+
+                  AND akses.pic_id =
+                    $3
+              )
+          ),
+
+          pengeluaran AS (
+            SELECT *
+            FROM pengeluaran_reguler
+
+            UNION ALL
+
+            SELECT *
+            FROM pengeluaran_sewa
+          ),
+
+          bulan AS (
+            SELECT
+              GENERATE_SERIES(
+                1,
+                12
+              )::integer AS nomor
+          )
+
+          SELECT
+            COALESCE(
+              (
+                SELECT SUM(nilai_kpi)
+
+                FROM public.master_kpi
+
+                WHERE tahun = $1
+              ),
+              0
+            )::numeric AS kpi,
+
+            COALESCE(
+              (
+                SELECT SUM(nilai)
+
+                FROM pendapatan
+                CROSS JOIN pengaturan
+
+                WHERE
+                  jenis = 'Reguler'
+
+                  AND status IN (
+                    'dibayar',
+                    'sudah dibayar',
+                    'lunas',
+                    'paid'
+                  )
+
+                  AND tanggal_bayar >=
+                    pengaturan.awal_tahun
+
+                  AND tanggal_bayar <
+                    pengaturan.akhir_tahun
+              ),
+              0
+            )::numeric AS reguler_dibayar,
+
+            COALESCE(
+              (
+                SELECT SUM(nilai)
+
+                FROM pendapatan
+                CROSS JOIN pengaturan
+
+                WHERE
+                  jenis = 'Sewa'
+
+                  AND status IN (
+                    'dibayar',
+                    'sudah dibayar',
+                    'lunas',
+                    'paid'
+                  )
+
+                  AND tanggal_bayar >=
+                    pengaturan.awal_tahun
+
+                  AND tanggal_bayar <
+                    pengaturan.akhir_tahun
+              ),
+              0
+            )::numeric AS sewa_dibayar,
+
+            COALESCE(
+              (
+                SELECT SUM(nilai)
+
+                FROM pendapatan
+                CROSS JOIN pengaturan
+
+                WHERE
+                  jenis = 'Transaksi'
+
+                  AND status IN (
+                    'dibayar',
+                    'sudah dibayar',
+                    'lunas',
+                    'paid'
+                  )
+
+                  AND tanggal_bayar >=
+                    pengaturan.awal_tahun
+
+                  AND tanggal_bayar <
+                    pengaturan.akhir_tahun
+              ),
+              0
+            )::numeric AS transaksi_dibayar,
+
+            COALESCE(
+              (
+                SELECT SUM(nilai)
+
+                FROM pendapatan
+                CROSS JOIN pengaturan
+
+                WHERE
+                  status IN (
+                    'belum dibayar',
+                    'belum bayar',
+                    'unpaid',
+                    'proses',
+                    'diproses',
+                    'processing'
+                  )
+
+                  AND tanggal_acuan >=
+                    pengaturan.awal_tahun
+
+                  AND tanggal_acuan <
+                    pengaturan.akhir_tahun
+              ),
+              0
+            )::numeric AS piutang_klien,
+
+            COALESCE(
+              (
+                SELECT SUM(nilai)
+
+                FROM pendapatan
+                CROSS JOIN pengaturan
+
+                WHERE
+                  status IN (
+                    'dibayar',
+                    'sudah dibayar',
+                    'lunas',
+                    'paid'
+                  )
+
+                  AND tanggal_bayar >=
+                    pengaturan.awal_tahun
+
+                  AND tanggal_bayar <
+                    pengaturan.akhir_tahun
+              ),
+              0
+            )::numeric
+              AS sudah_dibayar_klien,
+
+            COALESCE(
+              (
+                SELECT SUM(nilai)
+
+                FROM pendapatan
+                CROSS JOIN pengaturan
+
+                WHERE
+                  status IN (
+                    'dibayar',
+                    'sudah dibayar',
+                    'lunas',
+                    'paid'
+                  )
+
+                  AND tanggal_bayar >=
+                    pengaturan.awal_bulan
+
+                  AND tanggal_bayar <
+                    pengaturan.awal_bulan
+                    + INTERVAL '1 month'
+              ),
+              0
+            )::numeric
+              AS pendapatan_bulan_berjalan,
+
+            COALESCE(
+              (
+                SELECT SUM(nilai)
+
+                FROM pendapatan
+                CROSS JOIN pengaturan
+
+                WHERE
+                  status IN (
+                    'dibayar',
+                    'sudah dibayar',
+                    'lunas',
+                    'paid'
+                  )
+
+                  AND tanggal_bayar >=
+                    pengaturan.awal_bulan
+                    - INTERVAL '1 month'
+
+                  AND tanggal_bayar <
+                    pengaturan.awal_bulan
+              ),
+              0
+            )::numeric
+              AS pendapatan_bulan_sebelumnya,
+
+            COALESCE(
+              (
+                SELECT SUM(nilai)
+
+                FROM pengeluaran
+                CROSS JOIN pengaturan
+
+                WHERE
+                  status IN (
+                    'belum dibayar',
+                    'belum bayar',
+                    'unpaid',
+                    'proses',
+                    'diproses',
+                    'processing'
+                  )
+
+                  AND tanggal_acuan >=
+                    pengaturan.awal_tahun
+
+                  AND tanggal_acuan <
+                    pengaturan.akhir_tahun
+              ),
+              0
+            )::numeric
+              AS hutang_partner,
+
+            COALESCE(
+              (
+                SELECT SUM(nilai)
+
+                FROM pengeluaran
+                CROSS JOIN pengaturan
+
+                WHERE
+                  status IN (
+                    'dibayar',
+                    'sudah dibayar',
+                    'lunas',
+                    'paid'
+                  )
+
+                  AND tanggal_bayar >=
+                    pengaturan.awal_tahun
+
+                  AND tanggal_bayar <
+                    pengaturan.akhir_tahun
+              ),
+              0
+            )::numeric
+              AS dibayar_partner,
+
+            (
+              SELECT
+                JSONB_AGG(
+                  JSONB_BUILD_OBJECT(
+                    'bulan',
+                    bulan.nomor,
+
+                    'reguler',
+                    COALESCE(
+                      (
+                        SELECT SUM(p.nilai)
+
+                        FROM pendapatan p
+                        CROSS JOIN pengaturan
+
+                        WHERE
+                          p.jenis = 'Reguler'
+
+                          AND p.status IN (
+                            'dibayar',
+                            'sudah dibayar',
+                            'lunas',
+                            'paid'
+                          )
+
+                          AND p.tanggal_bayar >=
+                            pengaturan.awal_tahun
+
+                          AND p.tanggal_bayar <
+                            pengaturan.akhir_tahun
+
+                          AND EXTRACT(
+                            MONTH FROM
+                              p.tanggal_bayar
+                          )::integer =
+                            bulan.nomor
+                      ),
+                      0
+                    ),
+
+                    'sewa',
+                    COALESCE(
+                      (
+                        SELECT SUM(p.nilai)
+
+                        FROM pendapatan p
+                        CROSS JOIN pengaturan
+
+                        WHERE
+                          p.jenis = 'Sewa'
+
+                          AND p.status IN (
+                            'dibayar',
+                            'sudah dibayar',
+                            'lunas',
+                            'paid'
+                          )
+
+                          AND p.tanggal_bayar >=
+                            pengaturan.awal_tahun
+
+                          AND p.tanggal_bayar <
+                            pengaturan.akhir_tahun
+
+                          AND EXTRACT(
+                            MONTH FROM
+                              p.tanggal_bayar
+                          )::integer =
+                            bulan.nomor
+                      ),
+                      0
+                    ),
+
+                    'transaksi',
+                    COALESCE(
+                      (
+                        SELECT SUM(p.nilai)
+
+                        FROM pendapatan p
+                        CROSS JOIN pengaturan
+
+                        WHERE
+                          p.jenis = 'Transaksi'
+
+                          AND p.status IN (
+                            'dibayar',
+                            'sudah dibayar',
+                            'lunas',
+                            'paid'
+                          )
+
+                          AND p.tanggal_bayar >=
+                            pengaturan.awal_tahun
+
+                          AND p.tanggal_bayar <
+                            pengaturan.akhir_tahun
+
+                          AND EXTRACT(
+                            MONTH FROM
+                              p.tanggal_bayar
+                          )::integer =
+                            bulan.nomor
+                      ),
+                      0
+                    )
+                  )
+
+                  ORDER BY
+                    bulan.nomor
+                )
+
+              FROM bulan
+            ) AS income_monthly,
+
+            (
+              SELECT
+                JSONB_AGG(
+                  JSONB_BUILD_OBJECT(
+                    'bulan',
+                    bulan.nomor,
+
+                    'dibayar',
+                    COALESCE(
+                      (
+                        SELECT SUM(p.nilai)
+
+                        FROM pengeluaran p
+                        CROSS JOIN pengaturan
+
+                        WHERE
+                          p.status IN (
+                            'dibayar',
+                            'sudah dibayar',
+                            'lunas',
+                            'paid'
+                          )
+
+                          AND p.tanggal_bayar >=
+                            pengaturan.awal_tahun
+
+                          AND p.tanggal_bayar <
+                            pengaturan.akhir_tahun
+
+                          AND EXTRACT(
+                            MONTH FROM
+                              p.tanggal_bayar
+                          )::integer =
+                            bulan.nomor
+                      ),
+                      0
+                    )
+                  )
+
+                  ORDER BY
+                    bulan.nomor
+                )
+
+              FROM bulan
+            ) AS partner_monthly
+          `,
+          [
+            tahun,
+            bolehLihatSemua,
+            picId
+          ]
+        );
+
+      const data =
+        result.rows[0] || {};
+
+      const kpi =
+        dashboardAngka(data.kpi);
+
+      const reguler =
+        dashboardAngka(
+          data.reguler_dibayar
+        );
+
+      const sewa =
+        dashboardAngka(
+          data.sewa_dibayar
+        );
+
+      const realisasiKpi =
+        reguler + sewa;
+
+      const persentaseKpi =
+        kpi > 0
+          ? (
+              realisasiKpi /
+              kpi
+            ) * 100
+          : 0;
+
+      return res.json({
+        tahun,
+
+        generated_at:
+          new Date().toISOString(),
+
+        financial_overview: {
+          kpi,
+
+          realisasi_kpi:
+            realisasiKpi,
+
+          persentase_kpi:
+            persentaseKpi,
+
+          reguler_dibayar:
+            reguler,
+
+          sewa_dibayar:
+            sewa,
+
+          transaksi_dibayar:
+            dashboardAngka(
+              data.transaksi_dibayar
+            ),
+
+          piutang_klien:
+            dashboardAngka(
+              data.piutang_klien
+            ),
+
+          sudah_dibayar_klien:
+            dashboardAngka(
+              data.sudah_dibayar_klien
+            ),
+
+          hutang_partner:
+            dashboardAngka(
+              data.hutang_partner
+            ),
+
+          dibayar_partner:
+            dashboardAngka(
+              data.dibayar_partner
+            ),
+
+          pendapatan_bulan_berjalan:
+            dashboardAngka(
+              data
+                .pendapatan_bulan_berjalan
+            ),
+
+          pendapatan_bulan_sebelumnya:
+            dashboardAngka(
+              data
+                .pendapatan_bulan_sebelumnya
+            )
+        },
+
+        income_monthly:
+          Array.isArray(
+            data.income_monthly
+          )
+            ? data.income_monthly
+            : [],
+
+        partner_monthly:
+          Array.isArray(
+            data.partner_monthly
+          )
+            ? data.partner_monthly
+            : []
+      });
+
+    } catch (error) {
+      console.error(
+        "ERROR DASHBOARD FINANCIAL:",
         error
       );
 
@@ -4074,6 +4985,695 @@ app.get(
   }
 );
 
+
+// ======================================================
+// 3. DASHBOARD CONTRACT
+// ======================================================
+
+app.get(
+  "/api/dashboard/contract",
+
+  dashboardRequireLogin,
+
+  async (req, res) => {
+    try {
+      const {
+        tahun,
+        bolehLihatSemua,
+        picId
+      } = dashboardGetContext(req);
+
+      const result =
+        await pool.query(
+          `
+          WITH pengaturan AS (
+            SELECT
+              (
+                CURRENT_TIMESTAMP
+                AT TIME ZONE
+                  'Asia/Jakarta'
+              )::date AS hari_ini
+          ),
+
+          akses_proyek AS (
+            SELECT
+              p.id
+
+            FROM public.proyek p
+
+            WHERE
+              $1::boolean = TRUE
+
+              OR EXISTS (
+                SELECT 1
+
+                FROM public.proyek_pic
+                  akses
+
+                WHERE
+                  akses.proyek_id =
+                    p.id
+
+                  AND akses.pic_id =
+                    $2
+              )
+          ),
+
+          timeline_dashboard AS (
+            SELECT
+              timeline.tanggal_akhir::date
+                AS tanggal_akhir
+
+            FROM public.proyek_timeline
+              timeline
+
+            INNER JOIN public.proyek p
+              ON p.id =
+                timeline.proyek_id
+
+            INNER JOIN akses_proyek akses
+              ON akses.id =
+                p.id
+
+            WHERE
+              LOWER(
+                BTRIM(
+                  COALESCE(
+                    p.status_final,
+                    ''
+                  )
+                )
+              ) = 'aktif'
+
+              AND timeline.tanggal_akhir
+                IS NOT NULL
+
+            UNION ALL
+
+            SELECT
+              pesanan.end_date::date
+                AS tanggal_akhir
+
+            FROM
+              public.proyek_sewa_order
+                pesanan
+
+            INNER JOIN
+              public.proyek_sewa_produk
+                produk
+
+              ON produk.id =
+                pesanan
+                  .proyek_sewa_produk_id
+
+            INNER JOIN
+              public.proyek_sewa
+                sewa
+
+              ON sewa.id =
+                produk.proyek_sewa_id
+
+            INNER JOIN public.proyek p
+              ON p.id =
+                sewa.proyek_id
+
+            INNER JOIN akses_proyek akses
+              ON akses.id =
+                p.id
+
+            WHERE
+              LOWER(
+                BTRIM(
+                  COALESCE(
+                    p.status_final,
+                    ''
+                  )
+                )
+              ) = 'aktif'
+
+              AND pesanan.tanggal_do
+                IS NOT NULL
+
+              AND pesanan.end_date
+                IS NOT NULL
+          )
+
+          SELECT
+            (
+              SELECT
+                COUNT(*)::integer
+
+              FROM public.proyek_klien
+                klien
+
+              INNER JOIN public.proyek p
+                ON p.id =
+                  klien.proyek_id
+
+              INNER JOIN akses_proyek akses
+                ON akses.id =
+                  p.id
+
+              CROSS JOIN pengaturan
+
+              WHERE
+                LOWER(
+                  BTRIM(
+                    COALESCE(
+                      p.status_final,
+                      ''
+                    )
+                  )
+                ) = 'aktif'
+
+                AND klien.tanggal_akhir >=
+                  pengaturan.hari_ini
+
+                AND klien.tanggal_akhir <=
+                  pengaturan.hari_ini
+                  + INTERVAL '3 months'
+            ) AS
+              kontrak_klien_akan_jatuh_tempo,
+
+            (
+              SELECT
+                COUNT(*)::integer
+
+              FROM public.proyek_partner
+                partner
+
+              INNER JOIN public.proyek p
+                ON p.id =
+                  partner.proyek_id
+
+              INNER JOIN akses_proyek akses
+                ON akses.id =
+                  p.id
+
+              CROSS JOIN pengaturan
+
+              WHERE
+                LOWER(
+                  BTRIM(
+                    COALESCE(
+                      p.status_final,
+                      ''
+                    )
+                  )
+                ) = 'aktif'
+
+                AND partner.tanggal_akhir >=
+                  pengaturan.hari_ini
+
+                AND partner.tanggal_akhir <=
+                  pengaturan.hari_ini
+                  + INTERVAL '3 months'
+            ) AS
+              kontrak_partner_akan_jatuh_tempo,
+
+            (
+              SELECT
+                COUNT(*)::integer
+
+              FROM public.proyek_klien
+                klien
+
+              INNER JOIN public.proyek p
+                ON p.id =
+                  klien.proyek_id
+
+              INNER JOIN akses_proyek akses
+                ON akses.id =
+                  p.id
+
+              CROSS JOIN pengaturan
+
+              WHERE
+                LOWER(
+                  BTRIM(
+                    COALESCE(
+                      p.status_final,
+                      ''
+                    )
+                  )
+                ) = 'aktif'
+
+                AND klien.tanggal_akhir <
+                  pengaturan.hari_ini
+            ) AS
+              kontrak_klien_jatuh_tempo,
+
+            (
+              SELECT
+                COUNT(*)::integer
+
+              FROM public.proyek_partner
+                partner
+
+              INNER JOIN public.proyek p
+                ON p.id =
+                  partner.proyek_id
+
+              INNER JOIN akses_proyek akses
+                ON akses.id =
+                  p.id
+
+              CROSS JOIN pengaturan
+
+              WHERE
+                LOWER(
+                  BTRIM(
+                    COALESCE(
+                      p.status_final,
+                      ''
+                    )
+                  )
+                ) = 'aktif'
+
+                AND partner.tanggal_akhir <
+                  pengaturan.hari_ini
+            ) AS
+              kontrak_partner_jatuh_tempo,
+
+            (
+              SELECT
+                COUNT(*)::integer
+
+              FROM timeline_dashboard
+                timeline
+
+              CROSS JOIN pengaturan
+
+              WHERE
+                timeline.tanggal_akhir >=
+                  pengaturan.hari_ini
+
+                AND timeline.tanggal_akhir <=
+                  pengaturan.hari_ini
+                  + INTERVAL '3 months'
+            ) AS
+              lisensi_sewa_akan_jatuh_tempo,
+
+            (
+              SELECT
+                COUNT(*)::integer
+
+              FROM timeline_dashboard
+                timeline
+
+              CROSS JOIN pengaturan
+
+              WHERE
+                timeline.tanggal_akhir <
+                  pengaturan.hari_ini
+            ) AS
+              lisensi_sewa_jatuh_tempo,
+
+            (
+              SELECT
+                COUNT(
+                  DISTINCT p.id
+                )::integer
+
+              FROM public.proyek p
+
+              INNER JOIN akses_proyek akses
+                ON akses.id =
+                  p.id
+
+              INNER JOIN public.proyek_klien
+                klien
+
+                ON klien.proyek_id =
+                  p.id
+
+              CROSS JOIN pengaturan
+
+              WHERE
+                LOWER(
+                  BTRIM(
+                    COALESCE(
+                      p.status_final,
+                      ''
+                    )
+                  )
+                ) = 'aktif'
+
+                AND klien.tanggal_akhir <
+                  pengaturan.hari_ini
+
+                AND LOWER(
+                  BTRIM(
+                    COALESCE(
+                      klien.status_teknis,
+                      ''
+                    )
+                  )
+                ) NOT IN (
+                  'done',
+                  'selesai'
+                )
+            ) AS total_proyek_terlambat
+          `,
+          [
+            bolehLihatSemua,
+            picId
+          ]
+        );
+
+      const data =
+        result.rows[0] || {};
+
+      return res.json({
+        tahun,
+
+        generated_at:
+          new Date().toISOString(),
+
+        contract_overview: {
+          kontrak_klien_akan_jatuh_tempo:
+            dashboardAngka(
+              data
+                .kontrak_klien_akan_jatuh_tempo
+            ),
+
+          kontrak_partner_akan_jatuh_tempo:
+            dashboardAngka(
+              data
+                .kontrak_partner_akan_jatuh_tempo
+            ),
+
+          kontrak_klien_jatuh_tempo:
+            dashboardAngka(
+              data
+                .kontrak_klien_jatuh_tempo
+            ),
+
+          kontrak_partner_jatuh_tempo:
+            dashboardAngka(
+              data
+                .kontrak_partner_jatuh_tempo
+            ),
+
+          lisensi_sewa_akan_jatuh_tempo:
+            dashboardAngka(
+              data
+                .lisensi_sewa_akan_jatuh_tempo
+            ),
+
+          lisensi_sewa_jatuh_tempo:
+            dashboardAngka(
+              data
+                .lisensi_sewa_jatuh_tempo
+            ),
+
+          total_proyek_terlambat:
+            dashboardAngka(
+              data
+                .total_proyek_terlambat
+            )
+        }
+      });
+
+    } catch (error) {
+      console.error(
+        "ERROR DASHBOARD CONTRACT:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
+    }
+  }
+);
+
+
+// ======================================================
+// 4. DASHBOARD BUSINESS
+// ======================================================
+
+app.get(
+  "/api/dashboard/business",
+
+  dashboardRequireLogin,
+
+  async (req, res) => {
+    try {
+      const {
+        tahun,
+        bolehLihatSemua,
+        picId
+      } = dashboardGetContext(req);
+
+      const result =
+        await pool.query(
+          `
+          WITH proyek_aktif AS (
+            SELECT
+              p.id,
+
+              COALESCE(
+                p.updated_at,
+                p.created_at
+              ) AS terakhir_update
+
+            FROM public.proyek p
+
+            WHERE
+              LOWER(
+                BTRIM(
+                  COALESCE(
+                    p.status_final,
+                    ''
+                  )
+                )
+              ) = 'aktif'
+
+              AND (
+                $1::boolean = TRUE
+
+                OR EXISTS (
+                  SELECT 1
+
+                  FROM public.proyek_pic
+                    akses
+
+                  WHERE
+                    akses.proyek_id =
+                      p.id
+
+                    AND akses.pic_id =
+                      $2
+                )
+              )
+          ),
+
+          nilai_klien AS (
+            SELECT
+              aktif.id
+                AS proyek_id,
+
+              COALESCE(
+                NULLIF(
+                  klien.nilai_nego_3,
+                  0
+                ),
+                NULLIF(
+                  klien.nilai_nego_2,
+                  0
+                ),
+                NULLIF(
+                  klien.nilai_nego_1,
+                  0
+                ),
+                NULLIF(
+                  klien.nilai_submit,
+                  0
+                ),
+                (
+                  SELECT
+                    SUM(
+                      COALESCE(
+                        termin.nominal,
+                        0
+                      )
+                    )
+
+                  FROM
+                    public.proyek_klien_termin
+                      termin
+
+                  WHERE
+                    termin.proyek_klien_id =
+                      klien.id
+                ),
+                0
+              )::numeric
+                AS nilai
+
+            FROM proyek_aktif aktif
+
+            LEFT JOIN LATERAL (
+              SELECT
+                pk.id,
+                pk.nilai_submit,
+                pk.nilai_nego_1,
+                pk.nilai_nego_2,
+                pk.nilai_nego_3
+
+              FROM public.proyek_klien pk
+
+              WHERE
+                pk.proyek_id =
+                  aktif.id
+
+              ORDER BY
+                pk.id DESC
+
+              LIMIT 1
+            ) klien
+              ON TRUE
+          ),
+
+          nilai_partner AS (
+            SELECT
+              partner.proyek_id,
+
+              SUM(
+                COALESCE(
+                  NULLIF(
+                    partner.nilai_nego_3,
+                    0
+                  ),
+                  NULLIF(
+                    partner.nilai_nego_2,
+                    0
+                  ),
+                  NULLIF(
+                    partner.nilai_nego_1,
+                    0
+                  ),
+                  NULLIF(
+                    partner.nilai_submit,
+                    0
+                  ),
+                  (
+                    SELECT
+                      SUM(
+                        COALESCE(
+                          termin.nominal,
+                          0
+                        )
+                      )
+
+                    FROM
+                      public.proyek_partner_termin
+                        termin
+
+                    WHERE
+                      termin.proyek_partner_id =
+                        partner.id
+                  ),
+                  0
+                )
+              )::numeric AS nilai
+
+            FROM public.proyek_partner
+              partner
+
+            INNER JOIN proyek_aktif aktif
+              ON aktif.id =
+                partner.proyek_id
+
+            GROUP BY
+              partner.proyek_id
+          )
+
+          SELECT
+            COALESCE(
+              AVG(
+                (
+                  (
+                    klien.nilai -
+                    partner.nilai
+                  )
+                  /
+                  NULLIF(
+                    klien.nilai,
+                    0
+                  )
+                ) * 100
+              ) FILTER (
+                WHERE
+                  klien.nilai > 0
+
+                  AND partner.nilai >= 0
+              ),
+              0
+            )::numeric
+              AS margin_rata_rata,
+
+            (
+              SELECT
+                COUNT(*)::integer
+
+              FROM proyek_aktif
+
+              WHERE
+                terakhir_update <
+                  CURRENT_TIMESTAMP
+                  - INTERVAL '7 days'
+            ) AS proyek_belum_update
+
+          FROM nilai_klien klien
+
+          INNER JOIN nilai_partner partner
+            ON partner.proyek_id =
+              klien.proyek_id
+          `,
+          [
+            bolehLihatSemua,
+            picId
+          ]
+        );
+
+      const data =
+        result.rows[0] || {};
+
+      return res.json({
+        tahun,
+
+        generated_at:
+          new Date().toISOString(),
+
+        business_performance: {
+          margin_rata_rata:
+            dashboardAngka(
+              data.margin_rata_rata
+            ),
+
+          proyek_belum_update:
+            dashboardAngka(
+              data.proyek_belum_update
+            )
+        }
+      });
+
+    } catch (error) {
+      console.error(
+        "ERROR DASHBOARD BUSINESS:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
+    }
+  }
+);
 
 // ======================================================
 // FORMAT ANGKA UNTUK PESAN DASHBOARD
@@ -4785,94 +6385,44 @@ app.get(
 app.get(
   "/api/proyek",
   async (req, res) => {
+    // =============================================
+    // VALIDASI LOGIN
+    // =============================================
+
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
     try {
-      // ================================================
-      // VALIDASI LOGIN
-      // ================================================
-
-      if (
-        !req.session ||
-        !req.session.user
-      ) {
-        return res.status(401).json({
-          error:
-            "Belum login"
-        });
-      }
-
-
       const user =
         req.session.user;
 
-
-      // ================================================
-      // ROLE DAN PIC ID
-      // Karena login langsung dari tabel public.pic,
-      // user.id adalah PIC ID.
-      // ================================================
-
-      const role =
-        String(
-          user.role || ""
-        )
-          .trim()
-          .toLowerCase();
-
-
       const isAdmin =
-        role === "admin" ||
-        role === "administrator";
+        String(user.role || "")
+          .trim()
+          .toLowerCase() === "admin";
 
-
-      const picId =
+      const userId =
         Number(user.id);
 
+      const picId =
+        Number.isInteger(userId) &&
+        userId > 0
+          ? userId
+          : null;
 
-      if (
-        !isAdmin &&
-        (
-          !Number.isInteger(picId) ||
-          picId <= 0
-        )
-      ) {
-        return res.status(403).json({
-          error:
-            "Data PIC pada session tidak valid"
-        });
-      }
-
-
-      console.log(
-        "AKSES DAFTAR PROYEK:",
-        {
-          user_id:
-            user.id,
-
-          nama:
-            user.nama,
-
-          role:
-            user.role,
-
-          is_admin:
-            isAdmin,
-
-          pic_id:
-            picId
-        }
-      );
-
-
-      // ================================================
-      // QUERY DAFTAR PROYEK
-      // ================================================
+      // =============================================
+      // AMBIL DAFTAR PROYEK
+      // =============================================
 
       const result =
         await pool.query(
           `
           SELECT
             p.id,
-            p.id AS proyek_id,
+            p.kategori_produk_id,
             p.nama_proyek,
             p.deskripsi,
             p.jenis_proyek,
@@ -4881,148 +6431,43 @@ app.get(
             p.created_at,
             p.updated_at,
 
-            -- ==========================================
+            -- =====================================
             -- KATEGORI
-            -- ==========================================
+            -- =====================================
 
             COALESCE(
               kategori.nama_kategori_produk,
-              kategori_legacy.nama_kategori_produk
+              kategori_legacy.nama_kategori_produk,
+              '-'
             ) AS nama_kategori_produk,
 
             COALESCE(
-              kategori.nama_kategori_produk_list,
-
+              kategori.kategori_produk_list,
               CASE
-                WHEN
-                  kategori_legacy
-                    .nama_kategori_produk
-                    IS NOT NULL
-
+                WHEN kategori_legacy.nama_kategori_produk
+                  IS NOT NULL
                 THEN ARRAY[
-                  kategori_legacy
-                    .nama_kategori_produk
-                ]
-
-                ELSE
-                  ARRAY[]::TEXT[]
+                  kategori_legacy.nama_kategori_produk
+                ]::text[]
+                ELSE ARRAY[]::text[]
               END
-            ) AS nama_kategori_produk_list,
+            ) AS kategori_produk_list,
 
             COALESCE(
               kategori.kategori_produk_ids,
-
               CASE
-                WHEN
-                  p.kategori_produk_id
-                    IS NOT NULL
-
+                WHEN kategori_legacy.id
+                  IS NOT NULL
                 THEN ARRAY[
-                  p.kategori_produk_id
-                ]
-
-                ELSE
-                  ARRAY[]::INTEGER[]
+                  kategori_legacy.id
+                ]::integer[]
+                ELSE ARRAY[]::integer[]
               END
             ) AS kategori_produk_ids,
 
-
-            -- ==========================================
-            -- KLIEN
-            -- ==========================================
-
-            klien.proyek_klien_id,
-            klien.klien_id,
-            klien.perusahaan_klien,
-            klien.tanggal_mulai
-              AS tanggal_mulai_klien,
-            klien.tanggal_akhir
-              AS tanggal_akhir_klien,
-            klien.model_pembayaran
-              AS model_pembayaran_klien,
-            klien.status_pengadaan
-              AS status_pengadaan_klien,
-            klien.status_teknis
-              AS status_teknis_klien,
-
-            COALESCE(
-              klien.nilai_final_klien,
-              0
-            ) AS nilai_final_klien,
-
-            COALESCE(
-              klien.nilai_final_klien,
-              0
-            ) AS nilai_proyek,
-
-
-            -- ==========================================
-            -- PARTNER
-            -- ==========================================
-
-            COALESCE(
-              partner.nama_partner,
-              ''
-            ) AS nama_partner,
-
-            COALESCE(
-              partner.nilai_partner,
-              0
-            ) AS nilai_partner,
-
-
-            -- ==========================================
-            -- MARGIN
-            -- ==========================================
-
-            (
-              COALESCE(
-                klien.nilai_final_klien,
-                0
-              )
-              -
-              COALESCE(
-                partner.nilai_partner,
-                0
-              )
-            ) AS margin,
-
-            CASE
-              WHEN
-                COALESCE(
-                  klien.nilai_final_klien,
-                  0
-                ) > 0
-
-              THEN
-                (
-                  (
-                    COALESCE(
-                      klien.nilai_final_klien,
-                      0
-                    )
-                    -
-                    COALESCE(
-                      partner.nilai_partner,
-                      0
-                    )
-                  )
-                  /
-                  COALESCE(
-                    klien.nilai_final_klien,
-                    0
-                  )
-                  *
-                  100
-                )
-
-              ELSE 0
-            END AS margin_persen,
-
-
-            -- ==========================================
-            -- PIC
-            -- ==========================================
+            -- =====================================
+            -- PIC PROYEK
+            -- =====================================
 
             COALESCE(
               daftar_pic.nama_pic,
@@ -5031,160 +6476,263 @@ app.get(
 
             COALESCE(
               daftar_pic.nama_pic_list,
-              ARRAY[]::TEXT[]
+              ARRAY[]::text[]
             ) AS nama_pic_list,
 
             COALESCE(
               daftar_pic.pic_ids,
-              ARRAY[]::INTEGER[]
-            ) AS pic_ids
+              ARRAY[]::integer[]
+            ) AS pic_ids,
 
+            -- =====================================
+            -- INFORMASI KLIEN TERAKHIR
+            -- =====================================
+
+            klien.proyek_klien_id,
+            klien.klien_id,
+            klien.nama_klien,
+            klien.tanggal_mulai,
+            klien.tanggal_akhir,
+            klien.model_pembayaran,
+            klien.status_pengadaan,
+            klien.status_teknis,
+
+            COALESCE(
+              klien.nilai_final_klien,
+              0
+            )::numeric AS nilai_final_klien,
+
+            -- =====================================
+            -- INFORMASI PARTNER
+            -- =====================================
+
+            COALESCE(
+              partner.nama_partner,
+              ''
+            ) AS nama_partner,
+
+            COALESCE(
+              partner.nilai_final_partner,
+              0
+            )::numeric AS nilai_final_partner,
+
+            -- =====================================
+            -- PERHITUNGAN MARGIN
+            -- =====================================
+
+            (
+              COALESCE(
+                klien.nilai_final_klien,
+                0
+              )
+              -
+              COALESCE(
+                partner.nilai_final_partner,
+                0
+              )
+            )::numeric AS nilai_margin,
+
+            CASE
+              WHEN COALESCE(
+                klien.nilai_final_klien,
+                0
+              ) > 0
+              THEN ROUND(
+                (
+                  (
+                    COALESCE(
+                      klien.nilai_final_klien,
+                      0
+                    )
+                    -
+                    COALESCE(
+                      partner.nilai_final_partner,
+                      0
+                    )
+                  )
+                  /
+                  klien.nilai_final_klien
+                ) * 100,
+                2
+              )
+              ELSE 0
+            END AS persentase_margin
 
           FROM public.proyek p
 
-
-          // ============================================
-          // KATEGORI LEGACY
-          // ============================================
+          -- =======================================
+          -- KATEGORI LEGACY
+          -- =======================================
 
           LEFT JOIN public.kategori_produk
             kategori_legacy
-
             ON kategori_legacy.id =
-              p.kategori_produk_id
+               p.kategori_produk_id
 
-
-          // ============================================
-          // SELURUH KATEGORI PROYEK
-          // ============================================
+          -- =======================================
+          -- SEMUA KATEGORI PROYEK
+          -- =======================================
 
           LEFT JOIN LATERAL (
             SELECT
               MIN(
-                kp.nama_kategori_produk
+                master_kategori.nama_kategori_produk
               ) AS nama_kategori_produk,
 
               ARRAY_AGG(
                 DISTINCT
-                kp.nama_kategori_produk
+                master_kategori.nama_kategori_produk
 
                 ORDER BY
-                  kp.nama_kategori_produk
-              ) AS nama_kategori_produk_list,
+                  master_kategori.nama_kategori_produk
+              ) AS kategori_produk_list,
 
               ARRAY_AGG(
                 DISTINCT
-                kp.id
+                master_kategori.id
 
                 ORDER BY
-                  kp.id
+                  master_kategori.id
               ) AS kategori_produk_ids
 
-            FROM public.proyek_kategori pkategori
+            FROM public.proyek_kategori relasi
 
-            INNER JOIN public.kategori_produk kp
-              ON kp.id =
-                pkategori.kategori_produk_id
+            INNER JOIN public.kategori_produk
+              master_kategori
+              ON master_kategori.id =
+                 relasi.kategori_produk_id
 
-            WHERE
-              pkategori.proyek_id =
-                p.id
+            WHERE relasi.proyek_id =
+                  p.id
           ) kategori
             ON TRUE
 
+          -- =======================================
+          -- SEMUA PIC PROYEK
+          -- =======================================
 
-          // ============================================
-          // KLIEN TERBARU
-          // ============================================
+          LEFT JOIN LATERAL (
+            SELECT
+              STRING_AGG(
+                data_pic.nama_pic,
+                ', '
+
+                ORDER BY
+                  data_pic.nama_pic
+              ) AS nama_pic,
+
+              ARRAY_AGG(
+                data_pic.nama_pic
+
+                ORDER BY
+                  data_pic.nama_pic
+              ) AS nama_pic_list,
+
+              ARRAY_AGG(
+                data_pic.id
+
+                ORDER BY
+                  data_pic.id
+              ) AS pic_ids
+
+            FROM (
+              SELECT DISTINCT
+                master_pic.id,
+
+                COALESCE(
+                  NULLIF(
+                    TRIM(master_pic.nama),
+                    ''
+                  ),
+
+                  NULLIF(
+                    TRIM(master_pic.inisial),
+                    ''
+                  ),
+
+                  'PIC ' ||
+                  master_pic.id::text
+                ) AS nama_pic
+
+              FROM public.proyek_pic relasi_pic
+
+              INNER JOIN public.pic master_pic
+                ON master_pic.id =
+                   relasi_pic.pic_id
+
+              WHERE relasi_pic.proyek_id =
+                    p.id
+            ) data_pic
+          ) daftar_pic
+            ON TRUE
+
+          -- =======================================
+          -- KLIEN TERAKHIR
+          -- =======================================
 
           LEFT JOIN LATERAL (
             SELECT
               pk.id AS proyek_klien_id,
               pk.klien_id,
-              d.perusahaan_klien,
+
+              data_klien.perusahaan_klien
+                AS nama_klien,
+
               pk.tanggal_mulai,
               pk.tanggal_akhir,
               pk.model_pembayaran,
               pk.status_pengadaan,
               pk.status_teknis,
 
-              CASE
-                -- Nilai final submit/nego tersedia
-                WHEN
-                  COALESCE(
-                    NULLIF(
-                      pk.nilai_nego_3,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_nego_2,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_nego_1,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_submit,
-                      0
-                    ),
-                    0
-                  ) > 0
+              COALESCE(
+                NULLIF(
+                  pk.nilai_nego_3,
+                  0
+                ),
 
-                THEN
-                  COALESCE(
-                    NULLIF(
-                      pk.nilai_nego_3,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_nego_2,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_nego_1,
-                      0
-                    ),
-                    NULLIF(
-                      pk.nilai_submit,
-                      0
-                    ),
-                    0
-                  )
+                NULLIF(
+                  pk.nilai_nego_2,
+                  0
+                ),
 
+                NULLIF(
+                  pk.nilai_nego_1,
+                  0
+                ),
 
-                -- Jika nilai submit/nego kosong,
-                -- gunakan total nominal termin
-                ELSE
-                  COALESCE(
-                    (
-                      SELECT
-                        SUM(
-                          COALESCE(
-                            pkt.nominal,
-                            0
-                          )
-                        )
+                NULLIF(
+                  pk.nilai_submit,
+                  0
+                ),
 
-                      FROM public.proyek_klien_termin pkt
+                (
+                  SELECT
+                    SUM(
+                      COALESCE(
+                        termin_klien.nominal,
+                        0
+                      )
+                    )
 
-                      WHERE
-                        pkt.proyek_klien_id =
-                          pk.id
-                    ),
-                    0
-                  )
-              END AS nilai_final_klien
+                  FROM public.proyek_klien_termin
+                    termin_klien
+
+                  WHERE
+                    termin_klien.proyek_klien_id =
+                    pk.id
+                ),
+
+                0
+              )::numeric AS nilai_final_klien
 
             FROM public.proyek_klien pk
 
-            LEFT JOIN public.data d
-              ON d.id =
-                pk.klien_id
+            LEFT JOIN public.data data_klien
+              ON data_klien.id =
+                 pk.klien_id
 
-            WHERE
-              pk.proyek_id =
-                p.id
+            WHERE pk.proyek_id =
+                  p.id
 
             ORDER BY
               pk.id DESC
@@ -5193,183 +6741,138 @@ app.get(
           ) klien
             ON TRUE
 
-
-          // ============================================
-          // PARTNER
-          // ============================================
+          -- =======================================
+          -- SEMUA PARTNER PROYEK
+          -- =======================================
 
           LEFT JOIN LATERAL (
             SELECT
               STRING_AGG(
-                DISTINCT
-                partner_data.nama_partner,
+                data_partner.nama_partner,
                 ', '
 
                 ORDER BY
-                  partner_data.nama_partner
+                  data_partner.nama_partner
               ) AS nama_partner,
 
               SUM(
-                partner_data.nilai_final_partner
-              ) AS nilai_partner
+                data_partner.nilai_final
+              )::numeric AS nilai_final_partner
 
             FROM (
               SELECT
-                pp.id AS proyek_partner_id,
+                pp.id,
 
-                pr.nama_partner,
+                COALESCE(
+                  NULLIF(
+                    TRIM(master_partner.nama_partner),
+                    ''
+                  ),
+                  '-'
+                ) AS nama_partner,
 
-                CASE
-                  -- Nilai submit/nego tersedia
-                  WHEN
-                    COALESCE(
-                      NULLIF(
-                        pp.nilai_nego_3,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_nego_2,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_nego_1,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_submit,
-                        0
-                      ),
-                      0
-                    ) > 0
+                COALESCE(
+                  NULLIF(
+                    pp.nilai_nego_3,
+                    0
+                  ),
 
-                  THEN
-                    COALESCE(
-                      NULLIF(
-                        pp.nilai_nego_3,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_nego_2,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_nego_1,
-                        0
-                      ),
-                      NULLIF(
-                        pp.nilai_submit,
-                        0
-                      ),
-                      0
-                    )
+                  NULLIF(
+                    pp.nilai_nego_2,
+                    0
+                  ),
 
+                  NULLIF(
+                    pp.nilai_nego_1,
+                    0
+                  ),
 
-                  -- Jika nilai submit/nego kosong,
-                  -- gunakan total nominal termin partner
-                  ELSE
-                    COALESCE(
-                      (
-                        SELECT
-                          SUM(
-                            COALESCE(
-                              ppt.nominal,
-                              0
-                            )
-                          )
+                  NULLIF(
+                    pp.nilai_submit,
+                    0
+                  ),
 
-                        FROM public
-                          .proyek_partner_termin ppt
+                  (
+                    SELECT
+                      SUM(
+                        COALESCE(
+                          termin_partner.nominal,
+                          0
+                        )
+                      )
 
-                        WHERE
-                          ppt.proyek_partner_id =
-                            pp.id
-                      ),
-                      0
-                    )
-                END AS nilai_final_partner
+                    FROM public.proyek_partner_termin
+                      termin_partner
+
+                    WHERE
+                      termin_partner.proyek_partner_id =
+                      pp.id
+                  ),
+
+                  0
+                )::numeric AS nilai_final
 
               FROM public.proyek_partner pp
 
-              LEFT JOIN public.partner pr
-                ON pr.id =
-                  pp.partner_id
+              LEFT JOIN public.partner
+                master_partner
+                ON master_partner.id =
+                   pp.partner_id
 
-              WHERE
-                pp.proyek_id =
-                  p.id
-            ) partner_data
+              WHERE pp.proyek_id =
+                    p.id
+            ) data_partner
           ) partner
             ON TRUE
 
-
-          // ============================================
-          // PIC PROYEK
-          // ============================================
-
-          LEFT JOIN LATERAL (
-            SELECT
-              STRING_AGG(
-                DISTINCT
-                master_pic.nama,
-                ', '
-
-                ORDER BY
-                  master_pic.nama
-              ) AS nama_pic,
-
-              ARRAY_AGG(
-                DISTINCT
-                master_pic.nama
-
-                ORDER BY
-                  master_pic.nama
-              ) AS nama_pic_list,
-
-              ARRAY_AGG(
-                DISTINCT
-                master_pic.id
-
-                ORDER BY
-                  master_pic.id
-              ) AS pic_ids
-
-            FROM public.proyek_pic pp_pic
-
-            INNER JOIN public.pic master_pic
-              ON master_pic.id =
-                pp_pic.pic_id
-
-            WHERE
-              pp_pic.proyek_id =
-                p.id
-          ) daftar_pic
-            ON TRUE
-
-
-          // ============================================
-          // FILTER AKSES BERDASARKAN PIC
-          // ============================================
+          -- =======================================
+          -- HAK AKSES
+          -- Admin melihat semua.
+          -- Selain Admin hanya proyek PIC terkait.
+          -- =======================================
 
           WHERE
-            (
-              $1::BOOLEAN = TRUE
+            $1::boolean = TRUE
 
-              OR EXISTS (
-                SELECT 1
+            OR EXISTS (
+              SELECT 1
 
-                FROM public.proyek_pic auth_pic
+              FROM public.proyek_pic auth_pic
 
-                WHERE
-                  auth_pic.proyek_id =
-                    p.id
+              WHERE
+                auth_pic.proyek_id =
+                  p.id
 
-                  AND auth_pic.pic_id =
-                    $2
-              )
+                AND auth_pic.pic_id =
+                  $2
             )
 
-
           ORDER BY
+            CASE
+              WHEN LOWER(
+                TRIM(
+                  COALESCE(
+                    p.status_final,
+                    ''
+                  )
+                )
+              ) = 'aktif'
+              THEN 1
+
+              WHEN LOWER(
+                TRIM(
+                  COALESCE(
+                    p.status_final,
+                    ''
+                  )
+                )
+              ) = 'done'
+              THEN 2
+
+              ELSE 0
+            END,
+
+            p.nama_proyek ASC,
             p.id DESC
           `,
           [
@@ -5378,93 +6881,82 @@ app.get(
           ]
         );
 
+      // =============================================
+// NORMALISASI RESPONSE
+// =============================================
 
-      // ================================================
-      // NORMALISASI RESPONSE
-      // ================================================
+const data =
+  result.rows.map(proyek => ({
+    ...proyek,
 
-      const rows =
-        result.rows.map(item => ({
-          ...item,
+    nama_pic:
+      String(
+        proyek.nama_pic || ""
+      ).trim(),
 
-          id:
-            Number(item.id),
+    nama_pic_list:
+      Array.isArray(
+        proyek.nama_pic_list
+      )
+        ? proyek.nama_pic_list
+        : [],
 
-          proyek_id:
-            Number(item.proyek_id),
+    pic_ids:
+      Array.isArray(
+        proyek.pic_ids
+      )
+        ? proyek.pic_ids
+            .map(Number)
+            .filter(Number.isInteger)
+        : [],
 
-          proyek_klien_id:
-            item.proyek_klien_id
-              ? Number(
-                  item.proyek_klien_id
-                )
-              : null,
+    kategori_produk_list:
+      Array.isArray(
+        proyek.kategori_produk_list
+      )
+        ? proyek.kategori_produk_list
+        : [],
 
-          klien_id:
-            item.klien_id
-              ? Number(
-                  item.klien_id
-                )
-              : null,
+    kategori_produk_ids:
+      Array.isArray(
+        proyek.kategori_produk_ids
+      )
+        ? proyek.kategori_produk_ids
+            .map(Number)
+            .filter(Number.isInteger)
+        : [],
 
-          nilai_final_klien:
-            Number(
-              item.nilai_final_klien ||
-              0
-            ),
+    nilai_final_klien:
+      Number(
+        proyek.nilai_final_klien || 0
+      ),
 
-          nilai_proyek:
-            Number(
-              item.nilai_proyek ||
-              0
-            ),
+    nilai_final_partner:
+      Number(
+        proyek.nilai_final_partner || 0
+      ),
 
-          nilai_partner:
-            Number(
-              item.nilai_partner ||
-              0
-            ),
+    nilai_margin:
+      Number(
+        proyek.nilai_margin || 0
+      ),
 
-          margin:
-            Number(
-              item.margin ||
-              0
-            ),
+    persentase_margin:
+      Number(
+        proyek.persentase_margin || 0
+      )
+  }));
 
-          margin_persen:
-            Number(
-              item.margin_persen ||
-              0
-            )
-        }));
-
-
-      console.log(
-        "DAFTAR PROYEK BERHASIL:",
-        {
-          nama_user:
-            user.nama,
-
-          role:
-            user.role,
-
-          jumlah_proyek:
-            rows.length
-        }
-      );
-
-
-      return res.json(rows);
+return res.json(data);
 
     } catch (error) {
       console.error(
-        "ERROR READ PROYEK:",
+        "ERROR GET DAFTAR PROYEK:",
         error
       );
 
       return res.status(500).json({
-        error:
-          error.message
+        error: error.message
       });
     }
   }
@@ -5481,6 +6973,31 @@ app.post(
 
 
     try {
+    // ==================================================
+// VALIDASI LOGIN DAN PIC PEMBUAT
+// ==================================================
+
+if (!req.session?.user) {
+  return res.status(401).json({
+    error: "Belum login"
+  });
+}
+
+const picLoginId =
+  Number(
+    req.session.user.pic_id ||
+    req.session.user.id
+  );
+
+if (
+  !Number.isInteger(picLoginId) ||
+  picLoginId <= 0
+) {
+  return res.status(403).json({
+    error:
+      "PIC pengguna login tidak valid"
+  });
+}
 
       const {
         kategori_produk_ids,
@@ -5971,59 +7488,116 @@ app.post(
 
 
       // ==================================================
-      // PIC PROYEK
-      // ==================================================
+// PIC PROYEK
+// PIC LOGIN OTOMATIS IKUT TERSIMPAN
+// ==================================================
 
-      if (
-        Array.isArray(pic_ids)
-      ) {
+const picIdsDariForm =
+  Array.isArray(pic_ids)
+    ? pic_ids
+        .map(Number)
+        .filter(
+          id =>
+            Number.isInteger(id) &&
+            id > 0
+        )
+    : [];
 
-        const uniquePicIds =
-          [
-            ...new Set(
+/*
+ * Gabungkan PIC pilihan dari form
+ * dengan PIC pengguna yang membuat proyek.
+ */
 
-              pic_ids
+const uniquePicIds =
+  [
+    ...new Set([
+      ...picIdsDariForm,
+      picLoginId
+    ])
+  ];
 
-                .map(Number)
+// ==================================================
+// VALIDASI SEMUA PIC
+// ==================================================
 
-                .filter(
-                  id =>
-                    Number.isInteger(id) &&
-                    id > 0
-                )
+const picCheck =
+  await client.query(
+    `
+    SELECT
+      id,
+      nama,
+      jabatan
 
-            )
-          ];
+    FROM public.pic
 
+    WHERE id =
+      ANY($1::bigint[])
+    `,
+    [
+      uniquePicIds
+    ]
+  );
 
-        for (
-          const picId
-          of uniquePicIds
-        ) {
+if (
+  picCheck.rows.length !==
+  uniquePicIds.length
+) {
+  const ditemukan =
+    new Set(
+      picCheck.rows.map(
+        item =>
+          Number(item.id)
+      )
+    );
 
-          await client.query(
-            `
-              INSERT INTO public.proyek_pic
-              (
-                proyek_id,
-                pic_id
-              )
-              VALUES
-              (
-                $1,
-                $2
-              )
-              ON CONFLICT DO NOTHING
-            `,
-            [
-              proyek.id,
-              picId
-            ]
-          );
+  const tidakDitemukan =
+    uniquePicIds.filter(
+      id =>
+        !ditemukan.has(
+          Number(id)
+        )
+    );
 
-        }
+  const error =
+    new Error(
+      `PIC tidak ditemukan: ${
+        tidakDitemukan.join(", ")
+      }`
+    );
 
-      }
+  error.statusCode = 400;
+
+  throw error;
+}
+
+// ==================================================
+// SIMPAN PIC PROYEK
+// ==================================================
+
+for (
+  const picId
+  of uniquePicIds
+) {
+  await client.query(
+    `
+    INSERT INTO public.proyek_pic (
+      proyek_id,
+      pic_id
+    )
+
+    VALUES (
+      $1,
+      $2
+    )
+
+    ON CONFLICT DO NOTHING
+    `,
+    [
+      proyek.id,
+      picId
+    ]
+  );
+}
 
 
       // ==================================================
@@ -6331,41 +7905,27 @@ await client.query(
 );
 
 
-      res.status(201).json({
+      return res.status(201).json({
+  message:
+    "Proyek berhasil ditambahkan",
 
-        message:
-          "Proyek berhasil ditambahkan",
+  id:
+    proyek.id,
 
-        id:
-          proyek.id,
+  proyek,
 
-        proyek
+  pic_ids:
+    uniquePicIds,
 
-      });
-
+  pic_pembuat_id:
+    picLoginId
+});
 
     } catch (error) {
 
       await client.query(
         "ROLLBACK"
       );
-
-
-      console.error(
-        "ERROR CREATE PROYEK:",
-        error
-      );
-
-
-      res
-        .status(
-          error.statusCode || 500
-        )
-        .json({
-          error:
-            error.message
-        });
-
 
     } finally {
 
@@ -6512,19 +8072,36 @@ app.delete(
 
 
       // Foreign key masih menghalangi penghapusan
-      if (error.code === "23503") {
-        return res.status(409).json({
-          error:
-            "Proyek belum dapat dihapus karena masih mempunyai data terkait.",
+      if (
+  error.code === "23503"
+) {
 
-          constraint:
-            error.constraint || null,
+  console.error(
+    "FOREIGN KEY ERROR PROYEK SEWA:",
+    {
+      constraint:
+        error.constraint,
 
-          detail:
-            error.detail || null
-        });
-      }
+      detail:
+        error.detail,
 
+      table:
+        error.table
+    }
+  );
+
+  return res.status(400).json({
+    error:
+      "Data master yang dipilih tidak valid atau sudah tidak tersedia.",
+
+    constraint:
+      error.constraint,
+
+    detail:
+      error.detail
+  });
+
+}
 
       return res.status(500).json({
         error:
@@ -6587,6 +8164,25 @@ app.get(
             p.status_final,
             p.created_at,
             p.updated_at,
+
+            /* =========================
+            INFORMASI PIC PROYEK
+          ========================= */
+
+          COALESCE(
+            daftar_pic.nama_pic,
+            ''
+          ) AS nama_pic,
+
+          COALESCE(
+            daftar_pic.nama_pic_list,
+            ARRAY[]::TEXT[]
+          ) AS nama_pic_list,
+
+          COALESCE(
+            daftar_pic.pic_ids,
+            ARRAY[]::INTEGER[]
+          ) AS pic_ids,
 
 
             /* =========================
@@ -6752,7 +8348,63 @@ app.get(
           ) kategori
             ON TRUE
 
+      /* =========================
+        MULTI PIC PROYEK
+      ========================= */
 
+      LEFT JOIN LATERAL (
+        SELECT
+          STRING_AGG(
+            data_pic.nama_pic,
+            ', '
+            ORDER BY
+              data_pic.nama_pic
+          ) AS nama_pic,
+
+          ARRAY_AGG(
+            data_pic.nama_pic
+            ORDER BY
+              data_pic.nama_pic
+          ) AS nama_pic_list,
+
+          ARRAY_AGG(
+            data_pic.pic_id
+            ORDER BY
+              data_pic.pic_id
+          ) AS pic_ids
+
+        FROM (
+          SELECT DISTINCT
+            master_pic.id
+              AS pic_id,
+
+            COALESCE(
+              NULLIF(
+                TRIM(master_pic.nama),
+                ''
+              ),
+
+              NULLIF(
+                TRIM(master_pic.inisial),
+                ''
+              ),
+
+              'PIC ' ||
+              master_pic.id::TEXT
+            ) AS nama_pic
+
+          FROM public.proyek_pic relasi_pic
+
+          INNER JOIN public.pic master_pic
+            ON master_pic.id =
+              relasi_pic.pic_id
+
+          WHERE
+            relasi_pic.proyek_id =
+              p.id
+        ) data_pic
+      ) daftar_pic
+        ON TRUE
           /* =========================
              DATA KLIEN TERBARU
           ========================= */
@@ -7026,6 +8678,30 @@ app.get(
                   item.klien_id
                 )
               : null,
+            nama_pic:
+      String(
+        item.nama_pic || ""
+      ).trim(),
+
+    nama_pic_list:
+      Array.isArray(
+        item.nama_pic_list
+      )
+        ? item.nama_pic_list
+            .map(nama =>
+              String(nama || "").trim()
+            )
+            .filter(Boolean)
+        : [],
+
+    pic_ids:
+      Array.isArray(
+        item.pic_ids
+      )
+        ? item.pic_ids
+            .map(Number)
+            .filter(Number.isInteger)
+        : [],
 
           nilai_final_klien:
             Number(
@@ -17017,6 +18693,17 @@ if (modeSimpan === "tambah") {
 app.put(
   "/api/proyek/:id/partners",
   async (req, res) => {
+
+    // ==================================================
+    // VALIDASI LOGIN
+    // ==================================================
+
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
     const client =
       await pool.connect();
 
@@ -17024,12 +18711,20 @@ app.put(
       false;
 
     try {
+
+      // ==================================================
+      // AMBIL DATA
+      // ==================================================
+
       const proyekId =
         Number(req.params.id);
 
-      const {
-        partners
-      } = req.body;
+      const partners =
+        Array.isArray(
+          req.body?.partners
+        )
+          ? req.body.partners
+          : null;
 
       // ==================================================
       // VALIDASI
@@ -17045,7 +18740,7 @@ app.put(
         });
       }
 
-      if (!Array.isArray(partners)) {
+      if (!partners) {
         return res.status(400).json({
           error:
             "partners harus berupa array"
@@ -17053,8 +18748,9 @@ app.put(
       }
 
       const partnerIds =
-        partners.map(item =>
-          Number(item.partner_id)
+        partners.map(
+          item =>
+            Number(item.partner_id)
         );
 
       if (
@@ -17081,10 +18777,12 @@ app.put(
       }
 
       // ==================================================
-      // HELPER ANGKA
+      // HELPER NILAI
       // ==================================================
 
-      function nilaiAtauNull(value) {
+      function nilaiAtauNull(
+        value
+      ) {
         if (
           value === null ||
           value === undefined ||
@@ -17101,24 +18799,33 @@ app.put(
           : null;
       }
 
-      await client.query("BEGIN");
+      // ==================================================
+      // MULAI TRANSAKSI
+      // ==================================================
 
-      transactionDimulai = true;
+      await client.query(
+        "BEGIN"
+      );
+
+      transactionDimulai =
+        true;
 
       // ==================================================
-      // PASTIKAN PROYEK TERSEDIA
+      // AMBIL PROYEK
       // ==================================================
 
       const proyekResult =
         await client.query(
           `
-          SELECT
-            id,
-            nama_proyek
+            SELECT
+              id,
+              nama_proyek
 
-          FROM public.proyek
+            FROM public.proyek
 
-          WHERE id = $1
+            WHERE id = $1
+
+            FOR UPDATE
           `,
           [proyekId]
         );
@@ -17126,15 +18833,19 @@ app.put(
       if (
         proyekResult.rows.length === 0
       ) {
-        await client.query("ROLLBACK");
+        await client.query(
+          "ROLLBACK"
+        );
 
-        transactionDimulai = false;
+        transactionDimulai =
+          false;
 
         return res.status(404).json({
           error:
             "Proyek tidak ditemukan"
         });
       }
+
       const namaProyek =
         proyekResult.rows[0]
           .nama_proyek;
@@ -17144,63 +18855,76 @@ app.put(
       // ==================================================
 
       const existingResult =
-  await client.query(
-    `
-      SELECT
-        pp.id,
-        pp.proyek_id,
-        pp.partner_id,
-        pp.nilai_submit,
-        pp.nilai_nego_1,
-        pp.nilai_nego_2,
-        pp.nilai_nego_3,
-        pp.tanggal_mulai,
-        pp.tanggal_akhir,
-        pp.model_pembayaran,
-        pp.status_pengadaan,
-        pp.status_teknis,
+        await client.query(
+          `
+            SELECT
+              pp.id,
+              pp.partner_id,
+              pr.nama_partner,
+              pp.nilai_submit,
+              pp.nilai_nego_1,
+              pp.nilai_nego_2,
+              pp.nilai_nego_3,
+              pp.tanggal_mulai,
+              pp.tanggal_akhir,
+              pp.model_pembayaran,
+              pp.status_pengadaan,
+              pp.status_teknis
 
-        mp.nama_partner
+            FROM public.proyek_partner pp
 
-      FROM public.proyek_partner pp
+            LEFT JOIN public.partner pr
+              ON pr.id = pp.partner_id
 
-      LEFT JOIN public.partner mp
-        ON mp.id = pp.partner_id
+            WHERE pp.proyek_id = $1
 
-      WHERE pp.proyek_id = $1
+            ORDER BY
+              pp.id ASC
 
-      ORDER BY pp.id ASC
+            FOR UPDATE OF pp
+          `,
+          [proyekId]
+        );
 
-      FOR UPDATE OF pp
-    `,
-    [proyekId]
-  );
+      const partnerLama =
+        existingResult.rows;
 
+      const existingIds =
+        partnerLama.map(
+          item =>
+            Number(item.id)
+        );
 
-const partnerLama =
-  existingResult.rows;
-
-
-const existingIds =
-  partnerLama.map(
-    item =>
-      Number(item.id)
-  );
       // ==================================================
-      // ID PARTNER YANG MASIH ADA
+      // ID PARTNER PROYEK DARI FRONTEND
       // ==================================================
 
       const incomingIds =
         partners
           .filter(
             item =>
-              item.proyek_partner_id
+              item.proyek_partner_id !==
+                null &&
+              item.proyek_partner_id !==
+                undefined &&
+              item.proyek_partner_id !==
+                ""
           )
-          .map(item =>
-            Number(
-              item.proyek_partner_id
-            )
+          .map(
+            item =>
+              Number(
+                item.proyek_partner_id
+              )
           );
+
+      if (
+        new Set(incomingIds).size !==
+        incomingIds.length
+      ) {
+        throw new Error(
+          "Data partner proyek yang sama tidak boleh dikirim dua kali"
+        );
+      }
 
       const incomingIdTidakValid =
         incomingIds.some(
@@ -17230,14 +18954,19 @@ const existingIds =
       // HAPUS PARTNER
       // ==================================================
 
-      if (deletedIds.length > 0) {
+      if (
+        deletedIds.length > 0
+      ) {
         await client.query(
           `
-          DELETE FROM public.proyek_partner
-          WHERE proyek_id = $1
-            AND id = ANY(
-              $2::integer[]
-            )
+            DELETE FROM
+              public.proyek_partner
+
+            WHERE proyek_id = $1
+
+              AND id = ANY(
+                $2::integer[]
+              )
           `,
           [
             proyekId,
@@ -17250,10 +18979,13 @@ const existingIds =
       let jumlahDiperbarui = 0;
 
       // ==================================================
-      // LOOP PARTNER DARI FRONTEND
+      // UPDATE DAN INSERT PARTNER
       // ==================================================
 
-      for (const item of partners) {
+      for (
+        const item
+        of partners
+      ) {
         const partnerId =
           Number(item.partner_id);
 
@@ -17286,16 +19018,22 @@ const existingIds =
           null;
 
         const modelPembayaran =
-          item.model_pembayaran ||
-          null;
+          String(
+            item.model_pembayaran ||
+            ""
+          ).trim() || null;
 
         const statusPengadaan =
-          item.status_pengadaan ||
-          null;
+          String(
+            item.status_pengadaan ||
+            ""
+          ).trim() || null;
 
         const statusTeknis =
-          item.status_teknis ||
-          null;
+          String(
+            item.status_teknis ||
+            ""
+          ).trim() || null;
 
         if (
           tanggalMulai &&
@@ -17308,36 +19046,46 @@ const existingIds =
           );
         }
 
-        // ==================================================
-        // EDIT PARTNER LAMA
-        // ==================================================
+        // ================================================
+        // UPDATE PARTNER LAMA
+        // ================================================
 
-        if (item.proyek_partner_id) {
+        if (
+          item.proyek_partner_id !==
+            null &&
+          item.proyek_partner_id !==
+            undefined &&
+          item.proyek_partner_id !==
+            ""
+        ) {
           const proyekPartnerId =
             Number(
               item.proyek_partner_id
             );
 
-          const result =
+          const updateResult =
             await client.query(
               `
-              UPDATE public.proyek_partner
-              SET
-                partner_id = $1,
-                nilai_submit = $2,
-                nilai_nego_1 = $3,
-                nilai_nego_2 = $4,
-                nilai_nego_3 = $5,
-                tanggal_mulai = $6,
-                tanggal_akhir = $7,
-                model_pembayaran = $8,
-                status_pengadaan = $9,
-                status_teknis = $10,
-                updated_at =
-                  CURRENT_TIMESTAMP
-              WHERE id = $11
-                AND proyek_id = $12
-              RETURNING *
+                UPDATE public.proyek_partner
+
+                SET
+                  partner_id = $1,
+                  nilai_submit = $2,
+                  nilai_nego_1 = $3,
+                  nilai_nego_2 = $4,
+                  nilai_nego_3 = $5,
+                  tanggal_mulai = $6,
+                  tanggal_akhir = $7,
+                  model_pembayaran = $8,
+                  status_pengadaan = $9,
+                  status_teknis = $10,
+                  updated_at =
+                    CURRENT_TIMESTAMP
+
+                WHERE id = $11
+                  AND proyek_id = $12
+
+                RETURNING *
               `,
               [
                 partnerId,
@@ -17356,7 +19104,8 @@ const existingIds =
             );
 
           if (
-            result.rows.length === 0
+            updateResult.rows.length ===
+            0
           ) {
             throw new Error(
               `Partner proyek ${proyekPartnerId} tidak ditemukan`
@@ -17366,35 +19115,46 @@ const existingIds =
           jumlahDiperbarui += 1;
 
         } else {
-          // ==================================================
-          // TAMBAH PARTNER BARU
-          // ==================================================
+
+          // ==============================================
+          // INSERT PARTNER BARU
+          // ==============================================
 
           await client.query(
             `
-            INSERT INTO public.proyek_partner (
-              proyek_id,
-              partner_id,
-              nilai_submit,
-              nilai_nego_1,
-              nilai_nego_2,
-              nilai_nego_3,
-              tanggal_mulai,
-              tanggal_akhir,
-              model_pembayaran,
-              status_pengadaan,
-              status_teknis,
-              created_at,
-              updated_at
-            )
-            VALUES (
-              $1, $2, $3, $4, $5,
-              $6, $7, $8, $9, $10,
-              $11,
-              CURRENT_TIMESTAMP,
-              CURRENT_TIMESTAMP
-            )
-            RETURNING *
+              INSERT INTO public.proyek_partner (
+                proyek_id,
+                partner_id,
+                nilai_submit,
+                nilai_nego_1,
+                nilai_nego_2,
+                nilai_nego_3,
+                tanggal_mulai,
+                tanggal_akhir,
+                model_pembayaran,
+                status_pengadaan,
+                status_teknis,
+                created_at,
+                updated_at
+              )
+
+              VALUES (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9,
+                $10,
+                $11,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+              )
+
+              RETURNING *
             `,
             [
               proyekId,
@@ -17414,291 +19174,529 @@ const existingIds =
           jumlahDitambah += 1;
         }
       }
-// ==================================================
-// AMBIL KONDISI PARTNER SETELAH PERUBAHAN
-// ==================================================
 
-const partnerBaruResult =
-  await client.query(
-    `
-      SELECT
-        pp.id,
-        pp.proyek_id,
-        pp.partner_id,
-        pp.nilai_submit,
-        pp.nilai_nego_1,
-        pp.nilai_nego_2,
-        pp.nilai_nego_3,
-        pp.tanggal_mulai,
-        pp.tanggal_akhir,
-        pp.model_pembayaran,
-        pp.status_pengadaan,
-        pp.status_teknis,
+      // ==================================================
+      // AMBIL PARTNER SETELAH PERUBAHAN
+      // ==================================================
 
-        mp.nama_partner
+      const partnerBaruResult =
+        await client.query(
+          `
+            SELECT
+              pp.id,
+              pp.partner_id,
+              pr.nama_partner,
+              pp.nilai_submit,
+              pp.nilai_nego_1,
+              pp.nilai_nego_2,
+              pp.nilai_nego_3,
+              pp.tanggal_mulai,
+              pp.tanggal_akhir,
+              pp.model_pembayaran,
+              pp.status_pengadaan,
+              pp.status_teknis
 
-      FROM public.proyek_partner pp
+            FROM public.proyek_partner pp
 
-      LEFT JOIN public.partner mp
-        ON mp.id = pp.partner_id
+            LEFT JOIN public.partner pr
+              ON pr.id = pp.partner_id
 
-      WHERE pp.proyek_id = $1
+            WHERE pp.proyek_id = $1
 
-      ORDER BY pp.id ASC
-    `,
-    [proyekId]
-  );
-
-
-const partnerBaru =
-  partnerBaruResult.rows;
-
-
-// ==================================================
-// FORMAT ACTIVITY LOG
-// ==================================================
-
-const formatTeksPartnerProyek =
-  value => {
-    if (
-      value === null ||
-      value === undefined ||
-      String(value).trim() === ""
-    ) {
-      return "-";
-    }
-
-    return String(value).trim();
-  };
-
-
-const formatRupiahPartnerProyek =
-  value => {
-    if (
-      value === null ||
-      value === undefined ||
-      value === ""
-    ) {
-      return "-";
-    }
-
-    const angka =
-      Number(value);
-
-    if (!Number.isFinite(angka)) {
-      return String(value);
-    }
-
-    return `Rp ${new Intl.NumberFormat(
-      "id-ID",
-      {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-      }
-    ).format(angka)}`;
-  };
-
-
-const formatTanggalPartnerProyek =
-  value => {
-    if (!value) {
-      return "-";
-    }
-
-    const daftarBulan = [
-      "Januari",
-      "Februari",
-      "Maret",
-      "April",
-      "Mei",
-      "Juni",
-      "Juli",
-      "Agustus",
-      "September",
-      "Oktober",
-      "November",
-      "Desember"
-    ];
-
-    let tahun;
-    let bulan;
-    let tanggal;
-
-    if (value instanceof Date) {
-      tahun =
-        value.getUTCFullYear();
-
-      bulan =
-        value.getUTCMonth() + 1;
-
-      tanggal =
-        value.getUTCDate();
-    } else {
-      const cocok =
-        String(value).match(
-          /^(\d{4})-(\d{2})-(\d{2})/
+            ORDER BY
+              pp.id ASC
+          `,
+          [proyekId]
         );
 
-      if (!cocok) {
-        return String(value);
+      const partnerBaru =
+        partnerBaruResult.rows;
+
+      // ==================================================
+      // HELPER ACTIVITY LOG
+      // ==================================================
+
+      function normalisasiNominalLog(
+        value
+      ) {
+        if (
+          value === null ||
+          value === undefined ||
+          value === ""
+        ) {
+          return null;
+        }
+
+        const hasil =
+          Number(value);
+
+        return Number.isFinite(hasil)
+          ? hasil
+          : null;
       }
 
-      tahun =
-        Number(cocok[1]);
+      function formatNominalLog(
+        value
+      ) {
+        const hasil =
+          normalisasiNominalLog(
+            value
+          );
 
-      bulan =
-        Number(cocok[2]);
+        if (hasil === null) {
+          return "-";
+        }
 
-      tanggal =
-        Number(cocok[3]);
-    }
+        return (
+          "Rp " +
+          Math.round(hasil)
+            .toLocaleString(
+              "id-ID"
+            )
+        );
+      }
 
-    return `${tanggal} ${
-      daftarBulan[bulan - 1]
-    } ${tahun}`;
-  };
+      function normalisasiTeksLog(
+        value
+      ) {
+        const hasil =
+          String(value || "")
+            .trim();
 
+        return hasil || null;
+      }
 
-const buatRingkasanPartnerProyek =
-  daftarPartner => {
-    if (
-      !Array.isArray(
-        daftarPartner
-      ) ||
-      daftarPartner.length === 0
-    ) {
-      return "Tidak ada partner";
-    }
+      function formatTeksLog(
+        value
+      ) {
+        return (
+          normalisasiTeksLog(
+            value
+          ) || "-"
+        );
+      }
 
+      function normalisasiTanggalLog(
+        value
+      ) {
+        if (!value) {
+          return null;
+        }
 
-    return daftarPartner
-      .map(
-        (
-          item,
-          index
-        ) => {
-          const namaPartner =
-            formatTeksPartnerProyek(
-              item.nama_partner
+        if (
+          value instanceof Date
+        ) {
+          const tahun =
+            value.getUTCFullYear();
+
+          const bulan =
+            String(
+              value.getUTCMonth() + 1
+            ).padStart(2, "0");
+
+          const tanggal =
+            String(
+              value.getUTCDate()
+            ).padStart(2, "0");
+
+          return (
+            `${tahun}-${bulan}-${tanggal}`
+          );
+        }
+
+        const hasil =
+          String(value)
+            .trim()
+            .match(
+              /^\d{4}-\d{2}-\d{2}/
             );
 
-          return [
-            `PARTNER ${index + 1}`,
+        return hasil
+          ? hasil[0]
+          : null;
+      }
 
-            `NAMA = ${namaPartner}`,
+      function formatTanggalLog(
+        value
+      ) {
+        const tanggal =
+          normalisasiTanggalLog(
+            value
+          );
 
-            `NILAI SUBMIT = ${
-              formatRupiahPartnerProyek(
-                item.nilai_submit
-              )
-            }`,
-
-            `NILAI NEGO 1 = ${
-              formatRupiahPartnerProyek(
-                item.nilai_nego_1
-              )
-            }`,
-
-            `NILAI NEGO 2 = ${
-              formatRupiahPartnerProyek(
-                item.nilai_nego_2
-              )
-            }`,
-
-            `NILAI NEGO 3 = ${
-              formatRupiahPartnerProyek(
-                item.nilai_nego_3
-              )
-            }`,
-
-            `TANGGAL MULAI = ${
-              formatTanggalPartnerProyek(
-                item.tanggal_mulai
-              )
-            }`,
-
-            `TANGGAL AKHIR = ${
-              formatTanggalPartnerProyek(
-                item.tanggal_akhir
-              )
-            }`,
-
-            `MODEL PEMBAYARAN = ${
-              formatTeksPartnerProyek(
-                item.model_pembayaran
-              )
-            }`,
-
-            `STATUS PENGADAAN = ${
-              formatTeksPartnerProyek(
-                item.status_pengadaan
-              )
-            }`,
-
-            `STATUS TEKNIS = ${
-              formatTeksPartnerProyek(
-                item.status_teknis
-              )
-            }`
-          ].join(", ");
+        if (!tanggal) {
+          return "-";
         }
-      )
-      .join(" | ");
-  };
 
+        const [
+          tahun,
+          bulan,
+          hari
+        ] =
+          tanggal
+            .split("-")
+            .map(Number);
 
-const nilaiLamaLog =
-  buatRingkasanPartnerProyek(
-    partnerLama
-  );
+        const namaBulan = [
+          "Januari",
+          "Februari",
+          "Maret",
+          "April",
+          "Mei",
+          "Juni",
+          "Juli",
+          "Agustus",
+          "September",
+          "Oktober",
+          "November",
+          "Desember"
+        ];
 
-const nilaiBaruLog =
-  buatRingkasanPartnerProyek(
-    partnerBaru
-  );
+        return (
+          `${hari} ` +
+          `${namaBulan[bulan - 1]} ` +
+          `${tahun}`
+        );
+      }
 
+      // ==================================================
+      // BANDINGKAN FIELD YANG BERUBAH
+      // ==================================================
 
-// ==================================================
-// SIMPAN SATU ACTIVITY LOG
-// ==================================================
+      const perubahanPartner =
+        [];
 
-if (
-  nilaiLamaLog !==
-  nilaiBaruLog
-) {
-  await simpanActivityLog(
-    client,
-    {
-      ...getActivityUser(req),
+      const partnerLamaMap =
+        new Map(
+          partnerLama.map(
+            item => [
+              Number(item.id),
+              item
+            ]
+          )
+        );
 
-      aktivitas: "UPDATE",
-      modul: "PROYEK",
+      const partnerBaruMap =
+        new Map(
+          partnerBaru.map(
+            item => [
+              Number(item.id),
+              item
+            ]
+          )
+        );
 
-      // Entity menggunakan proyek ID
-      entity_id: proyekId,
-      entity_nama: namaProyek,
+      function tambahPerubahan(
+        identitas,
+        field,
+        nilaiLama,
+        nilaiBaru,
+        formatter
+      ) {
+        if (
+          nilaiLama === nilaiBaru
+        ) {
+          return;
+        }
 
-      field_name:
-        "PARTNER PROYEK",
+        perubahanPartner.push({
+          label:
+            `${identitas} - ${field}`,
 
-      nilai_lama:
-        nilaiLamaLog,
+          nilai_lama:
+            formatter(nilaiLama),
 
-      nilai_baru:
-        nilaiBaruLog,
+          nilai_baru:
+            formatter(nilaiBaru)
+        });
+      }
 
-      deskripsi:
-        "memperbarui data partner proyek"
-    }
-  );
-}
+      // ==================================================
+      // PARTNER YANG DIHAPUS
+      // ==================================================
+
+      partnerLama.forEach(
+        (
+          lama,
+          index
+        ) => {
+          if (
+            partnerBaruMap.has(
+              Number(lama.id)
+            )
+          ) {
+            return;
+          }
+
+          perubahanPartner.push({
+            label:
+              `PARTNER ${
+                index + 1
+              } DIHAPUS`,
+
+            nilai_lama:
+              lama.nama_partner ||
+              `Partner ID ${
+                lama.partner_id
+              }`,
+
+            nilai_baru:
+              "-"
+          });
+        }
+      );
+
+      // ==================================================
+      // PARTNER BARU ATAU DIPERBARUI
+      // ==================================================
+
+      partnerBaru.forEach(
+        (
+          baru,
+          index
+        ) => {
+          const lama =
+            partnerLamaMap.get(
+              Number(baru.id)
+            );
+
+          const identitas =
+            `PARTNER ${
+              index + 1
+            } (${
+              baru.nama_partner ||
+              lama?.nama_partner ||
+              `ID ${baru.partner_id}`
+            })`;
+
+          // Partner baru
+          if (!lama) {
+            perubahanPartner.push({
+              label:
+                `PARTNER ${
+                  index + 1
+                } DITAMBAHKAN`,
+
+              nilai_lama:
+                "-",
+
+              nilai_baru:
+                baru.nama_partner ||
+                `Partner ID ${
+                  baru.partner_id
+                }`
+            });
+
+            return;
+          }
+
+          // Nama partner
+          if (
+            Number(
+              lama.partner_id
+            ) !==
+            Number(
+              baru.partner_id
+            )
+          ) {
+            perubahanPartner.push({
+              label:
+                `${identitas} - NAMA PARTNER`,
+
+              nilai_lama:
+                lama.nama_partner ||
+                `Partner ID ${
+                  lama.partner_id
+                }`,
+
+              nilai_baru:
+                baru.nama_partner ||
+                `Partner ID ${
+                  baru.partner_id
+                }`
+            });
+          }
+
+          // Nilai Submit
+          tambahPerubahan(
+            identitas,
+            "NILAI SUBMIT",
+            normalisasiNominalLog(
+              lama.nilai_submit
+            ),
+            normalisasiNominalLog(
+              baru.nilai_submit
+            ),
+            formatNominalLog
+          );
+
+          // Nilai Nego 1
+          tambahPerubahan(
+            identitas,
+            "NILAI NEGO 1",
+            normalisasiNominalLog(
+              lama.nilai_nego_1
+            ),
+            normalisasiNominalLog(
+              baru.nilai_nego_1
+            ),
+            formatNominalLog
+          );
+
+          // Nilai Nego 2
+          tambahPerubahan(
+            identitas,
+            "NILAI NEGO 2",
+            normalisasiNominalLog(
+              lama.nilai_nego_2
+            ),
+            normalisasiNominalLog(
+              baru.nilai_nego_2
+            ),
+            formatNominalLog
+          );
+
+          // Nilai Nego 3
+          tambahPerubahan(
+            identitas,
+            "NILAI NEGO 3",
+            normalisasiNominalLog(
+              lama.nilai_nego_3
+            ),
+            normalisasiNominalLog(
+              baru.nilai_nego_3
+            ),
+            formatNominalLog
+          );
+
+          // Tanggal Mulai
+          tambahPerubahan(
+            identitas,
+            "TANGGAL MULAI",
+            normalisasiTanggalLog(
+              lama.tanggal_mulai
+            ),
+            normalisasiTanggalLog(
+              baru.tanggal_mulai
+            ),
+            formatTanggalLog
+          );
+
+          // Tanggal Akhir
+          tambahPerubahan(
+            identitas,
+            "TANGGAL AKHIR",
+            normalisasiTanggalLog(
+              lama.tanggal_akhir
+            ),
+            normalisasiTanggalLog(
+              baru.tanggal_akhir
+            ),
+            formatTanggalLog
+          );
+
+          // Model Pembayaran
+          tambahPerubahan(
+            identitas,
+            "MODEL PEMBAYARAN",
+            normalisasiTeksLog(
+              lama.model_pembayaran
+            ),
+            normalisasiTeksLog(
+              baru.model_pembayaran
+            ),
+            formatTeksLog
+          );
+
+          // Status Pengadaan
+          tambahPerubahan(
+            identitas,
+            "STATUS PENGADAAN",
+            normalisasiTeksLog(
+              lama.status_pengadaan
+            ),
+            normalisasiTeksLog(
+              baru.status_pengadaan
+            ),
+            formatTeksLog
+          );
+
+          // Status Teknis
+          tambahPerubahan(
+            identitas,
+            "STATUS TEKNIS",
+            normalisasiTeksLog(
+              lama.status_teknis
+            ),
+            normalisasiTeksLog(
+              baru.status_teknis
+            ),
+            formatTeksLog
+          );
+        }
+      );
+
+      // ==================================================
+      // SIMPAN LOG HANYA FIELD YANG BERUBAH
+      // ==================================================
+
+      if (
+        perubahanPartner.length > 0
+      ) {
+        await simpanActivityLog(
+          client,
+          {
+            ...getActivityUser(req),
+
+            aktivitas:
+              "UPDATE",
+
+            modul:
+              "PROYEK",
+
+            entity_id:
+              proyekId,
+
+            entity_nama:
+              namaProyek,
+
+            field_name:
+              "PARTNER PROYEK",
+
+            nilai_lama:
+              perubahanPartner
+                .map(
+                  item =>
+                    `${item.label} = ` +
+                    `${item.nilai_lama}`
+                )
+                .join(" | "),
+
+            nilai_baru:
+              perubahanPartner
+                .map(
+                  item =>
+                    `${item.label} = ` +
+                    `${item.nilai_baru}`
+                )
+                .join(" | "),
+
+            deskripsi:
+              "memperbarui data partner proyek"
+          }
+        );
+      }
+
       // ==================================================
       // COMMIT
       // ==================================================
 
-      await client.query("COMMIT");
+      await client.query(
+        "COMMIT"
+      );
 
-      transactionDimulai = false;
+      transactionDimulai =
+        false;
 
       return res.json({
         message:
@@ -17711,10 +19709,14 @@ if (
           jumlahDiperbarui,
 
         dihapus:
-          deletedIds.length
+          deletedIds.length,
+
+        perubahan:
+          perubahanPartner.length
       });
 
     } catch (error) {
+
       if (transactionDimulai) {
         await client.query(
           "ROLLBACK"
@@ -17732,11 +19734,12 @@ if (
       });
 
     } finally {
+
       client.release();
+
     }
   }
 );
-
 // ======================================================
 // TASK LIST
 // ======================================================
@@ -17744,31 +19747,21 @@ if (
 // TASK LIST - DAFTAR PROYEK
 // ======================================================
 
+// =====================================================
+// PILIHAN PROYEK TASK LIST
+// =====================================================
+
 app.get(
   "/api/task-list/proyek",
+
+  setTaskListAccess,
+
   async (req, res) => {
-
-    if (
-      !req.session ||
-      !req.session.user
-    ) {
-      return res
-        .status(401)
-        .json({
-          error: "Belum login"
-        });
-    }
-
     try {
-
-      const user =
-        req.session.user;
-
-      const isAdmin =
-        String(
-          user.role || ""
-        ).toLowerCase() === "admin";
-
+      const {
+        pic_id,
+        dapat_melihat_semua
+      } = req.taskListAccess;
 
       const result =
         await pool.query(
@@ -17777,13 +19770,43 @@ app.get(
             p.id,
             p.nama_proyek,
 
-            kp.id AS kategori_id,
-            kp.nama_kategori_produk AS kategori
+            p.kategori_produk_id
+              AS kategori_id,
+
+            COALESCE(
+              kategori_data.kategori,
+              kategori_utama.nama_kategori_produk,
+              'Tanpa Kategori'
+            ) AS kategori
 
           FROM public.proyek p
 
-          LEFT JOIN public.kategori_produk kp
-            ON kp.id = p.kategori_produk_id
+          LEFT JOIN public.kategori_produk
+            kategori_utama
+
+            ON kategori_utama.id =
+               p.kategori_produk_id
+
+          LEFT JOIN LATERAL (
+            SELECT
+              STRING_AGG(
+                DISTINCT
+                kategori.nama_kategori_produk,
+                ', '
+                ORDER BY
+                  kategori.nama_kategori_produk
+              ) AS kategori
+
+            FROM public.proyek_kategori relasi
+
+            INNER JOIN public.kategori_produk kategori
+              ON kategori.id =
+                 relasi.kategori_produk_id
+
+            WHERE relasi.proyek_id =
+                  p.id
+          ) kategori_data
+            ON TRUE
 
           WHERE
             $1::boolean = TRUE
@@ -17793,69 +19816,60 @@ app.get(
 
               FROM public.proyek_pic pp
 
-              WHERE
-                pp.proyek_id = p.id
-                AND pp.pic_id = $2
+              WHERE pp.proyek_id =
+                    p.id
+
+                AND pp.pic_id =
+                    $2
             )
 
           ORDER BY
-            p.nama_proyek ASC
+            p.nama_proyek ASC,
+            p.id ASC
           `,
           [
-            isAdmin,
-            user.id
+            dapat_melihat_semua,
+            pic_id
           ]
         );
 
-
-      res.json(
+      return res.json(
         result.rows
       );
 
     } catch (error) {
-
       console.error(
         "ERROR LOAD PROYEK TASK:",
         error
       );
 
-      res
-        .status(500)
-        .json({
-          error:
-            error.message
-        });
-
+      return res.status(500).json({
+        error:
+          error.message ||
+          "Gagal mengambil proyek Task List"
+      });
     }
-
   }
 );
 
-app.get("/api/task-list",
+// =====================================================
+// GET TASK LIST
+//
+// KABAG/KADIV : MELIHAT SEMUA TASK
+// LAINNYA     : HANYA TASK YANG DIBUAT SENDIRI
+// =====================================================
+
+app.get(
+  "/api/task-list",
+
+  setTaskListAccess,
+
   async (req, res) => {
-
-    if (
-      !req.session ||
-      !req.session.user
-    ) {
-
-      return res.status(401).json({
-        error: "Belum login"
-      });
-
-    }
-
-
     try {
-
-      const user =
-        req.session.user;
-
-      const isAdmin =
-        String(user.role || "")
-          .toLowerCase() ===
-        "admin";
-
+      const {
+        pic_id,
+        dapat_melihat_semua
+      } = req.taskListAccess;
 
       const result =
         await pool.query(
@@ -17890,75 +19904,95 @@ app.get("/api/task-list",
 
             p.nama_proyek,
 
-            kp.nama_kategori_produk
-              AS kategori,
+            COALESCE(
+              kategori_data.kategori,
+              kategori_utama.nama_kategori_produk,
+              'Tanpa Kategori'
+            ) AS kategori,
 
-            pic.nama
+            pembuat.nama
               AS dibuat_oleh
 
           FROM public.task_list t
 
-          JOIN public.proyek p
+          INNER JOIN public.proyek p
             ON p.id =
                t.proyek_id
 
-          LEFT JOIN public.kategori_produk kp
-            ON kp.id =
+          LEFT JOIN public.kategori_produk
+            kategori_utama
+
+            ON kategori_utama.id =
                p.kategori_produk_id
 
-          LEFT JOIN public.pic pic
-            ON pic.id =
+          LEFT JOIN LATERAL (
+            SELECT
+              STRING_AGG(
+                DISTINCT
+                kategori.nama_kategori_produk,
+                ', '
+                ORDER BY
+                  kategori.nama_kategori_produk
+              ) AS kategori
+
+            FROM public.proyek_kategori relasi
+
+            INNER JOIN public.kategori_produk kategori
+              ON kategori.id =
+                 relasi.kategori_produk_id
+
+            WHERE relasi.proyek_id =
+                  p.id
+          ) kategori_data
+            ON TRUE
+
+          LEFT JOIN public.pic pembuat
+            ON pembuat.id =
                t.created_by
 
           LEFT JOIN public.master_dokumen md
             ON md.id =
                t.master_dokumen_id
 
-          WHERE
+          /*
+           * Kabag/Kadiv:
+           * $1 = TRUE sehingga melihat seluruh task.
+           *
+           * Selain Kabag/Kadiv:
+           * hanya task dengan created_by sesuai PIC login.
+           */
+
+          WHERE (
             $1::boolean = TRUE
 
-            OR EXISTS (
-              SELECT 1
-
-              FROM public.proyek_pic pp
-
-              WHERE
-                pp.proyek_id =
-                  t.proyek_id
-
-                AND pp.pic_id =
-                  $2
-            )
+            OR t.created_by = $2
+          )
 
           ORDER BY
             t.id DESC
           `,
           [
-            isAdmin,
-            user.id
+            dapat_melihat_semua,
+            pic_id
           ]
         );
 
-
-      res.json(
+      return res.json(
         result.rows
       );
 
-
     } catch (error) {
-
       console.error(
         "ERROR GET TASK LIST:",
         error
       );
 
-      res.status(500).json({
+      return res.status(500).json({
         error:
-          "Gagal mengambil task list"
+          error.message ||
+          "Gagal mengambil Task List"
       });
-
     }
-
   }
 );
 
@@ -21429,7 +23463,24 @@ app.get(
 app.get(
   "/api/timeline",
   async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
     try {
+      const user =
+        req.session.user;
+
+      const isAdmin =
+        String(user.role || "")
+          .trim()
+          .toLowerCase() === "admin";
+
+      const picId =
+        Number(user.id) || 0;
+
       const page =
         Math.max(
           Number(req.query.page) || 1,
@@ -21457,35 +23508,143 @@ app.get(
           ? Number(req.query.bulan)
           : null;
 
+      const status =
+        String(
+          req.query.status || ""
+        )
+          .trim()
+          .toLowerCase() === "expired"
+            ? "expired"
+            : "";
+
+      const mode =
+        String(
+          req.query.mode || ""
+        )
+          .trim()
+          .toLowerCase();
+
+      const contractOverview =
+        mode === "contract-overview";
+
       const offset =
         (page - 1) * limit;
 
       const result =
         await pool.query(
           `
+          WITH tanggal_acuan AS (
+            SELECT
+              (
+                CURRENT_TIMESTAMP
+                AT TIME ZONE
+                'Asia/Jakarta'
+              )::date AS hari_ini
+          ),
+
+          timeline_dasar AS (
+
+            /* ========================================
+             * TIMELINE PROYEK BIASA
+             * ======================================== */
+
             SELECT
               timeline.id,
+
+              (
+                'proyek-' ||
+                timeline.id::text
+              ) AS timeline_key,
+
+              'Proyek'::text
+                AS sumber_timeline,
+
+              TRUE
+                AS dapat_diubah,
+
               timeline.proyek_id,
+
+              NULL::integer
+                AS proyek_sewa_id,
+
+              NULL::integer
+                AS proyek_sewa_produk_id,
+
               timeline.deskripsi,
-              timeline.tanggal_mulai,
-              timeline.tanggal_akhir,
+
+              timeline.tanggal_mulai::date
+                AS tanggal_mulai,
+
+              timeline.tanggal_akhir::date
+                AS tanggal_akhir,
+
               timeline.status,
 
               proyek.nama_proyek,
               proyek.jenis_proyek,
               proyek.sub_jenis_proyek,
 
+              proyek.status_final,
+
+              NULL::text
+                AS nomor_pr,
+
+              NULL::text
+                AS no_do,
+
+              NULL::text
+                AS item_produk,
+
+              NULL::text
+                AS nama_cabang,
+
               COALESCE(
                 kategori_data.kategori,
                 '[]'::jsonb
               ) AS kategori,
 
-              COUNT(*) OVER()
-                AS total_data
+              (
+                LOWER(
+                  BTRIM(
+                    COALESCE(
+                      proyek.status_final,
+                      ''
+                    )
+                  )
+                ) = 'aktif'
+
+                AND (
+
+                  LOWER(
+                    COALESCE(
+                      proyek.jenis_proyek,
+                      ''
+                    )
+                  ) LIKE '%sewa%'
+
+                  OR
+
+                  LOWER(
+                    COALESCE(
+                      proyek.sub_jenis_proyek,
+                      ''
+                    )
+                  ) LIKE '%sewa%'
+
+                  OR
+
+                  LOWER(
+                    COALESCE(
+                      proyek.sub_jenis_proyek,
+                      ''
+                    )
+                  ) LIKE '%lisensi%'
+                )
+              ) AS masuk_contract_overview
 
             FROM public.proyek_timeline timeline
 
-            JOIN public.proyek proyek
+            INNER JOIN public.proyek proyek
               ON proyek.id =
                  timeline.proyek_id
 
@@ -21493,7 +23652,9 @@ app.get(
               SELECT
                 COALESCE(
                   JSONB_AGG(
+                    DISTINCT
                     kategori.nama_kategori_produk
+
                     ORDER BY
                       kategori.nama_kategori_produk
                   ),
@@ -21502,7 +23663,7 @@ app.get(
 
               FROM public.proyek_kategori relasi
 
-              JOIN public.kategori_produk kategori
+              INNER JOIN public.kategori_produk kategori
                 ON kategori.id =
                    relasi.kategori_produk_id
 
@@ -21513,44 +23674,349 @@ app.get(
 
             WHERE
               (
-                $1 = ''
+                $7::boolean = TRUE
 
-                OR timeline.deskripsi
-                   ILIKE '%' || $1 || '%'
+                OR EXISTS (
+                  SELECT 1
 
-                OR proyek.nama_proyek
-                   ILIKE '%' || $1 || '%'
-              )
+                  FROM public.proyek_pic akses_pic
 
-              AND (
-                $2::integer IS NULL
+                  WHERE
+                    akses_pic.proyek_id =
+                      proyek.id
 
-                OR (
-                  timeline.tanggal_akhir
-                    >= CURRENT_DATE
-
-                  AND timeline.tanggal_akhir
-                    <= CURRENT_DATE +
-                       (
-                         $2::text ||
-                         ' months'
-                       )::interval
+                    AND akses_pic.pic_id =
+                      $8
                 )
               )
 
-            ORDER BY
-              timeline.tanggal_akhir ASC,
-              proyek.nama_proyek ASC,
-              timeline.id ASC
+            UNION ALL
 
-            LIMIT $3
-            OFFSET $4
+            /* ========================================
+             * TIMELINE PROYEK SEWA
+             * Mulai = tanggal DO
+             * Akhir = end date sewa
+             * ======================================== */
+
+            SELECT
+              sewa_order.id,
+
+              (
+                'sewa-' ||
+                sewa_order.id::text
+              ) AS timeline_key,
+
+              'Sewa'::text
+                AS sumber_timeline,
+
+              FALSE
+                AS dapat_diubah,
+
+              proyek_sewa.proyek_id,
+
+              proyek_sewa.id
+                AS proyek_sewa_id,
+
+              sewa_produk.id
+                AS proyek_sewa_produk_id,
+
+              COALESCE(
+                NULLIF(
+                  BTRIM(
+                    master_produk.item_produk
+                  ),
+                  ''
+                ),
+
+                NULLIF(
+                  BTRIM(
+                    sewa_produk.sub_jenis_proyek
+                  ),
+                  ''
+                ),
+
+                'Sewa'
+              ) AS deskripsi,
+
+              sewa_order.tanggal_do::date
+                AS tanggal_mulai,
+
+              sewa_order.end_date::date
+                AS tanggal_akhir,
+
+              CASE
+                WHEN
+                  sewa_order.end_date::date <
+                  tanggal_acuan.hari_ini
+                THEN 'Berakhir'
+
+                ELSE 'Aktif'
+              END::text AS status,
+
+              /* Nama proyek pada listing = Nomor PR */
+              COALESCE(
+                NULLIF(
+                  BTRIM(
+                    proyek_sewa.nomor_pr
+                  ),
+                  ''
+                ),
+                'Tanpa Nomor PR'
+              ) AS nama_proyek,
+
+              'Sewa'::text
+                AS jenis_proyek,
+
+              COALESCE(
+                NULLIF(
+                  BTRIM(
+                    sewa_produk.sub_jenis_proyek
+                  ),
+                  ''
+                ),
+
+                NULLIF(
+                  BTRIM(
+                    proyek.sub_jenis_proyek
+                  ),
+                  ''
+                ),
+
+                'Sewa'
+              ) AS sub_jenis_proyek,
+
+              proyek.status_final,
+
+              proyek_sewa.nomor_pr,
+              sewa_order.no_do,
+              master_produk.item_produk,
+              master_cabang.nama_cabang,
+
+              /* Kategori = proyek yang dipilih */
+              CASE
+                WHEN
+                  NULLIF(
+                    BTRIM(
+                      COALESCE(
+                        proyek.nama_proyek,
+                        ''
+                      )
+                    ),
+                    ''
+                  ) IS NULL
+                THEN '[]'::jsonb
+
+                ELSE JSONB_BUILD_ARRAY(
+                  BTRIM(
+                    proyek.nama_proyek
+                  )
+                )
+              END AS kategori,
+
+              (
+                LOWER(
+                  BTRIM(
+                    COALESCE(
+                      proyek.status_final,
+                      ''
+                    )
+                  )
+                ) = 'aktif'
+              ) AS masuk_contract_overview
+
+            FROM public.proyek_sewa_order sewa_order
+
+            INNER JOIN public.proyek_sewa_produk sewa_produk
+              ON sewa_produk.id =
+                 sewa_order.proyek_sewa_produk_id
+
+            INNER JOIN public.proyek_sewa proyek_sewa
+              ON proyek_sewa.id =
+                 sewa_produk.proyek_sewa_id
+
+            INNER JOIN public.proyek proyek
+              ON proyek.id =
+                 proyek_sewa.proyek_id
+
+            LEFT JOIN public.master_produk_sewa master_produk
+              ON master_produk.id =
+                 sewa_produk.produk_id
+
+            LEFT JOIN public.master_cabang master_cabang
+              ON master_cabang.id =
+                 sewa_order.cabang_id
+
+            CROSS JOIN tanggal_acuan
+
+            WHERE
+              sewa_order.tanggal_do IS NOT NULL
+
+              AND sewa_order.end_date IS NOT NULL
+
+              AND (
+                $7::boolean = TRUE
+
+                OR EXISTS (
+                  SELECT 1
+
+                  FROM public.proyek_pic akses_pic
+
+                  WHERE
+                    akses_pic.proyek_id =
+                      proyek.id
+
+                    AND akses_pic.pic_id =
+                      $8
+                )
+              )
+          )
+
+          SELECT
+            timeline.id,
+            timeline.timeline_key,
+            timeline.sumber_timeline,
+            timeline.dapat_diubah,
+
+            timeline.proyek_id,
+            timeline.proyek_sewa_id,
+            timeline.proyek_sewa_produk_id,
+
+            timeline.deskripsi,
+            timeline.tanggal_mulai,
+            timeline.tanggal_akhir,
+            timeline.status,
+
+            timeline.nama_proyek,
+            timeline.jenis_proyek,
+            timeline.sub_jenis_proyek,
+            timeline.status_final,
+
+            timeline.nomor_pr,
+            timeline.no_do,
+            timeline.item_produk,
+            timeline.nama_cabang,
+            timeline.kategori,
+
+            (
+              timeline.tanggal_akhir -
+              tanggal_acuan.hari_ini
+            )::integer AS sisa_hari,
+
+            CASE
+              WHEN
+                timeline.tanggal_akhir <
+                tanggal_acuan.hari_ini
+              THEN 'expired'
+
+              WHEN
+                timeline.tanggal_akhir =
+                tanggal_acuan.hari_ini
+              THEN 'hari-ini'
+
+              ELSE 'aktif'
+            END AS status_periode,
+
+            COUNT(*) OVER()
+              AS total_data
+
+          FROM timeline_dasar timeline
+
+          CROSS JOIN tanggal_acuan
+
+          WHERE
+            (
+              $1 = ''
+
+              OR timeline.deskripsi
+                 ILIKE '%' || $1 || '%'
+
+              OR timeline.nama_proyek
+                 ILIKE '%' || $1 || '%'
+
+              OR COALESCE(
+                timeline.nomor_pr,
+                ''
+              ) ILIKE '%' || $1 || '%'
+
+              OR COALESCE(
+                timeline.no_do,
+                ''
+              ) ILIKE '%' || $1 || '%'
+
+              OR COALESCE(
+                timeline.item_produk,
+                ''
+              ) ILIKE '%' || $1 || '%'
+
+              OR COALESCE(
+                timeline.nama_cabang,
+                ''
+              ) ILIKE '%' || $1 || '%'
+            )
+
+            /* Filter kartu Contract Overview */
+            AND (
+              $6::boolean = FALSE
+
+              OR timeline.masuk_contract_overview = TRUE
+            )
+
+            /* Filter periode */
+            AND (
+              (
+                $2::integer IS NULL
+                AND $5 = ''
+              )
+
+              OR
+
+              (
+                $2::integer IS NOT NULL
+                AND $5 = ''
+
+                AND timeline.tanggal_akhir >=
+                    tanggal_acuan.hari_ini
+
+                AND timeline.tanggal_akhir <=
+                    (
+                      tanggal_acuan.hari_ini +
+                      (
+                        $2::text ||
+                        ' months'
+                      )::interval
+                    )::date
+              )
+
+              OR
+
+              (
+                $5 = 'expired'
+
+                AND timeline.tanggal_akhir <
+                    tanggal_acuan.hari_ini
+              )
+            )
+
+          ORDER BY
+            timeline.tanggal_akhir ASC
+              NULLS LAST,
+
+            timeline.nama_proyek ASC,
+            timeline.sumber_timeline ASC,
+            timeline.id ASC
+
+          LIMIT $3
+          OFFSET $4
           `,
           [
-            search,
-            bulan,
-            limit,
-            offset
+            search,             // $1
+            bulan,              // $2
+            limit,              // $3
+            offset,             // $4
+            status,             // $5
+            contractOverview,   // $6
+            isAdmin,            // $7
+            picId               // $8
           ]
         );
 
@@ -21572,7 +24038,7 @@ app.get(
           return timeline;
         });
 
-      res.json({
+      return res.json({
         data,
 
         pagination: {
@@ -21589,6 +24055,13 @@ app.get(
               ),
               1
             )
+        },
+
+        filter: {
+          search,
+          bulan,
+          status,
+          mode
         }
       });
 
@@ -21598,9 +24071,8 @@ app.get(
         error
       );
 
-      res.status(500).json({
-        error:
-          error.message
+      return res.status(500).json({
+        error: error.message
       });
     }
   }
@@ -22101,6 +24573,182 @@ app.get(
   }
 );
 
+// DETAIL PENDAPATAN - SEWA
+app.get(
+  "/api/pendapatan/sewa/detail",
+  async (req, res) => {
+
+    try {
+
+      if (!req.session?.user) {
+        return res.status(401).json({
+          error: "Belum login"
+        });
+      }
+
+      const result =
+        await pool.query(
+          `
+          SELECT
+            pembayaran.id
+              AS termin_id,
+
+            'SEWA'::text
+              AS sumber_pendapatan,
+
+            ps.id
+              AS proyek_sewa_id,
+
+            ps.nomor_pr,
+
+            p.id
+              AS proyek_id,
+
+            p.nama_proyek,
+
+            'Sewa'::text
+              AS jenis_proyek,
+
+            COALESCE(
+              NULLIF(
+                TRIM(
+                  p.sub_jenis_proyek
+                ),
+                ''
+              ),
+              'Sewa'
+            ) AS sub_jenis_proyek,
+
+            klien.id
+              AS proyek_klien_id,
+
+            klien.klien_id,
+
+            d.perusahaan_klien
+              AS nama_klien,
+
+            klien.tanggal_mulai
+              AS tanggal_mulai_kontrak,
+
+            klien.tanggal_akhir
+              AS tanggal_akhir_kontrak,
+
+            klien.status_pengadaan,
+            klien.status_teknis,
+
+            COALESCE(
+              ps.total_nilai,
+              0
+            )::numeric
+              AS nilai_kontrak,
+
+            pembayaran.deskripsi
+              AS nama_termin,
+
+            NULL::numeric
+              AS persentase,
+
+            COALESCE(
+              pembayaran.nominal,
+              0
+            )::numeric
+              AS nominal,
+
+            pembayaran.status_pembayaran,
+
+            NULL::date
+              AS tanggal_jatuh_tempo,
+
+            pembayaran.tanggal_bayar,
+
+            pembayaran.tanggal_bayar
+              AS tanggal_pendapatan,
+
+            COALESCE(
+              pembayaran.nominal,
+              0
+            )::numeric
+              AS nilai_pendapatan,
+
+            p.nama_proyek
+              AS kategori_pendapatan,
+
+            pembayaran.syarat_pembayaran,
+            pembayaran.created_at,
+            pembayaran.updated_at
+
+          FROM public.proyek_sewa_pembayaran
+            pembayaran
+
+          INNER JOIN public.proyek_sewa ps
+            ON ps.id =
+              pembayaran.proyek_sewa_id
+
+          INNER JOIN public.proyek p
+            ON p.id =
+              ps.proyek_id
+
+          /*
+           * Mengambil data klien terbaru dari
+           * proyek yang dipilih pada proyek sewa.
+           */
+          LEFT JOIN LATERAL (
+            SELECT
+              pk.id,
+              pk.klien_id,
+              pk.tanggal_mulai,
+              pk.tanggal_akhir,
+              pk.status_pengadaan,
+              pk.status_teknis
+
+            FROM public.proyek_klien pk
+
+            WHERE pk.proyek_id =
+              p.id
+
+            ORDER BY
+              pk.id DESC
+
+            LIMIT 1
+          ) klien
+            ON TRUE
+
+          LEFT JOIN public.data d
+            ON d.id =
+              klien.klien_id
+
+          ORDER BY
+            pembayaran.tanggal_bayar
+              DESC NULLS LAST,
+
+            pembayaran.created_at
+              DESC,
+
+            pembayaran.id
+              DESC
+          `
+        );
+
+      return res.json({
+        pendapatan:
+          result.rows
+      });
+
+    } catch (error) {
+
+      console.error(
+        "ERROR GET PENDAPATAN SEWA:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+
+    }
+
+  }
+);
 // ======================================================
 // LAST UPDATE DETAIL PROYEK
 // ======================================================
@@ -24335,6 +26983,10 @@ const saved = current.rows.length
 })();
 
 // =====================================================
+// ---- BATAS API UNTUK DICONSUME SEWA
+// =====================================================
+
+// =====================================================
 // API MASTER PRODUK SEWA
 // =====================================================
 
@@ -25473,6 +28125,148 @@ app.get(
 );
 
 // =====================================================
+// PARTNER BERDASARKAN PROYEK/KONTRAK TERPILIH
+// =====================================================
+
+app.get(
+  "/api/proyek-sewa/master/proyek/:proyekId/partners",
+  async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
+    try {
+      const proyekId =
+        Number(req.params.proyekId);
+
+      if (
+        !Number.isInteger(proyekId) ||
+        proyekId <= 0
+      ) {
+        return res.status(400).json({
+          error: "ID proyek tidak valid"
+        });
+      }
+
+      const result =
+        await pool.query(
+          `
+          SELECT
+            pp.id AS proyek_partner_id,
+            pp.partner_id,
+
+            partner.nama_partner,
+
+            COALESCE(
+              NULLIF(pp.nilai_nego_3, 0),
+              NULLIF(pp.nilai_nego_2, 0),
+              NULLIF(pp.nilai_nego_1, 0),
+              NULLIF(pp.nilai_submit, 0),
+              0
+            )::numeric
+              AS nilai_final_partner,
+
+            pp.tanggal_mulai,
+            pp.tanggal_akhir,
+            pp.status_pengadaan,
+            pp.status_teknis
+
+          FROM public.proyek_partner pp
+
+          INNER JOIN public.partner partner
+            ON partner.id =
+               pp.partner_id
+
+          WHERE pp.proyek_id = $1
+
+          ORDER BY
+            partner.nama_partner ASC,
+            pp.id ASC
+          `,
+          [proyekId]
+        );
+
+      return res.json(result.rows);
+
+    } catch (error) {
+      console.error(
+        "ERROR GET PARTNER PROYEK SEWA:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+    }
+  }
+);
+async function tentukanPartnerProyekSewa(
+  client,
+  proyekId,
+  proyekPartnerId
+) {
+  if (
+    !Number.isInteger(Number(proyekId)) ||
+    Number(proyekId) <= 0
+  ) {
+    return null;
+  }
+
+  const result =
+    await client.query(
+      `
+      SELECT
+        pp.id AS proyek_partner_id
+
+      FROM public.proyek_partner pp
+
+      WHERE pp.proyek_id = $1
+
+      ORDER BY pp.id ASC
+      `,
+      [Number(proyekId)]
+    );
+
+  // Tidak ada partner pada kontrak
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  // Hanya satu partner: otomatis dipilih
+  if (
+    result.rows.length === 1 &&
+    !proyekPartnerId
+  ) {
+    return Number(
+      result.rows[0]
+        .proyek_partner_id
+    );
+  }
+
+  const partnerDipilih =
+    Number(proyekPartnerId);
+
+  const partnerValid =
+    result.rows.some(
+      item =>
+        Number(
+          item.proyek_partner_id
+        ) === partnerDipilih
+    );
+
+  if (!partnerValid) {
+    throw new Error(
+      result.rows.length > 1
+        ? "Pilih partner berdasarkan kontrak yang dipilih."
+        : "Partner tidak sesuai dengan kontrak yang dipilih."
+    );
+  }
+
+  return partnerDipilih;
+}
+// =====================================================
 // POST PROYEK SEWA
 // =====================================================
 
@@ -25503,22 +28297,15 @@ app.post(
       // AMBIL PAYLOAD
       // =================================================
 
-      const {
-
+     const {
         nomor_pr,
-
         tanggal_pr,
-
         proyek_id,
-
+        proyek_partner_id,
         klien_id,
-
         produk,
-
         pembayaran
-
       } = req.body;
-
 
       // =================================================
       // VALIDASI HEADER
@@ -25566,7 +28353,12 @@ app.post(
         "BEGIN"
       );
 
-
+    const proyekPartnerIdSimpan =
+      await tentukanPartnerProyekSewa(
+        client,
+        proyek_id,
+        proyek_partner_id
+      );
       // =================================================
       // CEK KLIEN
       // =================================================
@@ -26223,76 +29015,76 @@ app.post(
       // INSERT HEADER PROYEK SEWA
       // =================================================
 
-      const proyekSewaResult =
-        await client.query(
-          `
-            INSERT INTO public.proyek_sewa (
+   // =================================================
+// INSERT HEADER PROYEK SEWA
+// =================================================
 
-              nomor_pr,
+const proyekSewaResult =
+  await client.query(
+    `
+      INSERT INTO public.proyek_sewa (
+        nomor_pr,
+        tanggal_pr,
+        nomor_rujukan,
+        proyek_id,
+        proyek_partner_id,
+        klien_id,
+        total_nilai_per_bulan,
+        total_nilai,
+        created_at,
+        updated_at
+      )
 
-              tanggal_pr,
+      VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
+      )
 
-              nomor_rujukan,
+      RETURNING *
+    `,
+    [
+      // $1 = nomor_pr
+      String(
+        nomor_pr
+      ).trim(),
 
-              proyek_id,
+      // $2 = tanggal_pr
+      tanggal_pr ||
+        null,
 
-              klien_id,
+      // $3 = nomor_rujukan
+      nomorRujukanFinal,
 
-              total_nilai_per_bulan,
-
-              total_nilai,
-
-              created_at,
-
-              updated_at
-
-            )
-
-            VALUES (
-
-              $1,
-              $2,
-              $3,
-              $4,
-              $5,
-              $6,
-              $7,
-
-              CURRENT_TIMESTAMP,
-              CURRENT_TIMESTAMP
-
-            )
-
-            RETURNING *
-          `,
-          [
-
-            String(
-              nomor_pr
-            ).trim(),
-
-            tanggal_pr ||
-              null,
-
-            nomorRujukanFinal,
-
+      // $4 = proyek_id
+      proyek_id
+        ? Number(
             proyek_id
-              ? Number(
-                  proyek_id
-                )
-              : null,
+          )
+        : null,
 
-            Number(
-              klien_id
-            ),
+      // $5 = proyek_partner_id
+      proyekPartnerIdSimpan,
 
-            totalNilaiPerBulan,
+      // $6 = klien_id
+      Number(
+        klien_id
+      ),
 
-            totalNilai
+      // $7 = total_nilai_per_bulan
+      totalNilaiPerBulan,
 
-          ]
-        );
-
+      // $8 = total_nilai
+      totalNilai
+    ]
+  );
 
       const proyekSewa =
         proyekSewaResult.rows[0];
@@ -26455,7 +29247,7 @@ app.post(
       }
 
 
-      // =================================================
+// =================================================
 // INSERT PEMBAYARAN
 // =================================================
 
@@ -27060,6 +29852,19 @@ app.get(
               ps.total_nilai,
               ps.created_at,
               ps.updated_at,
+              ps.proyek_partner_id,
+
+              pp.partner_id,
+
+              partner.nama_partner,
+
+              COALESCE(
+                NULLIF(pp.nilai_nego_3, 0),
+                NULLIF(pp.nilai_nego_2, 0),
+                NULLIF(pp.nilai_nego_1, 0),
+                NULLIF(pp.nilai_submit, 0),
+                0
+              )::numeric AS nilai_final_partner,
 
               d.perusahaan_klien
                 AS nama_klien,
@@ -27073,6 +29878,14 @@ app.get(
 
             LEFT JOIN public.proyek p
               ON p.id = ps.proyek_id
+
+            LEFT JOIN public.proyek_partner pp
+            ON pp.id =
+              ps.proyek_partner_id
+
+          LEFT JOIN public.partner partner
+            ON partner.id =
+              pp.partner_id
 
             WHERE ps.id = $1
 
@@ -27311,39 +30124,84 @@ app.get(
           totalDibayar
         );
 
+        const dokumenResult =
+  await pool.query(
+    `
+    SELECT *
+    FROM public.proyek_sewa_dokumen
+    WHERE proyek_sewa_id = $1
+    ORDER BY id DESC
+    `,
+    [id]
+  );
+
+
+const pembayaranPartnerResult =
+  await pool.query(
+    `
+    SELECT *
+    FROM public.proyek_sewa_pembayaran_partner
+    WHERE proyek_sewa_id = $1
+    ORDER BY id ASC
+    `,
+    [id]
+  );
       // ==============================================
       // RESPONSE
       // ==============================================
 
       return res.json({
-        proyek:
-          proyekResult.rows[0],
+  proyek:
+    proyekResult.rows[0],
 
-        produk:
-          produk,
+  partner: {
+    proyek_partner_id:
+      proyekResult.rows[0]
+        .proyek_partner_id,
 
-        pembayaran:
-          pembayaran,
+    partner_id:
+      proyekResult.rows[0]
+        .partner_id,
 
-        summary: {
-          total_nilai_per_bulan:
-            Number(
-              proyekResult
-                .rows[0]
-                .total_nilai_per_bulan ||
-              0
-            ),
+    nama_partner:
+      proyekResult.rows[0]
+        .nama_partner,
 
-          total_nilai:
-            totalNilai,
+    nilai_final_partner:
+      Number(
+        proyekResult.rows[0]
+          .nilai_final_partner || 0
+      )
+  },
 
-          total_dibayar:
-            totalDibayar,
+  produk,
 
-          sisa_pembayaran:
-            sisaPembayaran
-        }
-      });
+  pembayaran:
+    pembayaranResult.rows,
+
+  pembayaran_partner:
+    pembayaranPartnerResult.rows,
+
+  dokumen:
+    dokumenResult.rows,
+
+  summary: {
+    total_nilai_per_bulan:
+      Number(
+        proyekResult.rows[0]
+          .total_nilai_per_bulan || 0
+      ),
+
+    total_nilai:
+      totalNilai,
+
+    total_dibayar:
+      totalDibayar,
+
+    sisa_pembayaran:
+      sisaPembayaran
+  }
+});
 
     } catch (error) {
 
@@ -27397,10 +30255,11 @@ app.put(
       }
 
 
-      const {
+     const {
         nomor_pr,
         tanggal_pr,
         proyek_id,
+        proyek_partner_id,
         klien_id
       } = req.body;
 
@@ -27541,7 +30400,24 @@ app.put(
 
       }
 
+// =================================================
+// VALIDASI DAN TENTUKAN PARTNER
+// =================================================
 
+const proyekPartnerIdSimpan =
+  await tentukanPartnerProyekSewa(
+    client,
+
+    proyek_id
+      ? Number(proyek_id)
+      : null,
+
+    proyek_partner_id
+      ? Number(
+          proyek_partner_id
+        )
+      : null
+  );
       // =================================================
       // UPDATE
       //
@@ -27550,38 +30426,52 @@ app.put(
       // =================================================
 
       const updateResult =
-        await client.query(
-          `
-            UPDATE public.proyek_sewa
+  await client.query(
+    `
+      UPDATE public.proyek_sewa
 
-            SET
-              nomor_pr = $1,
-              tanggal_pr = $2,
-              proyek_id = $3,
-              klien_id = $4,
-              updated_at = CURRENT_TIMESTAMP
+      SET
+        nomor_pr = $1,
+        tanggal_pr = $2,
+        proyek_id = $3,
+        proyek_partner_id = $4,
+        klien_id = $5,
+        updated_at =
+          CURRENT_TIMESTAMP
 
-            WHERE id = $5
+      WHERE id = $6
 
-            RETURNING *
-          `,
-          [
-            String(nomor_pr).trim(),
+      RETURNING *
+    `,
+    [
+      // $1
+      String(
+        nomor_pr
+      ).trim(),
 
-            tanggal_pr ||
-              null,
+      // $2
+      tanggal_pr ||
+        null,
 
+      // $3
+      proyek_id
+        ? Number(
             proyek_id
-              ? Number(proyek_id)
-              : null,
+          )
+        : null,
 
-            Number(klien_id),
+      // $4
+      proyekPartnerIdSimpan,
 
-            proyekSewaId
-          ]
-        );
+      // $5
+      Number(
+        klien_id
+      ),
 
-
+      // $6
+      proyekSewaId
+    ]
+  );
       await client.query("COMMIT");
 
 
@@ -27637,7 +30527,150 @@ app.put(
   }
 );
 
+app.put(
+  "/api/proyek-sewa/:id/partner",
+  async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
 
+    const client =
+      await pool.connect();
+
+    try {
+      const proyekSewaId =
+        Number(req.params.id);
+
+      const proyekPartnerId =
+        Number(
+          req.body.proyek_partner_id
+        );
+
+      if (
+        !Number.isInteger(proyekSewaId) ||
+        proyekSewaId <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID proyek sewa tidak valid"
+        });
+      }
+
+      await client.query("BEGIN");
+
+      const proyekResult =
+        await client.query(
+          `
+          SELECT
+            id,
+            proyek_id,
+            proyek_partner_id
+
+          FROM public.proyek_sewa
+
+          WHERE id = $1
+
+          FOR UPDATE
+          `,
+          [proyekSewaId]
+        );
+
+      if (proyekResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+
+        return res.status(404).json({
+          error:
+            "Proyek sewa tidak ditemukan"
+        });
+      }
+
+      const proyekId =
+        proyekResult.rows[0]
+          .proyek_id;
+
+      const partnerSimpan =
+        await tentukanPartnerProyekSewa(
+          client,
+          proyekId,
+          proyekPartnerId
+        );
+
+      const pembayaranLain =
+        await client.query(
+          `
+          SELECT 1
+
+          FROM public.proyek_sewa_pembayaran_partner
+
+          WHERE proyek_sewa_id = $1
+            AND proyek_partner_id <> $2
+
+          LIMIT 1
+          `,
+          [
+            proyekSewaId,
+            partnerSimpan
+          ]
+        );
+
+      if (pembayaranLain.rowCount > 0) {
+        await client.query("ROLLBACK");
+
+        return res.status(409).json({
+          error:
+            "Partner tidak dapat diganti karena sudah memiliki pembayaran partner."
+        });
+      }
+
+      const result =
+        await client.query(
+          `
+          UPDATE public.proyek_sewa
+
+          SET
+            proyek_partner_id = $1,
+            updated_at =
+              CURRENT_TIMESTAMP
+
+          WHERE id = $2
+
+          RETURNING *
+          `,
+          [
+            partnerSimpan,
+            proyekSewaId
+          ]
+        );
+
+      await client.query("COMMIT");
+
+      return res.json({
+        message:
+          "Partner proyek sewa berhasil diperbarui",
+
+        data:
+          result.rows[0]
+      });
+
+    } catch (error) {
+      await client.query("ROLLBACK");
+
+      console.error(
+        "ERROR UPDATE PARTNER PROYEK SEWA:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+
+    } finally {
+      client.release();
+    }
+  }
+);
 // =====================================================
 // 2. UPDATE PRODUK & ORDER
 // PUT /api/proyek-sewa/:id/produk
@@ -29870,7 +32903,1023 @@ app.put(
 
   }
 );
+// =====================================================
+// PEMBAYARAN PARTNER SEWA
+// =====================================================
+app.put(
+  "/api/proyek-sewa/:id/pembayaran-partner",
+  async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
 
+    const proyekSewaId =
+      Number(req.params.id);
+
+    const pembayaran =
+      Array.isArray(
+        req.body.pembayaran
+      )
+        ? req.body.pembayaran
+        : [];
+
+    if (
+      !Number.isInteger(proyekSewaId) ||
+      proyekSewaId <= 0
+    ) {
+      return res.status(400).json({
+        error:
+          "ID proyek sewa tidak valid"
+      });
+    }
+
+    const client =
+      await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const proyekResult =
+        await client.query(
+          `
+          SELECT
+            ps.id,
+            ps.proyek_partner_id,
+
+            COALESCE(
+              NULLIF(pp.nilai_nego_3, 0),
+              NULLIF(pp.nilai_nego_2, 0),
+              NULLIF(pp.nilai_nego_1, 0),
+              NULLIF(pp.nilai_submit, 0),
+              0
+            )::numeric
+              AS nilai_final_partner
+
+          FROM public.proyek_sewa ps
+
+          LEFT JOIN public.proyek_partner pp
+            ON pp.id =
+               ps.proyek_partner_id
+
+          WHERE ps.id = $1
+
+          FOR UPDATE OF ps
+          `,
+          [proyekSewaId]
+        );
+
+      if (proyekResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+
+        return res.status(404).json({
+          error:
+            "Proyek sewa tidak ditemukan"
+        });
+      }
+
+      const proyekPartnerId =
+        Number(
+          proyekResult.rows[0]
+            .proyek_partner_id
+        );
+
+      if (
+        !Number.isInteger(
+          proyekPartnerId
+        ) ||
+        proyekPartnerId <= 0
+      ) {
+        await client.query("ROLLBACK");
+
+        return res.status(400).json({
+          error:
+            "Pilih partner proyek sewa terlebih dahulu"
+        });
+      }
+
+      const statusValid = [
+        "Belum Dibayar",
+        "Proses",
+        "Sudah Dibayar"
+      ];
+
+      const dataValid = [];
+
+      for (
+        let index = 0;
+        index < pembayaran.length;
+        index += 1
+      ) {
+        const item =
+          pembayaran[index] || {};
+
+        const deskripsi =
+          String(
+            item.deskripsi || ""
+          ).trim();
+
+        const nominal =
+          Number(
+            item.nominal || 0
+          );
+
+        const status =
+          String(
+            item.status_pembayaran ||
+            "Belum Dibayar"
+          ).trim();
+
+        const tanggalBayar =
+          item.tanggal_bayar
+            ? String(
+                item.tanggal_bayar
+              ).slice(0, 10)
+            : null;
+
+        const syarat =
+          String(
+            item.syarat_pembayaran ||
+            ""
+          ).trim() || null;
+
+        if (
+          !deskripsi &&
+          nominal === 0 &&
+          !tanggalBayar &&
+          !syarat
+        ) {
+          continue;
+        }
+
+        if (!deskripsi) {
+          throw new Error(
+            `Deskripsi pembayaran partner ${index + 1} wajib diisi`
+          );
+        }
+
+        if (
+          !Number.isFinite(nominal) ||
+          nominal < 0
+        ) {
+          throw new Error(
+            `Nominal pembayaran partner ${index + 1} tidak valid`
+          );
+        }
+
+        if (!statusValid.includes(status)) {
+          throw new Error(
+            `Status pembayaran partner ${index + 1} tidak valid`
+          );
+        }
+
+        if (
+          status === "Sudah Dibayar" &&
+          !tanggalBayar
+        ) {
+          throw new Error(
+            `Tanggal bayar partner ${index + 1} wajib diisi`
+          );
+        }
+
+        dataValid.push({
+          deskripsi,
+          nominal,
+
+          status_pembayaran:
+            status,
+
+          tanggal_bayar:
+            status === "Sudah Dibayar"
+              ? tanggalBayar
+              : null,
+
+          syarat_pembayaran:
+            syarat
+        });
+      }
+
+      await client.query(
+        `
+        DELETE FROM
+          public.proyek_sewa_pembayaran_partner
+
+        WHERE proyek_sewa_id = $1
+          AND proyek_partner_id = $2
+        `,
+        [
+          proyekSewaId,
+          proyekPartnerId
+        ]
+      );
+
+      const dataTersimpan = [];
+
+      for (const item of dataValid) {
+        const result =
+          await client.query(
+            `
+            INSERT INTO
+              public.proyek_sewa_pembayaran_partner
+            (
+              proyek_sewa_id,
+              proyek_partner_id,
+              deskripsi,
+              nominal,
+              status_pembayaran,
+              tanggal_bayar,
+              syarat_pembayaran
+            )
+
+            VALUES (
+              $1, $2, $3, $4,
+              $5, $6, $7
+            )
+
+            RETURNING *
+            `,
+            [
+              proyekSewaId,
+              proyekPartnerId,
+              item.deskripsi,
+              item.nominal,
+              item.status_pembayaran,
+              item.tanggal_bayar,
+              item.syarat_pembayaran
+            ]
+          );
+
+        dataTersimpan.push(
+          result.rows[0]
+        );
+      }
+
+      const totalDibayar =
+        dataTersimpan
+          .filter(
+            item =>
+              item.status_pembayaran ===
+              "Sudah Dibayar"
+          )
+          .reduce(
+            (total, item) =>
+              total +
+              Number(item.nominal || 0),
+            0
+          );
+
+      const nilaiPartner =
+        Number(
+          proyekResult.rows[0]
+            .nilai_final_partner || 0
+        );
+
+      await client.query(
+        `
+        UPDATE public.proyek_sewa
+        SET updated_at =
+          CURRENT_TIMESTAMP
+        WHERE id = $1
+        `,
+        [proyekSewaId]
+      );
+
+      await client.query("COMMIT");
+
+      return res.json({
+        message:
+          "Pembayaran partner berhasil diperbarui",
+
+        pembayaran_partner:
+          dataTersimpan,
+
+        nilai_partner:
+          nilaiPartner,
+
+        total_dibayar_partner:
+          totalDibayar,
+
+        sisa_pembayaran_partner:
+          Math.max(
+            0,
+            nilaiPartner -
+            totalDibayar
+          )
+      });
+
+    } catch (error) {
+      await client.query("ROLLBACK");
+
+      console.error(
+        "ERROR PEMBAYARAN PARTNER SEWA:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+
+    } finally {
+      client.release();
+    }
+  }
+);
+
+// =====================================================
+// DOKUMEN PROYEK SEWA
+// =====================================================
+app.post(
+  "/api/proyek-sewa/:proyekSewaId/dokumen",
+
+  uploadDokumenKlien.single(
+    "file_dokumen"
+  ),
+
+  async (req, res) => {
+    let s3KeyBaru = null;
+
+    try {
+      if (!req.session?.user) {
+        return res.status(401).json({
+          error: "Belum login"
+        });
+      }
+
+      const proyekSewaId =
+        Number(
+          req.params.proyekSewaId
+        );
+
+      const namaDokumen =
+        String(
+          req.body.nama_dokumen || ""
+        ).trim();
+
+      const nomorDokumen =
+        String(
+          req.body.nomor_dokumen || ""
+        ).trim() || null;
+
+      if (
+        !Number.isInteger(proyekSewaId) ||
+        proyekSewaId <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID proyek sewa tidak valid"
+        });
+      }
+
+      if (!namaDokumen) {
+        return res.status(400).json({
+          error:
+            "Pilih dokumen terlebih dahulu"
+        });
+      }
+
+      const proyekCheck =
+        await pool.query(
+          `
+          SELECT id
+          FROM public.proyek_sewa
+          WHERE id = $1
+          `,
+          [proyekSewaId]
+        );
+
+      if (proyekCheck.rowCount === 0) {
+        return res.status(404).json({
+          error:
+            "Proyek sewa tidak ditemukan"
+        });
+      }
+
+      let namaFileAsli = null;
+      let namaFileSimpan = null;
+      let pathFile = null;
+      let tipeFile = null;
+      let ukuranFile = null;
+
+      if (req.file) {
+        const ekstensi =
+          path.extname(
+            req.file.originalname
+          ).toLowerCase();
+
+        const namaFile =
+          `${crypto.randomUUID()}` +
+          `${ekstensi}`;
+
+        const hasilUpload =
+          await uploadFile(
+            req.file,
+            namaFile
+          );
+
+        s3KeyBaru =
+          hasilUpload.key;
+
+        namaFileAsli =
+          req.file.originalname;
+
+        namaFileSimpan =
+          hasilUpload.key;
+
+        pathFile =
+          hasilUpload.key;
+
+        tipeFile =
+          req.file.mimetype;
+
+        ukuranFile =
+          req.file.size;
+      }
+
+      const result =
+        await pool.query(
+          `
+          INSERT INTO public.proyek_sewa_dokumen (
+            proyek_sewa_id,
+            nama_dokumen,
+            nomor_dokumen,
+            nama_file_asli,
+            nama_file_simpan,
+            path_file,
+            tipe_file,
+            ukuran_file
+          )
+
+          VALUES (
+            $1, $2, $3, $4,
+            $5, $6, $7, $8
+          )
+
+          RETURNING *
+          `,
+          [
+            proyekSewaId,
+            namaDokumen,
+            nomorDokumen,
+            namaFileAsli,
+            namaFileSimpan,
+            pathFile,
+            tipeFile,
+            ukuranFile
+          ]
+        );
+
+      return res.status(201).json({
+        message:
+          "Dokumen proyek sewa berhasil ditambahkan",
+
+        data:
+          result.rows[0]
+      });
+
+    } catch (error) {
+      if (s3KeyBaru) {
+        try {
+          await s3Client.send(
+            new DeleteObjectCommand({
+              Bucket:
+                process.env.bucket_name,
+
+              Key:
+                s3KeyBaru
+            })
+          );
+        } catch (hapusError) {
+          console.error(
+            "GAGAL ROLLBACK FILE DOKUMEN SEWA:",
+            hapusError
+          );
+        }
+      }
+
+      console.error(
+        "ERROR TAMBAH DOKUMEN SEWA:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/proyek-sewa/dokumen/:id",
+
+  uploadDokumenKlien.single(
+    "file_dokumen"
+  ),
+
+  async (req, res) => {
+    let s3KeyBaru = null;
+    let databaseBerhasil = false;
+
+    try {
+      if (!req.session?.user) {
+        return res.status(401).json({
+          error: "Belum login"
+        });
+      }
+
+      const id =
+        Number(req.params.id);
+
+      const namaDokumen =
+        String(
+          req.body.nama_dokumen || ""
+        ).trim();
+
+      const nomorDokumen =
+        String(
+          req.body.nomor_dokumen || ""
+        ).trim() || null;
+
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID dokumen tidak valid"
+        });
+      }
+
+      if (!namaDokumen) {
+        return res.status(400).json({
+          error:
+            "Pilih dokumen terlebih dahulu"
+        });
+      }
+
+      const oldResult =
+        await pool.query(
+          `
+          SELECT *
+          FROM public.proyek_sewa_dokumen
+          WHERE id = $1
+          `,
+          [id]
+        );
+
+      if (oldResult.rowCount === 0) {
+        return res.status(404).json({
+          error:
+            "Dokumen proyek sewa tidak ditemukan"
+        });
+      }
+
+      const dokumenLama =
+        oldResult.rows[0];
+
+      let namaFileAsli =
+        dokumenLama.nama_file_asli;
+
+      let namaFileSimpan =
+        dokumenLama.nama_file_simpan;
+
+      let pathFile =
+        dokumenLama.path_file;
+
+      let tipeFile =
+        dokumenLama.tipe_file;
+
+      let ukuranFile =
+        dokumenLama.ukuran_file;
+
+      if (req.file) {
+        const ekstensi =
+          path.extname(
+            req.file.originalname
+          ).toLowerCase();
+
+        const namaFile =
+          `${crypto.randomUUID()}` +
+          `${ekstensi}`;
+
+        const hasilUpload =
+          await uploadFile(
+            req.file,
+            namaFile
+          );
+
+        s3KeyBaru =
+          hasilUpload.key;
+
+        namaFileAsli =
+          req.file.originalname;
+
+        namaFileSimpan =
+          hasilUpload.key;
+
+        pathFile =
+          hasilUpload.key;
+
+        tipeFile =
+          req.file.mimetype;
+
+        ukuranFile =
+          req.file.size;
+      }
+
+      const result =
+        await pool.query(
+          `
+          UPDATE public.proyek_sewa_dokumen
+
+          SET
+            nama_dokumen = $1,
+            nomor_dokumen = $2,
+            nama_file_asli = $3,
+            nama_file_simpan = $4,
+            path_file = $5,
+            tipe_file = $6,
+            ukuran_file = $7,
+            updated_at =
+              CURRENT_TIMESTAMP
+
+          WHERE id = $8
+
+          RETURNING *
+          `,
+          [
+            namaDokumen,
+            nomorDokumen,
+            namaFileAsli,
+            namaFileSimpan,
+            pathFile,
+            tipeFile,
+            ukuranFile,
+            id
+          ]
+        );
+
+      databaseBerhasil = true;
+
+      if (
+        req.file &&
+        dokumenLama.path_file &&
+        dokumenLama.path_file !==
+          s3KeyBaru
+      ) {
+        try {
+          await s3Client.send(
+            new DeleteObjectCommand({
+              Bucket:
+                process.env.bucket_name,
+
+              Key:
+                dokumenLama.path_file
+            })
+          );
+        } catch (hapusError) {
+          console.error(
+            "GAGAL HAPUS FILE DOKUMEN SEWA LAMA:",
+            hapusError
+          );
+        }
+      }
+
+      return res.json({
+        message:
+          "Dokumen proyek sewa berhasil diperbarui",
+
+        data:
+          result.rows[0]
+      });
+
+    } catch (error) {
+      if (
+        s3KeyBaru &&
+        !databaseBerhasil
+      ) {
+        try {
+          await s3Client.send(
+            new DeleteObjectCommand({
+              Bucket:
+                process.env.bucket_name,
+
+              Key:
+                s3KeyBaru
+            })
+          );
+        } catch (hapusError) {
+          console.error(
+            "GAGAL ROLLBACK FILE BARU:",
+            hapusError
+          );
+        }
+      }
+
+      console.error(
+        "ERROR EDIT DOKUMEN SEWA:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+    }
+  }
+);
+
+// =====================================================
+// LIHAT / UNDUH FILE DOKUMEN PROYEK SEWA
+// =====================================================
+
+app.get(
+  "/api/proyek-sewa/dokumen/:id/file",
+  async (req, res) => {
+    try {
+
+      // ==============================================
+      // VALIDASI LOGIN
+      // ==============================================
+
+      if (!req.session?.user) {
+        return res.status(401).json({
+          error: "Belum login"
+        });
+      }
+
+      // ==============================================
+      // VALIDASI ID
+      // ==============================================
+
+      const id =
+        Number(req.params.id);
+
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID dokumen tidak valid"
+        });
+      }
+
+      // ==============================================
+      // AMBIL DATA DOKUMEN
+      // ==============================================
+
+      const dokumenResult =
+        await pool.query(
+          `
+          SELECT
+            id,
+            proyek_sewa_id,
+            nama_dokumen,
+            nomor_dokumen,
+            nama_file_asli,
+            nama_file_simpan,
+            path_file,
+            tipe_file,
+            ukuran_file
+
+          FROM public.proyek_sewa_dokumen
+
+          WHERE id = $1
+
+          LIMIT 1
+          `,
+          [id]
+        );
+
+      if (
+        dokumenResult.rowCount === 0
+      ) {
+        return res.status(404).json({
+          error:
+            "Dokumen proyek sewa tidak ditemukan"
+        });
+      }
+
+      const dokumen =
+        dokumenResult.rows[0];
+
+      // ==============================================
+      // AMBIL S3 KEY
+      // ==============================================
+
+      const s3Key =
+        String(
+          dokumen.path_file ||
+          dokumen.nama_file_simpan ||
+          ""
+        ).trim();
+
+      if (!s3Key) {
+        return res.status(404).json({
+          error:
+            "File belum tersedia pada dokumen ini"
+        });
+      }
+
+      // ==============================================
+      // MODE LIHAT / UNDUH
+      // ==============================================
+
+      const download =
+        ["1", "true", "yes", "ya"]
+          .includes(
+            String(
+              req.query.download || ""
+            )
+              .trim()
+              .toLowerCase()
+          );
+
+      // ==============================================
+      // NAMA FILE ASLI
+      // ==============================================
+
+      const originalName =
+        String(
+          dokumen.nama_file_asli ||
+          dokumen.nama_dokumen ||
+          `dokumen-${dokumen.id}`
+        ).trim();
+
+      // ==============================================
+      // BUAT PRESIGNED URL
+      // ==============================================
+
+      const fileUrl =
+        await getFileLink(
+          s3Key,
+          {
+            download,
+            isPrivate: true,
+            originalName
+          }
+        );
+
+      if (!fileUrl) {
+        return res.status(500).json({
+          error:
+            "Gagal membuat URL dokumen"
+        });
+      }
+
+      console.log(
+        "AKSES FILE DOKUMEN SEWA:",
+        {
+          dokumen_id:
+            dokumen.id,
+
+          proyek_sewa_id:
+            dokumen.proyek_sewa_id,
+
+          key:
+            s3Key,
+
+          mode:
+            download
+              ? "unduh"
+              : "lihat"
+        }
+      );
+
+      // Jangan simpan presigned URL pada cache browser.
+      res.setHeader(
+        "Cache-Control",
+        "private, no-store, max-age=0"
+      );
+
+      // Redirect ke presigned URL S3.
+      return res.redirect(
+        302,
+        fileUrl
+      );
+
+    } catch (error) {
+
+      console.error(
+        "ERROR AKSES FILE DOKUMEN SEWA:",
+        {
+          name:
+            error?.name,
+
+          code:
+            error?.Code ||
+            error?.code,
+
+          message:
+            error?.message,
+
+          status:
+            error?.$metadata
+              ?.httpStatusCode,
+
+          stack:
+            error?.stack
+        }
+      );
+
+      return res.status(500).json({
+        error:
+          error?.message ||
+          "Gagal membuka file dokumen"
+      });
+    }
+  }
+);
+
+app.delete(
+  "/api/proyek-sewa/dokumen/:id",
+  async (req, res) => {
+    try {
+      if (!req.session?.user) {
+        return res.status(401).json({
+          error: "Belum login"
+        });
+      }
+
+      const id =
+        Number(req.params.id);
+
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "ID dokumen tidak valid"
+        });
+      }
+
+      const result =
+        await pool.query(
+          `
+          DELETE FROM
+            public.proyek_sewa_dokumen
+
+          WHERE id = $1
+
+          RETURNING *
+          `,
+          [id]
+        );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({
+          error:
+            "Dokumen proyek sewa tidak ditemukan"
+        });
+      }
+
+      const dokumenLama =
+        result.rows[0];
+
+      if (dokumenLama.path_file) {
+        try {
+          await s3Client.send(
+            new DeleteObjectCommand({
+              Bucket:
+                process.env.bucket_name,
+
+              Key:
+                dokumenLama.path_file
+            })
+          );
+        } catch (hapusError) {
+          console.error(
+            "GAGAL HAPUS FILE DOKUMEN SEWA:",
+            hapusError
+          );
+        }
+      }
+
+      return res.json({
+        message:
+          "Dokumen proyek sewa berhasil dihapus",
+
+        data_lama:
+          dokumenLama
+      });
+
+    } catch (error) {
+      console.error(
+        "ERROR HAPUS DOKUMEN SEWA:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+    }
+  }
+);
+
+// =====================================================
+// -- BATAS API ACTIVITY LOG
+// =====================================================
 
 // =====================================================
 // GET ACTIVITY LOG
@@ -29978,6 +34027,1429 @@ const uploadS3 =
     }
 
   });
+// ======================================================
+// -- BATAS API KONTRAK
+// ======================================================
+
+app.get(
+  "/api/kontrak",
+  async (req, res) => {
+    // ================================================
+    // VALIDASI LOGIN
+    // ================================================
+
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
+    // ================================================
+    // PAGINATION
+    // ================================================
+
+    const page =
+      Math.max(
+        Number(req.query.page) || 1,
+        1
+      );
+
+    const limit =
+      Math.min(
+        Math.max(
+          Number(req.query.limit) || 20,
+          1
+        ),
+        100
+      );
+
+    const offset =
+      (page - 1) * limit;
+
+    // ================================================
+    // FILTER PENCARIAN
+    // ================================================
+
+    const search =
+      String(
+        req.query.search || ""
+      ).trim();
+
+    // ================================================
+    // FILTER JENIS
+    // ================================================
+
+    const jenisInput =
+      String(
+        req.query.jenis || ""
+      ).trim();
+
+    const jenis =
+      [
+        "Klien",
+        "Partner"
+      ].includes(jenisInput)
+        ? jenisInput
+        : "";
+
+    // ================================================
+    // FILTER STATUS
+    // ================================================
+
+    const statusInput =
+      String(
+        req.query.status || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const status =
+      [
+        "berjalan",
+        "berakhir",
+        "selesai"
+      ].includes(statusInput)
+        ? statusInput
+        : "";
+
+    // ================================================
+    // FILTER PERIODE
+    // ================================================
+
+    const periodeInput =
+      String(
+        req.query.periode || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const periode =
+      periodeInput === "3-bulan"
+        ? "3-bulan"
+        : "";
+
+    // ================================================
+    // INFORMASI LOGIN
+    // ================================================
+
+    const user =
+      req.session.user;
+
+    const isAdmin =
+      String(user.role || "")
+        .trim()
+        .toLowerCase() === "admin";
+
+    const picIdInput =
+      Number(user.id);
+
+    const picId =
+      Number.isInteger(picIdInput)
+        ? picIdInput
+        : 0;
+
+    try {
+      const result =
+        await pool.query(
+          `
+          WITH kontrak AS (
+            /*
+             * =========================================
+             * KONTRAK KLIEN
+             * =========================================
+             */
+            SELECT
+              'Klien'::text
+                AS jenis_relasi,
+
+              pk.id
+                AS kontrak_id,
+
+              p.id
+                AS proyek_id,
+
+              p.nama_proyek,
+
+              p.status_final,
+
+              d.perusahaan_klien
+                AS nama_relasi,
+
+              pk.tanggal_mulai::date
+                AS tanggal_mulai,
+
+              pk.tanggal_akhir::date
+                AS tanggal_akhir
+
+            FROM public.proyek_klien pk
+
+            INNER JOIN public.proyek p
+              ON p.id =
+                pk.proyek_id
+
+            LEFT JOIN public.data d
+              ON d.id =
+                pk.klien_id
+
+            WHERE
+              $7::boolean = TRUE
+
+              OR EXISTS (
+                SELECT 1
+
+                FROM public.proyek_pic akses_pic
+
+                WHERE
+                  akses_pic.proyek_id =
+                    p.id
+
+                  AND akses_pic.pic_id =
+                    $8
+              )
+
+            UNION ALL
+
+            /*
+             * =========================================
+             * KONTRAK PARTNER
+             * =========================================
+             */
+            SELECT
+              'Partner'::text
+                AS jenis_relasi,
+
+              pp.id
+                AS kontrak_id,
+
+              p.id
+                AS proyek_id,
+
+              p.nama_proyek,
+
+              p.status_final,
+
+              partner.nama_partner
+                AS nama_relasi,
+
+              pp.tanggal_mulai::date
+                AS tanggal_mulai,
+
+              pp.tanggal_akhir::date
+                AS tanggal_akhir
+
+            FROM public.proyek_partner pp
+
+            INNER JOIN public.proyek p
+              ON p.id =
+                pp.proyek_id
+
+            LEFT JOIN public.partner partner
+              ON partner.id =
+                pp.partner_id
+
+            WHERE
+              $7::boolean = TRUE
+
+              OR EXISTS (
+                SELECT 1
+
+                FROM public.proyek_pic akses_pic
+
+                WHERE
+                  akses_pic.proyek_id =
+                    p.id
+
+                  AND akses_pic.pic_id =
+                    $8
+              )
+          ),
+
+          /*
+           * ===========================================
+           * NORMALISASI STATUS KONTRAK
+           * ===========================================
+           */
+          kontrak_status AS (
+            SELECT
+              kontrak.*,
+
+              LOWER(
+                BTRIM(
+                  COALESCE(
+                    kontrak.status_final,
+                    ''
+                  )
+                )
+              ) AS status_final_normal,
+
+              CASE
+                /*
+                 * Status final Done/Selesai
+                 * diprioritaskan dari tanggal akhir.
+                 */
+                WHEN
+                  LOWER(
+                    BTRIM(
+                      COALESCE(
+                        kontrak.status_final,
+                        ''
+                      )
+                    )
+                  ) IN (
+                    'done',
+                    'selesai'
+                  )
+                THEN
+                  'selesai'
+
+                /*
+                 * Tanggal akhir belum diisi.
+                 */
+                WHEN
+                  kontrak.tanggal_akhir
+                    IS NULL
+                THEN
+                  'belum_ditentukan'
+
+                /*
+                 * Tanggal akhir sudah lewat.
+                 */
+                WHEN
+                  kontrak.tanggal_akhir <
+                    CURRENT_DATE
+                THEN
+                  'berakhir'
+
+                /*
+                 * Tanggal akhir masih berjalan.
+                 */
+                ELSE
+                  'berjalan'
+              END AS status_kontrak,
+
+              CASE
+                /*
+                 * Kontrak selesai tidak perlu
+                 * menghitung sisa hari.
+                 */
+                WHEN
+                  LOWER(
+                    BTRIM(
+                      COALESCE(
+                        kontrak.status_final,
+                        ''
+                      )
+                    )
+                  ) IN (
+                    'done',
+                    'selesai'
+                  )
+                THEN NULL
+
+                WHEN
+                  kontrak.tanggal_akhir
+                    IS NULL
+                THEN NULL
+
+                ELSE
+                  (
+                    kontrak.tanggal_akhir -
+                    CURRENT_DATE
+                  )::int
+              END AS sisa_hari
+
+            FROM kontrak
+          ),
+
+          /*
+           * ===========================================
+           * FILTER DATA
+           * ===========================================
+           */
+          kontrak_filter AS (
+            SELECT
+              *
+
+            FROM kontrak_status
+
+            WHERE
+              /*
+              * FILTER PENCARIAN
+              */
+              (
+                $1 = ''
+
+                OR nama_proyek
+                  ILIKE '%' || $1 || '%'
+
+                OR nama_relasi
+                  ILIKE '%' || $1 || '%'
+              )
+
+              /*
+              * FILTER KLIEN/PARTNER
+              */
+              AND (
+                $2 = ''
+
+                OR jenis_relasi =
+                  $2
+              )
+
+              /*
+              * FILTER STATUS KONTRAK
+              */
+              AND (
+                $3 = ''
+
+                OR status_kontrak =
+                  $3
+              )
+
+              /*
+              * FILTER PERIODE TIGA BULAN
+              */
+              AND (
+                $4 = ''
+
+                OR (
+                  $4 = '3-bulan'
+
+                  AND status_kontrak =
+                    'berjalan'
+
+                  AND tanggal_akhir
+                    IS NOT NULL
+
+                  AND tanggal_akhir >=
+                    CURRENT_DATE
+
+                  AND tanggal_akhir <=
+                    CURRENT_DATE +
+                    INTERVAL '3 months'
+                )
+              )
+
+              /*
+              * SAMAKAN DENGAN CONTRACT OVERVIEW.
+              *
+              * Filter berjalan, berakhir, dan tiga bulan
+              * hanya menghitung proyek Status Final Aktif.
+              *
+              * Status selesai tetap mengambil Final Done.
+              */
+              AND (
+                NOT (
+                  $3 IN (
+                    'berjalan',
+                    'berakhir'
+                  )
+
+                  OR $4 = '3-bulan'
+                )
+
+                OR status_final_normal =
+                  'aktif'
+              )
+          )
+
+          /*
+           * ===========================================
+           * HASIL AKHIR
+           * ===========================================
+           */
+          SELECT
+            jenis_relasi,
+            kontrak_id,
+            proyek_id,
+            nama_proyek,
+            status_final,
+            nama_relasi,
+            tanggal_mulai,
+            tanggal_akhir,
+            status_kontrak,
+            sisa_hari,
+
+            CASE
+              /*
+               * Status final Done/Selesai.
+               */
+              WHEN
+                status_kontrak =
+                  'selesai'
+              THEN
+                'Kontrak Telah Selesai'
+
+              /*
+               * Tanggal akhir belum diisi.
+               */
+              WHEN
+                tanggal_akhir IS NULL
+              THEN
+                'Belum ditentukan'
+
+              /*
+               * Tanggal akhir sudah lewat.
+               */
+              WHEN
+                tanggal_akhir <
+                  CURRENT_DATE
+              THEN
+                'Telah Berakhir'
+
+              /*
+               * Tanggal akhir hari ini.
+               */
+              WHEN
+                tanggal_akhir =
+                  CURRENT_DATE
+              THEN
+                'Berakhir Hari Ini'
+
+              /*
+               * Tanggal akhir masih berjalan.
+               */
+              ELSE
+                (
+                  tanggal_akhir -
+                  CURRENT_DATE
+                )::text ||
+                ' hari lagi'
+            END AS berakhir_pada,
+
+            COUNT(*) OVER()
+              AS total_data
+
+          FROM kontrak_filter
+
+          ORDER BY
+            /*
+             * Kontrak berjalan ditampilkan
+             * lebih dahulu.
+             */
+            CASE status_kontrak
+              WHEN 'berjalan'
+                THEN 1
+
+              WHEN 'belum_ditentukan'
+                THEN 2
+
+              WHEN 'selesai'
+                THEN 3
+
+              WHEN 'berakhir'
+                THEN 4
+
+              ELSE 5
+            END,
+
+            /*
+             * Tanggal akhir terdekat.
+             */
+            tanggal_akhir ASC
+              NULLS LAST,
+
+            nama_proyek ASC,
+
+            jenis_relasi ASC
+
+          LIMIT $5
+          OFFSET $6
+          `,
+          [
+            /*
+             * $1
+             */
+            search,
+
+            /*
+             * $2
+             */
+            jenis,
+
+            /*
+             * $3
+             */
+            status,
+
+            /*
+             * $4
+             */
+            periode,
+
+            /*
+             * $5
+             */
+            limit,
+
+            /*
+             * $6
+             */
+            offset,
+
+            /*
+             * $7
+             */
+            isAdmin,
+
+            /*
+             * $8
+             */
+            picId
+          ]
+        );
+
+      // ================================================
+      // TOTAL DATA
+      // ================================================
+
+      const totalData =
+        result.rows.length > 0
+          ? Number(
+              result.rows[0]
+                .total_data || 0
+            )
+          : 0;
+
+      // ================================================
+      // NORMALISASI RESPONSE
+      // ================================================
+
+      const data =
+        result.rows.map(item => {
+          const {
+            total_data,
+            ...kontrak
+          } = item;
+
+          return {
+            ...kontrak,
+
+            kontrak_id:
+              Number(
+                kontrak.kontrak_id
+              ),
+
+            proyek_id:
+              Number(
+                kontrak.proyek_id
+              ),
+
+            sisa_hari:
+              kontrak.sisa_hari === null ||
+              kontrak.sisa_hari === undefined
+                ? null
+                : Number(
+                    kontrak.sisa_hari
+                  )
+          };
+        });
+
+      // ================================================
+      // RESPONSE
+      // ================================================
+
+      return res.json({
+        data,
+
+        filter: {
+          search,
+          jenis,
+          status,
+          periode
+        },
+
+        pagination: {
+          page,
+          limit,
+
+          total_data:
+            totalData,
+
+          total_pages:
+            Math.max(
+              Math.ceil(
+                totalData / limit
+              ),
+              1
+            )
+        }
+      });
+
+    } catch (error) {
+      console.error(
+        "ERROR GET KONTRAK:",
+        error
+      );
+
+      return res.status(500).json({
+        error: error.message
+      });
+    }
+  }
+);
+
+// =====================================================
+// GET DETAIL PENGELUARAN
+//
+// SUMBER DATA:
+// 1. public.proyek_partner_termin
+// 2. public.proyek_sewa_pembayaran_partner
+//
+// DEFAULT:
+// - Tahun berjalan
+// - Status sudah dibayar
+// =====================================================
+
+app.get(
+  "/api/pengeluaran/detail",
+  async (req, res) => {
+
+    // =================================================
+    // VALIDASI LOGIN
+    // =================================================
+
+    if (
+      !req.session ||
+      !req.session.user
+    ) {
+
+      return res.status(401).json({
+        error: "Belum login"
+      });
+
+    }
+
+
+    try {
+
+      const user =
+        req.session.user;
+
+
+      const isAdmin =
+        String(
+          user.role || ""
+        )
+          .trim()
+          .toLowerCase() ===
+        "admin";
+
+
+      const picId =
+        Number(
+          user.id
+        );
+
+
+      // =================================================
+      // TAHUN SUMMARY
+      // =================================================
+
+      const tahunQuery =
+        Number(
+          req.query.tahun
+        );
+
+
+      const tahunSekarang =
+        new Date()
+          .getFullYear();
+
+
+      const tahun =
+        Number.isInteger(
+          tahunQuery
+        ) &&
+        tahunQuery >= 2000 &&
+        tahunQuery <= 2100
+
+          ? tahunQuery
+
+          : tahunSekarang;
+
+
+      // =================================================
+      // QUERY PENGELUARAN
+      // =================================================
+
+      const result =
+        await pool.query(
+          `
+          WITH pengeluaran_proyek AS (
+
+            /*
+             * ===========================================
+             * PENGELUARAN PROYEK REGULER / TRANSAKSI
+             * SUMBER: proyek_partner_termin
+             * ===========================================
+             */
+
+            SELECT
+              termin.id::bigint
+                AS id,
+
+              termin.id::bigint
+                AS termin_id,
+
+              NULL::bigint
+                AS pembayaran_id,
+
+              partner_proyek.proyek_id::bigint
+                AS proyek_id,
+
+              NULL::bigint
+                AS proyek_sewa_id,
+
+              proyek.nama_proyek,
+
+              NULL::text
+                AS nomor_pr,
+
+              master_partner.id::bigint
+                AS partner_id,
+
+              master_partner.nama_partner,
+
+              COALESCE(
+                proyek.jenis_proyek,
+                'Reguler'
+              )::text
+                AS jenis_proyek,
+
+              proyek.sub_jenis_proyek,
+
+              'Proyek'::text
+                AS sumber,
+
+              termin.nama_termin,
+
+              COALESCE(
+                termin.nama_termin,
+                '-'
+              )::text
+                AS deskripsi,
+
+              termin.persentase,
+
+              /*
+               * Jika nominal termin tersedia,
+               * gunakan nominal termin.
+               *
+               * Jika nominal kosong tetapi persentase ada,
+               * hitung dari nilai final partner.
+               */
+
+              COALESCE(
+                NULLIF(
+                  termin.nominal,
+                  0
+                ),
+
+                CASE
+                  WHEN
+                    COALESCE(
+                      termin.persentase,
+                      0
+                    ) > 0
+                  THEN
+                    (
+                      COALESCE(
+                        NULLIF(
+                          partner_proyek.nilai_nego_3,
+                          0
+                        ),
+
+                        NULLIF(
+                          partner_proyek.nilai_nego_2,
+                          0
+                        ),
+
+                        NULLIF(
+                          partner_proyek.nilai_nego_1,
+                          0
+                        ),
+
+                        NULLIF(
+                          partner_proyek.nilai_submit,
+                          0
+                        ),
+
+                        0
+                      )
+                      *
+                      termin.persentase
+                      /
+                      100
+                    )
+
+                  ELSE 0
+                END,
+
+                0
+              )::numeric
+                AS nominal,
+
+              COALESCE(
+                NULLIF(
+                  termin.nominal,
+                  0
+                ),
+
+                CASE
+                  WHEN
+                    COALESCE(
+                      termin.persentase,
+                      0
+                    ) > 0
+                  THEN
+                    (
+                      COALESCE(
+                        NULLIF(
+                          partner_proyek.nilai_nego_3,
+                          0
+                        ),
+
+                        NULLIF(
+                          partner_proyek.nilai_nego_2,
+                          0
+                        ),
+
+                        NULLIF(
+                          partner_proyek.nilai_nego_1,
+                          0
+                        ),
+
+                        NULLIF(
+                          partner_proyek.nilai_submit,
+                          0
+                        ),
+
+                        0
+                      )
+                      *
+                      termin.persentase
+                      /
+                      100
+                    )
+
+                  ELSE 0
+                END,
+
+                0
+              )::numeric
+                AS nilai_pengeluaran,
+
+              /*
+               * Normalisasi status proyek partner:
+               *
+               * dibayar / lunas
+               * menjadi Sudah Dibayar
+               *
+               * proses
+               * menjadi Proses
+               *
+               * selainnya
+               * menjadi Belum Dibayar
+               */
+
+              CASE
+
+                WHEN LOWER(
+                  BTRIM(
+                    REGEXP_REPLACE(
+                      COALESCE(
+                        termin.status_pembayaran,
+                        ''
+                      ),
+                      '\\s+',
+                      ' ',
+                      'g'
+                    )
+                  )
+                ) IN (
+                  'dibayar',
+                  'sudah dibayar',
+                  'lunas',
+                  'paid'
+                )
+                THEN 'Sudah Dibayar'
+
+                WHEN LOWER(
+                  BTRIM(
+                    REGEXP_REPLACE(
+                      COALESCE(
+                        termin.status_pembayaran,
+                        ''
+                      ),
+                      '\\s+',
+                      ' ',
+                      'g'
+                    )
+                  )
+                ) IN (
+                  'proses',
+                  'diproses',
+                  'processing'
+                )
+                THEN 'Proses'
+
+                ELSE 'Belum Dibayar'
+
+              END::text
+                AS status_pembayaran,
+
+              termin.status_pembayaran::text
+                AS status_pembayaran_asli,
+
+              termin.tanggal_jatuh_tempo,
+
+              termin.tanggal_bayar,
+
+              termin.syarat_pembayaran,
+
+              COALESCE(
+                termin.tanggal_bayar::date,
+                termin.tanggal_jatuh_tempo::date,
+                termin.created_at::date
+              ) AS tanggal_acuan,
+
+              termin.created_at,
+              termin.updated_at
+
+            FROM public.proyek_partner_termin termin
+
+            INNER JOIN public.proyek_partner partner_proyek
+              ON partner_proyek.id =
+                 termin.proyek_partner_id
+
+            INNER JOIN public.proyek proyek
+              ON proyek.id =
+                 partner_proyek.proyek_id
+
+            LEFT JOIN public.partner master_partner
+              ON master_partner.id =
+                 partner_proyek.partner_id
+
+            WHERE
+              $1::boolean = TRUE
+
+              OR EXISTS (
+                SELECT 1
+
+                FROM public.proyek_pic akses_pic
+
+                WHERE
+                  akses_pic.proyek_id =
+                    partner_proyek.proyek_id
+
+                  AND akses_pic.pic_id =
+                    $2
+              )
+          ),
+
+
+          pengeluaran_proyek_sewa AS (
+
+            /*
+             * ===========================================
+             * PENGELUARAN PROYEK SEWA
+             * SUMBER: proyek_sewa_pembayaran_partner
+             * ===========================================
+             */
+
+            SELECT
+              pembayaran.id::bigint
+                AS id,
+
+              NULL::bigint
+                AS termin_id,
+
+              pembayaran.id::bigint
+                AS pembayaran_id,
+
+              sewa.proyek_id::bigint
+                AS proyek_id,
+
+              sewa.id::bigint
+                AS proyek_sewa_id,
+
+              /*
+               * Pada listing pengeluaran,
+               * proyek sewa ditampilkan menggunakan
+               * nomor PR.
+               */
+
+              COALESCE(
+                NULLIF(
+                  BTRIM(
+                    sewa.nomor_pr
+                  ),
+                  ''
+                ),
+
+                proyek.nama_proyek,
+
+                '-'
+              )::text
+                AS nama_proyek,
+
+              sewa.nomor_pr,
+
+              master_partner.id::bigint
+                AS partner_id,
+
+              master_partner.nama_partner,
+
+              'Sewa'::text
+                AS jenis_proyek,
+
+              proyek.sub_jenis_proyek,
+
+              'Proyek Sewa'::text
+                AS sumber,
+
+              NULL::text
+                AS nama_termin,
+
+              COALESCE(
+                pembayaran.deskripsi,
+                '-'
+              )::text
+                AS deskripsi,
+
+              NULL::numeric
+                AS persentase,
+
+              COALESCE(
+                pembayaran.nominal,
+                0
+              )::numeric
+                AS nominal,
+
+              COALESCE(
+                pembayaran.nominal,
+                0
+              )::numeric
+                AS nilai_pengeluaran,
+
+              /*
+               * Normalisasi status pembayaran sewa:
+               *
+               * sudah dibayar / dibayar
+               * menjadi Sudah Dibayar
+               *
+               * proses
+               * menjadi Proses
+               *
+               * selainnya
+               * menjadi Belum Dibayar
+               */
+
+              CASE
+
+                WHEN LOWER(
+                  BTRIM(
+                    REGEXP_REPLACE(
+                      COALESCE(
+                        pembayaran.status_pembayaran,
+                        ''
+                      ),
+                      '\\s+',
+                      ' ',
+                      'g'
+                    )
+                  )
+                ) IN (
+                  'dibayar',
+                  'sudah dibayar',
+                  'lunas',
+                  'paid'
+                )
+                THEN 'Sudah Dibayar'
+
+                WHEN LOWER(
+                  BTRIM(
+                    REGEXP_REPLACE(
+                      COALESCE(
+                        pembayaran.status_pembayaran,
+                        ''
+                      ),
+                      '\\s+',
+                      ' ',
+                      'g'
+                    )
+                  )
+                ) IN (
+                  'proses',
+                  'diproses',
+                  'processing'
+                )
+                THEN 'Proses'
+
+                ELSE 'Belum Dibayar'
+
+              END::text
+                AS status_pembayaran,
+
+              pembayaran.status_pembayaran::text
+                AS status_pembayaran_asli,
+
+              NULL::date
+                AS tanggal_jatuh_tempo,
+
+              pembayaran.tanggal_bayar,
+
+              pembayaran.syarat_pembayaran,
+
+              COALESCE(
+                pembayaran.tanggal_bayar::date,
+                pembayaran.created_at::date
+              ) AS tanggal_acuan,
+
+              pembayaran.created_at,
+              pembayaran.updated_at
+
+            FROM public.proyek_sewa_pembayaran_partner pembayaran
+
+            INNER JOIN public.proyek_sewa sewa
+              ON sewa.id =
+                 pembayaran.proyek_sewa_id
+
+            LEFT JOIN public.proyek proyek
+              ON proyek.id =
+                 sewa.proyek_id
+
+            LEFT JOIN public.proyek_partner partner_proyek
+              ON partner_proyek.id =
+                 pembayaran.proyek_partner_id
+
+            LEFT JOIN public.partner master_partner
+              ON master_partner.id =
+                 partner_proyek.partner_id
+
+            WHERE
+              $1::boolean = TRUE
+
+              OR EXISTS (
+                SELECT 1
+
+                FROM public.proyek_pic akses_pic
+
+                WHERE
+                  akses_pic.proyek_id =
+                    sewa.proyek_id
+
+                  AND akses_pic.pic_id =
+                    $2
+              )
+          ),
+
+
+          semua_pengeluaran AS (
+
+            SELECT *
+            FROM pengeluaran_proyek
+
+            UNION ALL
+
+            SELECT *
+            FROM pengeluaran_proyek_sewa
+
+          )
+
+
+          SELECT
+            id,
+            termin_id,
+            pembayaran_id,
+            proyek_id,
+            proyek_sewa_id,
+            nama_proyek,
+            nomor_pr,
+            partner_id,
+
+            COALESCE(
+              nama_partner,
+              '-'
+            ) AS nama_partner,
+
+            jenis_proyek,
+            sub_jenis_proyek,
+            sumber,
+            nama_termin,
+            deskripsi,
+            persentase,
+            nominal,
+            nilai_pengeluaran,
+            status_pembayaran,
+            status_pembayaran_asli,
+            tanggal_jatuh_tempo,
+            tanggal_bayar,
+            tanggal_acuan,
+            syarat_pembayaran,
+            created_at,
+            updated_at
+
+          FROM semua_pengeluaran
+
+          ORDER BY
+            tanggal_bayar DESC NULLS LAST,
+            tanggal_acuan DESC NULLS LAST,
+            created_at DESC,
+            id DESC
+          `,
+          [
+            isAdmin,
+            picId
+          ]
+        );
+
+
+      // =================================================
+      // SUMMARY TAHUN TERPILIH
+      // =================================================
+
+      const dataTahun =
+        result.rows.filter(
+          item => {
+
+            const tanggal =
+              item.tanggal_acuan;
+
+            if (!tanggal) {
+              return false;
+            }
+
+            const tahunData =
+              Number(
+                String(
+                  tanggal
+                ).slice(
+                  0,
+                  4
+                )
+              );
+
+            return (
+              tahunData ===
+              tahun
+            );
+
+          }
+        );
+
+
+      const sudahDibayar =
+        dataTahun.filter(
+          item =>
+            item.status_pembayaran ===
+            "Sudah Dibayar" &&
+            item.tanggal_bayar
+        );
+
+
+      const belumDibayar =
+        dataTahun.filter(
+          item =>
+            item.status_pembayaran ===
+            "Belum Dibayar"
+        );
+
+
+      const proses =
+        dataTahun.filter(
+          item =>
+            item.status_pembayaran ===
+            "Proses"
+        );
+
+
+      const hitungTotal =
+        data =>
+          data.reduce(
+            (
+              total,
+              item
+            ) =>
+              total +
+              Number(
+                item.nilai_pengeluaran ||
+                item.nominal ||
+                0
+              ),
+
+            0
+          );
+
+
+      // =================================================
+      // RESPONSE
+      // =================================================
+
+      return res.json({
+
+        pengeluaran:
+          result.rows,
+
+        summary: {
+
+          tahun,
+
+          /*
+           * Total pengeluaran hanya mengambil
+           * pembayaran dengan status sudah dibayar
+           * dan memiliki tanggal bayar pada
+           * tahun terpilih.
+           */
+
+          total_pengeluaran:
+            hitungTotal(
+              sudahDibayar
+            ),
+
+          total_belum_dibayar:
+            hitungTotal(
+              belumDibayar
+            ),
+
+          total_proses:
+            hitungTotal(
+              proses
+            ),
+
+          termin_dibayar:
+            sudahDibayar.length,
+
+          termin_belum_dibayar:
+            belumDibayar.length +
+            proses.length,
+
+          jumlah_data:
+            dataTahun.length
+
+        }
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "ERROR GET DETAIL PENGELUARAN:",
+        error
+      );
+
+
+      return res.status(500).json({
+        error:
+          error.message
+      });
+
+    }
+
+  }
+);
+
 // ======================================================
 // START SERVER
 // ======================================================

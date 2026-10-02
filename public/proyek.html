@@ -520,6 +520,78 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* =========================================
+   NAMA DAN KATEGORI PROYEK
+========================================= */
+
+.proyek-info-cell {
+  width: 320px;
+  min-width: 260px;
+  max-width: 380px;
+}
+
+.proyek-main-name {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.proyek-category-name {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 4px 8px;
+  color: #4f46e5;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.jenis-proyek-main {
+  color: #334155;
+  font-weight: 650;
+}
+
+.jenis-proyek-sub {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 11.5px;
+}
+
+.proyek-info-cell {
+  min-width: 230px;
+  max-width: 320px;
+  vertical-align: middle;
+}
+
+.proyek-main-name {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.proyek-category-name {
+  display: block;
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
   </style>
 
 </head>
@@ -650,16 +722,13 @@
                     Nama Proyek
                   </th>
 
-
                   <th>
-                    Kategori
+                    Jenis Proyek
                   </th>
 
-
                   <th>
-                    Jenis
+                    PIC
                   </th>
-
 
                   <th>
                     Klien
@@ -667,17 +736,12 @@
 
 
                   <th>
-                    Nilai Proyek
+                      Partner
                   </th>
 
 
                   <th>
-                    End Date
-                  </th>
-
-
-                  <th>
-                    Partner
+                    Nilai Klien
                   </th>
 
 
@@ -687,12 +751,17 @@
 
 
                   <th>
-                    Margin Nominal
+                    Margin
                   </th>
 
 
                   <th>
-                    Margin Persen
+                    Margin %
+                  </th>
+
+
+                  <th>
+                    Selesai Kontrak
                   </th>
 
 
@@ -718,7 +787,7 @@
                 <tr>
 
                   <td
-                    colspan="12"
+                    colspan="11"
                     class="empty-state"
                   >
                     Memuat proyek...

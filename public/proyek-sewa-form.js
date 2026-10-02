@@ -102,7 +102,10 @@ const btnSimpan =
     "btnSimpanProyekSewa"
   );
 
-
+const proyekPartnerId =
+  document.getElementById(
+    "proyekPartnerId"
+  );
 // =====================================================
 // HELPER ANGKA
 // =====================================================
@@ -697,6 +700,114 @@ async function loadMasterCabang() {
 
 }
 
+// =====================================================
+// LOAD PARTNER
+// =====================================================
+
+async function loadPartnerProyekSewa(
+  selectedId = null
+) {
+  if (!proyekPartnerId) {
+    return;
+  }
+
+  const selectedProyekId =
+    Number(proyekId?.value);
+
+  if (
+    !Number.isInteger(
+      selectedProyekId
+    ) ||
+    selectedProyekId <= 0
+  ) {
+    proyekPartnerId.innerHTML = `
+      <option value="">
+        Pilih proyek terlebih dahulu
+      </option>
+    `;
+
+    proyekPartnerId.disabled =
+      true;
+
+    proyekPartnerId.required =
+      false;
+
+    return;
+  }
+
+  proyekPartnerId.innerHTML = `
+    <option value="">
+      Memuat partner...
+    </option>
+  `;
+
+  proyekPartnerId.disabled =
+    true;
+
+  const partners =
+    await fetchJSON(
+      `/api/proyek-sewa/master/proyek/${selectedProyekId}/partners`
+    );
+
+  proyekPartnerId.innerHTML = "";
+
+  if (
+    !Array.isArray(partners) ||
+    partners.length === 0
+  ) {
+    proyekPartnerId.innerHTML = `
+      <option value="">
+        Kontrak belum memiliki partner
+      </option>
+    `;
+
+    proyekPartnerId.disabled =
+      true;
+
+    proyekPartnerId.required =
+      false;
+
+    return;
+  }
+
+  proyekPartnerId.appendChild(
+    new Option(
+      "Pilih Partner",
+      ""
+    )
+  );
+
+  partners.forEach(item => {
+    proyekPartnerId.appendChild(
+      new Option(
+        item.nama_partner || "-",
+        String(
+          item.proyek_partner_id
+        )
+      )
+    );
+  });
+
+  proyekPartnerId.disabled =
+    false;
+
+  proyekPartnerId.required =
+    partners.length > 1;
+
+  if (selectedId) {
+    proyekPartnerId.value =
+      String(selectedId);
+
+  } else if (
+    partners.length === 1
+  ) {
+    proyekPartnerId.value =
+      String(
+        partners[0]
+          .proyek_partner_id
+      );
+  }
+}
 
 // =====================================================
 // OPTION PRODUK
@@ -1059,7 +1170,6 @@ function updateEndDateOrder(
 
 }
 
-
 // =====================================================
 // HITUNG SATU ORDER
 // =====================================================
@@ -1164,7 +1274,6 @@ function hitungOrder(
 
 }
 
-
 // =====================================================
 // HITUNG SATU PRODUK
 // =====================================================
@@ -1201,7 +1310,6 @@ function hitungProduk(
   hitungTotalProyek();
 
 }
-
 
 // =====================================================
 // HITUNG TOTAL PROYEK
@@ -1276,7 +1384,6 @@ function hitungTotalProyek() {
 
 }
 
-
 // =====================================================
 // UPDATE NOMOR / JUDUL PRODUK
 // =====================================================
@@ -1319,7 +1426,6 @@ function updateJudulProduk() {
   );
 
 }
-
 
 // =====================================================
 // TAMBAH ORDER
@@ -1603,7 +1709,6 @@ function tambahOrder(
   return orderItem;
 
 }
-
 
 // =====================================================
 // TAMBAH PRODUK
@@ -2065,7 +2170,6 @@ function tambahPembayaran(
   return paymentItem;
 }
 
-
 // =====================================================
 // LOAD DATA EDIT
 // =====================================================
@@ -2138,14 +2242,17 @@ async function loadDataEdit() {
   }
 
 
-  if (proyekId) {
+if (proyekId) {
 
-    proyekId.value =
-      proyek.proyek_id ||
-      "";
+  proyekId.value =
+    proyek.proyek_id ||
+    "";
 
-  }
+  await loadPartnerProyekSewa(
+    proyek.proyek_partner_id
+  );
 
+}
 
   if (nomorRujukan) {
 
@@ -2261,7 +2368,6 @@ async function loadDataEdit() {
   }
 
 }
-
 
 // =====================================================
 // BUILD PAYLOAD PRODUK
@@ -2493,7 +2599,6 @@ function buildProdukPayload() {
 
 }
 
-
 // =====================================================
 // BUILD PEMBAYARAN
 // =====================================================
@@ -2710,7 +2815,6 @@ function buildRujukanKontrak(
 
 }
 
-
 // =====================================================
 // SIMPAN TAMBAH
 // =====================================================
@@ -2737,7 +2841,6 @@ async function simpanTambah(
   );
 
 }
-
 
 // =====================================================
 // SIMPAN EDIT
@@ -2769,24 +2872,27 @@ async function simpanEdit(
       },
 
       body:
-        JSON.stringify({
+  JSON.stringify({
 
-          nomor_pr:
-            payload.nomor_pr,
+    nomor_pr:
+      payload.nomor_pr,
 
-          tanggal_pr:
-            payload.tanggal_pr,
+    tanggal_pr:
+      payload.tanggal_pr,
 
-          nomor_rujukan:
-            payload.nomor_rujukan,
+    nomor_rujukan:
+      payload.nomor_rujukan,
 
-          proyek_id:
-            payload.proyek_id,
+    proyek_id:
+      payload.proyek_id,
 
-          klien_id:
-            payload.klien_id
+    proyek_partner_id:
+      payload.proyek_partner_id,
 
-        })
+    klien_id:
+      payload.klien_id
+
+  })
     }
   );
 
@@ -2943,43 +3049,64 @@ form?.addEventListener(
       const pembayaran =
         buildPembayaranPayload();
 
+const proyekValue =
+  proyekId?.value
+    ? Number(proyekId.value)
+    : null;
 
+const proyekPartnerValue =
+  proyekPartnerId?.value
+    ? Number(
+        proyekPartnerId.value
+      )
+    : null;
+
+if (
+  proyekValue &&
+  proyekPartnerId?.required &&
+  !proyekPartnerValue
+) {
+  alert(
+    "Partner proyek wajib dipilih."
+  );
+
+  proyekPartnerId.focus();
+
+  return;
+}
       // =============================================
       // PAYLOAD
       // =============================================
 
       const payload = {
 
-        nomor_pr:
-          nomorPrValue,
+  nomor_pr:
+    nomorPrValue,
 
-        tanggal_pr:
-          tanggalPr?.value ||
-          null,
+  tanggal_pr:
+    tanggalPr?.value ||
+    null,
 
-        nomor_rujukan:
-          rujukan ||
-          null,
+  nomor_rujukan:
+    rujukan ||
+    null,
 
-        proyek_id:
-          proyekId?.value
-            ? Number(
-                proyekId.value
-              )
-            : null,
+  proyek_id:
+    proyekValue,
 
-        klien_id:
-          klienValue,
+  proyek_partner_id:
+    proyekPartnerValue,
 
-        produk:
-          produk,
+  klien_id:
+    klienValue,
 
-        pembayaran:
-          pembayaran
+  produk:
+    produk,
 
-      };
+  pembayaran:
+    pembayaran
 
-
+};
       console.log(
         "PAYLOAD PROYEK SEWA:",
         payload
@@ -3068,7 +3195,6 @@ form?.addEventListener(
   }
 );
 
-
 // =====================================================
 // BUTTON TAMBAH PRODUK
 // =====================================================
@@ -3106,10 +3232,14 @@ btnTambahPembayaran
 // pilih klien secara otomatis.
 // =====================================================
 
+// =====================================================
+// PROYEK EXISTING -> KLIEN DAN PARTNER
+// =====================================================
+
 proyekId
   ?.addEventListener(
     "change",
-    () => {
+    async () => {
 
       const selected =
         masterProyek.find(
@@ -3118,19 +3248,34 @@ proyekId
             String(proyekId.value)
         );
 
-
+      // Klien otomatis mengikuti proyek
       if (
         selected?.klien_id &&
         klienId
       ) {
-
         klienId.value =
           selected.klien_id;
+      }
+
+      try {
+
+        // Partner mengikuti proyek/kontrak
+        await loadPartnerProyekSewa();
+
+      } catch (error) {
+
+        console.error(
+          "ERROR LOAD PARTNER PROYEK:",
+          error
+        );
+
+        alert(error.message);
 
       }
 
     }
   );
+
 
 
 // =====================================================

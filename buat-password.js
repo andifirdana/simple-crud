@@ -5,7 +5,7 @@ const bcrypt =
 async function buatPassword() {
 
   const password =
-    "Password123!";
+    "Novica19";
 
 
   const hash =

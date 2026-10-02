@@ -1,1279 +1,51 @@
-// ======================================================
-// DASHBOARD PORTOPRO
-// Endpoint: GET /api/dashboard
-// ======================================================
-
-let dashboardData = null;
+"use strict";
 
 
 // ======================================================
-// ELEMENT HELPER
+// ELEMEN UTAMA DASHBOARD
 // ======================================================
 
-function getElement(id) {
-  return document.getElementById(id);
-}
-
-
-// ======================================================
-// NUMBER HELPER
-// ======================================================
-
-function angka(value) {
-  const result =
-    Number(value);
-
-  return Number.isFinite(result)
-    ? result
-    : 0;
-}
-
-
-// ======================================================
-// NORMALISASI TEXT
-// ======================================================
-
-function normalizeText(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase();
-}
-
-
-// ======================================================
-// FORMAT RUPIAH
-// ======================================================
-
-function formatRupiah(value) {
-  return new Intl.NumberFormat(
-    "id-ID",
-    {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0
-    }
-  ).format(
-    angka(value)
-  );
-}
-
-
-// ======================================================
-// PARSE TANGGAL LOKAL
-// ======================================================
-
-function parseTanggal(value) {
-  if (!value) {
-    return null;
-  }
-
-  const text =
-    String(value);
-
-  const dateOnlyMatch =
-    text.match(
-      /^(\d{4})-(\d{2})-(\d{2})/
-    );
-
-  if (dateOnlyMatch) {
-    const date =
-      new Date(
-        Number(dateOnlyMatch[1]),
-        Number(dateOnlyMatch[2]) - 1,
-        Number(dateOnlyMatch[3])
-      );
-
-    return Number.isNaN(
-      date.getTime()
-    )
-      ? null
-      : date;
-  }
-
-  const date =
-    new Date(value);
-
-  return Number.isNaN(
-    date.getTime()
-  )
-    ? null
-    : date;
-}
-
-
-// ======================================================
-// FORMAT TANGGAL
-// ======================================================
-
-function formatTanggal(value) {
-  const date =
-    parseTanggal(value);
-
-  if (!date) {
-    return "-";
-  }
-
-  return new Intl.DateTimeFormat(
-    "id-ID",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    }
-  ).format(date);
-}
-
-
-// ======================================================
-// ESCAPE HTML
-// ======================================================
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-
-// ======================================================
-// EMPTY TABLE
-// ======================================================
-
-function emptyTable(
-  colspan,
-  message
-) {
-  return `
-    <tr>
-      <td
-        colspan="${colspan}"
-        class="empty-state"
-      >
-        ${escapeHtml(message)}
-      </td>
-    </tr>
-  `;
-}
-
-
-// ======================================================
-// STATUS SUDAH DIBAYAR
-// ======================================================
-
-function statusSudahDibayar(status) {
-  return [
-    "dibayar",
-    "sudah dibayar",
-    "lunas",
-    "paid"
-  ].includes(
-    normalizeText(status)
-  );
-}
-
-
-// ======================================================
-// PROJECT LINK
-// ======================================================
-
-function projectLink(item) {
-  const proyekId =
-    Number(
-      item.proyek_id ??
-      item.id
-    );
-
-  const namaProyek =
-    escapeHtml(
-      item.nama_proyek || "-"
-    );
-
-  if (
-    !Number.isInteger(proyekId) ||
-    proyekId <= 0
-  ) {
-    return namaProyek;
-  }
-
-  return `
-    <a
-      class="project-link"
-      href="/detail-proyek.html?id=${encodeURIComponent(
-        proyekId
-      )}"
-    >
-      ${namaProyek}
-    </a>
-  `;
-}
-
-
-// ======================================================
-// NORMALISASI RESPONSE
-// ======================================================
-
-function normalizeDashboardResponse(
-  result
-) {
-  return {
-    projects:
-      Array.isArray(result.projects)
-        ? result.projects
-        : [],
-
-    revenue:
-      Array.isArray(result.revenue)
-        ? result.revenue
-        : [],
-
-    forecast:
-      Array.isArray(result.forecast)
-        ? result.forecast
-        : [],
-
-    termins:
-      Array.isArray(result.termins)
-        ? result.termins
-        : [],
-
-    timelines:
-      Array.isArray(result.timelines)
-        ? result.timelines
-        : [],
-
-    partnerContracts:
-      Array.isArray(
-        result.partner_contracts
-      )
-        ? result.partner_contracts
-        : []
-  };
-}
-
-
-// ======================================================
-// LOAD DASHBOARD
-// ======================================================
-
-async function loadDashboard() {
-  try {
-    const response =
-      await fetch(
-        "/api/dashboard",
-        {
-          headers: {
-            Accept:
-              "application/json"
-          },
-
-          cache:
-            "no-store"
-        }
-      );
-
-    if (response.status === 401) {
-      window.location.href =
-        "/login.html";
-
-      return;
-    }
-
-    const contentType =
-      response.headers.get(
-        "content-type"
-      ) || "";
-
-    if (
-      !contentType.includes(
-        "application/json"
-      )
-    ) {
-      throw new Error(
-        `Server tidak mengembalikan JSON. Status ${response.status}`
-      );
-    }
-
-    const result =
-      await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        result.error ||
-        "Gagal memuat dashboard."
-      );
-    }
-
-    dashboardData =
-      normalizeDashboardResponse(
-        result
-      );
-
-    buildDashboardFilters();
-
-    renderDashboard();
-
-    const lastUpdate =
-      getElement("lastUpdate");
-
-    if (lastUpdate) {
-      lastUpdate.textContent =
-        `Diperbarui ${new Date()
-          .toLocaleString(
-            "id-ID"
-          )}`;
-    }
-
-  } catch (error) {
-    console.error(
-      "ERROR LOAD DASHBOARD:",
-      error
-    );
-
-    const lastUpdate =
-      getElement("lastUpdate");
-
-    if (lastUpdate) {
-      lastUpdate.textContent =
-        `Gagal memuat data: ${error.message}`;
-    }
-
-    showDashboardError(
-      error.message
-    );
-  }
-}
-
-
-// ======================================================
-// ERROR DISPLAY
-// ======================================================
-
-function showDashboardError(message) {
-  const tableConfigs = [
-    [
-      "highestProjectTable",
-      7
-    ],
-    [
-      "lateProjectTable",
-      6
-    ],
-    [
-      "clientContractTable",
-      5
-    ],
-    [
-      "partnerContractTable",
-      5
-    ]
-  ];
-
-  tableConfigs.forEach(
-    ([
-      id,
-      colspan
-    ]) => {
-      const element =
-        getElement(id);
-
-      if (element) {
-        element.innerHTML =
-          emptyTable(
-            colspan,
-            `Gagal memuat data: ${message}`
-          );
-      }
-    }
+const dashboardJenisProyek =
+  document.getElementById(
+    "dashboardJenisProyek"
   );
 
-  const chartIds = [
-    "revenueChart",
-    "partnerPaymentChart"
-  ];
-
-  chartIds.forEach(id => {
-    const element =
-      getElement(id);
-
-    if (element) {
-      element.innerHTML = `
-        <div class="empty-state">
-          ${escapeHtml(message)}
-        </div>
-      `;
-    }
-  });
-}
-
-
-// ======================================================
-// ARRAY VALUE
-// ======================================================
-
-function getArrayValue(
-  item,
-  arrayKey,
-  textKey
-) {
-  if (
-    Array.isArray(
-      item[arrayKey]
-    )
-  ) {
-    return item[arrayKey]
-      .filter(Boolean)
-      .map(String);
-  }
-
-  return String(
-    item[textKey] || ""
-  )
-    .split(",")
-    .map(value =>
-      value.trim()
-    )
-    .filter(Boolean);
-}
-
-
-// ======================================================
-// UNIQUE VALUE
-// ======================================================
-
-function uniqueValues(values) {
-  return [
-    ...new Set(
-      values
-        .filter(Boolean)
-        .map(String)
-    )
-  ].sort(
-    (first, second) =>
-      first.localeCompare(
-        second,
-        "id"
-      )
-  );
-}
-
-
-// ======================================================
-// ISI SELECT FILTER
-// ======================================================
-
-function fillSelect(
-  id,
-  values,
-  defaultLabel
-) {
-  const select =
-    getElement(id);
-
-  if (!select) {
-    return;
-  }
-
-  const previousValue =
-    select.value;
-
-  select.innerHTML = "";
-
-  const defaultOption =
-    document.createElement(
-      "option"
-    );
-
-  defaultOption.value = "";
-
-  defaultOption.textContent =
-    defaultLabel;
-
-  select.appendChild(
-    defaultOption
+const dashboardPic =
+  document.getElementById(
+    "dashboardPic"
   );
 
-  values.forEach(value => {
-    const option =
-      document.createElement(
-        "option"
-      );
-
-    option.value =
-      String(value);
-
-    option.textContent =
-      String(value);
-
-    select.appendChild(
-      option
-    );
-  });
-
-  if (
-    [
-      ...select.options
-    ].some(
-      option =>
-        option.value ===
-        previousValue
-    )
-  ) {
-    select.value =
-      previousValue;
-  }
-}
-
-
-// ======================================================
-// BUILD FILTER
-// ======================================================
-
-function buildDashboardFilters() {
-  if (!dashboardData) {
-    return;
-  }
-
-  const projects =
-    dashboardData.projects;
-
-  const years =
-    uniqueValues(
-      projects
-        .flatMap(item => [
-          item.tanggal_mulai,
-          item.tanggal_akhir,
-          item.created_at
-        ])
-        .map(parseTanggal)
-        .filter(Boolean)
-        .map(date =>
-          date.getFullYear()
-        )
-    ).sort(
-      (first, second) =>
-        Number(second) -
-        Number(first)
-    );
-
-  const jenis =
-    uniqueValues(
-      projects.map(
-        item =>
-          item.jenis_proyek
-      )
-    );
-
-  const kategori =
-    uniqueValues(
-      projects.flatMap(item =>
-        getArrayValue(
-          item,
-          "kategori_list",
-          "kategori"
-        )
-      )
-    );
-
-  const pics =
-    uniqueValues(
-      projects.flatMap(item =>
-        getArrayValue(
-          item,
-          "nama_pic_list",
-          "nama_pic"
-        )
-      )
-    );
-
-  const statusFinal =
-    uniqueValues(
-      projects.map(
-        item =>
-          item.status_final
-      )
-    );
-
-  fillSelect(
-    "filterTahun",
-    years,
-    "Semua Tahun"
+const dashboardYear =
+  document.getElementById(
+    "dashboardYear"
   );
 
-  fillSelect(
-    "filterJenis",
-    jenis,
-    "Semua Jenis"
+const refreshDashboard =
+  document.getElementById(
+    "refreshDashboard"
   );
 
-  fillSelect(
-    "filterKategori",
-    kategori,
-    "Semua Kategori"
+const dashboardLoading =
+  document.getElementById(
+    "dashboardLoading"
   );
 
-  fillSelect(
-    "filterPic",
-    pics,
-    "Semua PIC"
+const dashboardError =
+  document.getElementById(
+    "dashboardError"
   );
 
-  fillSelect(
-    "filterStatus",
-    statusFinal,
-    "Semua Status"
-  );
-}
-
-
-// ======================================================
-// PROJECT MATCH FILTER
-// ======================================================
-
-function projectMatchesFilter(project) {
-  const search =
-    normalizeText(
-      getElement(
-        "dashboardSearch"
-      )?.value
-    );
-
-  const selectedYear =
-    getElement(
-      "filterTahun"
-    )?.value || "";
-
-  const selectedType =
-    getElement(
-      "filterJenis"
-    )?.value || "";
-
-  const selectedCategory =
-    getElement(
-      "filterKategori"
-    )?.value || "";
-
-  const selectedPic =
-    getElement(
-      "filterPic"
-    )?.value || "";
-
-  const selectedStatus =
-    getElement(
-      "filterStatus"
-    )?.value || "";
-
-  const categories =
-    getArrayValue(
-      project,
-      "kategori_list",
-      "kategori"
-    );
-
-  const pics =
-    getArrayValue(
-      project,
-      "nama_pic_list",
-      "nama_pic"
-    );
-
-  const searchText =
-    normalizeText([
-      project.nama_proyek,
-      project.nama_klien,
-      project.nama_partner,
-      project.kategori,
-      categories.join(" "),
-      project.nama_pic,
-      pics.join(" "),
-      project.jenis_proyek,
-      project.sub_jenis_proyek,
-      project.status_pengadaan,
-      project.status_final
-    ].join(" "));
-
-  const projectYears = [
-    project.tanggal_mulai,
-    project.tanggal_akhir,
-    project.created_at
-  ]
-    .map(parseTanggal)
-    .filter(Boolean)
-    .map(date =>
-      String(
-        date.getFullYear()
-      )
-    );
-
-  return (
-    (
-      !search ||
-      searchText.includes(search)
-    ) &&
-    (
-      !selectedYear ||
-      projectYears.includes(
-        selectedYear
-      )
-    ) &&
-    (
-      !selectedType ||
-      project.jenis_proyek ===
-        selectedType
-    ) &&
-    (
-      !selectedCategory ||
-      categories.includes(
-        selectedCategory
-      )
-    ) &&
-    (
-      !selectedPic ||
-      pics.includes(
-        selectedPic
-      )
-    ) &&
-    (
-      !selectedStatus ||
-      project.status_final ===
-        selectedStatus
-    )
-  );
-}
-
-
-// ======================================================
-// FILTER RELATED DATA
-// ======================================================
-
-function filterRelatedData(
-  data,
-  projectIds
-) {
-  return data.filter(item => {
-    if (
-      item.proyek_id === null ||
-      item.proyek_id === undefined
-    ) {
-      return true;
-    }
-
-    return projectIds.has(
-      Number(item.proyek_id)
-    );
-  });
-}
-
-
-// ======================================================
-// SUMMARY BERDASARKAN STATUS PENGADAAN
-// ======================================================
-
-function getProcurementSummary(
-  projects,
-  status
-) {
-  const normalizedStatus =
-    normalizeText(status);
-
-  const filtered =
-    projects.filter(item =>
-      normalizeText(
-        item.status_pengadaan
-      ) === normalizedStatus
-    );
-
-  return {
-    total:
-      filtered.length,
-
-    nilai:
-      filtered.reduce(
-        (sum, item) =>
-          sum +
-          angka(item.nilai_klien),
-        0
-      )
-  };
-}
-
-
-// ======================================================
-// SET SUMMARY CARD
-// ======================================================
-
-function setSummaryCard(
-  totalId,
-  valueId,
-  summary
-) {
-  const totalElement =
-    getElement(totalId);
-
-  const valueElement =
-    getElement(valueId);
-
-  if (totalElement) {
-    totalElement.textContent =
-      summary.total;
-  }
-
-  if (valueElement) {
-    valueElement.textContent =
-      formatRupiah(
-        summary.nilai
-      );
-  }
-}
-
-
-// ======================================================
-// RENDER SUMMARY
-// ======================================================
-
-function renderSummary(
-  projects,
-  termins
-) {
-  setSummaryCard(
-    "totalPipeline",
-    "nilaiPipeline",
-    getProcurementSummary(
-      projects,
-      "Pipeline"
-    )
+const dashboardPeriod =
+  document.getElementById(
+    "dashboardPeriod"
   );
 
-  setSummaryCard(
-    "totalSubmitPenawaran",
-    "nilaiSubmitPenawaran",
-    getProcurementSummary(
-      projects,
-      "Submit Penawaran"
-    )
+const lastUpdated =
+  document.getElementById(
+    "lastUpdated"
   );
 
-  setSummaryCard(
-    "totalSubmitPengadaan",
-    "nilaiSubmitPengadaan",
-    getProcurementSummary(
-      projects,
-      "Submit Pengadaan"
-    )
-  );
-
-  setSummaryCard(
-    "totalKontrak",
-    "nilaiKontrak",
-    getProcurementSummary(
-      projects,
-      "Kontrak"
-    )
-  );
-
-  const activeProjects =
-    projects.filter(item =>
-      normalizeText(
-        item.status_final
-      ) === "aktif"
-    );
-
-  setSummaryCard(
-    "totalProyekAktif",
-    "nilaiProyekAktif",
-    {
-      total:
-        activeProjects.length,
-
-      nilai:
-        activeProjects.reduce(
-          (sum, item) =>
-            sum +
-            angka(item.nilai_klien),
-          0
-        )
-    }
-  );
-
-  const clientTerms =
-    termins.filter(item =>
-      normalizeText(
-        item.pihak
-      ) === "klien"
-    );
-
-  const partnerTerms =
-    termins.filter(item =>
-      normalizeText(
-        item.pihak
-      ) === "partner"
-    );
-
-  const paidClient =
-    clientTerms
-      .filter(item =>
-        statusSudahDibayar(
-          item.status_pembayaran
-        )
-      )
-      .reduce(
-        (sum, item) =>
-          sum +
-          angka(item.nominal),
-        0
-      );
-
-  const unpaidClient =
-    clientTerms
-      .filter(item =>
-        !statusSudahDibayar(
-          item.status_pembayaran
-        )
-      )
-      .reduce(
-        (sum, item) =>
-          sum +
-          angka(item.nominal),
-        0
-      );
-
-  const paidPartner =
-    partnerTerms
-      .filter(item =>
-        statusSudahDibayar(
-          item.status_pembayaran
-        )
-      )
-      .reduce(
-        (sum, item) =>
-          sum +
-          angka(item.nominal),
-        0
-      );
-
-  const unpaidPartner =
-    partnerTerms
-      .filter(item =>
-        !statusSudahDibayar(
-          item.status_pembayaran
-        )
-      )
-      .reduce(
-        (sum, item) =>
-          sum +
-          angka(item.nominal),
-        0
-      );
-
-  if (getElement("piutangKlien")) {
-    getElement(
-      "piutangKlien"
-    ).textContent =
-      formatRupiah(
-        unpaidClient
-      );
-  }
-
-  if (getElement("dibayarKlien")) {
-    getElement(
-      "dibayarKlien"
-    ).textContent =
-      formatRupiah(
-        paidClient
-      );
-  }
-
-  if (getElement("hutangPartner")) {
-    getElement(
-      "hutangPartner"
-    ).textContent =
-      formatRupiah(
-        unpaidPartner
-      );
-  }
-
-  if (getElement("dibayarPartner")) {
-    getElement(
-      "dibayarPartner"
-    ).textContent =
-      formatRupiah(
-        paidPartner
-      );
-  }
-
-  const lateProjects =
-    getLateProjects(
-      projects
-    );
-
-  if (
-    getElement(
-      "totalProyekTerlambat"
-    )
-  ) {
-    getElement(
-      "totalProyekTerlambat"
-    ).textContent =
-      lateProjects.length;
-  }
-}
-
-
-// ======================================================
-// PROYEK TERLAMBAT
-// ======================================================
-
-function getLateProjects(projects) {
-  const today =
-    new Date();
-
-  today.setHours(
-    0,
-    0,
-    0,
-    0
-  );
-
-  return projects
-    .filter(item => {
-      const endDate =
-        parseTanggal(
-          item.tanggal_akhir
-        );
-
-      if (!endDate) {
-        return false;
-      }
-
-      endDate.setHours(
-        0,
-        0,
-        0,
-        0
-      );
-
-      const technicalStatus =
-        normalizeText(
-          item.status_teknis
-        );
-
-      return (
-        endDate < today &&
-        ![
-          "done",
-          "selesai"
-        ].includes(
-          technicalStatus
-        )
-      );
-    })
-    .map(item => {
-      const endDate =
-        parseTanggal(
-          item.tanggal_akhir
-        );
-
-      endDate.setHours(
-        0,
-        0,
-        0,
-        0
-      );
-
-      const lateDays =
-        Math.floor(
-          (
-            today.getTime() -
-            endDate.getTime()
-          ) /
-          86400000
-        );
-
-      return {
-        ...item,
-
-        lateDays
-      };
-    })
-    .sort(
-      (first, second) =>
-        second.lateDays -
-        first.lateDays
-    );
-}
-
-
-// ======================================================
-// TAHUN GRAFIK
-// ======================================================
-
-function getSelectedChartYear() {
-  const selectedYear =
-    Number(
-      getElement(
-        "filterTahun"
-      )?.value
-    );
-
-  return selectedYear ||
-    new Date().getFullYear();
-}
-
-
-// ======================================================
-// PENDAPATAN BULAN BERJALAN
-// ======================================================
-
-function renderCurrentMonthIncome(
-  revenue
-) {
-  const now =
-    new Date();
-
-  const currentYear =
-    now.getFullYear();
-
-  const currentMonth =
-    now.getMonth() + 1;
-
-  const previousDate =
-    new Date(
-      currentYear,
-      now.getMonth() - 1,
-      1
-    );
-
-  const previousYear =
-    previousDate.getFullYear();
-
-  const previousMonth =
-    previousDate.getMonth() + 1;
-
-  const currentValue =
-    revenue
-      .filter(item =>
-        angka(item.tahun) ===
-          currentYear &&
-        angka(item.bulan) ===
-          currentMonth
-      )
-      .reduce(
-        (sum, item) =>
-          sum +
-          angka(
-            item.nilai ??
-            item.total
-          ),
-        0
-      );
-
-  const previousValue =
-    revenue
-      .filter(item =>
-        angka(item.tahun) ===
-          previousYear &&
-        angka(item.bulan) ===
-          previousMonth
-      )
-      .reduce(
-        (sum, item) =>
-          sum +
-          angka(
-            item.nilai ??
-            item.total
-          ),
-        0
-      );
-
-  const incomeElement =
-    getElement(
-      "pendapatanBulanIni"
-    );
-
-  if (incomeElement) {
-    incomeElement.textContent =
-      formatRupiah(
-        currentValue
-      );
-  }
-
-  const comparison =
-    getElement(
-      "pendapatanComparison"
-    );
-
-  if (!comparison) {
-    return;
-  }
-
-  comparison.classList.remove(
-    "up",
-    "down",
-    "same"
-  );
-
-  if (
-    currentValue >
-    previousValue
-  ) {
-    const increase =
-      previousValue > 0
-        ? (
-            (
-              currentValue -
-              previousValue
-            ) /
-            previousValue
-          ) * 100
-        : 100;
-
-    comparison.classList.add(
-      "up"
-    );
-
-    comparison.textContent =
-      `▲ Naik ${increase.toFixed(2)}% dari bulan sebelumnya`;
-
-  } else if (
-    currentValue <
-    previousValue
-  ) {
-    const decrease =
-      previousValue > 0
-        ? (
-            (
-              previousValue -
-              currentValue
-            ) /
-            previousValue
-          ) * 100
-        : 0;
-
-    comparison.classList.add(
-      "down"
-    );
-
-    comparison.textContent =
-      `▼ Turun ${decrease.toFixed(2)}% dari bulan sebelumnya`;
-
-  } else {
-    comparison.classList.add(
-      "same"
-    );
-
-    comparison.textContent =
-      "● Sama dengan bulan sebelumnya";
-  }
-}
-
-
-// ======================================================
-// CHART CONFIG
-// ======================================================
-
-const monthNames = [
+const bulanSingkat = [
   "Jan",
   "Feb",
   "Mar",
@@ -1288,865 +60,2784 @@ const monthNames = [
   "Des"
 ];
 
+let currentDashboardData =
+  null;
+
+let timerFilterDashboard =
+  null;
+
+let resizeTimer =
+  null;
+
 
 // ======================================================
-// RENDER BAR CHART
+// HELPER UMUM
 // ======================================================
 
-function renderBarChart(
-  containerId,
-  data,
-  isPartner = false
+function dapatkanPeriodeJakarta() {
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-US",
+      {
+        timeZone:
+          "Asia/Jakarta",
+
+        year:
+          "numeric",
+
+        month:
+          "numeric"
+      }
+    ).formatToParts(
+      new Date()
+    );
+
+  return {
+    tahun:
+      Number(
+        parts.find(
+          item =>
+            item.type === "year"
+        )?.value
+      ),
+
+    bulan:
+      Number(
+        parts.find(
+          item =>
+            item.type === "month"
+        )?.value
+      )
+  };
+}
+
+
+function angka(value) {
+  const result =
+    Number(value);
+
+  return Number.isFinite(result)
+    ? result
+    : 0;
+}
+
+
+function formatRupiah(value) {
+  return new Intl.NumberFormat(
+    "id-ID",
+    {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }
+  ).format(
+    angka(value)
+  );
+}
+
+
+function formatPersen(value) {
+  return (
+    `${angka(value).toLocaleString(
+      "id-ID",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }
+    )}%`
+  );
+}
+
+
+function formatCompact(value) {
+  const number =
+    angka(value);
+
+  if (
+    Math.abs(number) >=
+    1_000_000_000
+  ) {
+    return (
+      `${(
+        number /
+        1_000_000_000
+      ).toLocaleString(
+        "id-ID",
+        {
+          maximumFractionDigits: 1
+        }
+      )} M`
+    );
+  }
+
+  if (
+    Math.abs(number) >=
+    1_000_000
+  ) {
+    return (
+      `${(
+        number /
+        1_000_000
+      ).toLocaleString(
+        "id-ID",
+        {
+          maximumFractionDigits: 1
+        }
+      )} Jt`
+    );
+  }
+
+  if (
+    Math.abs(number) >=
+    1_000
+  ) {
+    return (
+      `${(
+        number /
+        1_000
+      ).toLocaleString(
+        "id-ID",
+        {
+          maximumFractionDigits: 1
+        }
+      )} Rb`
+    );
+  }
+
+  return number.toLocaleString(
+    "id-ID"
+  );
+}
+
+
+function setText(
+  id,
+  value
 ) {
-  const container =
-    getElement(containerId);
+  const element =
+    document.getElementById(id);
 
-  if (!container) {
+  if (element) {
+    element.textContent =
+      value;
+  }
+}
+
+
+function setLoading(show) {
+  if (!dashboardLoading) {
     return;
   }
 
-  const values =
-    Array(12).fill(0);
+  dashboardLoading.hidden =
+    !show;
+}
 
-  data.forEach(item => {
-    const monthIndex =
-      angka(item.bulan) - 1;
 
-    if (
-      monthIndex >= 0 &&
-      monthIndex < 12
-    ) {
-      values[monthIndex] +=
-        angka(
-          item.nilai ??
-          item.total
-        );
-    }
-  });
+function showError(
+  message = ""
+) {
+  if (!dashboardError) {
+    return;
+  }
 
-  const maximumValue =
-    Math.max(
-      ...values,
-      1
-    );
+  dashboardError.textContent =
+    message;
 
-  container.innerHTML =
-    values.map(
-      (
-        value,
-        index
-      ) => {
-        const height =
-          value > 0
-            ? Math.max(
-                (
-                  value /
-                  maximumValue
-                ) * 100,
-                3
-              )
-            : 0;
-
-        return `
-          <div class="chart-month">
-
-            <div class="chart-bar-wrapper">
-
-              <div
-                class="
-                  chart-bar
-                  ${
-                    isPartner
-                      ? "partner"
-                      : ""
-                  }
-                "
-                style="
-                  height:${height}%;
-                "
-                title="${
-                  monthNames[index]
-                }: ${formatRupiah(value)}"
-              ></div>
-
-            </div>
-
-            <span class="chart-label">
-              ${monthNames[index]}
-            </span>
-
-          </div>
-        `;
-      }
-    ).join("");
+  dashboardError.style.display =
+    message
+      ? "block"
+      : "none";
 }
 
 
 // ======================================================
-// PEMBAYARAN PARTNER BULANAN
+// FETCH JSON
 // ======================================================
 
-function buildPartnerMonthlyData(
-  termins,
-  year
-) {
-  const values =
-    Array(12).fill(0);
+async function fetchJson(url) {
+  const response =
+    await fetch(
+      url,
+      {
+        headers: {
+          Accept:
+            "application/json"
+        },
 
-  termins
-    .filter(item =>
-      normalizeText(
-        item.pihak
-      ) === "partner" &&
-      statusSudahDibayar(
-        item.status_pembayaran
-      ) &&
-      item.tanggal_bayar
-    )
-    .forEach(item => {
-      const paymentDate =
-        parseTanggal(
-          item.tanggal_bayar
-        );
+        credentials:
+          "include",
 
-      if (
-        !paymentDate ||
-        paymentDate.getFullYear() !==
-          year
-      ) {
-        return;
+        cache:
+          "no-store"
       }
+    );
 
-      const monthIndex =
-        paymentDate.getMonth();
+  if (
+    response.status === 401
+  ) {
+    window.location.href =
+      "/login.html";
 
-      values[monthIndex] +=
-        angka(item.nominal);
-    });
+    throw new Error(
+      "Belum login"
+    );
+  }
 
-  return values.map(
-    (
-      value,
-      index
-    ) => ({
-      tahun:
-        year,
+  const contentType =
+    response.headers.get(
+      "content-type"
+    ) || "";
 
-      bulan:
-        index + 1,
+  if (
+    !contentType.includes(
+      "application/json"
+    )
+  ) {
+    const text =
+      await response.text();
 
-      nilai:
-        value
-    })
+    throw new Error(
+      `API tidak mengembalikan JSON. ` +
+      `Status ${response.status}. ${text}`
+    );
+  }
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      "Gagal mengambil data dashboard"
+    );
+  }
+
+  return data;
+}
+
+
+function ambilArrayDashboard(
+  response
+) {
+  if (
+    Array.isArray(response)
+  ) {
+    return response;
+  }
+
+  const kemungkinanData = [
+    response?.data,
+    response?.pic,
+    response?.rows,
+    response?.result
+  ];
+
+  return (
+    kemungkinanData.find(
+      value =>
+        Array.isArray(value)
+    ) || []
   );
 }
 
 
 // ======================================================
-// PROYEK NILAI TERTINGGI
+// FILTER DASHBOARD
 // ======================================================
 
-function renderHighestProjects(projects) {
-  const tbody =
-    getElement(
-      "highestProjectTable"
-    );
-
-  if (!tbody) {
+function isiPilihanTahun() {
+  if (!dashboardYear) {
     return;
   }
 
-  const rows =
-    [...projects]
+  const periode =
+    dapatkanPeriodeJakarta();
+
+  const tahunBerjalan =
+    periode.tahun;
+
+  const parameterUrl =
+    new URLSearchParams(
+      window.location.search
+    );
+
+  const tahunUrl =
+    Number(
+      parameterUrl.get(
+        "tahun"
+      )
+    );
+
+  dashboardYear.innerHTML =
+    "";
+
+  for (
+    let tahun = tahunBerjalan;
+    tahun >= tahunBerjalan - 6;
+    tahun -= 1
+  ) {
+    const option =
+      document.createElement(
+        "option"
+      );
+
+    option.value =
+      String(tahun);
+
+    option.textContent =
+      String(tahun);
+
+    dashboardYear.appendChild(
+      option
+    );
+  }
+
+  const tahunValid =
+    Number.isInteger(
+      tahunUrl
+    ) &&
+    tahunUrl >=
+      tahunBerjalan - 6 &&
+    tahunUrl <=
+      tahunBerjalan;
+
+  dashboardYear.value =
+    tahunValid
+      ? String(tahunUrl)
+      : String(tahunBerjalan);
+}
+
+
+function isiFilterJenisProyek() {
+  if (
+    !dashboardJenisProyek
+  ) {
+    return;
+  }
+
+  const parameterUrl =
+    new URLSearchParams(
+      window.location.search
+    );
+
+  const jenisUrl =
+    String(
+      parameterUrl.get(
+        "jenis_proyek"
+      ) || ""
+    ).trim();
+
+  const optionTersedia =
+    [
+      ...dashboardJenisProyek
+        .options
+    ].find(
+      option =>
+        String(option.value)
+          .trim()
+          .toLowerCase() ===
+        jenisUrl.toLowerCase()
+    );
+
+  dashboardJenisProyek.value =
+    optionTersedia
+      ? optionTersedia.value
+      : "";
+}
+
+
+async function isiFilterPic() {
+  if (!dashboardPic) {
+    return;
+  }
+
+  const parameterUrl =
+    new URLSearchParams(
+      window.location.search
+    );
+
+  const picUrl =
+    String(
+      parameterUrl.get(
+        "pic_id"
+      ) || ""
+    ).trim();
+
+  dashboardPic.innerHTML = `
+    <option value="">
+      Semua PIC
+    </option>
+  `;
+
+  try {
+    const response =
+      await fetchJson(
+        "/api/pic"
+      );
+
+    const daftarPic =
+      ambilArrayDashboard(
+        response
+      );
+
+    daftarPic
       .sort(
-        (first, second) =>
-          angka(
-            second.nilai_klien
-          ) -
-          angka(
-            first.nilai_klien
+        (a, b) =>
+          String(
+            a.nama ||
+            a.nama_pic ||
+            a.inisial ||
+            ""
+          ).localeCompare(
+            String(
+              b.nama ||
+              b.nama_pic ||
+              b.inisial ||
+              ""
+            ),
+            "id"
           )
       )
-      .slice(0, 5);
+      .forEach(item => {
+        const id =
+          item.id ??
+          item.pic_id;
 
-  if (rows.length === 0) {
-    tbody.innerHTML =
-      emptyTable(
-        7,
-        "Belum ada data proyek."
-      );
-
-    return;
-  }
-
-  tbody.innerHTML =
-    rows.map(
-      (
-        item,
-        index
-      ) => `
-        <tr>
-
-          <td>
-            ${index + 1}
-          </td>
-
-          <td>
-            ${projectLink(item)}
-          </td>
-
-          <td>
-            ${escapeHtml(
-              item.nama_klien ||
-              "-"
-            )}
-          </td>
-
-          <td>
-            ${escapeHtml(
-              item.status_pengadaan ||
-              "-"
-            )}
-          </td>
-
-          <td>
-            ${escapeHtml(
-              item.status_final ||
-              "-"
-            )}
-          </td>
-
-          <td class="money">
-            ${formatRupiah(
-              item.nilai_klien
-            )}
-          </td>
-
-          <td>
-            <a
-              class="project-link"
-              href="/detail-proyek.html?id=${encodeURIComponent(
-                item.proyek_id
-              )}"
-            >
-              Detail
-            </a>
-          </td>
-
-        </tr>
-      `
-    ).join("");
-}
-
-
-// ======================================================
-// RENDER PROYEK TERLAMBAT
-// ======================================================
-
-function renderLateProjects(projects) {
-  const tbody =
-    getElement(
-      "lateProjectTable"
-    );
-
-  if (!tbody) {
-    return;
-  }
-
-  const rows =
-    getLateProjects(
-      projects
-    ).slice(
-      0,
-      10
-    );
-
-  if (rows.length === 0) {
-    tbody.innerHTML =
-      emptyTable(
-        6,
-        "Tidak ada proyek terlambat."
-      );
-
-    return;
-  }
-
-  tbody.innerHTML =
-    rows.map(item => `
-      <tr>
-
-        <td>
-          ${projectLink(item)}
-        </td>
-
-        <td>
-          ${escapeHtml(
-            item.nama_klien ||
-            "-"
-          )}
-        </td>
-
-        <td>
-          ${formatTanggal(
-            item.tanggal_akhir
-          )}
-        </td>
-
-        <td>
-          ${escapeHtml(
-            item.status_teknis ||
-            "-"
-          )}
-        </td>
-
-        <td class="days-late">
-          ${item.lateDays} hari
-        </td>
-
-        <td>
-          <a
-            class="project-link"
-            href="/detail-proyek.html?id=${encodeURIComponent(
-              item.proyek_id
-            )}"
-          >
-            Detail
-          </a>
-        </td>
-
-      </tr>
-    `).join("");
-}
-
-
-// ======================================================
-// KONTRAK KLIEN JATUH TEMPO
-// ======================================================
-
-function renderClientContracts(projects) {
-  const tbody =
-    getElement(
-      "clientContractTable"
-    );
-
-  if (!tbody) {
-    return;
-  }
-
-  const today =
-    new Date();
-
-  today.setHours(
-    0,
-    0,
-    0,
-    0
-  );
-
-  const threeMonthsLater =
-    new Date(today);
-
-  threeMonthsLater.setMonth(
-    threeMonthsLater.getMonth() + 3
-  );
-
-  const rows =
-    projects
-      .filter(item => {
-        const endDate =
-          parseTanggal(
-            item.tanggal_akhir
-          );
-
-        if (!endDate) {
-          return false;
+        if (!id) {
+          return;
         }
 
-        endDate.setHours(
-          0,
-          0,
-          0,
-          0
-        );
+        const nama =
+          item.nama ??
+          item.nama_pic ??
+          item.inisial ??
+          `PIC ${id}`;
 
-        return (
-          endDate >= today &&
-          endDate <=
-            threeMonthsLater
-        );
-      })
-      .map(item => {
-        const endDate =
-          parseTanggal(
-            item.tanggal_akhir
+        const option =
+          document.createElement(
+            "option"
           );
 
-        endDate.setHours(
-          0,
-          0,
-          0,
-          0
+        option.value =
+          String(id);
+
+        option.textContent =
+          String(nama);
+
+        dashboardPic.appendChild(
+          option
         );
+      });
 
-        return {
-          ...item,
-
-          remainingDays:
-            Math.ceil(
-              (
-                endDate.getTime() -
-                today.getTime()
-              ) /
-              86400000
-            )
-        };
-      })
-      .sort(
-        (first, second) =>
-          first.remainingDays -
-          second.remainingDays
-      )
-      .slice(0, 5);
-
-  if (rows.length === 0) {
-    tbody.innerHTML =
-      emptyTable(
-        5,
-        "Tidak ada kontrak klien yang segera berakhir."
+    const picTersedia =
+      [
+        ...dashboardPic.options
+      ].some(
+        option =>
+          option.value ===
+          picUrl
       );
 
-    return;
+    dashboardPic.value =
+      picTersedia
+        ? picUrl
+        : "";
+
+  } catch (error) {
+    console.error(
+      "ERROR LOAD FILTER PIC:",
+      error
+    );
   }
-
-  tbody.innerHTML =
-    rows.map(item => `
-      <tr>
-
-        <td>
-          ${projectLink(item)}
-        </td>
-
-        <td>
-          ${escapeHtml(
-            item.nama_klien ||
-            "-"
-          )}
-        </td>
-
-        <td>
-          ${formatTanggal(
-            item.tanggal_akhir
-          )}
-        </td>
-
-        <td>
-          ${item.remainingDays} hari
-        </td>
-
-        <td>
-          <a
-            class="project-link"
-            href="/detail-proyek.html?id=${encodeURIComponent(
-              item.proyek_id
-            )}"
-          >
-            Detail
-          </a>
-        </td>
-
-      </tr>
-    `).join("");
 }
 
 
-// ======================================================
-// KONTRAK PARTNER JATUH TEMPO
-// ======================================================
+function ambilFilterDashboard() {
+  const periode =
+    dapatkanPeriodeJakarta();
 
-function renderPartnerContracts(data) {
-  const tbody =
-    getElement(
-      "partnerContractTable"
-    );
+  return {
+    tahun:
+      Number(
+        dashboardYear?.value
+      ) || periode.tahun,
 
-  if (!tbody) {
-    return;
-  }
+    jenis_proyek:
+      String(
+        dashboardJenisProyek
+          ?.value || ""
+      ).trim(),
 
-  const rows =
-    data
-      .filter(item =>
-        Number.isFinite(
-          angka(item.sisa_hari)
-        ) &&
-        angka(item.sisa_hari) >= 0 &&
-        angka(item.sisa_hari) <= 92
-      )
-      .sort(
-        (first, second) =>
-          angka(
-            first.sisa_hari
-          ) -
-          angka(
-            second.sisa_hari
-          )
-      )
-      .slice(0, 5);
-
-  if (rows.length === 0) {
-    tbody.innerHTML =
-      emptyTable(
-        5,
-        "Tidak ada kontrak partner yang segera berakhir."
-      );
-
-    return;
-  }
-
-  tbody.innerHTML =
-    rows.map(item => `
-      <tr>
-
-        <td>
-          ${projectLink(item)}
-        </td>
-
-        <td>
-          ${escapeHtml(
-            item.nama_partner ||
-            "-"
-          )}
-        </td>
-
-        <td>
-          ${formatTanggal(
-            item.tanggal_akhir
-          )}
-        </td>
-
-        <td>
-          ${angka(
-            item.sisa_hari
-          )} hari
-        </td>
-
-        <td>
-          <a
-            class="project-link"
-            href="/detail-proyek.html?id=${encodeURIComponent(
-              item.proyek_id
-            )}"
-          >
-            Detail
-          </a>
-        </td>
-
-      </tr>
-    `).join("");
+    pic_id:
+      String(
+        dashboardPic
+          ?.value || ""
+      ).trim()
+  };
 }
 
 
-// ======================================================
-// RENDER SEMUA DASHBOARD
-// ======================================================
+function buatQueryDashboard() {
+  const filter =
+    ambilFilterDashboard();
 
-function renderDashboard() {
-  if (!dashboardData) {
+  const parameter =
+    new URLSearchParams();
+
+  parameter.set(
+    "tahun",
+    String(filter.tahun)
+  );
+
+  if (
+    filter.jenis_proyek
+  ) {
+    parameter.set(
+      "jenis_proyek",
+      filter.jenis_proyek
+    );
+  }
+
+  if (filter.pic_id) {
+    parameter.set(
+      "pic_id",
+      filter.pic_id
+    );
+  }
+
+  return {
+    filter,
+    query:
+      parameter.toString()
+  };
+}
+
+
+// ######################################################
+// #                                                    #
+// #                PROJECT OVERVIEW                    #
+// #                                                    #
+// ######################################################
+
+function renderProjectOverview(
+  data = {}
+) {
+  // Pipeline
+
+  setText(
+    "totalPipeline",
+    angka(
+      data.total_pipeline
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "nilaiPipeline",
+    formatRupiah(
+      data.nilai_pipeline
+    )
+  );
+
+  // Submit Penawaran
+
+  setText(
+    "totalSubmitPenawaran",
+    angka(
+      data.total_submit_penawaran
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "nilaiSubmitPenawaran",
+    formatRupiah(
+      data.nilai_submit_penawaran
+    )
+  );
+
+  // Submit Pengadaan
+
+  setText(
+    "totalSubmitPengadaan",
+    angka(
+      data.total_submit_pengadaan
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "nilaiSubmitPengadaan",
+    formatRupiah(
+      data.nilai_submit_pengadaan
+    )
+  );
+
+  // Proses Kontrak
+
+  setText(
+    "totalKontrak",
+    angka(
+      data.total_kontrak
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "nilaiKontrak",
+    formatRupiah(
+      data.nilai_kontrak
+    )
+  );
+
+  // Proyek Aktif
+
+  setText(
+    "totalProyekAktif",
+    angka(
+      data.total_proyek_aktif
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "nilaiProyekAktif",
+    formatRupiah(
+      data.nilai_proyek_aktif
+    )
+  );
+
+  // Proyek Selesai
+
+  setText(
+    "totalProyekDone",
+    angka(
+      data.total_proyek_done
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "nilaiProyekDone",
+    formatRupiah(
+      data.nilai_proyek_done
+    )
+  );
+
+  // Proyek Terlambat
+
+  setText(
+    "totalProyekTerlambat",
+    angka(
+      data.total_proyek_terlambat
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "nilaiProyekTerlambat",
+    formatRupiah(
+      data.nilai_proyek_terlambat
+    )
+  );
+
+  // Total Proyek Tahun Laporan
+
+  setText(
+    "totalSemuaProyek",
+    angka(
+      data.total_semua_proyek
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "nilaiTotalProyek",
+    formatRupiah(
+      data.nilai_total_proyek
+    )
+  );
+}
+
+
+// ######################################################
+// #                                                    #
+// #               FINANCIAL OVERVIEW                   #
+// #                                                    #
+// ######################################################
+
+function renderFinancialOverview(
+  data = {}
+) {
+  setText(
+    "nilaiKpi",
+    formatRupiah(
+      data.kpi
+    )
+  );
+
+  setText(
+    "realisasiKpi",
+    formatRupiah(
+      data.realisasi_kpi
+    )
+  );
+
+  setText(
+    "persentaseKpi",
+    formatPersen(
+      data.persentase_kpi
+    )
+  );
+
+  setText(
+    "regulerDibayar",
+    formatRupiah(
+      data.reguler_dibayar
+    )
+  );
+
+  setText(
+    "sewaDibayar",
+    formatRupiah(
+      data.sewa_dibayar
+    )
+  );
+
+  setText(
+    "transaksiDibayar",
+    formatRupiah(
+      data.transaksi_dibayar
+    )
+  );
+
+  setText(
+    "piutangKlien",
+    formatRupiah(
+      data.piutang_klien
+    )
+  );
+
+  setText(
+    "sudahDibayarKlien",
+    formatRupiah(
+      data.sudah_dibayar_klien
+    )
+  );
+
+  setText(
+    "hutangPartner",
+    formatRupiah(
+      data.hutang_partner
+    )
+  );
+
+  setText(
+    "dibayarPartner",
+    formatRupiah(
+      data.dibayar_partner
+    )
+  );
+
+  setText(
+    "pendapatanBulanBerjalan",
+    formatRupiah(
+      data.pendapatan_bulan_berjalan
+    )
+  );
+
+  renderProgressKpi(data);
+  renderTrendPendapatan(data);
+}
+
+
+function renderProgressKpi(
+  data
+) {
+  const progress =
+    document.getElementById(
+      "kpiProgress"
+    );
+
+  if (!progress) {
     return;
   }
 
-  const projects =
-    dashboardData.projects.filter(
-      projectMatchesFilter
-    );
-
-  const projectIds =
-    new Set(
-      projects.map(item =>
-        Number(
-          item.proyek_id
+  const width =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        angka(
+          data.persentase_kpi
         )
       )
     );
 
-  const termins =
-    filterRelatedData(
-      dashboardData.termins,
-      projectIds
-    );
-
-  const partnerContracts =
-    filterRelatedData(
-      dashboardData.partnerContracts,
-      projectIds
-    );
-
-  const chartYear =
-    getSelectedChartYear();
-
-  const annualRevenue =
-    dashboardData.revenue.filter(
-      item =>
-        angka(item.tahun) ===
-          chartYear
-    );
-
-  const annualPartnerPayments =
-    buildPartnerMonthlyData(
-      termins,
-      chartYear
-    );
-
-  renderSummary(
-    projects,
-    termins
-  );
-
-  renderCurrentMonthIncome(
-    dashboardData.revenue
-  );
-
-  renderBarChart(
-    "revenueChart",
-    annualRevenue,
-    false
-  );
-
-  renderBarChart(
-    "partnerPaymentChart",
-    annualPartnerPayments,
-    true
-  );
-
-  renderHighestProjects(
-    projects
-  );
-
-  renderLateProjects(
-    projects
-  );
-
-  renderClientContracts(
-    projects
-  );
-
-  renderPartnerContracts(
-    partnerContracts
-  );
-}
-
-
-// ======================================================
-// BUKA FILTER PROYEK
-// ======================================================
-
-function openProjectFilter(
-  type,
-  value
-) {
-  const params =
-    new URLSearchParams();
-
-  params.set(
-    type,
-    value
-  );
-
-  window.location.href =
-    `/proyek.html?${params.toString()}`;
-}
-
-
-// ======================================================
-// CLICK CARD STATUS PENGADAAN
-// ======================================================
-
-document
-  .querySelectorAll(
-    "[data-status-pengadaan]"
-  )
-  .forEach(card => {
-    const openCard = () => {
-      openProjectFilter(
-        "status_pengadaan",
-        card.dataset
-          .statusPengadaan
-      );
-    };
-
-    card.addEventListener(
-      "click",
-      openCard
-    );
-
-    card.addEventListener(
-      "keydown",
-      event => {
-        if (
-          event.key === "Enter" ||
-          event.key === " "
-        ) {
-          event.preventDefault();
-
-          openCard();
-        }
-      }
-    );
-  });
-
-
-// ======================================================
-// CLICK CARD STATUS FINAL
-// ======================================================
-
-document
-  .querySelectorAll(
-    "[data-status-final]"
-  )
-  .forEach(card => {
-    const openCard = () => {
-      openProjectFilter(
-        "status_final",
-        card.dataset
-          .statusFinal
-      );
-    };
-
-    card.addEventListener(
-      "click",
-      openCard
-    );
-
-    card.addEventListener(
-      "keydown",
-      event => {
-        if (
-          event.key === "Enter" ||
-          event.key === " "
-        ) {
-          event.preventDefault();
-
-          openCard();
-        }
-      }
-    );
-  });
-
-
-// ======================================================
-// CLICK PROYEK TERLAMBAT
-// ======================================================
-
-const lateProjectCard =
-  getElement(
-    "lateProjectCard"
-  );
-
-if (lateProjectCard) {
-  const scrollToLateProjects =
+  requestAnimationFrame(
     () => {
-      getElement(
-        "lateProjectSection"
-      )?.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-    };
-
-  lateProjectCard.addEventListener(
-    "click",
-    scrollToLateProjects
-  );
-
-  lateProjectCard.addEventListener(
-    "keydown",
-    event => {
-      if (
-        event.key === "Enter" ||
-        event.key === " "
-      ) {
-        event.preventDefault();
-
-        scrollToLateProjects();
-      }
+      progress.style.width =
+        `${width}%`;
     }
   );
 }
 
 
-// ======================================================
-// FILTER EVENTS
-// ======================================================
+function renderTrendPendapatan(
+  data
+) {
+  const trend =
+    document.getElementById(
+      "monthlyTrend"
+    );
 
-const dashboardSearch =
-  getElement(
-    "dashboardSearch"
+  if (!trend) {
+    return;
+  }
+
+  const current =
+    angka(
+      data.pendapatan_bulan_berjalan
+    );
+
+  const previous =
+    angka(
+      data.pendapatan_bulan_sebelumnya
+    );
+
+  let difference = 0;
+
+  if (previous > 0) {
+    difference =
+      (
+        (
+          current -
+          previous
+        ) /
+        previous
+      ) * 100;
+
+  } else if (current > 0) {
+    difference =
+      100;
+  }
+
+  trend.classList.remove(
+    "up",
+    "down",
+    "flat"
   );
 
-if (dashboardSearch) {
-  dashboardSearch.addEventListener(
-    "input",
-    renderDashboard
+  if (current > previous) {
+    trend.classList.add(
+      "up"
+    );
+
+    trend.textContent =
+      `↑ ${Math.abs(
+        difference
+      ).toLocaleString(
+        "id-ID",
+        {
+          maximumFractionDigits: 1
+        }
+      )}% dari bulan sebelumnya`;
+
+  } else if (
+    current < previous
+  ) {
+    trend.classList.add(
+      "down"
+    );
+
+    trend.textContent =
+      `↓ ${Math.abs(
+        difference
+      ).toLocaleString(
+        "id-ID",
+        {
+          maximumFractionDigits: 1
+        }
+      )}% dari bulan sebelumnya`;
+
+  } else {
+    trend.classList.add(
+      "flat"
+    );
+
+    trend.textContent =
+      "— Sama dengan bulan sebelumnya";
+  }
+}
+
+
+// ======================================================
+// CHART HELPER
+// Masih bagian Financial Overview
+// ======================================================
+
+function siapkanCanvas(
+  canvas
+) {
+  if (!canvas) {
+    return null;
+  }
+
+  const parentWidth =
+    canvas.parentElement
+      ?.clientWidth || 800;
+
+  const width =
+    canvas.clientWidth ||
+    parentWidth;
+
+  const height =
+    canvas.clientHeight ||
+    300;
+
+  const ratio =
+    Math.min(
+      window.devicePixelRatio ||
+      1,
+      2
+    );
+
+  canvas.width =
+    width * ratio;
+
+  canvas.height =
+    height * ratio;
+
+  canvas.style.width =
+    `${width}px`;
+
+  canvas.style.height =
+    `${height}px`;
+
+  const context =
+    canvas.getContext("2d");
+
+  context.setTransform(
+    ratio,
+    0,
+    0,
+    ratio,
+    0,
+    0
+  );
+
+  context.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+  return {
+    canvas,
+    context,
+    width,
+    height
+  };
+}
+
+
+function normalisasiBulanan(
+  rows = []
+) {
+  return Array.from(
+    {
+      length: 12
+    },
+    (_, index) => {
+      const bulan =
+        index + 1;
+
+      return (
+        rows.find(
+          item =>
+            Number(
+              item.bulan ??
+              item.month
+            ) === bulan
+        ) || {
+          bulan
+        }
+      );
+    }
   );
 }
 
 
-[
-  "filterTahun",
-  "filterJenis",
-  "filterKategori",
-  "filterPic",
-  "filterStatus"
-].forEach(id => {
-  const element =
-    getElement(id);
+function maksimumBagus(value) {
+  const number =
+    Math.max(
+      angka(value),
+      1
+    );
 
-  if (element) {
-    element.addEventListener(
-      "change",
-      renderDashboard
+  const power =
+    Math.pow(
+      10,
+      Math.floor(
+        Math.log10(number)
+      )
+    );
+
+  return (
+    Math.ceil(
+      number / power
+    ) * power
+  );
+}
+
+
+function gambarGrafikPendapatan(
+  rows = []
+) {
+  const canvas =
+    document.getElementById(
+      "incomeChart"
+    );
+
+  const prepared =
+    siapkanCanvas(canvas);
+
+  if (!prepared) {
+    return;
+  }
+
+  const {
+    context,
+    width,
+    height
+  } = prepared;
+
+  const data =
+    normalisasiBulanan(rows);
+
+  const series = [
+    {
+      key: "reguler",
+      color: "#4f46e5"
+    },
+    {
+      key: "sewa",
+      color: "#0891b2"
+    },
+    {
+      key: "transaksi",
+      color: "#7c3aed"
+    }
+  ];
+
+  const padding = {
+    top: 24,
+    right: 22,
+    bottom: 42,
+    left: 66
+  };
+
+  const chartWidth =
+    width -
+    padding.left -
+    padding.right;
+
+  const chartHeight =
+    height -
+    padding.top -
+    padding.bottom;
+
+  const semuaNilai =
+    data.flatMap(
+      row =>
+        series.map(
+          item =>
+            angka(
+              row[item.key]
+            )
+        )
+    );
+
+  const maxValue =
+    maksimumBagus(
+      Math.max(
+        ...semuaNilai,
+        0
+      )
+    );
+
+  context.font =
+    "11px Inter, Arial";
+
+  // Garis horizontal
+
+  for (
+    let step = 0;
+    step <= 4;
+    step += 1
+  ) {
+    const y =
+      padding.top +
+      (
+        chartHeight *
+        step /
+        4
+      );
+
+    const value =
+      maxValue -
+      (
+        maxValue *
+        step /
+        4
+      );
+
+    context.strokeStyle =
+      "#e2e8f0";
+
+    context.lineWidth =
+      1;
+
+    context.beginPath();
+
+    context.moveTo(
+      padding.left,
+      y
+    );
+
+    context.lineTo(
+      width -
+      padding.right,
+      y
+    );
+
+    context.stroke();
+
+    context.fillStyle =
+      "#64748b";
+
+    context.textAlign =
+      "right";
+
+    context.fillText(
+      formatCompact(value),
+      padding.left - 10,
+      y + 4
     );
   }
-});
+
+  // Label bulan
+
+  data.forEach(
+    (_, index) => {
+      const x =
+        padding.left +
+        (
+          chartWidth *
+          index /
+          11
+        );
+
+      context.fillStyle =
+        "#64748b";
+
+      context.textAlign =
+        "center";
+
+      context.fillText(
+        bulanSingkat[index],
+        x,
+        height - 12
+      );
+    }
+  );
+
+  // Garis series
+
+  series.forEach(item => {
+    context.beginPath();
+
+    data.forEach(
+      (row, index) => {
+        const x =
+          padding.left +
+          (
+            chartWidth *
+            index /
+            11
+          );
+
+        const value =
+          angka(
+            row[item.key]
+          );
+
+        const y =
+          padding.top +
+          chartHeight -
+          (
+            value /
+            maxValue *
+            chartHeight
+          );
+
+        if (index === 0) {
+          context.moveTo(
+            x,
+            y
+          );
+        } else {
+          context.lineTo(
+            x,
+            y
+          );
+        }
+      }
+    );
+
+    context.strokeStyle =
+      item.color;
+
+    context.lineWidth =
+      3;
+
+    context.lineJoin =
+      "round";
+
+    context.lineCap =
+      "round";
+
+    context.stroke();
+
+    data.forEach(
+      (row, index) => {
+        const x =
+          padding.left +
+          (
+            chartWidth *
+            index /
+            11
+          );
+
+        const value =
+          angka(
+            row[item.key]
+          );
+
+        const y =
+          padding.top +
+          chartHeight -
+          (
+            value /
+            maxValue *
+            chartHeight
+          );
+
+        context.beginPath();
+
+        context.arc(
+          x,
+          y,
+          4,
+          0,
+          Math.PI * 2
+        );
+
+        context.fillStyle =
+          "#ffffff";
+
+        context.fill();
+
+        context.strokeStyle =
+          item.color;
+
+        context.lineWidth =
+          2;
+
+        context.stroke();
+      }
+    );
+  });
+}
+
+
+function gambarGrafikPartner(
+  rows = []
+) {
+  const canvas =
+    document.getElementById(
+      "partnerChart"
+    );
+
+  const prepared =
+    siapkanCanvas(canvas);
+
+  if (!prepared) {
+    return;
+  }
+
+  const {
+    context,
+    width,
+    height
+  } = prepared;
+
+  const data =
+    normalisasiBulanan(rows);
+
+  const padding = {
+    top: 24,
+    right: 22,
+    bottom: 42,
+    left: 66
+  };
+
+  const chartWidth =
+    width -
+    padding.left -
+    padding.right;
+
+  const chartHeight =
+    height -
+    padding.top -
+    padding.bottom;
+
+  const maxValue =
+    maksimumBagus(
+      Math.max(
+        ...data.map(
+          row =>
+            angka(
+              row.dibayar
+            )
+        ),
+        0
+      )
+    );
+
+  context.font =
+    "11px Inter, Arial";
+
+  for (
+    let step = 0;
+    step <= 4;
+    step += 1
+  ) {
+    const y =
+      padding.top +
+      (
+        chartHeight *
+        step /
+        4
+      );
+
+    const value =
+      maxValue -
+      (
+        maxValue *
+        step /
+        4
+      );
+
+    context.strokeStyle =
+      "#e2e8f0";
+
+    context.lineWidth =
+      1;
+
+    context.beginPath();
+
+    context.moveTo(
+      padding.left,
+      y
+    );
+
+    context.lineTo(
+      width -
+      padding.right,
+      y
+    );
+
+    context.stroke();
+
+    context.fillStyle =
+      "#64748b";
+
+    context.textAlign =
+      "right";
+
+    context.fillText(
+      formatCompact(value),
+      padding.left - 10,
+      y + 4
+    );
+  }
+
+  const slot =
+    chartWidth / 12;
+
+  const barWidth =
+    Math.min(
+      34,
+      slot * 0.6
+    );
+
+  data.forEach(
+    (row, index) => {
+      const value =
+        angka(
+          row.dibayar
+        );
+
+      const barHeight =
+        value /
+        maxValue *
+        chartHeight;
+
+      const x =
+        padding.left +
+        slot * index +
+        (
+          slot -
+          barWidth
+        ) / 2;
+
+      const y =
+        padding.top +
+        chartHeight -
+        barHeight;
+
+      const gradient =
+        context.createLinearGradient(
+          0,
+          y,
+          0,
+          padding.top +
+          chartHeight
+        );
+
+      gradient.addColorStop(
+        0,
+        "#4f46e5"
+      );
+
+      gradient.addColorStop(
+        1,
+        "#818cf8"
+      );
+
+      context.fillStyle =
+        gradient;
+
+      context.beginPath();
+
+      context.roundRect(
+        x,
+        y,
+        barWidth,
+        Math.max(
+          barHeight,
+          2
+        ),
+        6
+      );
+
+      context.fill();
+
+      context.fillStyle =
+        "#64748b";
+
+      context.textAlign =
+        "center";
+
+      context.fillText(
+        bulanSingkat[index],
+        x +
+        barWidth / 2,
+        height - 12
+      );
+    }
+  );
+}
+
+
+function renderCharts(data) {
+  gambarGrafikPendapatan(
+    Array.isArray(
+      data.income_monthly
+    )
+      ? data.income_monthly
+      : []
+  );
+
+  gambarGrafikPartner(
+    Array.isArray(
+      data.partner_monthly
+    )
+      ? data.partner_monthly
+      : []
+  );
+}
+
+
+// ######################################################
+// #                                                    #
+// #                CONTRACT OVERVIEW                   #
+// #                                                    #
+// ######################################################
+
+function renderContractOverview(
+  data = {}
+) {
+  setText(
+    "kontrakKlienTigaBulan",
+    angka(
+      data
+        .kontrak_klien_akan_jatuh_tempo
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "kontrakPartnerTigaBulan",
+    angka(
+      data
+        .kontrak_partner_akan_jatuh_tempo
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "kontrakKlienExpired",
+    angka(
+      data
+        .kontrak_klien_jatuh_tempo
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "kontrakPartnerExpired",
+    angka(
+      data
+        .kontrak_partner_jatuh_tempo
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "lisensiSewaTigaBulan",
+    angka(
+      data
+        .lisensi_sewa_akan_jatuh_tempo
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+
+  setText(
+    "lisensiSewaExpired",
+    angka(
+      data
+        .lisensi_sewa_jatuh_tempo
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+}
+
+
+// ######################################################
+// #                                                    #
+// #               BUSINESS PERFORMANCE                 #
+// #                                                    #
+// ######################################################
+
+function renderBusinessPerformance(
+  data = {}
+) {
+  setText(
+    "marginRataRata",
+    formatPersen(
+      data.margin_rata_rata
+    )
+  );
+
+  setText(
+    "proyekBelumUpdate",
+    angka(
+      data.proyek_belum_update
+    ).toLocaleString(
+      "id-ID"
+    )
+  );
+}
+
+
+// ======================================================
+// RENDER SELURUH DASHBOARD
+// ======================================================
+
+function renderDashboard(data) {
+  currentDashboardData =
+    data;
+
+  const tahun =
+    angka(data.tahun) ||
+    dapatkanPeriodeJakarta()
+      .tahun;
+
+  const jenisLabel =
+    data.jenis_proyek ||
+    "Semua Jenis Proyek";
+
+  const picLabel =
+    dashboardPic
+      ?.selectedOptions?.[0]
+      ?.textContent
+      ?.trim() ||
+    "Semua PIC";
+
+  if (dashboardPeriod) {
+    dashboardPeriod.textContent =
+      `Periode Januari–Desember ${tahun} • ` +
+      `${jenisLabel} • ${picLabel}`;
+  }
+
+  if (lastUpdated) {
+    const generated =
+      data.generated_at
+        ? new Date(
+            data.generated_at
+          )
+        : new Date();
+
+    lastUpdated.textContent =
+      `Diperbarui ${generated.toLocaleString(
+        "id-ID",
+        {
+          dateStyle:
+            "medium",
+
+          timeStyle:
+            "short",
+
+          timeZone:
+            "Asia/Jakarta"
+        }
+      )}`;
+  }
+
+  renderProjectOverview(
+    data.project_overview ||
+    {}
+  );
+
+  renderFinancialOverview(
+    data.financial_overview ||
+    {}
+  );
+
+  renderContractOverview(
+    data.contract_overview ||
+    {}
+  );
+
+  renderBusinessPerformance(
+    data.business_performance ||
+    {}
+  );
+
+  renderCharts(data);
+}
+
+
+// ======================================================
+// TIMELINE SESUAI LISTING
+// ======================================================
+
+async function getTimelineTotal(
+  filter = {}
+) {
+  const params =
+    new URLSearchParams({
+      page: "1",
+      limit: "1"
+    });
+
+  if (filter.bulan) {
+    params.set(
+      "bulan",
+      String(filter.bulan)
+    );
+  }
+
+  if (filter.status) {
+    params.set(
+      "status",
+      filter.status
+    );
+  }
+
+  if (
+    filter.jenis_proyek
+  ) {
+    params.set(
+      "jenis_proyek",
+      filter.jenis_proyek
+    );
+  }
+
+  if (filter.pic_id) {
+    params.set(
+      "pic_id",
+      filter.pic_id
+    );
+  }
+
+  const result =
+    await fetchJson(
+      `/api/timeline?${params.toString()}`
+    );
+
+  return angka(
+    result?.pagination
+      ?.total_data ??
+    result?.total_data ??
+    result?.total ??
+    (
+      Array.isArray(
+        result?.data
+      )
+        ? result.data.length
+        : 0
+    )
+  );
+}
+
+
+// ======================================================
+// LOAD EMPAT BAGIAN DASHBOARD
+// ======================================================
+
+async function ambilDashboardBagian(
+  namaBagian,
+  endpoint
+) {
+  try {
+    return await fetchJson(
+      endpoint
+    );
+
+  } catch (error) {
+    throw new Error(
+      `${namaBagian}: ${error.message}`
+    );
+  }
+}
+
+
+async function loadDashboard() {
+  const {
+    filter,
+    query
+  } = buatQueryDashboard();
+
+  setLoading(true);
+  showError("");
+
+  try {
+    const [
+      projectData,
+      financialData,
+      contractData,
+      businessData
+    ] = await Promise.all([
+      ambilDashboardBagian(
+        "Project Overview",
+        `/api/dashboard/project?${query}`
+      ),
+
+      ambilDashboardBagian(
+        "Financial Overview",
+        `/api/dashboard/financial?${query}`
+      ),
+
+      ambilDashboardBagian(
+        "Contract Overview",
+        `/api/dashboard/contract?${query}`
+      ),
+
+      ambilDashboardBagian(
+        "Business Performance",
+        `/api/dashboard/business?${query}`
+      )
+    ]);
+
+    const data = {
+      tahun:
+        filter.tahun,
+
+      jenis_proyek:
+        filter.jenis_proyek,
+
+      pic_id:
+        filter.pic_id,
+
+      generated_at:
+        new Date().toISOString(),
+
+      project_overview:
+        projectData
+          .project_overview ||
+        {},
+
+      financial_overview:
+        financialData
+          .financial_overview ||
+        {},
+
+      income_monthly:
+        Array.isArray(
+          financialData
+            .income_monthly
+        )
+          ? financialData
+              .income_monthly
+          : [],
+
+      partner_monthly:
+        Array.isArray(
+          financialData
+            .partner_monthly
+        )
+          ? financialData
+              .partner_monthly
+          : [],
+
+      contract_overview:
+        contractData
+          .contract_overview ||
+        {},
+
+      business_performance:
+        businessData
+          .business_performance ||
+        {}
+    };
+
+    // Timeline mengikuti filter dashboard
+
+    const [
+      timelineTigaBulan,
+      timelineExpired
+    ] = await Promise.allSettled([
+      getTimelineTotal({
+        bulan: 3,
+
+        jenis_proyek:
+          filter.jenis_proyek,
+
+        pic_id:
+          filter.pic_id
+      }),
+
+      getTimelineTotal({
+        status: "expired",
+
+        jenis_proyek:
+          filter.jenis_proyek,
+
+        pic_id:
+          filter.pic_id
+      })
+    ]);
+
+    if (
+      timelineTigaBulan.status ===
+      "fulfilled"
+    ) {
+      data.contract_overview
+        .lisensi_sewa_akan_jatuh_tempo =
+          timelineTigaBulan.value;
+    }
+
+    if (
+      timelineExpired.status ===
+      "fulfilled"
+    ) {
+      data.contract_overview
+        .lisensi_sewa_jatuh_tempo =
+          timelineExpired.value;
+    }
+
+    renderDashboard(data);
+
+    // Simpan filter ke URL dashboard
+
+    const url =
+      new URL(
+        window.location.href
+      );
+
+    url.searchParams.set(
+      "tahun",
+      String(filter.tahun)
+    );
+
+    if (
+      filter.jenis_proyek
+    ) {
+      url.searchParams.set(
+        "jenis_proyek",
+        filter.jenis_proyek
+      );
+    } else {
+      url.searchParams.delete(
+        "jenis_proyek"
+      );
+    }
+
+    if (filter.pic_id) {
+      url.searchParams.set(
+        "pic_id",
+        filter.pic_id
+      );
+    } else {
+      url.searchParams.delete(
+        "pic_id"
+      );
+    }
+
+    window.history.replaceState(
+      {},
+      "",
+      url
+    );
+
+  } catch (error) {
+    console.error(
+      "ERROR LOAD DASHBOARD:",
+      error
+    );
+
+    showError(
+      `Dashboard gagal dimuat: ${error.message}`
+    );
+
+  } finally {
+    setLoading(false);
+  }
+}
+
+
+// ======================================================
+// NAVIGASI CARD
+// ======================================================
+
+// ======================================================
+// NAVIGASI CARD DASHBOARD
+// ======================================================
+
+function bukaDetailCard(card) {
+  const periode =
+    dapatkanPeriodeJakarta();
+
+  const filterDashboard =
+    ambilFilterDashboard();
+
+  const route =
+    String(
+      card.dataset.route || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  let path = "";
+
+  const params =
+    new URLSearchParams({
+      tahun:
+        String(
+          filterDashboard.tahun
+        )
+    });
+
+  // ====================================================
+  // BAWA FILTER DASHBOARD
+  // ====================================================
+
+  if (
+    filterDashboard.jenis_proyek
+  ) {
+    params.set(
+      "jenis_proyek",
+      filterDashboard.jenis_proyek
+    );
+  }
+
+  if (filterDashboard.pic_id) {
+    params.set(
+      "pic_id",
+      filterDashboard.pic_id
+    );
+  }
+
+  // ====================================================
+  // PROJECT OVERVIEW
+  // ====================================================
+
+  if (route === "project") {
+    const contract =
+      String(
+        card.dataset.contract || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const filterKontrak = {
+      "klien-3-bulan": {
+        jenis: "Klien",
+        status: "berjalan",
+        periode: "3-bulan"
+      },
+
+      "partner-3-bulan": {
+        jenis: "Partner",
+        status: "berjalan",
+        periode: "3-bulan"
+      },
+
+      "klien-expired": {
+        jenis: "Klien",
+        status: "berakhir",
+        periode: ""
+      },
+
+      "partner-expired": {
+        jenis: "Partner",
+        status: "berakhir",
+        periode: ""
+      }
+    };
+
+    const filterKontrakAktif =
+      filterKontrak[contract];
+
+    // ==================================================
+    // CONTRACT OVERVIEW
+    // ==================================================
+
+    if (filterKontrakAktif) {
+      path =
+        "/kontrak.html";
+
+      params.delete(
+        "tahun"
+      );
+
+      params.set(
+        "jenis",
+        filterKontrakAktif.jenis
+      );
+
+      params.set(
+        "status",
+        filterKontrakAktif.status
+      );
+
+      if (
+        filterKontrakAktif.periode
+      ) {
+        params.set(
+          "periode",
+          filterKontrakAktif.periode
+        );
+
+      } else {
+        params.delete(
+          "periode"
+        );
+      }
+    }
+
+    // ==================================================
+    // PROYEK TERLAMBAT
+    // ==================================================
+
+    else if (
+      contract ===
+      "proyek-terlambat"
+    ) {
+      path =
+        "/proyek.html";
+
+      params.set(
+        "status_final",
+        "Aktif"
+      );
+
+      params.set(
+        "status_pengadaan",
+        "Done"
+      );
+
+      params.set(
+        "tanggal_akhir",
+        "expired"
+      );
+
+      params.set(
+        "status_teknis_exclude",
+        "done,selesai"
+      );
+
+      params.set(
+        "kontrak",
+        "proyek-terlambat"
+      );
+    }
+
+    // ==================================================
+    // PROYEK BELUM UPDATE
+    // ==================================================
+
+    else if (
+      card.dataset.update
+    ) {
+      path =
+        "/proyek-belum-update.html";
+
+      params.set(
+        "update",
+        card.dataset.update
+      );
+    }
+
+    // ==================================================
+    // CARD PROJECT OVERVIEW
+    // ==================================================
+
+    else {
+      path =
+        "/proyek.html";
+
+      const adalahCardTotalProyek =
+        Boolean(
+          card.querySelector(
+            "#totalSemuaProyek"
+          )
+        );
+
+      const adalahCardProyekAktif =
+        Boolean(
+          card.querySelector(
+            "#totalProyekAktif"
+          )
+        );
+
+      const adalahCardProsesPengadaan =
+        Boolean(
+          card.querySelector(
+            "#totalSubmitPengadaan"
+          )
+        );
+
+      // ================================================
+      // TOTAL PROYEK
+      //
+      // Gabungan seluruh card Project Overview.
+      // ================================================
+
+      if (
+        adalahCardTotalProyek
+      ) {
+        params.set(
+          "dashboard_group",
+          "total-project"
+        );
+
+        params.delete(
+          "status_final"
+        );
+
+        params.delete(
+          "status_pengadaan"
+        );
+
+        params.delete(
+          "periode_kontrak"
+        );
+      }
+
+      // ================================================
+      // PROYEK AKTIF
+      // ================================================
+
+      else if (
+        adalahCardProyekAktif
+      ) {
+        params.set(
+          "status_final",
+          "Aktif"
+        );
+
+        params.set(
+          "status_pengadaan",
+          "Done"
+        );
+
+        params.set(
+          "periode_kontrak",
+          "tahun"
+        );
+      }
+
+      // ================================================
+      // PROSES PENGADAAN
+      //
+      // Submit Pengadaan dan Negosiasi.
+      // ================================================
+
+      else if (
+        adalahCardProsesPengadaan
+      ) {
+        params.set(
+          "status_final",
+          "Aktif"
+        );
+
+        params.set(
+          "dashboard_group",
+          "proses-pengadaan"
+        );
+
+        params.delete(
+          "status_pengadaan"
+        );
+
+        params.delete(
+          "periode_kontrak"
+        );
+      }
+
+      // ================================================
+      // CARD PROJECT LAINNYA
+      // ================================================
+
+      else {
+        if (
+          card.dataset.statusFinal
+        ) {
+          params.set(
+            "status_final",
+            card.dataset.statusFinal
+          );
+        }
+
+        if (
+          card.dataset.statusPengadaan
+        ) {
+          params.set(
+            "status_pengadaan",
+            card.dataset.statusPengadaan
+          );
+        }
+
+        if (
+          card.dataset.periodeKontrak
+        ) {
+          params.set(
+            "periode_kontrak",
+            card.dataset.periodeKontrak
+          );
+
+        } else if (
+          card.dataset.statusFinal &&
+          !card.dataset.statusPengadaan
+        ) {
+          params.set(
+            "periode_kontrak",
+            "tahun"
+          );
+        }
+      }
+    }
+  }
+
+  // ====================================================
+  // FINANCIAL OVERVIEW — PENDAPATAN
+  // ====================================================
+
+  else if (
+    route === "income"
+  ) {
+    path =
+      "/pendapatan.html";
+
+    if (card.dataset.jenis) {
+      params.set(
+        "jenis_proyek",
+        card.dataset.jenis
+      );
+    }
+
+    if (card.dataset.status) {
+      params.set(
+        "status_pembayaran",
+        card.dataset.status
+      );
+    }
+
+    if (
+      card.dataset.currentMonth ===
+      "true"
+    ) {
+      params.set(
+        "tahun",
+        String(periode.tahun)
+      );
+
+      params.set(
+        "bulan",
+        String(periode.bulan)
+      );
+
+      params.set(
+        "status_pembayaran",
+        "Sudah Dibayar"
+      );
+    }
+  }
+
+  // ====================================================
+  // FINANCIAL OVERVIEW — PENGELUARAN
+  // ====================================================
+
+  else if (
+    route === "expense"
+  ) {
+    path =
+      "/pengeluaran.html";
+
+    if (card.dataset.status) {
+      params.set(
+        "status_pembayaran",
+        card.dataset.status
+      );
+    }
+  }
+
+  // ====================================================
+  // CONTRACT OVERVIEW — TIMELINE
+  // ====================================================
+
+  else if (
+    route === "timeline"
+  ) {
+    path =
+      "/timeline.html";
+
+    params.delete(
+      "tahun"
+    );
+
+    params.set(
+      "mode",
+      "contract-overview"
+    );
+
+    if (
+      card.dataset.timeline ===
+      "3-bulan"
+    ) {
+      params.set(
+        "bulan",
+        "3"
+      );
+    }
+
+    if (
+      card.dataset.timeline ===
+      "expired"
+    ) {
+      params.set(
+        "status",
+        "expired"
+      );
+    }
+  }
+
+  // ====================================================
+  // GRAFIK PENDAPATAN
+  // ====================================================
+
+  else if (
+    route === "total-income"
+  ) {
+    path =
+      "/total-pendapatan.html";
+  }
+
+  // ====================================================
+  // GRAFIK PENGELUARAN
+  // ====================================================
+
+  else if (
+    route === "total-expense"
+  ) {
+    path =
+      "/total-pengeluaran.html";
+  }
+
+  // ====================================================
+  // REDIRECT
+  // ====================================================
+
+  if (path) {
+    const query =
+      params.toString();
+
+    window.location.href =
+      query
+        ? `${path}?${query}`
+        : path;
+  }
+}
+
+// ======================================================
+// KONFIGURASI CARD
+// ======================================================
+
+function aturDataCard(
+  idNilai,
+  data
+) {
+  const element =
+    document.getElementById(
+      idNilai
+    );
+
+  if (!element) {
+    return;
+  }
+
+  const card =
+    element.closest(
+      [
+        "button",
+        ".stat-card",
+        ".metric-card",
+        ".contract-card",
+        ".overview-card",
+        ".finance-card",
+        ".chart-card"
+      ].join(",")
+    );
+
+  if (!card) {
+    return;
+  }
+
+  Object.entries(data)
+    .forEach(
+      ([key, value]) => {
+        card.dataset[key] =
+          value;
+      }
+    );
+
+  card.style.cursor =
+    "pointer";
+
+  if (
+    card.tagName.toLowerCase() !==
+      "button" &&
+    card.tagName.toLowerCase() !==
+      "a"
+  ) {
+    card.setAttribute(
+      "role",
+      "button"
+    );
+
+    card.setAttribute(
+      "tabindex",
+      "0"
+    );
+  }
+}
+
+
+function konfigurasiSemuaCard() {
+  // ====================================================
+  // PROJECT OVERVIEW
+  // ====================================================
+
+  aturDataCard(
+    "totalPipeline",
+    {
+      route: "project",
+      statusFinal: "Aktif",
+      statusPengadaan: "Pipeline"
+    }
+  );
+
+  aturDataCard(
+    "totalSubmitPenawaran",
+    {
+      route: "project",
+      statusFinal: "Aktif",
+      statusPengadaan:
+        "Submit Penawaran"
+    }
+  );
+
+  aturDataCard(
+    "totalSubmitPengadaan",
+    {
+      route: "project"
+    }
+  );
+
+  aturDataCard(
+    "totalKontrak",
+    {
+      route: "project",
+      statusFinal: "Aktif",
+      statusPengadaan:
+        "Kontrak"
+    }
+  );
+
+  aturDataCard(
+    "totalProyekAktif",
+    {
+      route: "project"
+    }
+  );
+
+  aturDataCard(
+    "totalProyekDone",
+    {
+      route: "project",
+      statusFinal: "Done",
+      periodeKontrak: "tahun"
+    }
+  );
+
+  aturDataCard(
+    "totalProyekTerlambat",
+    {
+      route: "project",
+      contract:
+        "proyek-terlambat"
+    }
+  );
+
+  aturDataCard(
+    "totalSemuaProyek",
+    {
+      route: "project"
+    }
+  );
+}
+
+  // Bagian Financial Overview,
+  // Contract Overview, Business Performance
+  // yang sudah ada tetap dilanjutkan di bawah sini.
+
+// ======================================================
+// EVENT CARD
+// ======================================================
+
+document.addEventListener(
+  "click",
+  event => {
+    const card =
+      event.target.closest(
+        "[data-route]"
+      );
+
+    if (!card) {
+      return;
+    }
+
+    event.preventDefault();
+
+    bukaDetailCard(card);
+  }
+);
+
+
+document.addEventListener(
+  "keydown",
+  event => {
+    if (
+      event.key !== "Enter" &&
+      event.key !== " "
+    ) {
+      return;
+    }
+
+    const card =
+      event.target.closest(
+        "[data-route]"
+      );
+
+    if (!card) {
+      return;
+    }
+
+    event.preventDefault();
+
+    bukaDetailCard(card);
+  }
+);
+
+
+// ======================================================
+// EVENT FILTER
+// ======================================================
+
+function jalankanFilterDashboard() {
+  window.clearTimeout(
+    timerFilterDashboard
+  );
+
+  timerFilterDashboard =
+    window.setTimeout(
+      () => {
+        loadDashboard();
+      },
+      150
+    );
+}
+
+
+dashboardYear
+  ?.addEventListener(
+    "change",
+    jalankanFilterDashboard
+  );
+
+dashboardJenisProyek
+  ?.addEventListener(
+    "change",
+    jalankanFilterDashboard
+  );
+
+dashboardPic
+  ?.addEventListener(
+    "change",
+    jalankanFilterDashboard
+  );
 
 
 // ======================================================
 // RESET FILTER
 // ======================================================
 
-const resetDashboardFilter =
-  getElement(
-    "resetDashboardFilter"
-  );
-
-if (resetDashboardFilter) {
-  resetDashboardFilter.addEventListener(
+refreshDashboard
+  ?.addEventListener(
     "click",
     () => {
-      [
-        "dashboardSearch",
-        "filterTahun",
-        "filterJenis",
-        "filterKategori",
-        "filterPic",
-        "filterStatus"
-      ].forEach(id => {
-        const element =
-          getElement(id);
+      const periode =
+        dapatkanPeriodeJakarta();
 
-        if (element) {
-          element.value = "";
-        }
-      });
+      if (dashboardYear) {
+        dashboardYear.value =
+          String(
+            periode.tahun
+          );
+      }
 
-      renderDashboard();
+      if (
+        dashboardJenisProyek
+      ) {
+        dashboardJenisProyek.value =
+          "";
+      }
+
+      if (dashboardPic) {
+        dashboardPic.value =
+          "";
+      }
+
+      loadDashboard();
     }
   );
+
+
+// ======================================================
+// RESIZE GRAFIK
+// ======================================================
+
+window.addEventListener(
+  "resize",
+  () => {
+    window.clearTimeout(
+      resizeTimer
+    );
+
+    resizeTimer =
+      window.setTimeout(
+        () => {
+          if (
+            currentDashboardData
+          ) {
+            renderCharts(
+              currentDashboardData
+            );
+          }
+        },
+        160
+      );
+  }
+);
+
+
+// ======================================================
+// INISIALISASI
+// ======================================================
+
+async function mulaiDashboard() {
+  isiPilihanTahun();
+
+  isiFilterJenisProyek();
+
+  await isiFilterPic();
+
+  konfigurasiSemuaCard();
+
+  await loadDashboard();
 }
 
 
-// ======================================================
-// START
-// ======================================================
+if (
+  document.readyState ===
+  "loading"
+) {
+  document.addEventListener(
+    "DOMContentLoaded",
+    mulaiDashboard
+  );
 
-loadDashboard();
+} else {
+  mulaiDashboard();
+}

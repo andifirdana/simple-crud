@@ -48,6 +48,7 @@ const saveButton =
 
 
 let masterPartner = [];
+let picLogin = null;
 
 let selectedKategori =
   new Map();
@@ -190,17 +191,15 @@ function statusHtml(flag) {
 // =====================================================
 
 async function loadMaster() {
-
   try {
-
     const [
       kategori,
       jenis,
       klien,
       partner,
-      statuses
+      statuses,
+      picSayaResult
     ] = await Promise.all([
-
       getJson(
         "/api/proyek/kategori"
       ),
@@ -219,13 +218,28 @@ async function loadMaster() {
 
       getJson(
         "/api/proyek/status"
-      )
+      ),
 
+      getJson(
+        "/api/proyek/pic-saya"
+      )
     ]);
 
+    // ===============================================
+    // SIMPAN PIC PENGGUNA LOGIN
+    // ===============================================
+
+    picLogin =
+      picSayaResult?.pic ||
+      null;
+
+    console.log(
+      "PIC PENGGUNA LOGIN:",
+      picLogin
+    );
 
     // ===============================================
-    // KATEGORI AKTIF
+    // KATEGORI
     // ===============================================
 
     fillSelect(
@@ -236,9 +250,8 @@ async function loadMaster() {
       "Pilih Kategori"
     );
 
-
     // ===============================================
-    // JENIS PROYEK AKTIF
+    // JENIS PROYEK
     // ===============================================
 
     fillSelect(
@@ -248,7 +261,6 @@ async function loadMaster() {
       "name",
       "Pilih Jenis"
     );
-
 
     // ===============================================
     // KLIEN
@@ -262,34 +274,31 @@ async function loadMaster() {
       "Pilih Klien"
     );
 
-
     // ===============================================
     // PARTNER
     // ===============================================
 
     masterPartner =
-      partner;
-
+      Array.isArray(partner)
+        ? partner
+        : [];
 
     // ===============================================
-    // KELOMPOKKAN STATUS BERDASARKAN FLAG
+    // STATUS
     // ===============================================
 
     Object
       .keys(statusOptions)
       .forEach(flag => {
-
         statusOptions[flag] =
-          statuses.filter(row =>
-
-            String(
-              row.flag
-            ).toLowerCase() === flag
-
+          statuses.filter(
+            row =>
+              String(
+                row.flag || ""
+              ).toLowerCase() ===
+              flag
           );
-
       });
-
 
     $("status_pengadaan_klien")
       .innerHTML =
@@ -297,20 +306,17 @@ async function loadMaster() {
           "pengadaan"
         );
 
-
     $("status_teknis_klien")
       .innerHTML =
         statusHtml(
           "teknis"
         );
 
-
     $("status_administrasi_klien")
       .innerHTML =
         statusHtml(
           "administrasi"
         );
-
 
     $("status_final")
       .innerHTML =
@@ -320,22 +326,17 @@ async function loadMaster() {
             "Pilih Status Final"
           );
 
-
   } catch (error) {
-
     console.error(
       "ERROR LOAD MASTER:",
       error
     );
 
-
     alert(
       "Gagal mengambil master data proyek:\n" +
       error.message
     );
-
   }
-
 }
 
 
@@ -455,121 +456,220 @@ function renderKategori() {
 // LOAD PIC BERDASARKAN KATEGORI
 // =====================================================
 
+// =====================================================
+// LOAD PIC BERDASARKAN KATEGORI
+// PIC LOGIN OTOMATIS TERPILIH
+// =====================================================
+
 async function loadPic() {
+
+  // ===============================================
+  // SIMPAN PIC YANG SUDAH DICENTANG
+  // ===============================================
+
+  const picSudahTerpilih =
+    new Set(
+      [
+        ...document.querySelectorAll(
+          'input[name="pic_ids"]:checked'
+        )
+      ].map(
+        item =>
+          String(item.value)
+      )
+    );
 
   picContainer.innerHTML =
     "";
 
-
   if (!selectedKategori.size) {
-
     picContainer.textContent =
       "Pilih kategori terlebih dahulu.";
 
     return;
-
   }
 
-
   try {
-
     const groups =
       await Promise.all(
-
         [
           ...selectedKategori.keys()
-        ].map(id =>
-
-          getJson(
-            `/api/proyek/kategori/${id}/pic`
-          )
-
+        ].map(
+          id =>
+            getJson(
+              `/api/proyek/kategori/${encodeURIComponent(
+                id
+              )}/pic`
+            )
         )
-
       );
 
+    // ===============================================
+    // GABUNGKAN PIC SEMUA KATEGORI
+    // ===============================================
 
     const unique =
-      new Map(
+      new Map();
 
-        groups
-          .flat()
-          .map(pic => [
-
+    groups
+      .flat()
+      .forEach(pic => {
+        if (
+          pic?.id !== null &&
+          pic?.id !== undefined
+        ) {
+          unique.set(
             String(pic.id),
-
             pic
+          );
+        }
+      });
 
-          ])
+    // ===============================================
+    // TAMBAHKAN PIC LOGIN
+    // MESKIPUN BELUM TERHUBUNG KE KATEGORI
+    // ===============================================
 
+    if (
+      picLogin?.id !== null &&
+      picLogin?.id !== undefined
+    ) {
+      unique.set(
+        String(picLogin.id),
+        picLogin
       );
-
+    }
 
     if (!unique.size) {
-
       picContainer.textContent =
         "Belum ada PIC pada kategori yang dipilih.";
 
       return;
-
     }
 
+    // ===============================================
+    // URUTKAN PIC
+    // PIC LOGIN DITAMPILKAN PALING ATAS
+    // ===============================================
 
-    unique.forEach(pic => {
+    const daftarPic =
+      [
+        ...unique.values()
+      ].sort(
+        (a, b) => {
+          const aLogin =
+            String(a.id) ===
+            String(picLogin?.id);
+
+          const bLogin =
+            String(b.id) ===
+            String(picLogin?.id);
+
+          if (
+            aLogin &&
+            !bLogin
+          ) {
+            return -1;
+          }
+
+          if (
+            !aLogin &&
+            bLogin
+          ) {
+            return 1;
+          }
+
+          return String(
+            a.nama || ""
+          ).localeCompare(
+            String(
+              b.nama || ""
+            ),
+            "id"
+          );
+        }
+      );
+
+    daftarPic.forEach(pic => {
+      const picId =
+        String(pic.id);
+
+      const adalahPicLogin =
+        picId ===
+        String(picLogin?.id);
+
+      /*
+       * PIC login otomatis dicentang.
+       * PIC pilihan sebelumnya tetap dipertahankan.
+       */
+
+      const checked =
+        adalahPicLogin ||
+        picSudahTerpilih.has(
+          picId
+        );
 
       const label =
         document.createElement(
           "label"
         );
 
-
       label.className =
         "pic-item";
 
+      if (adalahPicLogin) {
+        label.classList.add(
+          "pic-item-current"
+        );
+      }
 
       label.innerHTML = `
-
         <input
           type="checkbox"
           name="pic_ids"
-          value="${pic.id}"
+          value="${escapeHtml(picId)}"
+          ${checked ? "checked" : ""}
         >
 
         <span>
-
-          ${escapeHtml(pic.nama)}
+          ${escapeHtml(
+            pic.nama || "-"
+          )}
 
           ${
             pic.jabatan
-              ? ` - ${escapeHtml(pic.jabatan)}`
+              ? ` - ${escapeHtml(
+                  pic.jabatan
+                )}`
               : ""
           }
 
+          ${
+            adalahPicLogin
+              ? `
+                <small class="pic-current-label">
+                  PIC Anda
+                </small>
+              `
+              : ""
+          }
         </span>
-
       `;
-
 
       picContainer.appendChild(
         label
       );
-
     });
 
-
   } catch (error) {
-
     picContainer.textContent =
       "Gagal mengambil PIC.";
-
 
     console.error(
       "ERROR LOAD PIC:",
       error
     );
-
   }
-
 }
 
 

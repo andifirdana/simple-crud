@@ -260,7 +260,6 @@ function ambilAngkaNominal(value) {
     .replace(/[^\d]/g, "");
 }
 
-
 function formatInputNominal(value) {
   const angka =
     ambilAngkaNominal(value);
@@ -365,7 +364,6 @@ function isInputNominal(element) {
     .edit-partner-nego3
   `);
 }
-
 
 function setNilaiNominal(
   inputOrId,
@@ -500,6 +498,270 @@ document.addEventListener(
     }
   }
 );
+
+// =====================================================
+// CACHE MASTER DOKUMEN
+// =====================================================
+
+let masterDokumenData = [];
+
+let masterDokumenPromise =
+  null;
+
+
+// =====================================================
+// AMBIL DATA MASTER DOKUMEN
+// =====================================================
+
+async function ambilMasterDokumenData(
+  forceReload = false
+) {
+
+  if (
+    !forceReload &&
+    masterDokumenData.length > 0
+  ) {
+    return masterDokumenData;
+  }
+
+
+  if (
+    !forceReload &&
+    masterDokumenPromise
+  ) {
+    return masterDokumenPromise;
+  }
+
+
+  masterDokumenPromise =
+    fetch(
+      "/api/master-dokumen",
+      {
+        credentials:
+          "include",
+
+        headers: {
+          Accept:
+            "application/json"
+        },
+
+        cache:
+          "no-store"
+      }
+    )
+      .then(
+        async response => {
+
+          const data =
+            await response.json();
+
+
+          if (!response.ok) {
+
+            throw new Error(
+              data.error ||
+              "Gagal mengambil master dokumen"
+            );
+
+          }
+
+
+          if (!Array.isArray(data)) {
+
+            throw new Error(
+              "Format master dokumen tidak valid"
+            );
+
+          }
+
+
+          masterDokumenData =
+            data;
+
+
+          return data;
+
+        }
+      )
+      .catch(
+        error => {
+
+          masterDokumenPromise =
+            null;
+
+
+          throw error;
+
+        }
+      );
+
+
+  return masterDokumenPromise;
+
+}
+
+
+// =====================================================
+// AMBIL KODE MASTER DOKUMEN
+// =====================================================
+
+function ambilKodeMasterDokumen(
+  item
+) {
+
+  return String(
+    item?.kode_dokumen ||
+    item?.kode ||
+    item?.name ||
+    ""
+  ).trim();
+
+}
+
+
+// =====================================================
+// AMBIL DESKRIPSI MASTER DOKUMEN
+// =====================================================
+
+function ambilDeskripsiMasterDokumen(
+  item
+) {
+
+  return String(
+    item?.deskripsi ||
+    item?.nama_dokumen ||
+    item?.nama ||
+    ""
+  ).trim();
+
+}
+
+
+// =====================================================
+// CARI DESKRIPSI BERDASARKAN KODE
+// =====================================================
+
+function cariDeskripsiDokumen(
+  kodeDokumen
+) {
+
+  const kodeNormal =
+    String(
+      kodeDokumen || ""
+    )
+      .trim()
+      .toLowerCase();
+
+
+  if (!kodeNormal) {
+    return "";
+  }
+
+
+  const master =
+    masterDokumenData.find(
+      item => {
+
+        const kodeMaster =
+          ambilKodeMasterDokumen(
+            item
+          )
+            .toLowerCase();
+
+
+        return (
+          kodeMaster ===
+          kodeNormal
+        );
+
+      }
+    );
+
+
+  return master
+    ? ambilDeskripsiMasterDokumen(
+        master
+      )
+    : "";
+
+}
+
+
+// =====================================================
+// FORMAT KODE - DESKRIPSI
+// =====================================================
+
+function formatNamaDokumenDetail(
+  namaDokumen,
+  deskripsiDokumen = ""
+) {
+
+  const nama =
+    String(
+      namaDokumen || ""
+    ).trim();
+
+
+  if (!nama) {
+    return "-";
+  }
+
+
+  /*
+   * Jika data lama sudah berbentuk
+   * "KODE - Deskripsi", ambil bagian
+   * kode untuk mencari master.
+   */
+  const kode =
+    nama.includes(" - ")
+      ? nama.split(" - ")[0].trim()
+      : nama;
+
+
+  const deskripsiDariData =
+    String(
+      deskripsiDokumen || ""
+    ).trim();
+
+
+  const deskripsi =
+    deskripsiDariData ||
+    cariDeskripsiDokumen(
+      kode
+    );
+
+
+  if (!deskripsi) {
+    return nama;
+  }
+
+
+  /*
+   * Hindari hasil:
+   * BAST - Berita... - Berita...
+   */
+  const namaNormal =
+    nama.toLowerCase();
+
+
+  const deskripsiNormal =
+    deskripsi.toLowerCase();
+
+
+  if (
+    namaNormal.includes(
+      deskripsiNormal
+    )
+  ) {
+    return nama;
+  }
+
+
+  return (
+    `${kode} - ${deskripsi}`
+  );
+
+}
 
 // =====================================================
 // EDIT KATEGORI
@@ -1997,189 +2259,387 @@ function nilaiSubmitKlienTampil(klien) {
 // RENDER TERMIN KLIEN
 // ======================================================
 
-function renderTermin(klien) {
+// ======================================================
+// RENDER TERMIN KLIEN
+// ======================================================
+
+function renderTermin(
+  klien
+) {
+
   const tbody =
     document.getElementById(
       "terminTable"
     );
 
-  if (!tbody) return;
 
-
-  const termin =
-    Array.isArray(klien?.termin)
-      ? klien.termin
-      : [];
-
-
-  if (termin.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8">
-          Belum ada termin pembayaran.
-        </td>
-      </tr>
-    `;
-
-    const totalTermin =
-      document.getElementById(
-        "totalTermin"
-      );
-
-    if (totalTermin) {
-      totalTermin.textContent =
-        "0.00%";
-    }
-
+  if (!tbody) {
     return;
   }
 
 
-  // Nilai final dari submit/nego
+  const termin =
+    Array.isArray(
+      klien?.termin
+    )
+      ? klien.termin
+      : [];
+
+
+  const totalTerminElement =
+    document.getElementById(
+      "totalTermin"
+    );
+
+
+  const totalNominalElement =
+    document.getElementById(
+      "totalNominalTermin"
+    );
+
+
+  const nilaiFinalElement =
+    document.getElementById(
+      "nilaiFinalTermin"
+    );
+
+
+  const sisaTerminElement =
+    document.getElementById(
+      "sisaTermin"
+    );
+
+
+  // ================================================
+  // NILAI FINAL
+  // ================================================
+
   const nilaiFinalAsli =
-    ambilNilaiFinal(klien);
+    Number(
+      ambilNilaiFinal(
+        klien
+      )
+    ) || 0;
 
 
-  // Total nominal seluruh termin
-  const totalNominal =
+  // ================================================
+  // JIKA BELUM ADA TERMIN
+  // ================================================
+
+  if (
+    termin.length === 0
+  ) {
+
+    tbody.innerHTML = `
+
+      <tr>
+
+        <td
+          colspan="8"
+          class="empty"
+        >
+          Belum ada termin pembayaran.
+        </td>
+
+      </tr>
+
+    `;
+
+
+    if (totalTerminElement) {
+
+      totalTerminElement.textContent =
+        "0.00%";
+
+    }
+
+
+    if (totalNominalElement) {
+
+      totalNominalElement.textContent =
+        rupiah(0);
+
+    }
+
+
+    if (nilaiFinalElement) {
+
+      nilaiFinalElement.textContent =
+        rupiah(
+          nilaiFinalAsli
+        );
+
+    }
+
+
+    if (sisaTerminElement) {
+
+      sisaTerminElement.textContent =
+        "100.00%";
+
+    }
+
+
+    return;
+
+  }
+
+
+  // ================================================
+  // TOTAL NOMINAL ASLI DARI DATABASE
+  // ================================================
+
+  const totalNominalDatabase =
     termin.reduce(
-      (total, item) =>
-        total +
-        Number(
-          item.nominal || 0
-        ),
+      (total, item) => {
+
+        return (
+          total +
+          (
+            Number(
+              item.nominal || 0
+            ) || 0
+          )
+        );
+
+      },
       0
     );
 
 
   /*
-   * Jika nilai final asli tidak ada,
-   * nilai final = total nominal termin.
+   * Jika nilai final submit/nego belum tersedia,
+   * gunakan total nominal untuk membantu
+   * menghitung persentase yang kosong.
    */
   const nilaiFinalEfektif =
     nilaiFinalAsli > 0
       ? nilaiFinalAsli
-      : totalNominal;
+      : totalNominalDatabase;
 
 
-  let totalPersentase =
-    0;
+  let totalPersentase = 0;
 
+  let totalNominalTampil = 0;
+
+
+  // ================================================
+  // RENDER DAFTAR TERMIN
+  // ================================================
 
   tbody.innerHTML =
-    termin.map(item => {
-      let nominal =
-        Number(
-          item.nominal || 0
-        );
+    termin
+      .map(
+        item => {
 
-      let persentase =
-        Number(
-          item.persentase || 0
-        );
+          let nominal =
+            Number(
+              item.nominal || 0
+            ) || 0;
 
 
-      // Jika nominal belum dikirim API
-      if (
-        nominal <= 0 &&
-        persentase > 0 &&
-        nilaiFinalEfektif > 0
-      ) {
-        nominal =
-          nilaiFinalEfektif *
-          persentase /
-          100;
-      }
+          let persentase =
+            Number(
+              item.persentase || 0
+            ) || 0;
 
 
-      // Jika persentase belum dikirim API
-      if (
-        persentase <= 0 &&
-        nominal > 0 &&
-        nilaiFinalEfektif > 0
-      ) {
-        persentase =
-          nominal /
-          nilaiFinalEfektif *
-          100;
-      }
+          // Persentase diisi, nominal kosong
+          if (
+            nominal <= 0 &&
+            persentase > 0 &&
+            nilaiFinalEfektif > 0
+          ) {
+
+            nominal =
+              (
+                nilaiFinalEfektif *
+                persentase
+              ) / 100;
+
+          }
 
 
-      totalPersentase +=
-        persentase;
+          // Nominal diisi, persentase kosong
+          if (
+            persentase <= 0 &&
+            nominal > 0 &&
+            nilaiFinalEfektif > 0
+          ) {
+
+            persentase =
+              (
+                nominal /
+                nilaiFinalEfektif
+              ) * 100;
+
+          }
 
 
-      return `
-        <tr>
-
-          <td>
-            ${item.nama_termin || "-"}
-          </td>
-
-          <td>
-            ${persentase.toFixed(2)}%
-          </td>
-
-          <td>
-            ${rupiah(nominal)}
-          </td>
-
-          <td>
-            ${item.status_pembayaran || "-"}
-          </td>
-
-          <td>
-            ${tanggal(
-              item.tanggal_jatuh_tempo
-            )}
-          </td>
-
-          <td>
-            ${tanggal(
-              item.tanggal_bayar
-            )}
-          </td>
-
-          <td>
-            ${item.syarat_pembayaran || "-"}
-          </td>
-
-          <td>
-
-            <button
-              type="button"
-              class="btn-secondary"
-              onclick="editTerminKlien(${item.id})"
-            >
-              Edit
-            </button>
-
-            <button
-              type="button"
-              class="btn-danger"
-              onclick="hapusTermin(${item.id})"
-            >
-              Hapus
-            </button>
-
-          </td>
-
-        </tr>
-      `;
-    }).join("");
+          totalPersentase +=
+            persentase;
 
 
-  const totalTermin =
-    document.getElementById(
-      "totalTermin"
+          totalNominalTampil +=
+            nominal;
+
+
+          return `
+
+            <tr>
+
+              <td>
+                ${escapeHtml(
+                  item.nama_termin ||
+                  "-"
+                )}
+              </td>
+
+
+              <td>
+                ${persentase.toFixed(2)}%
+              </td>
+
+
+              <td>
+                ${rupiah(
+                  nominal
+                )}
+              </td>
+
+
+              <td>
+                ${escapeHtml(
+                  item.status_pembayaran ||
+                  "-"
+                )}
+              </td>
+
+
+              <td>
+
+                ${tanggal(
+                  item.tanggal_jatuh_tempo
+                )}
+
+              </td>
+
+
+              <td>
+
+                ${tanggal(
+                  item.tanggal_bayar
+                )}
+
+              </td>
+
+
+              <td>
+
+                ${escapeHtml(
+                  item.syarat_pembayaran ||
+                  "-"
+                )}
+
+              </td>
+
+
+              <td>
+
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  onclick="editTerminKlien(${Number(
+                    item.id
+                  )})"
+                >
+                  Edit
+                </button>
+
+
+                <button
+                  type="button"
+                  class="btn-danger"
+                  onclick="hapusTermin(${Number(
+                    item.id
+                  )})"
+                >
+                  Hapus
+                </button>
+
+              </td>
+
+            </tr>
+
+          `;
+
+        }
+      )
+      .join("");
+
+
+  // ================================================
+  // RINGKASAN TERMIN
+  // ================================================
+
+  /*
+   * Ketentuan:
+   *
+   * Sisa Termin =
+   * 100% - Total Persentase
+   */
+  const sisaTermin =
+    Math.max(
+      0,
+      100 -
+      totalPersentase
     );
 
-  if (totalTermin) {
-    totalTermin.textContent =
+
+  if (
+    totalTerminElement
+  ) {
+
+    totalTerminElement.textContent =
       `${totalPersentase.toFixed(2)}%`;
-  }
+
   }
 
+
+  if (
+    totalNominalElement
+  ) {
+
+    totalNominalElement.textContent =
+      rupiah(
+        totalNominalTampil
+      );
+
+  }
+
+
+  if (
+    nilaiFinalElement
+  ) {
+
+    nilaiFinalElement.textContent =
+      rupiah(
+        nilaiFinalAsli
+      );
+
+  }
+
+
+  if (
+    sisaTerminElement
+  ) {
+
+    sisaTerminElement.textContent =
+      `${sisaTermin.toFixed(2)}%`;
+
+  }
+
+}
 
 
 // ======================================================
@@ -3464,119 +3924,137 @@ document.getElementById(
   }
 );
 
-// ======================================================
-// SELECT DOK FROM MASTER DOKUMEN
-// ======================================================
+// =====================================================
+// SELECT DOKUMEN DARI MASTER
+// =====================================================
+
 async function loadMasterDokumen() {
+
   const select =
     document.getElementById(
       "namaDokumen"
     );
 
+
   if (!select) {
     return;
   }
 
+
   select.innerHTML = `
+
     <option value="">
       Memuat dokumen...
     </option>
+
   `;
 
-  select.disabled = true;
+
+  select.disabled =
+    true;
+
 
   try {
-    const response =
-      await fetch(
-        "/api/master-dokumen"
-      );
 
     const data =
-      await response.json();
+      await ambilMasterDokumenData();
 
-    if (!response.ok) {
-      throw new Error(
-        data.error ||
-        "Gagal mengambil master dokumen"
-      );
-    }
-
-    if (!Array.isArray(data)) {
-      throw new Error(
-        "Format master dokumen tidak valid"
-      );
-    }
 
     select.innerHTML = `
+
       <option value="">
         Pilih Kode Dokumen
       </option>
+
     `;
 
-    data.forEach(item => {
-  const kode =
-    String(
-      item.kode_dokumen ||
-      item.kode ||
-      item.name ||
-      ""
-    ).trim();
 
-  const deskripsi =
-    String(
-      item.deskripsi ||
-      item.nama_dokumen ||
-      item.nama ||
-      ""
-    ).trim();
+    data.forEach(
+      item => {
 
-  if (!kode) {
-    return;
-  }
+        const kode =
+          ambilKodeMasterDokumen(
+            item
+          );
 
-  const option =
-    document.createElement(
-      "option"
+
+        const deskripsi =
+          ambilDeskripsiMasterDokumen(
+            item
+          );
+
+
+        if (!kode) {
+          return;
+        }
+
+
+        const option =
+          document.createElement(
+            "option"
+          );
+
+
+        /*
+         * Database tetap menyimpan kode.
+         * Contoh: BAST, KPBJ, PKS.
+         */
+        option.value =
+          kode;
+
+
+        /*
+         * Dropdown menampilkan:
+         * KODE - Deskripsi
+         */
+        option.textContent =
+          deskripsi
+            ? `${kode} - ${deskripsi}`
+            : kode;
+
+
+        option.dataset.id =
+          String(
+            item.id || ""
+          );
+
+
+        option.dataset.deskripsi =
+          deskripsi;
+
+
+        select.appendChild(
+          option
+        );
+
+      }
     );
 
-  // Yang dikirim dan disimpan ke database
-  option.value =
-    kode;
-
-  // Yang ditampilkan pada dropdown
-  option.textContent =
-    deskripsi
-      ? `${kode} - ${deskripsi}`
-      : kode;
-
-  option.dataset.id =
-    item.id || "";
-
-  option.dataset.deskripsi =
-    deskripsi;
-
-  select.appendChild(
-    option
-  );
-});
 
   } catch (error) {
+
     console.error(
       "ERROR MASTER DOKUMEN:",
       error
     );
 
+
     select.innerHTML = `
+
       <option value="">
         Gagal memuat dokumen
       </option>
+
     `;
 
-    alert(error.message);
 
   } finally {
-    select.disabled = false;
+
+    select.disabled =
+      false;
+
   }
+
 }
 
 // ======================================================
@@ -3674,11 +4152,15 @@ function renderDokumenPartner(dokumen = []) {
 
           <div class="dokumen-detail">
 
-            <strong>
-              ${escapeHtml(
-                item.nama_dokumen || "-"
-              )}
-            </strong>
+                 
+          <strong>
+            ${escapeHtml(
+              formatNamaDokumenDetail(
+                item.nama_dokumen,
+                item.deskripsi_dokumen
+              )
+            )}
+          </strong>
 
             <div class="label">
               No. Dokumen:
@@ -4355,14 +4837,16 @@ function renderDokumen(klien) {
 
               <div class="dokumen-detail">
 
-                <strong>
-                  ${
-                    escapeHtml(
-                      item.nama_dokumen ||
-                      "-"
-                    )
-                  }
-                </strong>
+                    <strong>
+              ${
+                escapeHtml(
+                  formatNamaDokumenDetail(
+                    item.nama_dokumen,
+                    item.deskripsi_dokumen
+                  )
+                )
+              }
+            </strong>
 
                 <div class="label">
                   No. Dokumen:
@@ -9595,9 +10079,41 @@ console.log(
   }
 
 }
-// ======================================================
-// START
-// ======================================================
 
-loadDetail();
-loadTimeline();
+// =====================================================
+// START
+// =====================================================
+
+async function mulaiDetailProyek() {
+
+  /*
+   * Master dokumen wajib dimuat terlebih dahulu
+   * agar seluruh kode dapat dicocokkan dengan
+   * deskripsinya.
+   */
+  try {
+
+    await ambilMasterDokumenData();
+
+  } catch (error) {
+
+    console.error(
+      "MASTER DOKUMEN TIDAK DAPAT DIMUAT:",
+      error
+    );
+
+  }
+
+
+  await Promise.all([
+
+    loadDetail(),
+
+    loadTimeline()
+
+  ]);
+
+}
+
+
+mulaiDetailProyek();

@@ -644,6 +644,68 @@
 
 }
 
+.catatan-cell {
+  width: 360px;
+  min-width: 300px;
+  max-width: 420px;
+  vertical-align: top;
+}
+
+.task-note-wrapper {
+  width: 100%;
+}
+
+.task-note-text {
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.task-note-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  margin-top: 6px;
+  padding: 0;
+
+  background: transparent;
+  border: none;
+
+  color: #4f46e5;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.task-note-toggle:hover {
+  background: transparent;
+  color: #3730a3;
+  text-decoration: underline;
+}
+
+.task-note-toggle:focus {
+  outline: none;
+}
+
+.task-note-toggle::after {
+  content: "↓";
+  font-size: 10px;
+}
+
+.task-note-toggle[aria-expanded="true"]::after {
+  content: "↑";
+}
+
+.task-note-empty {
+  color: #94a3b8;
+}
   </style>
 
 </head>
