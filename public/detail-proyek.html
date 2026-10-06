@@ -1914,78 +1914,321 @@ and (
     rgba(34, 197, 94, 0.12);
 }
 
-/* =========================================
-   DETAIL PROJECT TASK
-========================================= */
+/* =====================================================
+   DETAIL PROJECT TASK LIST
+===================================================== */
 
-/* CATATAN */
-
-.detail-task-note {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-
-  margin: 0;
-  padding: 0;
-
-  font-size: 13px;
-  line-height: 1.5;
-
-  text-align: left;
+.project-task-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
 }
 
-/* KOLOM CATATAN */
+.project-task-table {
+  width: 100%;
+  min-width: 1380px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.project-task-table thead {
+  background: #f8fafc;
+}
+
+.project-task-table th {
+  padding: 13px 12px;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.3;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  white-space: nowrap;
+}
+
+.project-task-table td {
+  padding: 14px 12px;
+  color: #334155;
+  border-bottom: 1px solid #edf2f7;
+  font-size: 12px;
+  line-height: 1.5;
+  vertical-align: top;
+}
+
+.project-task-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.project-task-table tbody tr:hover {
+  background: #fafbff;
+}
+
+/* =====================================================
+   LEBAR KOLOM
+===================================================== */
+
+.project-task-table th:nth-child(1),
+.task-cell-pic {
+  width: 115px;
+}
+
+.project-task-table th:nth-child(2),
+.task-cell-name {
+  width: 175px;
+}
+
+.project-task-table th:nth-child(3),
+.task-cell-catatan {
+  width: 330px;
+}
+
+.project-task-table th:nth-child(4),
+.task-cell-link {
+  width: 60px;
+  text-align: center;
+}
+
+.project-task-table th:nth-child(5),
+.task-cell-status {
+  width: 115px;
+}
+
+.project-task-table th:nth-child(6),
+.project-task-table th:nth-child(7),
+.project-task-table th:nth-child(8),
+.project-task-table th:nth-child(9),
+.task-cell-date {
+  width: 105px;
+}
+
+.project-task-table th:nth-child(10) {
+  width: 135px;
+}
+
+.project-task-table th:nth-child(11),
+.task-cell-action {
+  width: 125px;
+  text-align: right;
+}
+
+/* =====================================================
+   PIC DAN TASK
+===================================================== */
+
+.task-pic-name {
+  display: block;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.task-name-value {
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.task-parent-label {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 3px 7px;
+  color: #4338ca;
+  background: #eef2ff;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* =====================================================
+   CATATAN
+===================================================== */
 
 .task-cell-catatan {
-  min-width: 360px;
-  width: 45%;
-
-  vertical-align: top;
+  min-width: 330px;
 }
 
-/* KOLOM PIC */
-
-.task-cell-pic {
-  min-width: 110px;
-  vertical-align: top;
+.task-note-wrapper {
+  width: 100%;
 }
 
-/* KOLOM TASK */
-
-.task-cell-name {
-  min-width: 160px;
-  vertical-align: top;
+.task-note-text {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-/* KOLOM LINK */
+.task-note-text[hidden] {
+  display: none !important;
+}
 
-.task-cell-link {
-  min-width: 65px;
+.task-note-empty {
+  color: #94a3b8;
+}
+
+.task-note-toggle {
+  display: inline;
+  width: auto;
+  min-width: 0;
+  margin: 5px 0 0;
+  padding: 0;
+  color: #334155;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-note-toggle:hover {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+/* =====================================================
+   LINK DAN STATUS
+===================================================== */
+
+.detail-task-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #4f46e5;
+  background: #eef2ff;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.detail-task-link:hover {
+  color: #ffffff;
+  background: #4f46e5;
+}
+
+.detail-task-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.3;
   text-align: center;
-  vertical-align: top;
+  white-space: normal;
 }
 
-/* KOLOM STATUS */
-
-.task-cell-status {
-  min-width: 110px;
-  vertical-align: top;
+.detail-task-status-not-started {
+  color: #475569;
+  background: #f1f5f9;
 }
 
-/* KOLOM TANGGAL */
+.detail-task-status-on-progress {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.detail-task-status-hold {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.detail-task-status-urgent {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.detail-task-status-done {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.detail-task-status-need-follow-up {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
+/* =====================================================
+   TANGGAL
+===================================================== */
 
 .task-cell-date {
-  min-width: 115px;
+  color: #475569;
+  font-size: 11px !important;
+  white-space: normal;
+}
+
+/* =====================================================
+   AKSI
+===================================================== */
+
+.task-cell-action {
   white-space: nowrap;
-  vertical-align: top;
 }
 
-/* SELURUH ISI TABEL */
-
-#detailProjectTaskBody td {
-  padding: 16px 12px;
-  vertical-align: top;
+.task-action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
+.task-action-button {
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 9px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.task-action-button.edit {
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+
+.task-action-button.edit:hover {
+  color: #ffffff;
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.task-action-button.delete {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.task-action-button.delete:hover {
+  color: #ffffff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
 /* =====================================================
    PERBAIKAN MODAL TERTIMPA SIDEBAR
 ===================================================== */
@@ -2110,6 +2353,645 @@ body.modal-open {
 /* CEGAH HALAMAN BERGESER SAAT MODAL TERBUKA */
 body.modal-open {
   overflow: hidden;
+}
+
+/* =====================================================
+   MODAL TASK DETAIL PROYEK
+===================================================== */
+/* =====================================================
+   MODAL TASK LIST DETAIL PROYEK
+===================================================== */
+
+#taskDetailModal {
+  padding: 24px !important;
+  overflow-y: auto !important;
+}
+
+#taskDetailModal .modal-content {
+  width: min(900px, 100%) !important;
+  max-width: 900px !important;
+  max-height: calc(100vh - 48px) !important;
+  margin: auto !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  border-radius: 18px !important;
+  box-sizing: border-box !important;
+}
+
+#taskDetailModal .modal-header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding: 22px 24px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+#taskDetailModal .modal-header > div {
+  min-width: 0;
+}
+
+#taskDetailModal .modal-header h3 {
+  margin: 0 !important;
+  color: #0f172a;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+#taskDetailModal .task-modal-description {
+  margin: 5px 0 0 !important;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+#taskDetailModal #taskDetailForm {
+  display: block !important;
+  padding: 22px 24px 24px !important;
+  max-height: calc(100vh - 145px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* =====================================================
+   FORM
+===================================================== */
+
+#taskDetailModal .form-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0 0 15px;
+}
+
+#taskDetailModal .form-group label {
+  display: block;
+  margin: 0 0 7px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+#taskDetailModal input,
+#taskDetailModal select,
+#taskDetailModal textarea {
+  display: block;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 43px;
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  outline: none;
+  box-sizing: border-box !important;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+#taskDetailModal textarea {
+  height: auto;
+  min-height: 105px;
+  resize: vertical;
+}
+
+#taskDetailModal input[readonly] {
+  color: #475569;
+  background: #f8fafc;
+  cursor: default;
+}
+
+#taskDetailModal input:focus,
+#taskDetailModal select:focus,
+#taskDetailModal textarea:focus {
+  border-color: #6366f1;
+  box-shadow:
+    0 0 0 3px
+    rgba(99, 102, 241, 0.13);
+}
+
+/* =====================================================
+   BARIS PROYEK, KATEGORI, TARGET DATE
+===================================================== */
+
+#taskDetailModal .task-detail-form-grid {
+  display: grid !important;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 14px !important;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#taskDetailModal .task-detail-form-grid > * {
+  min-width: 0 !important;
+}
+
+#taskDetailModal .task-detail-form-grid.project-row {
+  grid-template-columns:
+    minmax(0, 1.3fr)
+    minmax(0, 1fr)
+    minmax(170px, 0.7fr);
+}
+
+/* =====================================================
+   NEED FOLLOW UP DAN STATUS
+===================================================== */
+
+#taskDetailModal .follow-up-status-row {
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+  align-items: start;
+}
+
+#taskDetailModal .task-follow-up-check {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100%;
+  min-height: 43px;
+  margin: 0 !important;
+  padding: 10px 13px !important;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+#taskDetailModal .task-follow-up-check input {
+  flex: 0 0 auto;
+  width: 17px !important;
+  height: 17px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  accent-color: #4f46e5;
+}
+
+#taskDetailModal .task-follow-up-check span {
+  min-width: 0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* =====================================================
+   FIELD FOLLOW UP
+===================================================== */
+
+#taskDetailModal .task-follow-up-fields {
+  width: 100%;
+  margin: 0 0 15px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+#taskDetailModal .task-follow-up-fields[hidden] {
+  display: none !important;
+}
+
+#taskDetailModal .task-follow-up-fields .form-group {
+  margin-bottom: 0;
+}
+
+/* =====================================================
+   TOMBOL MODAL
+===================================================== */
+
+#taskDetailModal .modal-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  width: 100%;
+  margin: 7px 0 0 !important;
+  padding: 18px 0 0 !important;
+  border-top: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+#taskDetailModal .modal-actions button {
+  width: auto !important;
+  min-width: 120px;
+  margin: 0 !important;
+}
+
+#taskDetailModal .modal-close-button {
+  flex: 0 0 auto;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 0;
+  border-radius: 9px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 900px) {
+  #taskDetailModal {
+    padding: 14px !important;
+  }
+
+  #taskDetailModal .task-detail-form-grid.project-row {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  #taskDetailModal .project-row .form-group:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  #taskDetailModal {
+    align-items: flex-start !important;
+    padding: 10px !important;
+  }
+
+  #taskDetailModal .modal-content {
+    max-height: calc(100vh - 20px) !important;
+    border-radius: 14px !important;
+  }
+
+  #taskDetailModal .modal-header {
+    padding: 18px !important;
+  }
+
+  #taskDetailModal #taskDetailForm {
+    max-height: calc(100vh - 115px);
+    padding: 18px !important;
+  }
+
+  #taskDetailModal .task-detail-form-grid,
+  #taskDetailModal .task-detail-form-grid.project-row,
+  #taskDetailModal .follow-up-status-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  #taskDetailModal .project-row .form-group:first-child {
+    grid-column: auto;
+  }
+
+  #taskDetailModal .modal-actions {
+    display: grid !important;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  #taskDetailModal .modal-actions button {
+    width: 100% !important;
+    min-width: 0;
+  }
+}
+
+/* =====================================================
+   AKSI TASK LIST
+===================================================== */
+
+.task-cell-action {
+  width: 125px;
+  min-width: 125px;
+  text-align: right;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.task-action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.task-action-button {
+  min-width: 0;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.task-action-button.edit {
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+
+.task-action-button.edit:hover {
+  color: #ffffff;
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.task-action-button.delete {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.task-action-button.delete:hover {
+  color: #ffffff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* =====================================================
+   HILANGKAN SPASI BERLEBIH TASK LIST
+===================================================== */
+
+#taskListSection {
+  margin-top: 20px !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+#taskListSection .section-header {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 18px 20px !important;
+}
+
+#taskListSection .section-heading {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#taskListSection .section-heading h2 {
+  margin: 0 0 3px !important;
+}
+
+#taskListSection .section-heading p {
+  margin: 0 !important;
+}
+
+#taskListSection .section-body {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 20px 20px !important;
+}
+
+#taskListSection .project-task-table-wrapper {
+  margin: 0 !important;
+}
+/* =====================================================
+   TASK LIST SECTION
+===================================================== */
+
+#taskListSection {
+  display: block;
+  width: 100%;
+  margin: 20px 0 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+#taskListSection .task-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  min-height: 0;
+  margin: 0 !important;
+  padding: 18px 20px !important;
+
+  border-bottom: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+#taskListSection .section-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#taskListSection .section-heading-content {
+  min-width: 0;
+}
+
+#taskListSection .section-heading h2 {
+  margin: 0 0 3px !important;
+  padding: 0;
+  color: #0f172a;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+#taskListSection .section-heading p {
+  margin: 0 !important;
+  padding: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#taskListSection .section-icon {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+
+  color: #ffffff;
+  background: #4f46e5;
+  border-radius: 10px;
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+#taskListSection .task-add-button {
+  flex: 0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  width: auto;
+  min-width: 120px;
+  min-height: 38px;
+
+  margin: 0 !important;
+  padding: 9px 14px !important;
+
+  white-space: nowrap;
+}
+
+#taskListSection .task-list-body {
+  width: 100%;
+  min-height: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  box-sizing: border-box;
+}
+
+#taskListSection .project-task-table-wrapper {
+  width: 100%;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  overflow-x: auto;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  box-sizing: border-box;
+}
+
+#taskListSection .project-task-table {
+  width: 100%;
+  min-width: 1380px;
+
+  margin: 0;
+  border-spacing: 0;
+  border-collapse: collapse;
+
+  table-layout: fixed;
+}
+
+#taskListSection .project-task-table thead {
+  background: #f8fafc;
+}
+
+#taskListSection .project-task-table th {
+  margin: 0;
+  padding: 12px;
+
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.3;
+
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  white-space: nowrap;
+}
+
+#taskListSection .project-task-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #edf2f7;
+  vertical-align: top;
+}
+
+#taskListSection .project-task-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+#taskListSection .task-header-action {
+  text-align: right;
+}
+
+#taskListSection .task-loading-cell {
+  height: auto !important;
+  min-height: 0 !important;
+
+  padding: 28px 20px !important;
+
+  color: #64748b;
+  text-align: center;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 650px) {
+
+  #taskListSection .task-list-header {
+    align-items: flex-start;
+    padding: 16px !important;
+  }
+
+  #taskListSection .task-add-button {
+    min-width: auto;
+    padding: 9px 11px !important;
+  }
+
+  #taskListSection .section-heading p {
+    display: none;
+  }
+
+}
+.task-empty-value {
+  color: #94a3b8;
+}
+
+.task-main-label {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 3px 7px;
+  color: #0369a1;
+  background: #e0f2fe;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.task-error-cell {
+  color: #dc2626 !important;
+}
+
+#detailProjectTaskBody .task-cell-status {
+  min-width: 150px;
+  white-space: nowrap;
+}
+
+#detailProjectTaskBody .detail-task-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: max-content;
+  max-width: none;
+  white-space: nowrap !important;
 }
   </style>
 </head>
@@ -2787,7 +3669,9 @@ body.modal-open {
 
       <!-- PROGRESS REPORT -->
 
-      <section class="project-section">
+      <section  
+      class="project-section"
+    id="taskListSection">
 
         <div class="section-header">
 
@@ -2872,97 +3756,141 @@ body.modal-open {
 
       <!-- TASK LIST -->
 
-      <section class="project-section">
+      <!-- =====================================================
+     TASK LIST
+===================================================== -->
 
-        <div class="section-header">
+<section
+  class="project-section task-list-section"
+  id="taskListSection"
+>
 
-          <div class="section-heading">
+  <!-- HEADER TASK LIST -->
 
-            <div class="section-icon">
-              ✓
-            </div>
+  <div class="section-header task-list-header">
 
-            <div>
+    <div class="section-heading">
 
-              <h2>
-                Task List
-              </h2>
+      <div class="section-icon">
+        ✓
+      </div>
 
-              <p>
-                Aktivitas seluruh PIC pada proyek ini
-              </p>
+      <div class="section-heading-content">
 
-            </div>
+        <h2>
+          Task List
+        </h2>
 
-          </div>
+        <p>
+          Aktivitas seluruh PIC pada proyek ini
+        </p>
 
-        </div>
-
-
-        <div class="section-body">
-
-          <div class="project-task-table-wrapper">
-
-            <table class="project-task-table">
-
-              <thead>
-
-                <tr>
-
-                  <th>PIC</th>
-
-                  <th>Task</th>
-
-                  <th>Catatan</th>
-
-                  <th>Link</th>
-
-                  <th>Status</th>
-
-                  <th>Tanggal Mulai</th>
-
-                  <th>Target Date</th>
-
-                  <th>Tanggal Selesai</th>
-
-                  <th>Dibuat</th>
-
-                </tr>
-
-              </thead>
-
-              <tbody id="detailProjectTaskBody">
-
-                <tr>
-
-                  <td
-                    colspan="9"
-                    style="
-                      text-align:center;
-                      color:#64748b;
-                      padding:30px;
-                    "
-                  >
-                    Memuat task...
-                  </td>
-
-                </tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </div>
-
-      </section>
+      </div>
 
     </div>
 
-  </main>
 
-</div>
+    <button
+      type="button"
+      class="btn btn-primary task-add-button"
+      id="tambahTaskDetailButton"
+    >
+      <span aria-hidden="true">
+        +
+      </span>
+
+      <span>
+        Tambah Task
+      </span>
+    </button>
+
+  </div>
+
+
+  <!-- TABEL TASK LIST -->
+
+  <div class="section-body task-list-body">
+
+    <div class="project-task-table-wrapper">
+
+      <table class="project-task-table">
+
+        <thead>
+
+          <tr>
+
+            <th scope="col">
+              PIC
+            </th>
+
+            <th scope="col">
+              Task
+            </th>
+
+            <th scope="col">
+              Catatan
+            </th>
+
+            <th scope="col">
+              Link
+            </th>
+
+
+            <th scope="col">
+              Status
+            </th>
+
+            <th scope="col">
+             Mulai
+            </th>
+
+            <th scope="col">
+              Target
+            </th>
+
+            <th scope="col">
+              Tindak Lanjut
+            </th>
+
+            <th scope="col">
+              Selesai
+            </th>
+
+
+            <th
+              scope="col"
+              class="task-header-action"
+            >
+              Aksi
+            </th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody id="detailProjectTaskBody">
+
+          <tr>
+
+            <td
+              colspan="11"
+              class="task-loading-cell"
+            >
+              Memuat task...
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</section>
 
 
 <!-- ================================================= -->
@@ -3155,10 +4083,302 @@ body.modal-open {
     </form>
 
   </div>
-
 </div>
 
 
+<!-- =====================================================
+     MODAL TAMBAH / EDIT TASK LIST
+===================================================== -->
+
+<div
+  class="modal"
+  id="taskDetailModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <div>
+
+        <h3 id="taskDetailModalTitle">
+          Tambah Task
+        </h3>
+
+        <p class="task-modal-description">
+          Tambahkan aktivitas untuk proyek ini.
+        </p>
+
+      </div>
+
+
+      <button
+        type="button"
+        class="modal-close-button"
+        id="tutupTaskDetailModal"
+        aria-label="Tutup"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form id="taskDetailForm">
+
+      <input
+        type="hidden"
+        id="taskDetailId"
+      >
+
+      <input
+        type="hidden"
+        id="taskDetailParentId"
+      >
+
+
+      <!-- PROYEK DAN KATEGORI -->
+
+      <div class="task-detail-form-grid project-row">
+
+        <div class="form-group">
+
+          <label for="taskDetailProyek">
+            Nama Proyek
+          </label>
+
+          <input
+            type="text"
+            id="taskDetailProyek"
+            readonly
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="taskDetailKategori">
+            Kategori
+          </label>
+
+          <input
+            type="text"
+            id="taskDetailKategori"
+            readonly
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="taskDetailTargetDate">
+            Target Date
+          </label>
+
+          <input
+            type="date"
+            id="taskDetailTargetDate"
+            required
+          >
+
+        </div>
+
+      </div>
+
+
+      <!-- TASK -->
+
+      <div class="form-group">
+
+        <label for="taskDetailTask">
+          Task
+        </label>
+
+        <input
+          type="text"
+          id="taskDetailTask"
+          maxlength="500"
+          placeholder="Masukkan nama task"
+          required
+        >
+
+      </div>
+
+
+      <!-- LINK -->
+
+      <div class="form-group">
+
+        <label for="taskDetailLink">
+          Link
+        </label>
+
+        <input
+          type="url"
+          id="taskDetailLink"
+          placeholder="https://contoh.com"
+        >
+
+      </div>
+
+
+      <!-- CATATAN -->
+
+      <div class="form-group">
+
+        <label for="taskDetailCatatan">
+          Catatan
+        </label>
+
+        <textarea
+          id="taskDetailCatatan"
+          rows="5"
+          placeholder="Masukkan catatan task"
+        ></textarea>
+
+      </div>
+
+
+      <!-- STATUS DAN NEED FOLLOW UP -->
+
+      <div class="task-detail-form-grid follow-up-status-row">
+
+        <div class="form-group">
+
+          <label>
+            Need Follow Up
+          </label>
+
+          <label class="task-follow-up-check">
+
+            <input
+              type="checkbox"
+              id="taskDetailNeedFollowUp"
+            >
+
+            <span>
+              Perlu tindak lanjut
+            </span>
+
+          </label>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="taskDetailStatus">
+            Status
+          </label>
+
+          <select
+            id="taskDetailStatus"
+            required
+          >
+
+            <option value="Not Started">
+              Not Started
+            </option>
+
+            <option value="On Progress">
+              On Progress
+            </option>
+
+            <option value="Hold">
+              Hold
+            </option>
+
+            <option value="Urgent">
+              Urgent
+            </option>
+
+            <option value="Done">
+              Done
+            </option>
+
+            <option value="Need Follow Up">
+              Need Follow Up
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <!-- FIELD FOLLOW UP -->
+
+      <div
+        class="task-follow-up-fields"
+        id="taskDetailFollowUpFields"
+        hidden
+      >
+
+        <div class="task-detail-form-grid">
+
+          <div class="form-group">
+
+            <label for="taskDetailSubTask">
+              Sub Task
+            </label>
+
+            <input
+              type="text"
+              id="taskDetailSubTask"
+              maxlength="500"
+              placeholder="Tindak Lanjut Nama Task"
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="taskDetailTanggalTindakLanjut">
+              Tanggal Tindak Lanjut
+            </label>
+
+            <input
+              type="date"
+              id="taskDetailTanggalTindakLanjut"
+            >
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalTaskDetailButton"
+        >
+          Batal
+        </button>
+
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+          id="simpanTaskDetailButton"
+        >
+          Simpan Task
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
 <!-- =====================================================
      MODAL DOKUMEN KLIEN/PARTNER
 ===================================================== -->
@@ -5350,10 +6570,6 @@ body.modal-open {
 
   </div>
 </div>
-
-<script src="/layout.js"></script>
-<script src="/sidebar.js"></script>
-<script src="/detail-proyek.js"></script>
 
 
 </body>

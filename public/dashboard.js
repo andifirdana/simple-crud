@@ -45,6 +45,330 @@ const lastUpdated =
     "lastUpdated"
   );
 
+  const notificationButton =
+  document.getElementById(
+    "notificationButton"
+  );
+
+const notificationBadge =
+  document.getElementById(
+    "notificationBadge"
+  );
+
+const notificationDropdown =
+  document.getElementById(
+    "notificationDropdown"
+  );
+
+const notificationList =
+  document.getElementById(
+    "notificationList"
+  );
+
+
+function escapeNotificationHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+
+// ======================================================
+// FORMAT TANGGAL NOTIFIKASI
+// ======================================================
+
+function formatTanggalNotifikasi(
+  value
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "-";
+  }
+
+  const text =
+    String(value).trim();
+
+  let tanggal = null;
+
+
+  /*
+   * Menangani format PostgreSQL:
+   * 2026-10-05
+   * 2026-10-05T00:00:00.000Z
+   * 2026-10-05 00:00:00
+   */
+
+  const formatIso =
+    text.match(
+      /^(\d{4})-(\d{2})-(\d{2})/
+    );
+
+
+  if (formatIso) {
+
+    const tahun =
+      Number(formatIso[1]);
+
+    const bulan =
+      Number(formatIso[2]);
+
+    const hari =
+      Number(formatIso[3]);
+
+
+    tanggal =
+      new Date(
+        tahun,
+        bulan - 1,
+        hari,
+        12,
+        0,
+        0
+      );
+
+
+    /*
+     * Pastikan tanggal benar-benar valid.
+     */
+
+    if (
+      tanggal.getFullYear() !== tahun ||
+      tanggal.getMonth() !==
+        bulan - 1 ||
+      tanggal.getDate() !== hari
+    ) {
+      return "-";
+    }
+
+  } else {
+
+    tanggal =
+      new Date(text);
+
+  }
+
+
+  if (
+    !tanggal ||
+    Number.isNaN(
+      tanggal.getTime()
+    )
+  ) {
+    console.warn(
+      "Tanggal tindak lanjut tidak valid:",
+      value
+    );
+
+    return "-";
+  }
+
+
+  try {
+
+    return new Intl.DateTimeFormat(
+      "id-ID",
+      {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      }
+    ).format(tanggal);
+
+  } catch (error) {
+
+    console.warn(
+      "Gagal format tanggal notifikasi:",
+      value,
+      error
+    );
+
+    return "-";
+
+  }
+}
+
+async function loadNotifikasiTask() {
+  try {
+    const response =
+      await fetch(
+        "/api/notifikasi/task",
+        {
+          credentials: "include",
+          cache: "no-store"
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Gagal mengambil notifikasi"
+      );
+    }
+
+    const jumlah =
+      Number(
+        result.jumlah_belum_dibaca
+      ) || 0;
+
+    notificationBadge.textContent =
+      jumlah > 99
+        ? "99+"
+        : String(jumlah);
+
+    notificationBadge.hidden =
+      jumlah === 0;
+
+    const data =
+      Array.isArray(result.data)
+        ? result.data
+        : [];
+
+    if (data.length === 0) {
+      notificationList.innerHTML = `
+        <div class="notification-empty">
+          Tidak ada task yang perlu
+          ditindaklanjuti.
+        </div>
+      `;
+
+      return;
+    }
+
+    notificationList.innerHTML =
+      data.map(item => `
+        <button
+          type="button"
+          class="notification-item ${
+            item.sudah_dibaca
+              ? ""
+              : "is-unread"
+          }"
+          data-task-id="${Number(
+            item.task_id
+          )}"
+        >
+          <span class="notification-title">
+            Ada Task yang perlu dilakukan Update
+          </span>
+
+          <span class="notification-task">
+            ${escapeNotificationHtml(
+              item.task
+            )} — Tindak lanjut
+          </span>
+
+          <span class="notification-project">
+            ${escapeNotificationHtml(
+              item.nama_proyek
+            )}
+            ·
+            ${escapeNotificationHtml(
+              item.kategori
+            )}
+          </span>
+
+          <span class="notification-date">
+            ${formatTanggalNotifikasi(
+              item.tanggal_tindak_lanjut
+            )}
+          </span>
+        </button>
+      `).join("");
+
+  } catch (error) {
+    console.error(
+      "ERROR LOAD NOTIFIKASI:",
+      error
+    );
+
+    notificationList.innerHTML = `
+      <div class="notification-empty">
+        ${escapeNotificationHtml(
+          error.message
+        )}
+      </div>
+    `;
+  }
+}
+
+
+notificationButton?.addEventListener(
+  "click",
+  async event => {
+    event.stopPropagation();
+
+    notificationDropdown.hidden =
+      !notificationDropdown.hidden;
+
+    if (!notificationDropdown.hidden) {
+      await loadNotifikasiTask();
+    }
+  }
+);
+
+
+notificationList?.addEventListener(
+  "click",
+  async event => {
+    const item =
+      event.target.closest(
+        "[data-task-id]"
+      );
+
+    if (!item) {
+      return;
+    }
+
+    const taskId =
+      Number(item.dataset.taskId);
+
+    try {
+      await fetch(
+        `/api/notifikasi/task/${taskId}/baca`,
+        {
+          method: "PUT",
+          credentials: "include"
+        }
+      );
+    } finally {
+      window.location.href =
+  `/task.html?task_id=${taskId}`;
+    }
+  }
+);
+
+
+document.addEventListener(
+  "click",
+  event => {
+    if (
+      !event.target.closest(
+        ".notification-wrapper"
+      )
+    ) {
+      notificationDropdown.hidden =
+        true;
+    }
+  }
+);
+
+
+loadNotifikasiTask();
+
+setInterval(
+  loadNotifikasiTask,
+  60000
+);
+
 const bulanSingkat = [
   "Jan",
   "Feb",
@@ -2047,10 +2371,6 @@ async function loadDashboard() {
 
 
 // ======================================================
-// NAVIGASI CARD
-// ======================================================
-
-// ======================================================
 // NAVIGASI CARD DASHBOARD
 // ======================================================
 
@@ -2378,71 +2698,84 @@ function bukaDetailCard(card) {
         }
       }
     }
-  }
+  
 
   // ====================================================
   // FINANCIAL OVERVIEW — PENDAPATAN
   // ====================================================
 
-  else if (
-    route === "income"
-  ) {
-    path =
-      "/pendapatan.html";
+  } else if (  
+  route === "income"
+) {
+  path =
+    "/pendapatan.html";
 
-    if (card.dataset.jenis) {
-      params.set(
-        "jenis_proyek",
-        card.dataset.jenis
-      );
-    }
-
-    if (card.dataset.status) {
-      params.set(
-        "status_pembayaran",
-        card.dataset.status
-      );
-    }
-
-    if (
-      card.dataset.currentMonth ===
-      "true"
-    ) {
-      params.set(
-        "tahun",
-        String(periode.tahun)
-      );
-
-      params.set(
-        "bulan",
-        String(periode.bulan)
-      );
-
-      params.set(
-        "status_pembayaran",
-        "Sudah Dibayar"
-      );
-    }
+  if (card.dataset.jenis) {
+    params.set(
+      "jenis_proyek",
+      card.dataset.jenis
+    );
   }
 
+  if (card.dataset.status) {
+    params.set(
+      "status_pembayaran",
+      card.dataset.status
+    );
+  }
+
+  /*
+   * Pendapatan bulan berjalan
+   * menggunakan pengakuan pendapatan,
+   * bukan hanya status sudah dibayar.
+   */
+
+  if (
+    card.dataset.currentMonth ===
+    "true"
+  ) {
+    const periode =
+      dapatkanPeriodeJakarta();
+
+    params.set(
+      "tahun",
+      String(periode.tahun)
+    );
+
+    params.set(
+      "bulan",
+      String(periode.bulan)
+    );
+
+    params.set(
+      "status_pembayaran",
+      "Pendapatan Diakui"
+    );
+  }
   // ====================================================
   // FINANCIAL OVERVIEW — PENGELUARAN
   // ====================================================
 
-  else if (
-    route === "expense"
-  ) {
-    path =
-      "/pengeluaran.html";
+  } else if (
+  route === "expense"
+) {
+  path =
+    "/pengeluaran.html";
 
-    if (card.dataset.status) {
-      params.set(
-        "status_pembayaran",
-        card.dataset.status
-      );
-    }
+  if (card.dataset.jenis) {
+    params.set(
+      "jenis_proyek",
+      card.dataset.jenis
+    );
   }
 
+  if (card.dataset.status) {
+    params.set(
+      "status_pembayaran",
+      card.dataset.status
+    );
+  }
+}
   // ====================================================
   // CONTRACT OVERVIEW — TIMELINE
   // ====================================================
@@ -2457,10 +2790,6 @@ function bukaDetailCard(card) {
       "tahun"
     );
 
-    params.set(
-      "mode",
-      "contract-overview"
-    );
 
     if (
       card.dataset.timeline ===
@@ -2502,7 +2831,7 @@ function bukaDetailCard(card) {
     route === "total-expense"
   ) {
     path =
-      "/total-pengeluaran.html";
+      "/pengeluaran.html";
   }
 
   // ====================================================
@@ -2523,7 +2852,6 @@ function bukaDetailCard(card) {
 // ======================================================
 // KONFIGURASI CARD
 // ======================================================
-
 function aturDataCard(
   idNilai,
   data
@@ -2533,37 +2861,87 @@ function aturDataCard(
       idNilai
     );
 
+
   if (!element) {
+    console.warn(
+      `Elemen #${idNilai} tidak ditemukan`
+    );
+
     return;
   }
+
+
+  /*
+   * Cari pembungkus card.
+   * Selector dibuat lebih luas agar
+   * cocok dengan seluruh desain card.
+   */
 
   const card =
     element.closest(
       [
         "button",
+        "a",
+        "[role='button']",
         ".stat-card",
         ".metric-card",
         ".contract-card",
         ".overview-card",
         ".finance-card",
-        ".chart-card"
+        ".financial-card",
+        ".income-card",
+        ".expense-card",
+        ".month-card",
+        ".chart-card",
+        ".business-card",
+        "[class*='card']"
       ].join(",")
-    );
+    ) ||
+    element.parentElement ||
+    element;
 
-  if (!card) {
-    return;
-  }
+
+  /*
+   * Pasang dataset pada pembungkus card.
+   */
 
   Object.entries(data)
     .forEach(
       ([key, value]) => {
-        card.dataset[key] =
-          value;
+        if (
+          value !== null &&
+          value !== undefined
+        ) {
+          card.dataset[key] =
+            String(value);
+        }
       }
     );
 
+
+  /*
+   * Pasang juga pada elemen angka sebagai
+   * pengaman jika pembungkus card tidak
+   * terdeteksi dengan benar.
+   */
+
+  Object.entries(data)
+    .forEach(
+      ([key, value]) => {
+        if (
+          value !== null &&
+          value !== undefined
+        ) {
+          element.dataset[key] =
+            String(value);
+        }
+      }
+    );
+
+
   card.style.cursor =
     "pointer";
+
 
   if (
     card.tagName.toLowerCase() !==
@@ -2581,6 +2959,14 @@ function aturDataCard(
       "0"
     );
   }
+
+
+  console.log(
+    "CARD NAVIGASI TERPASANG:",
+    idNilai,
+    data,
+    card
+  );
 }
 
 
@@ -2598,6 +2984,7 @@ function konfigurasiSemuaCard() {
     }
   );
 
+
   aturDataCard(
     "totalSubmitPenawaran",
     {
@@ -2608,12 +2995,14 @@ function konfigurasiSemuaCard() {
     }
   );
 
+
   aturDataCard(
     "totalSubmitPengadaan",
     {
       route: "project"
     }
   );
+
 
   aturDataCard(
     "totalKontrak",
@@ -2625,12 +3014,14 @@ function konfigurasiSemuaCard() {
     }
   );
 
+
   aturDataCard(
     "totalProyekAktif",
     {
       route: "project"
     }
   );
+
 
   aturDataCard(
     "totalProyekDone",
@@ -2641,6 +3032,7 @@ function konfigurasiSemuaCard() {
     }
   );
 
+
   aturDataCard(
     "totalProyekTerlambat",
     {
@@ -2650,10 +3042,207 @@ function konfigurasiSemuaCard() {
     }
   );
 
+
   aturDataCard(
     "totalSemuaProyek",
     {
       route: "project"
+    }
+  );
+
+
+  // ====================================================
+  // FINANCIAL OVERVIEW — PENDAPATAN
+  // ====================================================
+
+  aturDataCard(
+    "pendapatanBulanBerjalan",
+    {
+      route: "income",
+      status:
+        "Pendapatan Diakui",
+      currentMonth:
+        "true"
+    }
+  );
+
+
+  aturDataCard(
+    "regulerDibayar",
+    {
+      route: "income",
+      jenis:
+        "Reguler/SLA",
+      status:
+        "Pendapatan Diakui"
+    }
+  );
+
+
+  aturDataCard(
+    "sewaDibayar",
+    {
+      route: "income",
+      jenis:
+        "Sewa",
+      status:
+        "Pendapatan Diakui"
+    }
+  );
+
+
+  aturDataCard(
+    "transaksiDibayar",
+    {
+      route: "income",
+      jenis:
+        "Transaksi",
+      status:
+        "Pendapatan Diakui"
+    }
+  );
+
+
+  aturDataCard(
+    "piutangKlien",
+    {
+      route: "income",
+      status:
+        "Selain Dibayar"
+    }
+  );
+
+
+  aturDataCard(
+    "sudahDibayarKlien",
+    {
+      route: "income",
+      status:
+        "Sudah Dibayar"
+    }
+  );
+
+
+  // ====================================================
+  // FINANCIAL OVERVIEW — PENGELUARAN
+  // ====================================================
+
+  aturDataCard(
+    "hutangPartner",
+    {
+      route: "expense",
+      status:
+        "Selain Dibayar"
+    }
+  );
+
+
+  aturDataCard(
+    "dibayarPartner",
+    {
+      route: "expense",
+      status:
+        "Sudah Dibayar"
+    }
+  );
+
+
+  // ====================================================
+  // GRAFIK FINANCIAL OVERVIEW
+  // ====================================================
+
+  aturDataCard(
+    "incomeChart",
+    {
+      route:
+        "total-income"
+    }
+  );
+
+
+  aturDataCard(
+    "partnerChart",
+    {
+      route:
+        "total-expense"
+    }
+  );
+
+
+  // ====================================================
+  // CONTRACT OVERVIEW
+  // ====================================================
+
+  aturDataCard(
+    "kontrakKlienTigaBulan",
+    {
+      route: "project",
+      contract:
+        "klien-3-bulan"
+    }
+  );
+
+
+  aturDataCard(
+    "kontrakPartnerTigaBulan",
+    {
+      route: "project",
+      contract:
+        "partner-3-bulan"
+    }
+  );
+
+
+  aturDataCard(
+    "kontrakKlienExpired",
+    {
+      route: "project",
+      contract:
+        "klien-expired"
+    }
+  );
+
+
+  aturDataCard(
+    "kontrakPartnerExpired",
+    {
+      route: "project",
+      contract:
+        "partner-expired"
+    }
+  );
+
+
+  aturDataCard(
+    "lisensiSewaTigaBulan",
+    {
+      route: "timeline",
+      timeline:
+        "3-bulan"
+    }
+  );
+
+
+  aturDataCard(
+    "lisensiSewaExpired",
+    {
+      route: "timeline",
+      timeline:
+        "expired"
+    }
+  );
+
+
+  // ====================================================
+  // BUSINESS PERFORMANCE
+  // ====================================================
+
+  aturDataCard(
+    "proyekBelumUpdate",
+    {
+      route: "project",
+      update:
+        "belum-update"
     }
   );
 }
@@ -2669,21 +3258,56 @@ function konfigurasiSemuaCard() {
 document.addEventListener(
   "click",
   event => {
+    const target =
+      event.target instanceof Element
+        ? event.target
+        : null;
+
+
+    if (!target) {
+      return;
+    }
+
+
     const card =
-      event.target.closest(
+      target.closest(
         "[data-route]"
       );
+
 
     if (!card) {
       return;
     }
+
+
+    /*
+     * Variabel route sebelumnya belum dibuat.
+     * Hal ini yang menyebabkan klik berhenti.
+     */
+
+    const route =
+      String(
+        card.dataset.route || ""
+      )
+        .trim()
+        .toLowerCase();
+
+
+    if (!route) {
+      console.error(
+        "Card tidak mempunyai route",
+        card
+      );
+
+      return;
+    }
+
 
     event.preventDefault();
 
     bukaDetailCard(card);
   }
 );
-
 
 document.addEventListener(
   "keydown",
@@ -2695,22 +3319,47 @@ document.addEventListener(
       return;
     }
 
+
+    const target =
+      event.target instanceof Element
+        ? event.target
+        : null;
+
+
+    if (!target) {
+      return;
+    }
+
+
     const card =
-      event.target.closest(
+      target.closest(
         "[data-route]"
       );
+
 
     if (!card) {
       return;
     }
+
+
+    const route =
+      String(
+        card.dataset.route || ""
+      )
+        .trim()
+        .toLowerCase();
+
+
+    if (!route) {
+      return;
+    }
+
 
     event.preventDefault();
 
     bukaDetailCard(card);
   }
 );
-
-
 // ======================================================
 // EVENT FILTER
 // ======================================================
@@ -2826,6 +3475,13 @@ async function mulaiDashboard() {
   konfigurasiSemuaCard();
 
   await loadDashboard();
+
+  /*
+   * Pasang kembali setelah dashboard
+   * selesai dirender.
+   */
+
+  konfigurasiSemuaCard();
 }
 
 

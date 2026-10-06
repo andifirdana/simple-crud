@@ -592,6 +592,308 @@
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
+.btn-project-log {
+  min-height: 34px;
+  padding: 7px 13px;
+  border: 1px solid #c7d2fe;
+  border-radius: 9px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.btn-project-log:hover {
+  border-color: #818cf8;
+  background: #e0e7ff;
+  transform: translateY(-1px);
+}
+
+.activity-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.activity-modal.is-open {
+  display: flex;
+}
+
+.activity-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(4px);
+}
+
+.activity-modal-dialog {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(900px, 100%);
+  max-height: min(760px, 90vh);
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow:
+    0 30px 70px rgba(15, 23, 42, 0.3);
+}
+
+.activity-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 26px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.activity-modal-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #6366f1;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.activity-modal-header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 21px;
+  line-height: 1.3;
+}
+
+.activity-modal-header p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.activity-modal-close {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border: 0;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 27px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.activity-modal-close:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.activity-modal-body {
+  min-height: 220px;
+  overflow-y: auto;
+  padding: 22px 26px;
+  background: #f8fafc;
+}
+
+.activity-log-list {
+  position: relative;
+}
+
+.activity-log-list::before {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 15px;
+  width: 2px;
+  background: #dbeafe;
+  content: "";
+}
+
+.activity-log-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 14px;
+  padding-bottom: 18px;
+}
+
+.activity-log-item:last-child {
+  padding-bottom: 0;
+}
+
+.activity-log-dot {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border: 5px solid #f8fafc;
+  border-radius: 50%;
+  background: #4f46e5;
+  box-shadow: 0 0 0 1px #c7d2fe;
+}
+
+.activity-log-card {
+  padding: 16px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.activity-log-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.activity-log-description {
+  margin: 0;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.activity-log-date {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.activity-log-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.activity-log-chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.activity-log-user {
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.activity-log-change {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    24px
+    minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.activity-log-value {
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.activity-log-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-weight: 800;
+}
+
+.activity-log-loading,
+.activity-log-empty {
+  padding: 54px 20px;
+  color: #64748b;
+  text-align: center;
+  font-size: 14px;
+}
+
+.activity-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 26px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.activity-modal-close-button {
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 9px;
+  background: #0f172a;
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+body.activity-modal-open {
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .activity-modal {
+    padding: 12px;
+  }
+
+  .activity-modal-dialog {
+    max-height: 92vh;
+    border-radius: 16px;
+  }
+
+  .activity-modal-header,
+  .activity-modal-body,
+  .activity-modal-footer {
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+
+  .activity-log-top {
+    display: block;
+  }
+
+  .activity-log-date {
+    display: block;
+    margin-top: 6px;
+  }
+
+  .activity-log-change {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-log-arrow {
+    transform: rotate(90deg);
+  }
+}
   </style>
 
 </head>
@@ -807,7 +1109,84 @@
 
         </div>
 
+<div
+  class="activity-modal"
+  id="activityLogModal"
+  aria-hidden="true"
+>
+  <div
+    class="activity-modal-backdrop"
+    data-close-activity-log
+  ></div>
 
+  <section
+    class="activity-modal-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="activityLogTitle"
+  >
+    <header class="activity-modal-header">
+      <div>
+        <span class="activity-modal-eyebrow">
+          Riwayat Aktivitas
+        </span>
+
+        <h2 id="activityLogTitle">
+          Activity Log Proyek
+        </h2>
+
+        <p id="activityLogProjectName">
+          -
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="activity-modal-close"
+        data-close-activity-log
+        aria-label="Tutup"
+      >
+        &times;
+      </button>
+    </header>
+
+    <div class="activity-modal-body">
+      <div
+        class="activity-log-loading"
+        id="activityLogLoading"
+      >
+        Memuat activity log...
+      </div>
+
+      <div
+        class="activity-log-empty"
+        id="activityLogEmpty"
+        hidden
+      >
+        Belum ada activity log untuk proyek ini.
+      </div>
+
+      <div
+        class="activity-log-list"
+        id="activityLogList"
+      ></div>
+    </div>
+
+    <footer class="activity-modal-footer">
+      <span id="activityLogTotal">
+        0 aktivitas
+      </span>
+
+      <button
+        type="button"
+        class="activity-modal-close-button"
+        data-close-activity-log
+      >
+        Tutup
+      </button>
+    </footer>
+  </section>
+</div>
         <!-- =============================================
              PAGINATION
         ============================================== -->

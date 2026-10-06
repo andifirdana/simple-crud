@@ -89,6 +89,18 @@ const pendapatanPaginationButtons =
     "pendapatanPaginationButtons"
   );
 
+const pendapatanUrlParams =
+  new URLSearchParams(
+  window.location.search
+  );
+
+const picIdPendapatan =
+  String(
+    pendapatanUrlParams.get(
+      "pic_id"
+    ) || ""
+  ).trim();
+
 // ======================================================
 // FORMAT
 // ======================================================
@@ -251,31 +263,46 @@ function getBulan(value) {
 // ======================================================
 
 function getTanggalPendapatan(item) {
-  const status =
-    getStatusPembayaranPendapatan(
-      item
-    );
+  const jenis =
+    String(
+      item?.jenis_proyek || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const sumber =
+    String(
+      item?.sumber_pendapatan || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const proyekSewa =
+    jenis.includes("sewa") ||
+    sumber.includes("sewa");
 
   /*
-   * Sudah Dibayar:
-   * Utamakan tanggal bayar.
+   * Proyek:
+   * 1. Tanggal bayar
+   * 2. Tanggal jatuh tempo
    *
-   * Belum Dibayar/Proses:
-   * Utamakan tanggal jatuh tempo.
+   * Proyek Sewa:
+   * 1. Tanggal bayar
+   * 2. Tanggal DO
    */
 
-  if (status === "Sudah Dibayar") {
+  if (proyekSewa) {
     return (
       item?.tanggal_bayar ||
-      item?.tanggal_jatuh_tempo ||
+      item?.tanggal_do ||
       item?.created_at ||
       null
     );
   }
 
   return (
-    item?.tanggal_jatuh_tempo ||
     item?.tanggal_bayar ||
+    item?.tanggal_jatuh_tempo ||
     item?.created_at ||
     null
   );
@@ -311,7 +338,6 @@ function normalisasiStatusPembayaran(
     .toLowerCase();
 
 }
-
 
 function statusSudahDibayar(item) {
 
@@ -359,7 +385,6 @@ function statusSudahDibayar(item) {
 
 }
 
-
 function getStatusPembayaranPendapatan(
   item
 ) {
@@ -401,6 +426,56 @@ function getStatusPembayaranPendapatan(
     ? "Sudah Dibayar"
     : "Belum Dibayar";
 
+}
+function pendapatanDiakui(item) {
+  const jenis =
+    String(
+      item?.jenis_proyek || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const sumber =
+    String(
+      item?.sumber_pendapatan || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const proyekSewa =
+    jenis.includes("sewa") ||
+    sumber.includes("sewa");
+
+  /*
+   * Semua jenis proyek diakui jika:
+   * status sudah dibayar atau ada tanggal bayar.
+   */
+
+  if (
+    statusSudahDibayar(item) ||
+    Boolean(item?.tanggal_bayar)
+  ) {
+    return true;
+  }
+
+  /*
+   * Proyek Sewa diakui jika sudah ada DO.
+   */
+
+  if (proyekSewa) {
+    return Boolean(
+      item?.tanggal_do
+    );
+  }
+
+  /*
+   * Proyek Reguler/Transaksi diakui
+   * jika sudah ada tanggal jatuh tempo.
+   */
+
+  return Boolean(
+    item?.tanggal_jatuh_tempo
+  );
 }
 function getKategoriPendapatan(item) {
 
@@ -447,6 +522,86 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function updateUrlPendapatan() {
+  const params =
+    new URLSearchParams();
+
+  if (
+    filterTahunPendapatan?.value
+  ) {
+    params.set(
+      "tahun",
+      filterTahunPendapatan.value
+    );
+  }
+
+  if (
+    filterBulanPendapatan?.value
+  ) {
+    params.set(
+      "bulan",
+      filterBulanPendapatan.value
+    );
+  }
+
+  if (
+    filterJenisPendapatan?.value
+  ) {
+    params.set(
+      "jenis_proyek",
+      filterJenisPendapatan.value
+    );
+  }
+
+  if (
+    filterStatusPembayaranPendapatan
+  ) {
+    params.set(
+      "status_pembayaran",
+
+      filterStatusPembayaranPendapatan
+        .value ||
+      "Semua Status"
+    );
+  }
+
+  if (
+    searchPendapatan
+      ?.value
+      .trim()
+  ) {
+    params.set(
+      "search",
+      searchPendapatan
+        .value
+        .trim()
+    );
+  }
+
+  /*
+   * PIC dari Dashboard tetap dipertahankan,
+   * meskipun tidak ditampilkan sebagai
+   * filter di halaman Pendapatan.
+   */
+
+  if (picIdPendapatan) {
+    params.set(
+      "pic_id",
+      picIdPendapatan
+    );
+  }
+
+  const query =
+    params.toString();
+
+  window.history.replaceState(
+    {},
+    "",
+    query
+      ? `/pendapatan.html?${query}`
+      : "/pendapatan.html"
+  );
+}
 // ======================================================
 // LOAD PENDAPATAN
 // ======================================================
@@ -543,54 +698,107 @@ async function fetchSumberPendapatan(
 
 }
 
+// ======================================================
+// LOAD SEMUA DATA PENDAPATAN
+// ======================================================
 
 async function loadPendapatan() {
-
-  if (!pendapatanGroup) {
-
-    console.error(
-      "Element #pendapatanGroup tidak ditemukan."
-    );
-
-    return;
-
-  }
-
-  try {
-
+  if (pendapatanGroup) {
     pendapatanGroup.innerHTML = `
       <div class="empty-state">
         Memuat data pendapatan...
       </div>
     `;
+  }
 
-    /*
-     * Kedua sumber diambil terpisah karena
-     * tabel penyimpanannya memang berbeda.
-     */
+  try {
+    const apiParams =
+      new URLSearchParams();
+
+    if (picIdPendapatan) {
+      apiParams.set(
+        "pic_id",
+        picIdPendapatan
+      );
+    }
+
+    const apiQuery =
+      apiParams.toString();
+
+    const urlPendapatanProyek =
+      apiQuery
+        ? `/api/pendapatan/detail?${apiQuery}`
+        : "/api/pendapatan/detail";
+
+    const urlPendapatanSewa =
+      apiQuery
+        ? `/api/pendapatan/sewa/detail?${apiQuery}`
+        : "/api/pendapatan/sewa/detail";
 
     const [
-      pendapatanRegulerTransaksi,
-      pendapatanSewa
-    ] =
-      await Promise.all([
-        fetchSumberPendapatan(
-          "/api/pendapatan/detail"
-        ),
+      hasilProyek,
+      hasilSewa
+    ] = await Promise.allSettled([
+      fetchSumberPendapatan(
+        urlPendapatanProyek
+      ),
 
-        fetchSumberPendapatan(
-          "/api/pendapatan/sewa/detail"
-        )
-      ]);
+      fetchSumberPendapatan(
+        urlPendapatanSewa
+      )
+    ]);
+
+    if (
+      hasilProyek.status ===
+      "rejected"
+    ) {
+      console.error(
+        "ERROR PENDAPATAN PROYEK:",
+        hasilProyek.reason
+      );
+    }
+
+    if (
+      hasilSewa.status ===
+      "rejected"
+    ) {
+      console.error(
+        "ERROR PENDAPATAN SEWA:",
+        hasilSewa.reason
+      );
+    }
+
+    if (
+      hasilProyek.status ===
+        "rejected" &&
+      hasilSewa.status ===
+        "rejected"
+    ) {
+      throw new Error(
+        "API pendapatan proyek dan sewa gagal dimuat."
+      );
+    }
+
+    const pendapatanProyek =
+      hasilProyek.status ===
+      "fulfilled"
+        ? hasilProyek.value
+        : [];
+
+    const pendapatanSewa =
+      hasilSewa.status ===
+      "fulfilled"
+        ? hasilSewa.value
+        : [];
 
     allPendapatan = [
-      ...pendapatanRegulerTransaksi.map(
+      ...pendapatanProyek.map(
         item => ({
           ...item,
 
           sumber_pendapatan:
             item.sumber_pendapatan ||
-            "REGULER_TRANSAKSI"
+            "PROYEK"
         })
       ),
 
@@ -602,53 +810,53 @@ async function loadPendapatan() {
             "SEWA",
 
           jenis_proyek:
+            item.jenis_proyek ||
             "Sewa"
         })
       )
-    ].filter(
-      item =>
-        Boolean(
-          getTanggalPendapatan(item)
-        )
+    ];
+
+    console.log(
+      "PENDAPATAN PROYEK:",
+      pendapatanProyek
+    );
+
+    console.log(
+      "PENDAPATAN SEWA:",
+      pendapatanSewa
+    );
+
+    console.log(
+      "SEMUA PENDAPATAN:",
+      allPendapatan
     );
 
     loadPendapatanFilters();
 
-    /*
-     * Default:
-     * - Tahun berjalan
-     * - Status Sudah Dibayar
-     */
-
-    setDefaultPendapatanFilter();
+    setFilterPendapatanDariUrl();
 
     currentPagePendapatan = 1;
 
     applyPendapatanFilter();
 
   } catch (error) {
-
     console.error(
       "ERROR LOAD PENDAPATAN:",
       error
     );
 
-    pendapatanGroup.innerHTML = `
-      <div class="empty-state">
-        Gagal mengambil data pendapatan:
-        ${escapeHtml(error.message)}
-      </div>
-    `;
+    allPendapatan = [];
+    filteredPendapatan = [];
 
-    if (pendapatanPagination) {
-
-      pendapatanPagination.style.display =
-        "none";
-
+    if (pendapatanGroup) {
+      pendapatanGroup.innerHTML = `
+        <div class="empty-state error-state">
+          Gagal mengambil data pendapatan:
+          ${escapeHtml(error.message)}
+        </div>
+      `;
     }
-
   }
-
 }
 // ======================================================
 // ISI SELECT
@@ -808,10 +1016,16 @@ function loadPendapatanFilters() {
   );
 
   isiSelectPendapatan(
-    filterTahunPendapatan,
-    daftarTahun,
-    "Semua Tahun"
-  );
+  filterStatusPembayaranPendapatan,
+  [
+    "Pendapatan Diakui",
+    "Sudah Dibayar",
+    "Selain Dibayar",
+    "Belum Dibayar",
+    "Proses"
+  ],
+  "Semua Status Pembayaran"
+);
 
   loadFilterBulanPendapatan();
 
@@ -848,6 +1062,200 @@ function loadPendapatanFilters() {
   );
 }
 
+function normalisasiStatusFilterPendapatan(
+  value
+) {
+  const status =
+    String(value || "")
+      .trim()
+      .toLowerCase();
+
+  if (
+    status === "" ||
+    status === "semua" ||
+    status === "semua status" ||
+    status ===
+      "semua status pembayaran"
+  ) {
+    return "";
+  }
+
+  if (
+    [
+      "pendapatan diakui",
+      "diakui",
+      "recognized"
+    ].includes(status)
+  ) {
+    return "Pendapatan Diakui";
+  }
+
+  if (
+    [
+      "dibayar",
+      "sudah dibayar",
+      "lunas",
+      "paid"
+    ].includes(status)
+  ) {
+    return "Sudah Dibayar";
+  }
+
+  if (
+    [
+      "selain dibayar",
+      "belum dibayar dan proses"
+    ].includes(status)
+  ) {
+    return "Selain Dibayar";
+  }
+
+  if (
+    [
+      "proses",
+      "diproses",
+      "processing"
+    ].includes(status)
+  ) {
+    return "Proses";
+  }
+
+  if (
+    [
+      "belum dibayar",
+      "belum bayar",
+      "unpaid"
+    ].includes(status)
+  ) {
+    return "Belum Dibayar";
+  }
+
+  return "";
+}
+
+
+function setFilterPendapatanDariUrl() {
+  const tahunBerjalan =
+    String(
+      new Date().getFullYear()
+    );
+
+  const tahunUrl =
+    String(
+      pendapatanUrlParams.get(
+        "tahun"
+      ) || tahunBerjalan
+    );
+
+  const bulanUrl =
+    String(
+      pendapatanUrlParams.get(
+        "bulan"
+      ) || ""
+    );
+
+  const jenisUrl =
+    String(
+      pendapatanUrlParams.get(
+        "jenis_proyek"
+      ) || ""
+    ).trim();
+
+  const statusUrl =
+    pendapatanUrlParams.has(
+      "status_pembayaran"
+    )
+      ? normalisasiStatusFilterPendapatan(
+          pendapatanUrlParams.get(
+            "status_pembayaran"
+          )
+        )
+      : "Sudah Dibayar";
+
+
+  if (filterTahunPendapatan) {
+    const tersedia =
+      Array.from(
+        filterTahunPendapatan.options
+      ).some(
+        option =>
+          option.value === tahunUrl
+      );
+
+    filterTahunPendapatan.value =
+      tersedia
+        ? tahunUrl
+        : tahunBerjalan;
+  }
+
+
+  if (filterBulanPendapatan) {
+    const tersedia =
+      Array.from(
+        filterBulanPendapatan.options
+      ).some(
+        option =>
+          option.value === bulanUrl
+      );
+
+    filterBulanPendapatan.value =
+      tersedia
+        ? bulanUrl
+        : "";
+  }
+
+
+  if (filterJenisPendapatan) {
+    const tersedia =
+      Array.from(
+        filterJenisPendapatan.options
+      ).some(
+        option =>
+          String(
+            option.value
+          ).toLowerCase() ===
+          jenisUrl.toLowerCase()
+      );
+
+    if (tersedia) {
+      const option =
+        Array.from(
+          filterJenisPendapatan.options
+        ).find(
+          item =>
+            String(
+              item.value
+            ).toLowerCase() ===
+            jenisUrl.toLowerCase()
+        );
+
+      filterJenisPendapatan.value =
+        option?.value || "";
+    } else {
+      filterJenisPendapatan.value =
+        "";
+    }
+  }
+
+
+  if (
+    filterStatusPembayaranPendapatan
+  ) {
+    filterStatusPembayaranPendapatan
+      .value =
+        statusUrl;
+  }
+
+
+  if (searchPendapatan) {
+    searchPendapatan.value =
+      String(
+        pendapatanUrlParams.get(
+          "search"
+        ) || ""
+      );
+  }
+}
 // ======================================================
 // DEFAULT FILTER
 // ======================================================
@@ -1021,14 +1429,48 @@ function applyPendapatanFilter(
    */
 
   filteredPendapatan =
-    dataSummary.filter(
-      item =>
+  dataSummary.filter(
+    item => {
+      if (
         !statusPembayaranDipilih ||
+        statusPembayaranDipilih ===
+          "Semua Status"
+      ) {
+        return true;
+      }
+
+      if (
+        statusPembayaranDipilih ===
+        "Pendapatan Diakui"
+      ) {
+        return pendapatanDiakui(
+          item
+        );
+      }
+
+      if (
+        statusPembayaranDipilih ===
+        "Selain Dibayar"
+      ) {
+        return (
+          getStatusPembayaranPendapatan(
+            item
+          ) === "Belum Dibayar" ||
+
+          getStatusPembayaranPendapatan(
+            item
+          ) === "Proses"
+        );
+      }
+
+      return (
         getStatusPembayaranPendapatan(
           item
         ) ===
-          statusPembayaranDipilih
-    );
+        statusPembayaranDipilih
+      );
+    }
+  );
 
   // ====================================================
   // URUTKAN TANGGAL TERBARU
@@ -1064,7 +1506,9 @@ function applyPendapatanFilter(
   );
 
   renderPendapatanPage();
+  updateUrlPendapatan();
 }
+
 
 // ======================================================
 // SUMMARY
@@ -1103,11 +1547,17 @@ function updatePendapatanSummary(data) {
    * termin yang sudah dibayar.
    */
 
-  const total =
-    terminDibayar.reduce(
+ const total =
+  data
+    .filter(
+      item =>
+        pendapatanDiakui(item)
+    )
+    .reduce(
       (sum, item) =>
         sum +
         getNilaiPendapatan(item),
+
       0
     );
 
@@ -1974,7 +2424,7 @@ function resetFilterPendapatan() {
    * Status Sudah Dibayar
    */
 
-  setDefaultPendapatanFilter();
+  setFilterPendapatanDariUrl();
 
   currentPagePendapatan = 1;
 

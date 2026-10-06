@@ -79,6 +79,12 @@ const urlParams =
     window.location.search
   );
 
+const picIdPengeluaran =
+  String(
+    urlParams.get(
+      "pic_id"
+    ) || ""
+  ).trim();
 
 const tahunSekarang =
   new Date().getFullYear();
@@ -787,24 +793,43 @@ async function loadPengeluaran() {
 
   try {
 
-    const response =
-      await fetch(
-        "/api/pengeluaran/detail",
-        {
-          method: "GET",
+    const apiParams =
+  new URLSearchParams();
 
-          headers: {
-            Accept:
-              "application/json"
-          },
+if (picIdPengeluaran) {
+  apiParams.set(
+    "pic_id",
+    picIdPengeluaran
+  );
+}
 
-          credentials:
-            "include",
+const apiQuery =
+  apiParams.toString();
 
-          cache:
-            "no-store"
-        }
-      );
+const apiUrl =
+  apiQuery
+    ? `/api/pengeluaran/detail?${apiQuery}`
+    : "/api/pengeluaran/detail";
+
+
+const response =
+  await fetch(
+    apiUrl,
+    {
+      method: "GET",
+
+      headers: {
+        Accept:
+          "application/json"
+      },
+
+      credentials:
+        "include",
+
+      cache:
+        "no-store"
+    }
+  );
 
 
     if (
@@ -1036,8 +1061,18 @@ function updateUrl() {
         .trim()
     );
 
+
   }
 
+  if (picIdPengeluaran) {
+  params.set(
+    "pic_id",
+    picIdPengeluaran
+  );
+}
+
+const query =
+  params.toString();
 
   window.history.replaceState(
     {},

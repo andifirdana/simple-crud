@@ -1727,7 +1727,21 @@ function renderTable(data) {
                 >
                   Detail
                 </a>
-
+                
+<button
+    type="button"
+    class="btn-project-log"
+    data-project-log
+    data-project-id="${Number(
+      item?.id
+    )}"
+    data-project-name="${escapeHTML(
+      item?.nama_proyek ||
+      "Proyek"
+    )}"
+  >
+    Log
+  </button>
                 <button
                   type="button"
                   class="btn-delete-project"
@@ -1993,6 +2007,401 @@ async function loadProyek() {
     );
   });
 
+
+  // ======================================================
+// ACTIVITY LOG PROYEK
+// ======================================================
+
+const activityLogModal =
+  document.getElementById(
+    "activityLogModal"
+  );
+
+const activityLogProjectName =
+  document.getElementById(
+    "activityLogProjectName"
+  );
+
+const activityLogLoading =
+  document.getElementById(
+    "activityLogLoading"
+  );
+
+const activityLogEmpty =
+  document.getElementById(
+    "activityLogEmpty"
+  );
+
+const activityLogList =
+  document.getElementById(
+    "activityLogList"
+  );
+
+const activityLogTotal =
+  document.getElementById(
+    "activityLogTotal"
+  );
+
+
+function formatTanggalLog(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const tanggal =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      tanggal.getTime()
+    )
+  ) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(
+    "id-ID",
+    {
+      timeZone: "Asia/Jakarta",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  ).format(tanggal);
+}
+
+
+function namaPenggunaLog(item) {
+  const nama =
+    item.dibuat_oleh ||
+    item.nama_user ||
+    item.user_nama ||
+    item.user_name ||
+    item.nama_pic ||
+    item.username ||
+    item.email;
+
+  return String(
+    nama || "Sistem"
+  ).trim();
+}
+
+
+function tutupActivityLog() {
+  if (!activityLogModal) {
+    return;
+  }
+
+  activityLogModal.classList.remove(
+    "is-open"
+  );
+
+  activityLogModal.setAttribute(
+    "aria-hidden",
+    "true"
+  );
+
+  document.body.classList.remove(
+    "activity-modal-open"
+  );
+}
+
+
+function bukaModalActivityLog() {
+  if (!activityLogModal) {
+    return;
+  }
+
+  activityLogModal.classList.add(
+    "is-open"
+  );
+
+  activityLogModal.setAttribute(
+    "aria-hidden",
+    "false"
+  );
+
+  document.body.classList.add(
+    "activity-modal-open"
+  );
+}
+
+
+function renderActivityLog(items) {
+  if (!activityLogList) {
+    return;
+  }
+
+  activityLogTotal.textContent =
+    `${items.length} aktivitas`;
+
+  if (!items.length) {
+    activityLogEmpty.hidden = false;
+    activityLogList.innerHTML = "";
+    return;
+  }
+
+  activityLogEmpty.hidden = true;
+
+  activityLogList.innerHTML =
+    items
+      .map(item => {
+        const nilaiLama =
+          item.nilai_lama ?? "";
+
+        const nilaiBaru =
+          item.nilai_baru ?? "";
+
+        const adaPerubahanNilai =
+          String(nilaiLama).trim() ||
+          String(nilaiBaru).trim();
+
+        return `
+          <article class="activity-log-item">
+            <span
+              class="activity-log-dot"
+            ></span>
+
+            <div class="activity-log-card">
+              <div class="activity-log-top">
+                <p class="activity-log-description">
+                  ${escapeHTML(
+                    item.deskripsi ||
+                    "Aktivitas proyek"
+                  )}
+                </p>
+
+                <time class="activity-log-date">
+                  ${escapeHTML(
+                    formatTanggalLog(
+                      item.created_at
+                    )
+                  )}
+                </time>
+              </div>
+
+              <div class="activity-log-meta">
+                <span class="activity-log-chip">
+                  ${escapeHTML(
+                    item.aktivitas ||
+                    "AKTIVITAS"
+                  )}
+                </span>
+
+                <span class="activity-log-chip">
+                  ${escapeHTML(
+                    item.modul ||
+                    "PROYEK"
+                  )}
+                </span>
+
+                ${
+                  item.field_name
+                    ? `
+                      <span class="activity-log-chip">
+                        ${escapeHTML(
+                          item.field_name
+                        )}
+                      </span>
+                    `
+                    : ""
+                }
+              </div>
+
+              <div class="activity-log-user">
+                Oleh:
+                ${escapeHTML(
+                  namaPenggunaLog(item)
+                )}
+              </div>
+
+              ${
+                adaPerubahanNilai
+                  ? `
+                    <div class="activity-log-change">
+                      <div class="activity-log-value">
+                        ${
+                          escapeHTML(
+                            String(
+                              nilaiLama ||
+                              "-"
+                            )
+                          )
+                        }
+                      </div>
+
+                      <div class="activity-log-arrow">
+                        →
+                      </div>
+
+                      <div class="activity-log-value">
+                        ${
+                          escapeHTML(
+                            String(
+                              nilaiBaru ||
+                              "-"
+                            )
+                          )
+                        }
+                      </div>
+                    </div>
+                  `
+                  : ""
+              }
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+}
+
+
+async function loadActivityLogProyek(
+  proyekId,
+  namaProyek
+) {
+  if (
+    !Number.isInteger(proyekId) ||
+    proyekId <= 0
+  ) {
+    window.alert(
+      "ID proyek tidak valid."
+    );
+
+    return;
+  }
+
+  activityLogProjectName.textContent =
+    namaProyek || "Proyek";
+
+  activityLogLoading.hidden = false;
+  activityLogEmpty.hidden = true;
+  activityLogList.innerHTML = "";
+  activityLogTotal.textContent =
+    "Memuat...";
+
+  bukaModalActivityLog();
+
+  try {
+    const response =
+      await fetch(
+        `/api/proyek/${encodeURIComponent(
+          proyekId
+        )}/activity-log`,
+        {
+          headers: {
+            Accept: "application/json"
+          },
+
+          credentials:
+            "same-origin"
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Gagal mengambil activity log"
+      );
+    }
+
+    activityLogProjectName.textContent =
+      result.proyek?.nama_proyek ||
+      namaProyek ||
+      "Proyek";
+
+    renderActivityLog(
+      Array.isArray(result.data)
+        ? result.data
+        : []
+    );
+
+  } catch (error) {
+    console.error(
+      "ERROR LOAD ACTIVITY LOG:",
+      error
+    );
+
+    activityLogEmpty.hidden = false;
+    activityLogEmpty.textContent =
+      error.message;
+
+    activityLogTotal.textContent =
+      "Gagal dimuat";
+
+  } finally {
+    activityLogLoading.hidden = true;
+  }
+}
+
+
+// ======================================================
+// KLIK TOMBOL LOG
+// ======================================================
+
+proyekTable?.addEventListener(
+  "click",
+  event => {
+    const logButton =
+      event.target.closest(
+        "[data-project-log]"
+      );
+
+    if (!logButton) {
+      return;
+    }
+
+    const proyekId =
+      Number(
+        logButton.dataset.projectId
+      );
+
+    const namaProyek =
+      logButton.dataset.projectName ||
+      "Proyek";
+
+    loadActivityLogProyek(
+      proyekId,
+      namaProyek
+    );
+  }
+);
+
+
+// ======================================================
+// TUTUP MODAL
+// ======================================================
+
+document
+  .querySelectorAll(
+    "[data-close-activity-log]"
+  )
+  .forEach(button => {
+    button.addEventListener(
+      "click",
+      tutupActivityLog
+    );
+  });
+
+
+document.addEventListener(
+  "keydown",
+  event => {
+    if (
+      event.key === "Escape" &&
+      activityLogModal
+        ?.classList
+        .contains("is-open")
+    ) {
+      tutupActivityLog();
+    }
+  }
+);
 
 // ======================================================
 // HAPUS PROYEK

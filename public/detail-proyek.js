@@ -6,6 +6,8 @@ const proyekId =
 
 
 let detailData = null;
+let detailProjectTaskData = [];
+let activeTaskDetailId = null;
 let activePartnerTerminId = null;
 let activePartnerId = null;
 let activePartnerDokumenId = null;
@@ -148,6 +150,90 @@ function formatTaskNote(value) {
     : "-";
 
 }
+
+// ======================================================
+// CATATAN TASK - RINGKAS DAN SELENGKAPNYA
+// ======================================================
+function buatCatatanTaskDetail(value, taskId) {
+  const catatan = String(value ?? "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
+
+  if (!catatan) {
+    return `<span class="task-note-empty">-</span>`;
+  }
+
+  const batasKarakter = 200;
+  const catatanAman = escapeTaskHtml(catatan);
+
+  if (catatan.length <= batasKarakter) {
+    return `<div class="task-note-text">${catatanAman}</div>`;
+  }
+
+  const id = Number(taskId);
+
+  const catatanRingkas = escapeTaskHtml(
+    catatan.substring(0, batasKarakter).trimEnd()
+  );
+
+  return `
+    <div
+      class="task-note-wrapper"
+      id="taskNoteWrapper-${id}"
+    >
+      <div
+        class="task-note-text task-note-short"
+        id="taskNoteShort-${id}"
+      >${catatanRingkas}...</div>
+
+      <div
+        class="task-note-text task-note-full"
+        id="taskNoteFull-${id}"
+        hidden
+      >${catatanAman}</div>
+
+      <button
+        type="button"
+        class="task-note-toggle"
+        id="taskNoteButton-${id}"
+        aria-expanded="false"
+        onclick="toggleCatatanTaskDetail(${id})"
+      >
+        Lihat selengkapnya ↓
+      </button>
+    </div>
+  `;
+}
+
+window.toggleCatatanTaskDetail = function (taskId) {
+  const shortElement = document.getElementById(
+    `taskNoteShort-${taskId}`
+  );
+
+  const fullElement = document.getElementById(
+    `taskNoteFull-${taskId}`
+  );
+
+  const button = document.getElementById(
+    `taskNoteButton-${taskId}`
+  );
+
+  if (!shortElement || !fullElement || !button) {
+    return;
+  }
+
+  const buka = fullElement.hidden;
+
+  shortElement.hidden = buka;
+  fullElement.hidden = !buka;
+
+  button.setAttribute("aria-expanded", String(buka));
+
+  button.textContent = buka
+    ? "Tampilkan lebih sedikit ↑"
+    : "Lihat selengkapnya ↓";
+};
+
 // ======================================================
 // FORMAT LAST UPDATE
 // Contoh: Senin, 19 Januari 2026 14:30
@@ -599,7 +685,6 @@ async function ambilMasterDokumenData(
   return masterDokumenPromise;
 
 }
-
 
 // =====================================================
 // AMBIL KODE MASTER DOKUMEN
@@ -1958,32 +2043,172 @@ let inputTerminTerakhir =
 
 
 // ======================================================
-// AMBIL NILAI FINAL ASLI
-// Tidak menggunakan total termin.
+// UBAH NILAI MENJADI ANGKA
+// ======================================================
+
+function angkaTermin(value) {
+
+  if (
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  ) {
+
+    return 0;
+
+  }
+
+
+  if (
+    typeof value === "number"
+  ) {
+
+    return Number.isFinite(value)
+      ? value
+      : 0;
+
+  }
+
+
+  const text =
+    String(value)
+      .trim()
+      .replace(/rp/gi, "")
+      .replace(/\s/g, "");
+
+
+  /*
+   * Nilai dari database biasanya:
+   * 990000000.00
+   *
+   * Nilai tampilan nominal biasanya:
+   * 990.000.000
+   */
+
+  if (
+    /^\d{1,3}(\.\d{3})+$/.test(
+      text
+    )
+  ) {
+
+    const nominalIndonesia =
+      Number(
+        text.replace(/\./g, "")
+      );
+
+
+    return Number.isFinite(
+      nominalIndonesia
+    )
+      ? nominalIndonesia
+      : 0;
+
+  }
+
+
+  const number =
+    Number(
+      text.replace(",", ".")
+    );
+
+
+  return Number.isFinite(number)
+    ? number
+    : 0;
+
+}
+
+
+// ======================================================
+// AMBIL NILAI FINAL KLIEN / PARTNER
 // ======================================================
 
 function ambilNilaiFinal(data) {
-  if (!data) return 0;
 
-  const daftarNilai = [
-    data.nilai_nego_3,
-    data.nilai_nego_2,
-    data.nilai_nego_1,
-    data.nilai_submit
-  ];
-
-  for (
-    const nilai of daftarNilai
-  ) {
-    const angka =
-      Number(nilai || 0);
-
-    if (angka > 0) {
-      return angka;
-    }
+  if (!data) {
+    return 0;
   }
 
-  return 0;
+
+  /*
+   * Prioritaskan nilai final hasil API.
+   * Kemudian fallback ke nilai negosiasi
+   * dan nilai submit.
+   */
+
+  const daftarNilai = [
+
+    data.nilai_final_partner,
+
+    data.nilai_final_klien,
+
+    data.nilai_final,
+
+    data.nilai_nego_3,
+
+    data.nilai_nego_2,
+
+    data.nilai_nego_1,
+
+    data.nilai_submit,
+
+    data.nilai_partner,
+
+    data.nilai_klien
+
+  ];
+
+
+  for (
+    const nilai
+    of daftarNilai
+  ) {
+
+    const angka =
+      angkaTermin(nilai);
+
+
+    if (angka > 0) {
+
+      return angka;
+
+    }
+
+  }
+
+
+  /*
+   * Apabila nilai submit/nego kosong,
+   * gunakan total nominal termin sebagai
+   * nilai final efektif.
+   */
+
+  const daftarTermin =
+    Array.isArray(
+      data.termin
+    )
+      ? data.termin
+      : [];
+
+
+  const totalNominalTermin =
+    daftarTermin.reduce(
+      (total, termin) => {
+
+        return (
+          total +
+          angkaTermin(
+            termin?.nominal
+          )
+        );
+
+      },
+      0
+    );
+
+
+  return totalNominalTermin;
+
 }
 
 
@@ -1992,35 +2217,92 @@ function ambilNilaiFinal(data) {
 // ======================================================
 
 function getDataTerminAktif() {
-  if (activePartnerId) {
+
+  const partnerId =
+    Number(
+      activePartnerId
+    );
+
+
+  if (
+    Number.isInteger(partnerId) &&
+    partnerId > 0
+  ) {
+
+    const partners =
+      Array.isArray(
+        detailData?.partners
+      )
+        ? detailData.partners
+        : [];
+
+
+    const partnerAktif =
+      partners.find(item => {
+
+        const proyekPartnerId =
+          Number(
+            item
+              ?.proyek_partner_id ??
+            item?.id
+          );
+
+
+        return (
+          proyekPartnerId ===
+          partnerId
+        );
+
+      });
+
+
     return (
-      detailData?.partners || []
-    ).find(item =>
-      Number(
-        item.proyek_partner_id
-      ) ===
-      Number(activePartnerId)
-    ) || null;
+      partnerAktif ||
+      null
+    );
+
   }
 
-  return detailData?.klien || null;
+
+  return (
+    detailData?.klien ||
+    null
+  );
+
 }
+
 
 // ======================================================
 // NILAI FINAL TERMIN AKTIF
 // ======================================================
 
 function getNilaiFinalTerminAktif() {
-  return ambilNilaiFinal(
-    getDataTerminAktif()
-  );
+
+  const dataAktif =
+    getDataTerminAktif();
+
+
+  const nilaiFinal =
+    ambilNilaiFinal(
+      dataAktif
+    );
+
+
+  return Number.isFinite(
+    nilaiFinal
+  )
+    ? nilaiFinal
+    : 0;
+
 }
+
 
 // ======================================================
 // ATUR INPUT PERSENTASE DAN NOMINAL
 // ======================================================
 
 function aturInputTermin() {
+
   const persentaseGroup =
     document.getElementById(
       "persentaseTerminGroup"
@@ -2041,23 +2323,35 @@ function aturInputTermin() {
       "nominalTermin"
     );
 
-  const nilaiFinal =
-    getNilaiFinalTerminAktif();
 
-
-  // Selalu munculkan kedua input
   if (persentaseGroup) {
+
     persentaseGroup.style.display =
       "";
+
   }
+
 
   if (nominalGroup) {
+
     nominalGroup.style.display =
       "";
+
   }
 
-  if (!persentaseInput) return;
-  if (!nominalInput) return;
+
+  if (
+    !persentaseInput ||
+    !nominalInput
+  ) {
+
+    return;
+
+  }
+
+
+  const nilaiFinal =
+    getNilaiFinalTerminAktif();
 
 
   nominalInput.disabled =
@@ -2066,9 +2360,17 @@ function aturInputTermin() {
   nominalInput.required =
     true;
 
+  nominalInput.placeholder =
+    "Isi nominal";
 
-  // Nilai final tersedia
+
+  /*
+   * Persentase tetap dapat diisi apabila
+   * nilai final tersedia.
+   */
+
   if (nilaiFinal > 0) {
+
     persentaseInput.disabled =
       false;
 
@@ -2078,31 +2380,24 @@ function aturInputTermin() {
     persentaseInput.placeholder =
       "Isi persentase";
 
-    nominalInput.placeholder =
-      "Isi nominal";
-
   } else {
-    // Nilai final belum ada:
-    // hanya nominal yang dapat diisi
+
     persentaseInput.disabled =
       true;
 
     persentaseInput.required =
       false;
 
-    persentaseInput.value =
-      "";
-
     persentaseInput.placeholder =
-      "Otomatis";
+      "Nilai final belum tersedia";
 
-    nominalInput.placeholder =
-      "Isi nominal termin";
   }
+
 }
 
+
 // ======================================================
-// PERHITUNGAN OTOMATIS INPUT
+// PERHITUNGAN OTOMATIS
 // ======================================================
 
 const persentaseTerminInput =
@@ -2110,100 +2405,152 @@ const persentaseTerminInput =
     "persentaseTermin"
   );
 
+
 const nominalTerminInput =
   document.getElementById(
     "nominalTermin"
   );
 
+
 if (
   persentaseTerminInput &&
   nominalTerminInput
 ) {
-  // Persentase → Nominal
+
+  // ====================================================
+  // PERSENTASE → NOMINAL
+  // ====================================================
+
   persentaseTerminInput.addEventListener(
     "input",
     () => {
-      const nilaiFinal =
-        getNilaiFinalTerminAktif();
-
-      if (nilaiFinal <= 0) {
-        persentaseTerminInput.value =
-          "";
-
-        return;
-      }
 
       inputTerminTerakhir =
         "persentase";
 
+
+      const nilaiFinal =
+        getNilaiFinalTerminAktif();
+
+
+      const persentaseText =
+        String(
+          persentaseTerminInput
+            .value || ""
+        )
+          .trim()
+          .replace(/%/g, "")
+          .replace(/\s/g, "")
+          .replace(",", ".");
+
+
       const persentase =
-        Number(
-          persentaseTerminInput.value ||
-          0
-        );
+        persentaseText === ""
+          ? 0
+          : Number(
+              persentaseText
+            );
+
 
       if (
+        nilaiFinal <= 0 ||
         !Number.isFinite(
           persentase
         ) ||
         persentase <= 0
       ) {
+
         nominalTerminInput.value =
           "";
 
         return;
+
       }
+
 
       const nominal =
         nilaiFinal *
         persentase /
         100;
 
+
       setNilaiNominal(
         nominalTerminInput,
         Math.round(nominal)
       );
+
     }
   );
 
 
-  // Nominal → Persentase
+  // ====================================================
+  // NOMINAL → PERSENTASE
+  // ====================================================
+
   nominalTerminInput.addEventListener(
     "input",
     () => {
+
       inputTerminTerakhir =
         "nominal";
+
 
       const nilaiFinal =
         getNilaiFinalTerminAktif();
 
+
       const nominal =
-      nominalOrNull(
-        nominalTerminInput.value
-      ) || 0;
+        nominalOrNull(
+          nominalTerminInput.value
+        ) || 0;
+
+
+      console.log(
+        "HITUNG PERSENTASE PARTNER:",
+        {
+          activePartnerId,
+
+          nilaiFinal,
+
+          nominal
+        }
+      );
+
 
       if (
         nilaiFinal <= 0 ||
-        !Number.isFinite(nominal) ||
+        !Number.isFinite(
+          nominal
+        ) ||
         nominal <= 0
       ) {
+
         persentaseTerminInput.value =
           "";
 
         return;
+
       }
+
 
       const persentase =
         nominal /
         nilaiFinal *
         100;
 
+
+      /*
+       * Batasi dua angka desimal.
+       * Contoh: 90.90909 menjadi 90.91
+       */
+
       persentaseTerminInput.value =
         persentase.toFixed(2);
+
     }
   );
-}
 
+}
 // ======================================================
 // TOTAL NOMINAL TERMIN
 // ======================================================
@@ -2255,9 +2602,6 @@ function nilaiSubmitKlienTampil(klien) {
 
 }
 
-// ======================================================
-// RENDER TERMIN KLIEN
-// ======================================================
 
 // ======================================================
 // RENDER TERMIN KLIEN
@@ -2743,169 +3087,419 @@ const batalTermin =
 // ======================================================
 // SAVE TERMIN
 // ======================================================
+// ======================================================
+// SIMPAN TERMIN KLIEN DAN PARTNER
+// ======================================================
 
-document.getElementById(
-  "terminForm"
-).addEventListener(
-  "submit",
-  async event => {
-
-    event.preventDefault();
-
-
-    const terminId =
-      document.getElementById(
-        "terminId"
-      ).value;
-const nilaiFinal =
-  getNilaiFinalTerminAktif();
-
-const persentaseInput =
+const terminForm =
   document.getElementById(
-    "persentaseTermin"
-  );
-
-const nominalInput =
-  document.getElementById(
-    "nominalTermin"
-  );
-
-const persenValue =
-  persentaseInput.value === ""
-    ? null
-    : Number(
-        persentaseInput.value
-      );
-
-const nominalValue =
-  nominalOrNull(
-    nominalInput.value
+    "terminForm"
   );
 
 
-const payload = {
-  nama_termin:
-    document.getElementById(
-      "namaTermin"
-    ).value.trim(),
+if (terminForm) {
 
-  persentase:
-    nilaiFinal > 0
-      ? persenValue
-      : null,
+  terminForm.addEventListener(
+    "submit",
+    async event => {
 
-  nominal:
-    nominalValue,
+      event.preventDefault();
 
-  input_terakhir:
-    nilaiFinal > 0
-      ? (
-          inputTerminTerakhir ||
-          "persentase"
+
+      // ==================================================
+      // AMBIL ELEMEN FORM
+      // ==================================================
+
+      const terminIdInput =
+        document.getElementById(
+          "terminId"
+        );
+
+      const namaTerminInput =
+        document.getElementById(
+          "namaTermin"
+        );
+
+      const persentaseInput =
+        document.getElementById(
+          "persentaseTermin"
+        );
+
+      const nominalInput =
+        document.getElementById(
+          "nominalTermin"
+        );
+
+      const statusInput =
+        document.getElementById(
+          "statusPembayaran"
+        );
+
+      const tanggalJatuhTempoInput =
+        document.getElementById(
+          "tanggalJatuhTempo"
+        );
+
+      const tanggalBayarInput =
+        document.getElementById(
+          "tanggalBayar"
+        );
+
+      const syaratPembayaranInput =
+        document.getElementById(
+          "syaratPembayaran"
+        );
+
+
+      const terminId =
+        String(
+          terminIdInput?.value || ""
+        ).trim();
+
+
+      // ==================================================
+      // NILAI FINAL
+      // ==================================================
+
+      const nilaiFinal =
+        Number(
+          getNilaiFinalTerminAktif() ||
+          0
+        );
+
+
+      // ==================================================
+      // PARSE PERSENTASE
+      //
+      // 90.91  -> 90.91
+      // 90,91  -> 90.91
+      // 90.91% -> 90.91
+      // ==================================================
+
+      const persentaseRaw =
+        String(
+          persentaseInput?.value || ""
         )
-      : "nominal",
-
-  status_pembayaran:
-    document.getElementById(
-      "statusPembayaran"
-    ).value ||
-    "Belum Dibayar",
-
-  tanggal_jatuh_tempo:
-    document.getElementById(
-      "tanggalJatuhTempo"
-    ).value || null,
-
-  tanggal_bayar:
-    document.getElementById(
-      "tanggalBayar"
-    ).value || null,
-
-  syarat_pembayaran:
-    document.getElementById(
-      "syaratPembayaran"
-    ).value.trim() || null
-};
+          .trim()
+          .replace(/%/g, "")
+          .replace(/\s/g, "")
+          .replace(",", ".");
 
 
-console.log(
-  "PAYLOAD TERMIN:",
-  payload
-);
+      const persenValue =
+        persentaseRaw === ""
+          ? null
+          : Number(
+              persentaseRaw
+            );
 
 
-if (!payload.nama_termin) {
-  alert(
-    "Nama termin wajib diisi."
-  );
+      // ==================================================
+      // PARSE NOMINAL
+      //
+      // 899.999.992 -> 899999992
+      // ==================================================
 
-  document.getElementById(
-    "namaTermin"
-  ).focus();
-
-  return;
-}
-
-
-if (
-  payload.nominal === null ||
-  !Number.isFinite(
-    payload.nominal
-  ) ||
-  payload.nominal <= 0
-) {
-  alert(
-    "Nominal termin harus lebih dari Rp 0."
-  );
-
-  nominalInput.focus();
-
-  return;
-}
+      const nominalValue =
+        nominalOrNull(
+          nominalInput?.value
+        );
 
 
-if (
-  nilaiFinal > 0 &&
-  (
-    payload.persentase === null ||
-    !Number.isFinite(
-      payload.persentase
-    ) ||
-    payload.persentase <= 0 ||
-    payload.persentase > 100
-  )
-) {
-  alert(
-    "Persentase harus lebih dari 0 dan maksimal 100%."
-  );
+      // ==================================================
+      // TENTUKAN INPUT TERAKHIR
+      // ==================================================
 
-  persentaseInput.focus();
-
-  return;
-}
-
-    let url;
-    let method;
+      let modeInput =
+        String(
+          inputTerminTerakhir || ""
+        )
+          .trim()
+          .toLowerCase();
 
 
-    // ======================================================
-    // TERMIN PARTNER
-    // ======================================================
+      if (
+        modeInput !== "persentase" &&
+        modeInput !== "nominal"
+      ) {
 
-    if (activePartnerId) {
+        modeInput =
+          persenValue !== null &&
+          Number.isFinite(
+            persenValue
+          ) &&
+          persenValue > 0
+            ? "persentase"
+            : "nominal";
 
-      if (activePartnerTerminId) {
+      }
+
+
+      // ==================================================
+      // PAYLOAD
+      //
+      // Jangan lagi membuat persentase null hanya karena
+      // nilaiFinal tidak ditemukan di frontend.
+      // ==================================================
+
+      const payload = {
+
+        nama_termin:
+          String(
+            namaTerminInput?.value || ""
+          ).trim(),
+
+        persentase:
+          persenValue,
+
+        nominal:
+          nominalValue,
+
+        input_terakhir:
+          modeInput,
+
+        status_pembayaran:
+          String(
+            statusInput?.value ||
+            "Belum Dibayar"
+          ).trim(),
+
+        tanggal_jatuh_tempo:
+          tanggalJatuhTempoInput
+            ?.value ||
+          null,
+
+        tanggal_bayar:
+          tanggalBayarInput
+            ?.value ||
+          null,
+
+        syarat_pembayaran:
+          String(
+            syaratPembayaranInput
+              ?.value || ""
+          ).trim() ||
+          null
+
+      };
+
+
+      // ==================================================
+      // VALIDASI NAMA TERMIN
+      // ==================================================
+
+      if (!payload.nama_termin) {
+
+        alert(
+          "Nama termin wajib diisi."
+        );
+
+        namaTerminInput?.focus();
+
+        return;
+
+      }
+
+
+      // ==================================================
+      // VALIDASI NOMINAL
+      // ==================================================
+
+      if (
+        payload.nominal === null ||
+        !Number.isFinite(
+          payload.nominal
+        ) ||
+        payload.nominal <= 0
+      ) {
+
+        alert(
+          "Nominal termin harus lebih dari Rp 0."
+        );
+
+        nominalInput?.focus();
+
+        return;
+
+      }
+
+
+      // ==================================================
+      // VALIDASI PERSENTASE
+      //
+      // Jika kolom persentase memiliki nilai,
+      // nilainya harus berada pada rentang 0–100.
+      // ==================================================
+
+      if (
+        payload.persentase !== null &&
+        (
+          !Number.isFinite(
+            payload.persentase
+          ) ||
+          payload.persentase <= 0 ||
+          payload.persentase > 100
+        )
+      ) {
+
+        console.error(
+          "PERSENTASE TIDAK VALID:",
+          {
+            nilai_asli:
+              persentaseInput?.value,
+
+            nilai_parse:
+              payload.persentase
+          }
+        );
+
+        alert(
+          "Persentase harus lebih dari 0 dan maksimal 100%."
+        );
+
+        persentaseInput?.focus();
+
+        return;
+
+      }
+
+
+      /*
+       * Apabila nilai final tersedia,
+       * persentase wajib terisi.
+       */
+
+      if (
+        nilaiFinal > 0 &&
+        (
+          payload.persentase === null ||
+          !Number.isFinite(
+            payload.persentase
+          )
+        )
+      ) {
+
+        alert(
+          "Persentase termin wajib diisi."
+        );
+
+        persentaseInput?.focus();
+
+        return;
+
+      }
+
+
+      // ==================================================
+      // TENTUKAN URL DAN METHOD
+      // ==================================================
+
+      let url = "";
+      let method = "";
+
+
+      const partnerAktifId =
+        Number(
+          activePartnerId
+        );
+
+
+      const terminPartnerAktifId =
+        Number(
+          activePartnerTerminId
+        );
+
+
+      const adaPartnerAktif =
+        Number.isInteger(
+          partnerAktifId
+        ) &&
+        partnerAktifId > 0;
+
+
+      const adaTerminPartnerAktif =
+        Number.isInteger(
+          terminPartnerAktifId
+        ) &&
+        terminPartnerAktifId > 0;
+
+
+      // ==================================================
+      // TERMIN PARTNER
+      // ==================================================
+
+      if (adaPartnerAktif) {
+
+        if (
+          adaTerminPartnerAktif
+        ) {
+
+          url =
+            `/api/proyek/partner/termin/${terminPartnerAktifId}`;
+
+          method =
+            "PUT";
+
+        } else {
+
+          url =
+            `/api/proyek/partner/${partnerAktifId}/termin`;
+
+          method =
+            "POST";
+
+        }
+
+      }
+
+
+      // ==================================================
+      // TERMIN KLIEN - EDIT
+      // ==================================================
+
+      else if (terminId) {
 
         url =
-          `/api/proyek/partner/termin/${activePartnerTerminId}`;
+          `/api/proyek/klien/termin/${terminId}`;
 
         method =
           "PUT";
 
-      } else {
+      }
+
+
+      // ==================================================
+      // TERMIN KLIEN - TAMBAH
+      // ==================================================
+
+      else {
+
+        const proyekKlienId =
+          Number(
+            detailData
+              ?.klien
+              ?.proyek_klien_id
+          );
+
+
+        if (
+          !Number.isInteger(
+            proyekKlienId
+          ) ||
+          proyekKlienId <= 0
+        ) {
+
+          alert(
+            "Data proyek klien tidak ditemukan."
+          );
+
+          return;
+
+        }
+
 
         url =
-          `/api/proyek/partner/${activePartnerId}/termin`;
+          `/api/proyek/klien/${proyekKlienId}/termin`;
 
         method =
           "POST";
@@ -2913,131 +3507,397 @@ if (
       }
 
 
-    // ======================================================
-    // TERMIN KLIEN - EDIT
-    // ======================================================
-
-    } else if (terminId) {
-
-      url =
-        `/api/proyek/klien/termin/${terminId}`;
-
-      method =
-        "PUT";
-
-
-    // ======================================================
-    // TERMIN KLIEN - TAMBAH
-    // ======================================================
-
-    } else {
-
-      if (
-        !detailData.klien ||
-        !detailData.klien.proyek_klien_id
-      ) {
-
-        alert(
-          "Data proyek klien tidak ditemukan."
-        );
-
-        return;
-      }
-
-
-      url =
-        `/api/proyek/klien/${detailData.klien.proyek_klien_id}/termin`;
-
-      method =
-        "POST";
-
-    }
-
-
-    try {
+      // ==================================================
+      // DEBUG
+      // ==================================================
 
       console.log(
         "SIMPAN TERMIN:",
         {
           url,
           method,
-          payload,
+
           activePartnerId,
           activePartnerTerminId,
-          jenisProyek:
-            detailData?.proyek?.jenis_proyek
+
+          nilaiFinal,
+
+          inputPersentase:
+            persentaseInput?.value,
+
+          payload
         }
       );
 
-console.log("PAYLOAD TERMIN:", payload);
-console.log(
-  "PAYLOAD TERMIN JSON:",
-  JSON.stringify(
-    payload,
-    null,
-    2
-  )
-);
 
-      const response =
-        await fetch(
-          url,
-          {
-            method,
+      console.log(
+        "PAYLOAD TERMIN JSON:",
+        JSON.stringify(
+          payload,
+          null,
+          2
+        )
+      );
 
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
 
-            body:
-              JSON.stringify(payload)
-          }
+      // ==================================================
+      // KIRIM KE API
+      // ==================================================
+
+      try {
+
+        const response =
+          await fetch(
+            url,
+            {
+              method,
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Accept:
+                  "application/json"
+              },
+
+              credentials:
+                "same-origin",
+
+              body:
+                JSON.stringify(
+                  payload
+                )
+            }
+          );
+
+
+        const result =
+          await response.json();
+
+
+        if (!response.ok) {
+
+          console.error(
+            "RESPONSE ERROR TERMIN:",
+            {
+              status:
+                response.status,
+
+              url,
+
+              payload,
+
+              result
+            }
+          );
+
+
+          throw new Error(
+            result.error ||
+            "Gagal menyimpan termin."
+          );
+
+        }
+
+
+        // ==================================================
+        // TUTUP MODAL DAN RESET
+        // ==================================================
+
+        terminModal.classList.remove(
+          "show"
         );
 
 
-      const result =
-        await response.json();
+        activePartnerId =
+          null;
+
+        activePartnerTerminId =
+          null;
+
+        inputTerminTerakhir =
+          null;
 
 
-      if (!response.ok) {
+        terminForm.reset();
 
-        throw new Error(
-          result.error ||
-          "Gagal menyimpan termin"
+
+        await loadDetail();
+
+
+      } catch (error) {
+
+        console.error(
+          "ERROR SIMPAN TERMIN:",
+          error
+        );
+
+
+        alert(
+          error.message
         );
 
       }
 
+    }
+  );
 
-      terminModal.classList.remove(
-        "show"
+}
+
+
+// ======================================================
+// EDIT TERMIN KLIEN
+// ======================================================
+
+window.editTerminKlien =
+  function (id) {
+
+    const daftarTermin =
+      Array.isArray(
+        detailData
+          ?.klien
+          ?.termin
+      )
+        ? detailData.klien.termin
+        : [];
+
+
+    const termin =
+      daftarTermin.find(
+        item =>
+          Number(item.id) ===
+          Number(id)
       );
 
 
-      // reset mode partner
-      activePartnerId = null;
-      activePartnerTerminId = null;
-
-
-      await loadDetail();
-
-
-    } catch (error) {
-
-      console.error(
-        "ERROR SIMPAN TERMIN:",
-        error
-      );
+    if (!termin) {
 
       alert(
-        error.message
+        "Termin klien tidak ditemukan."
+      );
+
+      return;
+
+    }
+
+
+    // ==================================================
+    // RESET MODE PARTNER
+    // ==================================================
+
+    activePartnerId =
+      null;
+
+    activePartnerTerminId =
+      null;
+
+
+    // ==================================================
+    // NORMALISASI PERSENTASE
+    // ==================================================
+
+    const persentaseText =
+      String(
+        termin.persentase ?? ""
+      )
+        .trim()
+        .replace(/%/g, "")
+        .replace(",", ".");
+
+
+    const persentaseTermin =
+      persentaseText === ""
+        ? null
+        : Number(
+            persentaseText
+          );
+
+
+    // ==================================================
+    // TENTUKAN INPUT TERAKHIR
+    // ==================================================
+
+    inputTerminTerakhir =
+      Number.isFinite(
+        persentaseTermin
+      ) &&
+      persentaseTermin > 0
+        ? "persentase"
+        : "nominal";
+
+
+    // ==================================================
+    // AMBIL ELEMEN
+    // ==================================================
+
+    const terminIdInput =
+      document.getElementById(
+        "terminId"
+      );
+
+    const namaTerminInput =
+      document.getElementById(
+        "namaTermin"
+      );
+
+    const persentaseInput =
+      document.getElementById(
+        "persentaseTermin"
+      );
+
+    const nominalInput =
+      document.getElementById(
+        "nominalTermin"
+      );
+
+    const statusInput =
+      document.getElementById(
+        "statusPembayaran"
+      );
+
+    const tanggalJatuhTempoInput =
+      document.getElementById(
+        "tanggalJatuhTempo"
+      );
+
+    const tanggalBayarInput =
+      document.getElementById(
+        "tanggalBayar"
+      );
+
+    const syaratPembayaranInput =
+      document.getElementById(
+        "syaratPembayaran"
+      );
+
+    const modalTitle =
+      document.getElementById(
+        "terminModalTitle"
+      );
+
+
+    // ==================================================
+    // ISI FORM
+    // ==================================================
+
+    if (terminIdInput) {
+
+      terminIdInput.value =
+        String(termin.id);
+
+    }
+
+
+    if (namaTerminInput) {
+
+      namaTerminInput.value =
+        termin.nama_termin ||
+        "";
+
+    }
+
+
+    /*
+     * Atur mode setelah activePartnerId
+     * dikosongkan agar data aktif adalah klien.
+     */
+
+    aturInputTermin();
+
+
+    if (persentaseInput) {
+
+      if (
+        persentaseTermin !== null &&
+        Number.isFinite(
+          persentaseTermin
+        ) &&
+        persentaseTermin > 0
+      ) {
+
+        persentaseInput.disabled =
+          false;
+
+        persentaseInput.required =
+          true;
+
+      }
+
+
+      persentaseInput.value =
+        persentaseTermin !== null &&
+        Number.isFinite(
+          persentaseTermin
+        )
+          ? String(
+              persentaseTermin
+            )
+          : "";
+
+    }
+
+
+    if (nominalInput) {
+
+      setNilaiNominal(
+        nominalInput,
+        termin.nominal
       );
 
     }
 
-  }
-);
+
+    if (statusInput) {
+
+      statusInput.value =
+        termin.status_pembayaran ||
+        "Belum Dibayar";
+
+    }
+
+
+    if (tanggalJatuhTempoInput) {
+
+      tanggalJatuhTempoInput.value =
+        tanggalInput(
+          termin.tanggal_jatuh_tempo
+        );
+
+    }
+
+
+    if (tanggalBayarInput) {
+
+      tanggalBayarInput.value =
+        tanggalInput(
+          termin.tanggal_bayar
+        );
+
+    }
+
+
+    if (syaratPembayaranInput) {
+
+      syaratPembayaranInput.value =
+        termin.syarat_pembayaran ||
+        "";
+
+    }
+
+
+    if (modalTitle) {
+
+      modalTitle.textContent =
+        "Edit Termin Klien";
+
+    }
+
+
+    terminModal.classList.add(
+      "show"
+    );
+
+  };
 
 // ======================================================
 // EDIT TERMIN KLIEN
@@ -4555,22 +5415,46 @@ async function bukaDokumenPartner(
 // ======================================================
 
 function editTerminPartner(id) {
+
   let terminDitemukan = null;
   let partnerDitemukan = null;
 
-  const partners =
-    detailData?.partners || [];
 
-  // Cari termin dari seluruh partner
-  for (const partner of partners) {
+  const partners =
+    Array.isArray(
+      detailData?.partners
+    )
+      ? detailData.partners
+      : [];
+
+
+  // ==================================================
+  // CARI TERMIN DARI SELURUH PARTNER
+  // ==================================================
+
+  for (
+    const partner
+    of partners
+  ) {
+
+    const daftarTermin =
+      Array.isArray(
+        partner?.termin
+      )
+        ? partner.termin
+        : [];
+
+
     const termin =
-      (partner.termin || []).find(
+      daftarTermin.find(
         item =>
           Number(item.id) ===
           Number(id)
       );
 
+
     if (termin) {
+
       terminDitemukan =
         termin;
 
@@ -4578,123 +5462,409 @@ function editTerminPartner(id) {
         partner;
 
       break;
+
     }
+
   }
+
 
   if (
     !terminDitemukan ||
     !partnerDitemukan
   ) {
+
     alert(
       "Termin partner tidak ditemukan."
     );
 
     return;
+
   }
 
-  // Tentukan partner dan termin aktif
-  activePartnerId =
+
+  // ==================================================
+  // TENTUKAN ID PARTNER PROYEK
+  // ==================================================
+
+  const proyekPartnerId =
     Number(
       partnerDitemukan
-        .proyek_partner_id
+        .proyek_partner_id ??
+      partnerDitemukan.id
     );
+
+
+  if (
+    !Number.isInteger(
+      proyekPartnerId
+    ) ||
+    proyekPartnerId <= 0
+  ) {
+
+    console.error(
+      "DATA PARTNER TIDAK VALID:",
+      partnerDitemukan
+    );
+
+    alert(
+      "ID partner proyek tidak valid."
+    );
+
+    return;
+
+  }
+
+
+ activePartnerId =
+  Number(
+    partnerDitemukan
+      .proyek_partner_id ??
+    partnerDitemukan.id
+  );
 
   activePartnerTerminId =
     Number(
       terminDitemukan.id
     );
 
-  // Tentukan input yang memiliki data
+
+  // ==================================================
+  // AMBIL NILAI FINAL PARTNER
+  // ==================================================
+
+  const nilaiFinalPartner =
+    ambilNilaiFinal(
+      partnerDitemukan
+    );
+
+
+  // ==================================================
+  // NORMALISASI PERSENTASE
+  // ==================================================
+
+  const persentaseText =
+    String(
+      terminDitemukan
+        .persentase ?? ""
+    )
+      .trim()
+      .replace(/%/g, "")
+      .replace(",", ".");
+
+
+  let persentaseValue =
+    persentaseText
+      ? Number(persentaseText)
+      : null;
+
+
   if (
-    Number(
-      terminDitemukan.persentase
-    ) > 0
+    !Number.isFinite(
+      persentaseValue
+    )
   ) {
-    inputTerminTerakhir =
-      "persentase";
-  } else {
-    inputTerminTerakhir =
-      "nominal";
+
+    persentaseValue =
+      null;
+
   }
 
-  // Hidden ID
-  document.getElementById(
-    "terminId"
-  ).value =
-    terminDitemukan.id;
 
-  // Nama termin
-  document.getElementById(
-    "namaTermin"
-  ).value =
-    terminDitemukan.nama_termin ||
-    "";
+  // ==================================================
+  // NORMALISASI NOMINAL
+  // ==================================================
 
-  // Atur kondisi input terlebih dahulu
+  let nominalValue =
+    Number(
+      terminDitemukan
+        .nominal || 0
+    );
+
+
+  if (
+    !Number.isFinite(
+      nominalValue
+    )
+  ) {
+
+    nominalValue =
+      0;
+
+  }
+
+
+  // ==================================================
+  // HITUNG NILAI YANG BELUM TERSEDIA
+  // ==================================================
+
+  if (
+    (
+      persentaseValue === null ||
+      persentaseValue <= 0
+    ) &&
+    nominalValue > 0 &&
+    nilaiFinalPartner > 0
+  ) {
+
+    persentaseValue =
+      Number(
+        (
+          nominalValue /
+          nilaiFinalPartner *
+          100
+        ).toFixed(2)
+      );
+
+  }
+
+
+  if (
+    nominalValue <= 0 &&
+    persentaseValue !== null &&
+    persentaseValue > 0 &&
+    nilaiFinalPartner > 0
+  ) {
+
+    nominalValue =
+      Math.round(
+        nilaiFinalPartner *
+        persentaseValue /
+        100
+      );
+
+  }
+
+
+  // ==================================================
+  // TENTUKAN INPUT TERAKHIR
+  // ==================================================
+
+  inputTerminTerakhir =
+    persentaseValue !== null &&
+    persentaseValue > 0
+      ? "persentase"
+      : "nominal";
+
+
+  // ==================================================
+  // AMBIL ELEMEN FORM
+  // ==================================================
+
+  const terminIdInput =
+    document.getElementById(
+      "terminId"
+    );
+
+  const namaTerminInput =
+    document.getElementById(
+      "namaTermin"
+    );
+
+  const persentaseInput =
+    document.getElementById(
+      "persentaseTermin"
+    );
+
+  const nominalInput =
+    document.getElementById(
+      "nominalTermin"
+    );
+
+  const statusInput =
+    document.getElementById(
+      "statusPembayaran"
+    );
+
+  const jatuhTempoInput =
+    document.getElementById(
+      "tanggalJatuhTempo"
+    );
+
+  const tanggalBayarInput =
+    document.getElementById(
+      "tanggalBayar"
+    );
+
+  const syaratInput =
+    document.getElementById(
+      "syaratPembayaran"
+    );
+
+  const modalTitle =
+    document.getElementById(
+      "terminModalTitle"
+    );
+
+
+  // ==================================================
+  // ISI DATA FORM
+  // ==================================================
+
+  if (terminIdInput) {
+
+    terminIdInput.value =
+      String(
+        terminDitemukan.id
+      );
+
+  }
+
+
+  if (namaTerminInput) {
+
+    namaTerminInput.value =
+      terminDitemukan
+        .nama_termin ||
+      "";
+
+  }
+
+
+  /*
+   * Dipanggil setelah activePartnerId terisi
+   * agar nilai final diambil dari partner,
+   * bukan dari klien.
+   */
+
   aturInputTermin();
 
-  // Persentase
-  document.getElementById(
-    "persentaseTermin"
-  ).value =
-    terminDitemukan.persentase ??
-    "";
 
-  // Nominal
+  if (persentaseInput) {
+
+    /*
+     * Jika data lama sudah mempunyai
+     * persentase, jangan dibuat disabled.
+     */
+
+    if (
+      persentaseValue !== null &&
+      persentaseValue > 0
+    ) {
+
+      persentaseInput.disabled =
+        false;
+
+      persentaseInput.required =
+        true;
+
+    }
+
+
+    persentaseInput.value =
+      persentaseValue !== null &&
+      persentaseValue > 0
+        ? String(
+            Number(
+              persentaseValue.toFixed(2)
+            )
+          )
+        : "";
+
+  }
+
+
+  if (nominalInput) {
+
     setNilaiNominal(
-      "nominalTermin",
-      terminDitemukan.nominal
+      nominalInput,
+      nominalValue > 0
+        ? nominalValue
+        : ""
     );
 
-  // Status pembayaran
-  document.getElementById(
-    "statusPembayaran"
-  ).value =
-    terminDitemukan
-      .status_pembayaran ||
-    "Belum Dibayar";
+  }
 
-  // Tanggal jatuh tempo
-  document.getElementById(
-    "tanggalJatuhTempo"
-  ).value =
-    tanggalInput(
+
+  if (statusInput) {
+
+    statusInput.value =
       terminDitemukan
-        .tanggal_jatuh_tempo
-    );
+        .status_pembayaran ||
+      "Belum Dibayar";
 
-  // Tanggal bayar
-  document.getElementById(
-    "tanggalBayar"
-  ).value =
-    tanggalInput(
+  }
+
+
+  if (jatuhTempoInput) {
+
+    jatuhTempoInput.value =
+      tanggalInput(
+        terminDitemukan
+          .tanggal_jatuh_tempo
+      );
+
+  }
+
+
+  if (tanggalBayarInput) {
+
+    tanggalBayarInput.value =
+      tanggalInput(
+        terminDitemukan
+          .tanggal_bayar
+      );
+
+  }
+
+
+  if (syaratInput) {
+
+    syaratInput.value =
       terminDitemukan
-        .tanggal_bayar
-    );
+        .syarat_pembayaran ||
+      "";
 
-  // Syarat pembayaran
-  document.getElementById(
-    "syaratPembayaran"
-  ).value =
-    terminDitemukan
-      .syarat_pembayaran ||
-    "";
+  }
 
-  // Judul modal
-  document.getElementById(
-    "terminModalTitle"
-  ).textContent =
-    `Edit Termin Partner - ${
-      partnerDitemukan.nama_partner ||
-      ""
-    }`;
 
-  // Buka modal
+  if (modalTitle) {
+
+    modalTitle.textContent =
+      `Edit Termin Partner - ${
+        partnerDitemukan
+          .nama_partner ||
+        ""
+      }`;
+
+  }
+
+
+  // ==================================================
+  // DEBUG SEMENTARA
+  // ==================================================
+
+  console.log(
+    "EDIT TERMIN PARTNER:",
+    {
+      proyekPartnerId:
+        activePartnerId,
+
+      terminId:
+        activePartnerTerminId,
+
+      nilaiFinalPartner,
+
+      persentase:
+        persentaseValue,
+
+      nominal:
+        nominalValue,
+
+      inputTerakhir:
+        inputTerminTerakhir
+    }
+  );
+
+
+  // ==================================================
+  // BUKA MODAL
+  // ==================================================
+
   terminModal.classList.add(
     "show"
   );
-}
 
+}
 // ======================================================
 // DELETE TERMIN
 // ======================================================
@@ -9320,40 +10490,72 @@ async function loadDetailProjectTask() {
       "detailProjectTaskBody"
     );
 
+
   if (!tbody) {
     return;
   }
 
-  const params =
-    new URLSearchParams(
-      window.location.search
-    );
 
-  const proyekId =
-    params.get("id");
+  // ====================================================
+  // VALIDASI ID PROYEK
+  // ====================================================
 
   if (!proyekId) {
 
     tbody.innerHTML = `
       <tr>
-        <td colspan="9">
+
+        <td
+          colspan="11"
+          class="task-loading-cell"
+        >
           ID proyek tidak ditemukan.
         </td>
+
       </tr>
     `;
 
     return;
   }
 
+
+  // ====================================================
+  // STATUS MEMUAT
+  // ====================================================
+
+  tbody.innerHTML = `
+    <tr>
+
+      <td
+        colspan="11"
+        class="task-loading-cell"
+      >
+        Memuat task...
+      </td>
+
+    </tr>
+  `;
+
+
   try {
 
-    const response =
-      await fetch(
-        `/api/proyek/${encodeURIComponent(proyekId)}/task-list`
-      );
+    // ==================================================
+    // AMBIL TASK BERDASARKAN PROYEK
+    // ==================================================
+
+   const response = await fetch(
+  `/api/proyek/${encodeURIComponent(proyekId)}/task-list`,
+  {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store"
+  }
+);
+
 
     const data =
       await response.json();
+
 
     if (!response.ok) {
 
@@ -9364,6 +10566,7 @@ async function loadDetailProjectTask() {
 
     }
 
+
     if (!Array.isArray(data)) {
 
       throw new Error(
@@ -9372,182 +10575,292 @@ async function loadDetailProjectTask() {
 
     }
 
-    if (data.length === 0) {
+
+    detailProjectTaskData =
+      data;
+
+
+    // ==================================================
+    // DATA KOSONG
+    // ==================================================
+
+    if (
+      detailProjectTaskData.length === 0
+    ) {
 
       tbody.innerHTML = `
         <tr>
+
           <td
-            colspan="9"
-            style="
-              text-align:center;
-              padding:30px;
-              color:#64748b;
-            "
+            colspan="11"
+            class="task-loading-cell"
           >
             Belum ada task pada proyek ini.
           </td>
+
         </tr>
       `;
 
       return;
     }
 
+
+    // ==================================================
+    // RENDER TASK
+    // ==================================================
+
     tbody.innerHTML =
-      data.map(item => {
+      detailProjectTaskData
+        .map(item => {
 
-        const statusClass =
-          String(item.status || "")
-            .toLowerCase()
-            .trim()
-            .replace(/[^a-z0-9]+/g, "-");
+          // ============================================
+          // STATUS CLASS
+          // ============================================
 
-        const catatan =
-          formatTaskNote(
-            item.catatan
-          );
+          const statusClass =
+            String(
+              item.status || ""
+            )
+              .trim()
+              .toLowerCase()
+              .replace(
+                /[^a-z0-9]+/g,
+                "-"
+              );
 
-        const link =
-          String(item.link || "").trim();
 
-        let linkHtml = "-";
+          // ============================================
+          // CATATAN
+          // ============================================
 
-        if (link) {
+          const catatan =
+            buatCatatanTaskDetail(
+              item.catatan,
+              item.id
+            );
 
-          try {
 
-            const url =
-              new URL(link);
+          // ============================================
+          // LINK
+          // ============================================
 
-            if (
-              url.protocol === "http:" ||
-              url.protocol === "https:"
-            ) {
+          const link =
+            String(
+              item.link || ""
+            ).trim();
 
-              linkHtml = `
-                <a
-                  href="${escapeTaskHtml(url.href)}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="detail-task-link"
-                >
-                  ↗
-                </a>
-              `;
+
+          let linkHtml =
+            `<span class="task-empty-value">-</span>`;
+
+
+          if (link) {
+
+            try {
+
+              const url =
+                new URL(link);
+
+
+              if (
+                url.protocol === "http:" ||
+                url.protocol === "https:"
+              ) {
+
+                linkHtml = `
+                  <a
+                    href="${escapeTaskHtml(url.href)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="detail-task-link"
+                    title="Buka Link"
+                  >
+                    ↗
+                  </a>
+                `;
+
+              }
+
+            } catch (error) {
+
+              linkHtml =
+                `<span class="task-empty-value">-</span>`;
 
             }
 
-          } catch (error) {
-
-            linkHtml = "-";
-
           }
 
-        }
 
-        return `
-          <tr>
+          // ============================================
+          // LABEL TASK / SUB TASK
+          // ============================================
 
-            <!-- PIC -->
+          const tipeTaskHtml =
+            item.parent_task_id
+              ? `
+                <span class="task-parent-label">
+                  Sub Task
+                </span>
+              `
+              : `
+                <span class="task-main-label">
+                  Task Utama
+                </span>
+              `;
 
-            <td class="task-cell-pic">
 
-              <strong>
-                ${escapeTaskHtml(
-                  item.nama_pic || "-"
+          // ============================================
+          // BARIS TASK
+          // ============================================
+
+          return `
+            <tr>
+
+              <!-- PIC -->
+
+              <td class="task-cell-pic">
+
+                <span class="task-pic-name">
+                  ${escapeTaskHtml(
+                    item.nama_pic ||
+                    item.dibuat_oleh ||
+                    "-"
+                  )}
+                </span>
+
+              </td>
+
+
+              <!-- TASK -->
+
+              <td class="task-cell-name">
+
+                <div class="task-name-value">
+                  ${escapeTaskHtml(
+                    item.task || "-"
+                  )}
+                </div>
+
+                ${tipeTaskHtml}
+
+              </td>
+
+
+              <!-- CATATAN -->
+
+              <td class="task-cell-catatan">
+
+                ${catatan}
+
+              </td>
+
+
+              <!-- LINK -->
+
+              <td class="task-cell-link">
+
+                ${linkHtml}
+
+              </td>
+
+
+              <!-- STATUS -->
+
+              <td class="task-cell-status">
+
+                <span
+                  class="
+                    detail-task-status
+                    detail-task-status-${statusClass}
+                  "
+                >
+                  ${escapeTaskHtml(
+                    item.status || "-"
+                  )}
+                </span>
+
+              </td>
+
+
+              <!-- TANGGAL MULAI -->
+
+              <td class="task-cell-date">
+
+                ${formatTaskDate(
+                  item.tanggal_mulai
                 )}
-              </strong>
 
-            </td>
+              </td>
 
-            <!-- TASK -->
 
-            <td class="task-cell-name">
+              <!-- TARGET DATE -->
 
-              <strong>
-                ${escapeTaskHtml(
-                  item.task || "-"
+              <td class="task-cell-date">
+
+                ${formatTaskDate(
+                  item.target_date
                 )}
-              </strong>
 
-            </td>
+              </td>
 
-            <!-- CATATAN -->
 
-            <td class="task-cell-catatan">
+              <!-- TINDAK LANJUT -->
 
-  <div class="detail-task-note">${catatan}</div>
+              <td class="task-cell-date">
 
-</td>
-
-            <!-- LINK -->
-
-            <td class="task-cell-link">
-
-              ${linkHtml}
-
-            </td>
-
-            <!-- STATUS -->
-
-            <td class="task-cell-status">
-
-              <span
-                class="
-                  detail-task-status
-                  detail-task-status-${statusClass}
-                "
-              >
-                ${escapeTaskHtml(
-                  item.status || "-"
+                ${formatTaskDate(
+                  item.tanggal_tindak_lanjut
                 )}
-              </span>
 
-            </td>
+              </td>
 
-            <!-- TANGGAL MULAI -->
 
-            <td class="task-cell-date">
+              <!-- TANGGAL SELESAI -->
 
-              ${formatTaskDate(
-                item.tanggal_mulai
-              )}
+              <td class="task-cell-date">
 
-            </td>
+                ${formatTaskDate(
+                  item.tanggal_selesai
+                )}
 
-            <!-- TARGET DATE -->
+              </td>
 
-            <td class="task-cell-date">
 
-              ${formatTaskDate(
-                item.target_date
-              )}
 
-            </td>
+              <!-- AKSI -->
 
-            <!-- TANGGAL SELESAI -->
+              <td class="task-cell-action">
 
-            <td class="task-cell-date">
+                <div class="task-action-buttons">
 
-              ${formatTaskDate(
-                item.tanggal_selesai
-              )}
+                  <button
+                    type="button"
+                    class="task-action-button edit"
+                    onclick="editTaskDetail(${Number(item.id)})"
+                    title="Edit Task"
+                  >
+                    Edit
+                  </button>
 
-            </td>
+                  <button
+                    type="button"
+                    class="task-action-button delete"
+                    onclick="hapusTaskDetail(${Number(item.id)})"
+                    title="Hapus Task"
+                  >
+                    Hapus
+                  </button>
 
-            <!-- DIBUAT -->
+                </div>
 
-            <td class="task-cell-date">
+              </td>
 
-              ${formatTaskDateTime(
-                item.created_at
-              )}
+            </tr>
+          `;
 
-            </td>
+        })
+        .join("");
 
-          </tr>
-        `;
-
-      }).join("");
 
   } catch (error) {
 
@@ -9556,19 +10869,865 @@ async function loadDetailProjectTask() {
       error
     );
 
+
+    detailProjectTaskData =
+      [];
+
+
     tbody.innerHTML = `
       <tr>
-        <td colspan="9">
-          Gagal mengambil task.
+
+        <td
+          colspan="11"
+          class="task-loading-cell task-error-cell"
+        >
+          ${escapeTaskHtml(
+            error.message ||
+            "Gagal mengambil task"
+          )}
         </td>
+
       </tr>
     `;
 
   }
 
 }
-
 loadDetailProjectTask();
+
+// ======================================================
+// MODAL TASK DETAIL PROYEK
+// ======================================================
+
+const taskDetailModal =
+  document.getElementById(
+    "taskDetailModal"
+  );
+
+const taskDetailForm =
+  document.getElementById(
+    "taskDetailForm"
+  );
+
+const taskDetailNeedFollowUp =
+  document.getElementById(
+    "taskDetailNeedFollowUp"
+  );
+
+const taskDetailFollowUpFields =
+  document.getElementById(
+    "taskDetailFollowUpFields"
+  );
+
+const taskDetailStatus =
+  document.getElementById(
+    "taskDetailStatus"
+  );
+
+
+function kategoriProyekDetail() {
+
+  const daftarKategori =
+    detailData
+      ?.proyek
+      ?.nama_kategori_produk_list;
+
+
+  if (
+    Array.isArray(
+      daftarKategori
+    ) &&
+    daftarKategori.length > 0
+  ) {
+    return daftarKategori.join(
+      ", "
+    );
+  }
+
+
+  return (
+    detailData
+      ?.proyek
+      ?.nama_kategori_produk ||
+    "Tanpa Kategori"
+  );
+}
+
+
+function bukaTaskDetailModal() {
+
+  if (!taskDetailModal) {
+    return;
+  }
+
+
+  taskDetailModal.classList.add(
+    "show"
+  );
+
+  document.body.classList.add(
+    "modal-open"
+  );
+}
+
+
+function tutupTaskDetailModal() {
+
+  if (!taskDetailModal) {
+    return;
+  }
+
+
+  taskDetailModal.classList.remove(
+    "show"
+  );
+
+  document.body.classList.remove(
+    "modal-open"
+  );
+
+
+  activeTaskDetailId =
+    null;
+}
+
+
+function aturFieldFollowUpTaskDetail() {
+  const aktif = Boolean(
+    taskDetailNeedFollowUp?.checked
+  );
+
+  const sedangEdit = Boolean(activeTaskDetailId);
+
+  if (taskDetailFollowUpFields) {
+    taskDetailFollowUpFields.hidden = !aktif;
+  }
+
+  const subTaskInput = document.getElementById(
+    "taskDetailSubTask"
+  );
+
+  const tanggalInput = document.getElementById(
+    "taskDetailTanggalTindakLanjut"
+  );
+
+  if (subTaskInput) {
+    // Sub Task wajib hanya ketika menambahkan task baru.
+    subTaskInput.required = aktif && !sedangEdit;
+  }
+
+  if (tanggalInput) {
+    tanggalInput.required = aktif;
+  }
+
+  if (aktif && taskDetailStatus) {
+    taskDetailStatus.value = "Need Follow Up";
+  } else if (
+    taskDetailStatus?.value === "Need Follow Up"
+  ) {
+    taskDetailStatus.value = "Not Started";
+  }
+}
+
+
+function resetTaskDetailForm() {
+
+  taskDetailForm?.reset();
+
+
+  activeTaskDetailId =
+    null;
+
+
+  document.getElementById(
+    "taskDetailId"
+  ).value =
+    "";
+
+
+  document.getElementById(
+    "taskDetailParentId"
+  ).value =
+    "";
+
+
+  document.getElementById(
+    "taskDetailProyek"
+  ).value =
+    detailData
+      ?.proyek
+      ?.nama_proyek ||
+    "";
+
+
+  document.getElementById(
+    "taskDetailKategori"
+  ).value =
+    kategoriProyekDetail();
+
+
+  document.getElementById(
+    "taskDetailStatus"
+  ).value =
+    "Not Started";
+
+
+  document.getElementById(
+    "taskDetailModalTitle"
+  ).textContent =
+    "Tambah Task";
+
+
+  document.getElementById(
+    "simpanTaskDetailButton"
+  ).textContent =
+    "Simpan Task";
+
+
+  aturFieldFollowUpTaskDetail();
+}
+
+
+document.getElementById(
+  "tambahTaskDetailButton"
+)?.addEventListener(
+  "click",
+  () => {
+
+    resetTaskDetailForm();
+
+    bukaTaskDetailModal();
+
+  }
+);
+
+
+document.getElementById(
+  "tutupTaskDetailModal"
+)?.addEventListener(
+  "click",
+  tutupTaskDetailModal
+);
+
+
+document.getElementById(
+  "batalTaskDetailButton"
+)?.addEventListener(
+  "click",
+  tutupTaskDetailModal
+);
+
+
+taskDetailModal?.addEventListener(
+  "click",
+  event => {
+
+    if (
+      event.target ===
+      taskDetailModal
+    ) {
+      tutupTaskDetailModal();
+    }
+
+  }
+);
+
+
+taskDetailNeedFollowUp
+  ?.addEventListener(
+    "change",
+    aturFieldFollowUpTaskDetail
+  );
+
+
+taskDetailStatus
+  ?.addEventListener(
+    "change",
+    () => {
+
+      if (
+        taskDetailStatus.value ===
+        "Need Follow Up"
+      ) {
+
+        taskDetailNeedFollowUp.checked =
+          true;
+
+      } else if (
+        taskDetailNeedFollowUp.checked
+      ) {
+
+        taskDetailNeedFollowUp.checked =
+          false;
+
+      }
+
+
+      aturFieldFollowUpTaskDetail();
+
+    }
+  );
+
+
+// ======================================================
+// EDIT TASK
+// ======================================================
+
+window.editTaskDetail =
+  function (id) {
+
+    const item =
+      detailProjectTaskData.find(
+        taskItem =>
+          Number(taskItem.id) ===
+          Number(id)
+      );
+
+
+    if (!item) {
+
+      alert(
+        "Task tidak ditemukan."
+      );
+
+      return;
+
+    }
+
+
+    activeTaskDetailId =
+      Number(item.id);
+
+
+    document.getElementById(
+      "taskDetailId"
+    ).value =
+      item.id;
+
+
+    document.getElementById(
+      "taskDetailParentId"
+    ).value =
+      item.parent_task_id || "";
+
+
+    document.getElementById(
+      "taskDetailProyek"
+    ).value =
+      item.nama_proyek ||
+      detailData
+        ?.proyek
+        ?.nama_proyek ||
+      "";
+
+
+    document.getElementById(
+      "taskDetailKategori"
+    ).value =
+      item.kategori ||
+      kategoriProyekDetail();
+
+
+    document.getElementById(
+      "taskDetailTargetDate"
+    ).value =
+      tanggalInput(
+        item.target_date
+      );
+
+
+    document.getElementById(
+      "taskDetailTask"
+    ).value =
+      item.task || "";
+
+
+    document.getElementById(
+      "taskDetailLink"
+    ).value =
+      item.link || "";
+
+
+    document.getElementById(
+      "taskDetailCatatan"
+    ).value =
+      item.catatan || "";
+
+
+    document.getElementById(
+      "taskDetailStatus"
+    ).value =
+      item.status ||
+      "Not Started";
+
+
+    document.getElementById(
+      "taskDetailNeedFollowUp"
+    ).checked =
+      Boolean(
+        item.need_follow_up
+      );
+
+
+    document.getElementById(
+      "taskDetailTanggalTindakLanjut"
+    ).value =
+      tanggalInput(
+        item.tanggal_tindak_lanjut
+      );
+
+
+    document.getElementById(
+      "taskDetailSubTask"
+    ).value =
+      "";
+
+
+    document.getElementById(
+      "taskDetailModalTitle"
+    ).textContent =
+      item.parent_task_id
+        ? "Edit Sub Task"
+        : "Edit Task";
+
+
+    document.getElementById(
+      "simpanTaskDetailButton"
+    ).textContent =
+      "Simpan Perubahan";
+
+
+    aturFieldFollowUpTaskDetail();
+
+    bukaTaskDetailModal();
+
+  };
+
+
+// ======================================================
+// SIMPAN TASK
+// ======================================================
+// ======================================================
+// SIMPAN TASK
+// ======================================================
+
+let taskDetailSaving = false;
+
+async function kirimTaskDetail(url, method, payload) {
+  const response = await fetch(url, {
+    method,
+    credentials: "same-origin",
+
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json"
+    },
+
+    body: JSON.stringify(payload)
+  });
+
+  let result;
+
+  try {
+    result = await response.json();
+  } catch (error) {
+    throw new Error(
+      `${method} ${url}: respons API bukan JSON ` +
+      `(HTTP ${response.status}).`
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      result?.error ||
+      `Gagal menyimpan task (HTTP ${response.status}).`
+    );
+  }
+
+  const data = result?.data || result;
+  const id = Number(data?.id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new Error(
+      "API merespons berhasil, tetapi ID task tidak tersedia. " +
+      "Periksa Response sebelum mencoba menyimpan ulang."
+    );
+  }
+
+  if (
+    Number(data.proyek_id) !==
+    Number(payload.proyek_id)
+  ) {
+    throw new Error(
+      "Proyek pada hasil API berbeda dari proyek yang disimpan."
+    );
+  }
+
+  return data;
+}
+
+if (!taskDetailForm) {
+  console.error(
+    "Form taskDetailForm tidak ditemukan; " +
+    "handler Simpan belum terpasang."
+  );
+} else {
+  taskDetailForm.addEventListener(
+    "submit",
+    async event => {
+      event.preventDefault();
+
+      if (taskDetailSaving) return;
+
+      let simpanButton;
+      let taskTersimpan = null;
+      let semuaTersimpan = false;
+
+      const field = id => {
+        const element = document.getElementById(id);
+
+        if (!element) {
+          throw new Error(
+            `Elemen form ${id} tidak ditemukan.`
+          );
+        }
+
+        return element;
+      };
+
+      try {
+        simpanButton = field(
+          "simpanTaskDetailButton"
+        );
+
+        const taskValue = field(
+          "taskDetailTask"
+        ).value.trim();
+
+        const targetDate = field(
+          "taskDetailTargetDate"
+        ).value;
+
+        const link = field(
+          "taskDetailLink"
+        ).value.trim();
+
+        const catatan = field(
+          "taskDetailCatatan"
+        ).value.trim();
+
+        const status = field(
+          "taskDetailStatus"
+        ).value;
+
+        const needFollowUp = field(
+          "taskDetailNeedFollowUp"
+        ).checked;
+
+        const tanggalTindakLanjut = field(
+          "taskDetailTanggalTindakLanjut"
+        ).value;
+
+        const subTaskInput = field(
+          "taskDetailSubTask"
+        );
+
+        const subTask =
+          subTaskInput.value.trim();
+
+        const parentTaskId = field(
+          "taskDetailParentId"
+        ).value;
+
+        const taskId = activeTaskDetailId
+          ? Number(activeTaskDetailId)
+          : null;
+
+        const proyekIdValue = Number(proyekId);
+
+        if (
+          !Number.isInteger(proyekIdValue) ||
+          proyekIdValue <= 0
+        ) {
+          throw new Error(
+            "ID proyek pada URL tidak valid."
+          );
+        }
+
+        if (
+          taskId !== null &&
+          (
+            !Number.isInteger(taskId) ||
+            taskId <= 0
+          )
+        ) {
+          throw new Error(
+            "ID task yang diedit tidak valid."
+          );
+        }
+
+        if (!taskValue) {
+          throw new Error("Task wajib diisi.");
+        }
+
+        if (taskValue.length > 250) {
+          throw new Error(
+            "Task maksimal 250 karakter."
+          );
+        }
+
+        if (!targetDate) {
+          throw new Error(
+            "Target Date wajib diisi."
+          );
+        }
+
+        if (
+          needFollowUp &&
+          !tanggalTindakLanjut
+        ) {
+          throw new Error(
+            "Tanggal Tindak Lanjut wajib diisi."
+          );
+        }
+
+        if (
+          needFollowUp &&
+          !taskId &&
+          !subTask
+        ) {
+          throw new Error(
+            "Sub Task wajib diisi apabila " +
+            "Need Follow Up dipilih."
+          );
+        }
+
+        if (
+          needFollowUp &&
+          subTask.length > 250
+        ) {
+          throw new Error(
+            "Sub Task maksimal 250 karakter."
+          );
+        }
+
+        const payload = {
+          proyek_id: proyekIdValue,
+
+          parent_task_id: parentTaskId
+            ? Number(parentTaskId)
+            : null,
+
+          task: taskValue,
+          catatan: catatan || null,
+          link: link || null,
+          target_date: targetDate,
+
+          status: needFollowUp
+            ? "Need Follow Up"
+            : status,
+
+          need_follow_up: needFollowUp,
+
+          tanggal_tindak_lanjut: needFollowUp
+            ? tanggalTindakLanjut
+            : null
+        };
+
+        taskDetailSaving = true;
+        simpanButton.disabled = true;
+        simpanButton.textContent = "Menyimpan...";
+
+        const method = taskId
+          ? "PUT"
+          : "POST";
+
+        const url = taskId
+          ? `/api/task-list/${taskId}`
+          : "/api/task-list";
+
+        const saved = await kirimTaskDetail(
+          url,
+          method,
+          payload
+        );
+
+        taskTersimpan = saved;
+
+        // Pertahankan ID jika pembuatan Sub Task gagal.
+        // Percobaan ulang memperbarui task yang sama.
+        activeTaskDetailId = Number(saved.id);
+
+        field("taskDetailId").value = saved.id;
+
+        // Buat Sub Task baru saat Tambah maupun Edit.
+        if (needFollowUp && subTask) {
+          await kirimTaskDetail(
+            "/api/task-list",
+            "POST",
+            {
+              proyek_id: proyekIdValue,
+              parent_task_id: Number(saved.id),
+
+              task: subTask,
+              catatan: null,
+              link: link || null,
+
+              target_date: tanggalTindakLanjut,
+              status: "Not Started",
+              need_follow_up: false,
+              tanggal_tindak_lanjut: null
+            }
+          );
+
+          // Kosongkan setelah Sub Task berhasil disimpan.
+          subTaskInput.value = "";
+        }
+
+        semuaTersimpan = true;
+      } catch (error) {
+        console.error(
+          "ERROR SAVE TASK DETAIL:",
+          error
+        );
+
+        const pesan = taskTersimpan
+          ? (
+              `Task sudah tersimpan ` +
+              `(ID ${taskTersimpan.id}), ` +
+              `tetapi proses berikutnya gagal: ` +
+              error.message
+            )
+          : (
+              error.message ||
+              "Gagal menyimpan task."
+            );
+
+        alert(pesan);
+      } finally {
+        taskDetailSaving = false;
+
+        if (simpanButton) {
+          simpanButton.disabled = false;
+
+          simpanButton.textContent =
+            activeTaskDetailId
+              ? "Simpan Perubahan"
+              : "Simpan Task";
+        }
+      }
+
+      if (!semuaTersimpan) return;
+
+      // Refresh dipisahkan dari proses penyimpanan.
+      tutupTaskDetailModal();
+
+      if (simpanButton) {
+        simpanButton.textContent = "Simpan Task";
+      }
+
+      try {
+        await loadDetailProjectTask();
+        await loadLastUpdate();
+      } catch (error) {
+        console.error(
+          "ERROR REFRESH SETELAH SAVE TASK:",
+          error
+        );
+
+        alert(
+          "Task sudah tersimpan, tetapi tampilan " +
+          "gagal dimuat ulang. Muat ulang halaman."
+        );
+      }
+    }
+  );
+}
+
+// ======================================================
+// HAPUS TASK
+// ======================================================
+
+window.hapusTaskDetail =
+  async function (id) {
+
+    const item =
+      detailProjectTaskData.find(
+        taskItem =>
+          Number(taskItem.id) ===
+          Number(id)
+      );
+
+
+    if (!item) {
+
+      alert(
+        "Task tidak ditemukan."
+      );
+
+      return;
+
+    }
+
+
+    const yakin =
+      window.confirm(
+        `Hapus task "${item.task}"?`
+      );
+
+
+    if (!yakin) {
+      return;
+    }
+
+
+    try {
+
+      const response =
+        await fetch(
+          `/api/task-list/${id}`,
+          {
+            method:
+              "DELETE"
+          }
+        );
+
+
+      const result =
+        await response.json();
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          result.error ||
+          "Gagal menghapus task"
+        );
+
+      }
+
+
+      await loadDetailProjectTask();
+
+      await loadLastUpdate();
+
+
+    } catch (error) {
+
+      console.error(
+        "ERROR DELETE TASK DETAIL:",
+        error
+      );
+
+
+      alert(
+        error.message ||
+        "Gagal menghapus task"
+      );
+
+    }
+
+  };
 // ======================================================
 // TERMIN - MODE BERDASARKAN JENIS PROYEK
 // ======================================================
