@@ -2775,62 +2775,148 @@ function getNilaiFinalTerminAktif() {
 
 }
 
-function getNilaiDasarPartnerTermin() {
-  if (!(Number(activePartnerId) > 0)) return 0;
+// ======================================================
+// NILAI DASAR KONTRAK TERMIN AKTIF
+// Berlaku untuk klien dan partner
+// ======================================================
 
-  const partner = getDataTerminAktif();
+function getNilaiDasarTerminAktif() {
 
-  const nilai = [
-    partner?.nilai_nego_3,
-    partner?.nilai_nego_2,
-    partner?.nilai_nego_1,
-    partner?.nilai_submit
-  ];
+  const data =
+    getDataTerminAktif();
 
-  return (
-    nilai
-      .map(angkaTermin)
-      .find(angka => angka > 0) || 0
-  );
-}
 
-function getAcuanNominalTermin(nominalBaru) {
-  // Perhitungan klien tetap menggunakan fungsi sebelumnya.
-  if (!(Number(activePartnerId) > 0)) {
-    return getNilaiFinalTerminAktif();
+  if (!data) {
+    return 0;
   }
 
-  const nilaiDasar = getNilaiDasarPartnerTermin();
+
+  const daftarNilai = [
+    data.nilai_nego_3,
+    data.nilai_nego_2,
+    data.nilai_nego_1,
+    data.nilai_submit
+  ];
+
+
+  for (
+    const nilai
+    of daftarNilai
+  ) {
+
+    const hasil =
+      angkaTermin(nilai);
+
+
+    if (hasil > 0) {
+      return hasil;
+    }
+
+  }
+
+
+  return 0;
+
+}
+
+
+// ======================================================
+// KOMPATIBILITAS FUNGSI PARTNER LAMA
+// ======================================================
+
+function getNilaiDasarPartnerTermin() {
+
+  if (
+    !(Number(activePartnerId) > 0)
+  ) {
+    return 0;
+  }
+
+
+  return getNilaiDasarTerminAktif();
+
+}
+
+
+// ======================================================
+// ACUAN PERHITUNGAN PERSENTASE
+//
+// Jika nilai final tersedia:
+// persentase = nominal / nilai final
+//
+// Jika nilai final kosong:
+// persentase = nominal / total seluruh termin
+// ======================================================
+
+function getAcuanNominalTermin(
+  nominalBaru
+) {
+
+  const nilaiDasar =
+    getNilaiDasarTerminAktif();
+
 
   if (nilaiDasar > 0) {
     return nilaiDasar;
   }
 
-  const partner = getDataTerminAktif();
 
-  const daftarTermin = Array.isArray(partner?.termin)
-    ? partner.termin
-    : [];
+  const dataAktif =
+    getDataTerminAktif();
 
-  const idEdit = Number(
-    document.getElementById("terminId")?.value ||
-    activePartnerTerminId ||
-    0
+
+  const daftarTermin =
+    Array.isArray(
+      dataAktif?.termin
+    )
+      ? dataAktif.termin
+      : [];
+
+
+  const idEdit =
+    Number(
+      document.getElementById(
+        "terminId"
+      )?.value ||
+      activePartnerTerminId ||
+      0
+    );
+
+
+  const totalTerminLain =
+    daftarTermin.reduce(
+      (total, item) => {
+
+        /*
+         * Saat edit, nominal termin yang sedang
+         * diedit tidak ikut dihitung dua kali.
+         */
+
+        if (
+          idEdit > 0 &&
+          Number(item.id) === idEdit
+        ) {
+          return total;
+        }
+
+
+        return (
+          total +
+          angkaTermin(
+            item.nominal
+          )
+        );
+
+      },
+      0
+    );
+
+
+  return (
+    totalTerminLain +
+    angkaTermin(nominalBaru)
   );
 
-  const totalTerminLain = daftarTermin.reduce(
-    (total, item) => {
-      // Saat edit, keluarkan nominal lama termin tersebut.
-      if (idEdit > 0 && Number(item.id) === idEdit) {
-        return total;
-      }
-
-      return total + angkaTermin(item.nominal);
-    },
-    0
-  );
-
-  return totalTerminLain + nominalBaru;
 }
 
 // ======================================================
@@ -2838,59 +2924,112 @@ function getAcuanNominalTermin(nominalBaru) {
 // ======================================================
 
 function aturInputTermin() {
-  for (const id of [
-    "persentaseTerminGroup",
-    "nominalTerminGroup"
-  ]) {
-    const group = document.getElementById(id);
+
+  for (
+    const id
+    of [
+      "persentaseTerminGroup",
+      "nominalTerminGroup"
+    ]
+  ) {
+
+    const group =
+      document.getElementById(id);
+
 
     if (group) {
       group.style.display = "";
     }
+
   }
+
 
   const persen =
-    document.getElementById("persentaseTermin");
+    document.getElementById(
+      "persentaseTermin"
+    );
+
 
   const nominal =
-    document.getElementById("nominalTermin");
+    document.getElementById(
+      "nominalTermin"
+    );
 
-  if (!persen || !nominal) return;
+
+  if (
+    !persen ||
+    !nominal
+  ) {
+    return;
+  }
+
+
+  const nilaiDasar =
+    getNilaiDasarTerminAktif();
+
+
+  /*
+   * Berlaku sama untuk klien dan partner.
+   *
+   * Jika submit/nego kosong:
+   * - nominal tetap bisa diisi
+   * - persentase otomatis dihitung
+   * - persentase tidak diisi manual
+   */
 
   const otomatisDariNominal =
-    Number(activePartnerId) > 0 &&
-    getNilaiDasarPartnerTermin() <= 0;
+    nilaiDasar <= 0;
 
-  const nilaiFinal = getNilaiFinalTerminAktif();
 
-  nominal.disabled = false;
-  nominal.required = true;
-  nominal.placeholder = "Isi nominal";
+  nominal.disabled =
+    false;
+
+  nominal.required =
+    true;
+
+  nominal.placeholder =
+    "Isi nominal";
+
 
   persen.disabled =
-    !otomatisDariNominal && nilaiFinal <= 0;
+    false;
 
-  persen.readOnly = otomatisDariNominal;
+  persen.readOnly =
+    otomatisDariNominal;
 
   persen.required =
-    !otomatisDariNominal && nilaiFinal > 0;
+    !otomatisDariNominal;
 
   persen.min =
-    otomatisDariNominal ? "0" : "0.000001";
+    otomatisDariNominal
+      ? "0"
+      : "0.000001";
 
-  persen.max = "100";
-  persen.step = "any";
-  persen.setCustomValidity("");
+  persen.max =
+    "100";
 
-  persen.placeholder = otomatisDariNominal
-    ? "Otomatis dari total nominal termin"
-    : "Isi persentase";
+  persen.step =
+    "any";
+
+  persen.setCustomValidity(
+    ""
+  );
+
+
+  persen.placeholder =
+    otomatisDariNominal
+      ? "Otomatis dari total nominal termin"
+      : "Isi persentase";
+
 
   if (otomatisDariNominal) {
-    inputTerminTerakhir = "nominal";
-  }
-}
 
+    inputTerminTerakhir =
+      "nominal";
+
+  }
+
+}
 
 // ======================================================
 // PERHITUNGAN OTOMATIS
@@ -3625,7 +3764,7 @@ if (terminForm) {
 
       const nilaiFinal =
         Number(
-          getNilaiFinalTerminAktif() ||
+          getNilaiDasarTerminAktif() ||
           0
         );
 
@@ -3703,12 +3842,14 @@ if (terminForm) {
       // Jangan lagi membuat persentase null hanya karena
       // nilaiFinal tidak ditemukan di frontend.
       // ==================================================
-        if (
-          Number(activePartnerId) > 0 &&
-          getNilaiDasarPartnerTermin() <= 0
-        ) {
-          modeInput = "nominal";
-        }
+       if (
+  getNilaiDasarTerminAktif() <= 0
+) {
+
+  modeInput =
+    "nominal";
+
+}
       const payload = {
 
         nama_termin:
@@ -4038,58 +4179,154 @@ if (terminForm) {
           );
 
 
-        const result =
-          await response.json();
-
-
-        if (!response.ok) {
-
-          console.error(
-            "RESPONSE ERROR TERMIN:",
-            {
-              status:
-                response.status,
-
-              url,
-
-              payload,
-
-              result
-            }
-          );
-
-
-          throw new Error(
-            result.error ||
-            "Gagal menyimpan termin."
-          );
-
-        }
-
-
         // ==================================================
-        // TUTUP MODAL DAN RESET
-        // ==================================================
+// BACA RESPONSE DENGAN AMAN
+// ==================================================
 
-        terminModal.classList.remove(
-          "show"
-        );
-
-
-        activePartnerId =
-          null;
-
-        activePartnerTerminId =
-          null;
-
-        inputTerminTerakhir =
-          null;
+const responseText =
+  await response.text();
 
 
-        terminForm.reset();
+let result = {};
 
 
-        await loadDetail();
+if (
+  responseText.trim()
+) {
+
+  try {
+
+    result =
+      JSON.parse(
+        responseText
+      );
+
+  } catch (parseError) {
+
+    console.warn(
+      "RESPONSE TERMIN BUKAN JSON:",
+      responseText
+    );
+
+
+    /*
+     * Jika HTTP sukses tetapi response kosong
+     * atau bukan JSON, penyimpanan tetap dianggap
+     * berhasil.
+     */
+
+    result = {
+      message:
+        responseText
+    };
+
+  }
+
+}
+
+
+// ==================================================
+// CEK RESPONSE API
+// ==================================================
+
+if (!response.ok) {
+
+  console.error(
+    "RESPONSE ERROR TERMIN:",
+    {
+      status:
+        response.status,
+
+      url,
+
+      payload,
+
+      responseText,
+
+      result
+    }
+  );
+
+
+  throw new Error(
+    result.error ||
+    responseText ||
+    "Gagal menyimpan termin."
+  );
+
+}
+
+
+// ==================================================
+// TUTUP SELURUH MODAL TERMIN YANG SEDANG TAMPIL
+// ==================================================
+
+document
+  .querySelectorAll(
+    '[id="terminModal"]'
+  )
+  .forEach(modal => {
+
+    modal.classList.remove(
+      "show"
+    );
+
+    modal.setAttribute(
+      "aria-hidden",
+      "true"
+    );
+
+  });
+
+
+document.body.classList.remove(
+  "modal-open"
+);
+
+
+// ==================================================
+// RESET MODE TERMIN
+// ==================================================
+
+activePartnerId =
+  null;
+
+activePartnerTerminId =
+  null;
+
+inputTerminTerakhir =
+  null;
+
+
+if (terminForm) {
+
+  terminForm.reset();
+
+}
+
+
+// ==================================================
+// MUAT ULANG DETAIL
+// ==================================================
+
+try {
+
+  await loadDetail();
+
+} catch (reloadError) {
+
+  /*
+   * Kegagalan memuat ulang data tidak boleh
+   * membuka kembali modal atau dianggap sebagai
+   * kegagalan penyimpanan.
+   */
+
+  console.error(
+    "TERMIN TERSIMPAN, TETAPI GAGAL MEMUAT ULANG DETAIL:",
+    reloadError
+  );
+
+}
 
 
       } catch (error) {
@@ -4313,6 +4550,21 @@ window.editTerminKlien =
 
     }
 
+    if (
+  getNilaiDasarTerminAktif() <= 0 &&
+  nominalInput
+) {
+
+  nominalInput.dispatchEvent(
+    new Event(
+      "input",
+      {
+        bubbles: true
+      }
+    )
+  );
+
+}
 
     if (statusInput) {
 
@@ -4364,110 +4616,6 @@ window.editTerminKlien =
       "show"
     );
 
-  };
-
-// ======================================================
-// EDIT TERMIN KLIEN
-// ======================================================
-
-window.editTerminKlien =
-  function (id) {
-    const termin =
-      detailData?.klien?.termin?.find(
-        item =>
-          Number(item.id) ===
-          Number(id)
-      );
-
-    if (!termin) {
-      alert(
-        "Termin klien tidak ditemukan."
-      );
-
-      return;
-    }
-
-
-    activePartnerId =
-      null;
-
-    activePartnerTerminId =
-      null;
-
-    inputTerminTerakhir =
-      ambilNilaiFinal(
-        detailData?.klien
-      ) > 0
-        ? "persentase"
-        : "nominal";
-
-
-    document.getElementById(
-      "terminId"
-    ).value =
-      termin.id;
-
-
-    document.getElementById(
-      "namaTermin"
-    ).value =
-      termin.nama_termin || "";
-
-
-    aturInputTermin();
-
-
-    document.getElementById(
-      "persentaseTermin"
-    ).value =
-      termin.persentase ?? "";
-
-
-    setNilaiNominal(
-      "nominalTermin",
-      termin.nominal
-    );
-
-
-    document.getElementById(
-      "statusPembayaran"
-    ).value =
-      termin.status_pembayaran ||
-      "Belum Dibayar";
-
-
-    document.getElementById(
-      "tanggalJatuhTempo"
-    ).value =
-      tanggalInput(
-        termin.tanggal_jatuh_tempo
-      );
-
-
-    document.getElementById(
-      "tanggalBayar"
-    ).value =
-      tanggalInput(
-        termin.tanggal_bayar
-      );
-
-
-    document.getElementById(
-      "syaratPembayaran"
-    ).value =
-      termin.syarat_pembayaran ||
-      "";
-
-
-    document.getElementById(
-      "terminModalTitle"
-    ).textContent =
-      "Edit Termin Klien";
-
-
-    terminModal.classList.add(
-      "show"
-    );
   };
 
 // ======================================================

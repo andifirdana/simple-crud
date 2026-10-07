@@ -17957,12 +17957,30 @@ if (nilaiDasarPartner <= 0) {
 
 
       await client.query(
-        "COMMIT"
-      );
+  "COMMIT"
+);
 
 
+// ==================================================
+// RESPONSE BERHASIL
+// WAJIB DIKIRIM AGAR FETCH SELESAI
+// ==================================================
 
-    } catch (error) {
+return res.status(200).json({
+
+  success:
+    true,
+
+  message:
+    "Termin partner berhasil diperbarui",
+
+  data:
+    result.rows[0]
+
+});
+
+
+} catch (error) {
 
       await client.query(
         "ROLLBACK"
