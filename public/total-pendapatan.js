@@ -1,606 +1,351 @@
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
+(() => {
+
+  function initPendapatan() {
 
     const filterTahun =
-      document.getElementById(
-        "filterTahun"
-      );
+      document.getElementById("filterTahun");
 
-
-    // ======================================================
-    // NAMA BULAN
-    // ======================================================
-
-    const namaBulan = [
-      "januari",
-      "februari",
-      "maret",
-      "april",
-      "mei",
-      "juni",
-      "juli",
-      "agustus",
-      "september",
-      "oktober",
-      "november",
-      "desember"
+    const rowIds = [
+      "regulerRow",
+      "sewaRow",
+      "transaksiRow",
+      "totalPendapatanRow"
     ];
 
-
-    // ======================================================
-    // FORMAT RUPIAH
-    // ======================================================
-
-    function rupiah(value) {
-
-      return new Intl.NumberFormat(
-        "id-ID",
-        {
-          style: "currency",
-          currency: "IDR",
-          maximumFractionDigits: 0
-        }
-      ).format(
-        Number(value || 0)
+    if (
+      !filterTahun ||
+      rowIds.some(id => !document.getElementById(id))
+    ) {
+      console.error(
+        "Filter tahun atau baris tabel pendapatan tidak ditemukan."
       );
-
+      return;
     }
 
+    const namaBulan = [
+      "januari", "februari", "maret", "april",
+      "mei", "juni", "juli", "agustus",
+      "september", "oktober", "november", "desember"
+    ];
 
-    // ======================================================
+    const formatRupiah = new Intl.NumberFormat(
+      "id-ID",
+      {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0
+      }
+    );
+
+    let controller = null;
+    let requestId = 0;
+
+    // ==================================================
+    // FORMAT ANGKA DAN RUPIAH
+    // ==================================================
+
+    function angka(value) {
+      const nilai = Number(value ?? 0);
+      return Number.isFinite(nilai) ? nilai : 0;
+    }
+
+    function rupiah(value) {
+      return formatRupiah.format(angka(value));
+    }
+
+    // ==================================================
+    // NORMALISASI DATA MENJADI 12 BULAN
+    // ==================================================
+
+    function normalisasiBulanan(values) {
+      return Array.from(
+        { length: 12 },
+        (_, index) => {
+
+          const value = Array.isArray(values)
+            ? values[index]
+            : values?.[namaBulan[index]];
+
+          return angka(value);
+
+        }
+      );
+    }
+
+    // ==================================================
     // FILTER TAHUN
-    // ======================================================
+    // ==================================================
 
     function loadTahun() {
-
-      if (!filterTahun) {
-
-        console.error(
-          "Element #filterTahun tidak ditemukan."
-        );
-
-        return;
-
-      }
-
 
       const tahunSekarang =
         new Date().getFullYear();
 
-
-      filterTahun.innerHTML = "";
-
+      filterTahun.replaceChildren();
 
       for (
         let tahun = tahunSekarang;
         tahun >= 2025;
         tahun--
       ) {
-
         const option =
-          document.createElement(
-            "option"
-          );
+          document.createElement("option");
 
+        option.value = String(tahun);
+        option.textContent = String(tahun);
 
-        option.value = tahun;
-
-        option.textContent = tahun;
-
-
-        filterTahun.appendChild(
-          option
-        );
-
+        filterTahun.appendChild(option);
       }
 
-
-      filterTahun.value =
-        String(tahunSekarang);
-
+      filterTahun.value = String(tahunSekarang);
     }
 
-
-    // ======================================================
-    // NORMALISASI DATA BULANAN
-    // ======================================================
-
-    function normalisasiBulanan(
-      values
-    ) {
-
-      /*
-        Mendukung format array:
-
-        [
-          1000000,
-          2000000,
-          ...
-        ]
-      */
-
-      if (Array.isArray(values)) {
-
-        return Array.from(
-          { length: 12 },
-          (_, index) =>
-            Number(
-              values[index] || 0
-            )
-        );
-
-      }
-
-
-      /*
-        Mendukung format object:
-
-        {
-          januari: 1000000,
-          februari: 2000000
-        }
-      */
-
-      return namaBulan.map(
-        bulan =>
-          Number(
-            values?.[bulan] || 0
-          )
-      );
-
-    }
-
-
-    // ======================================================
-    // RENDER PER JENIS
-    // ======================================================
+    // ==================================================
+    // RENDER BARIS
+    // 1 JENIS + 12 BULAN + 1 TOTAL
+    // ==================================================
 
     function renderJenis(
       rowId,
       label,
-      values
+      values,
+      isTotal = false
     ) {
 
       const row =
-        document.getElementById(
-          rowId
-        );
+        document.getElementById(rowId);
 
+      const bulanan =
+        normalisasiBulanan(values);
 
-      if (!row) {
-
-        console.error(
-          "Row tidak ditemukan:",
-          rowId
-        );
-
-        return;
-
-      }
-
-
-      const bulan =
-        normalisasiBulanan(
-          values
-        );
-
-
-      const total =
-        bulan.reduce(
-          (
-            jumlah,
-            nilai
-          ) =>
-            jumlah + nilai,
-          0
-        );
-
+      const total = bulanan.reduce(
+        (jumlah, nilai) => jumlah + nilai,
+        0
+      );
 
       row.innerHTML = `
         <td class="jenis-value">
-          <strong>
-            ${label}
-          </strong>
+          <strong>${label}</strong>
         </td>
 
-        ${bulan
-          .map(
-            value => `
-              <td>
-                ${rupiah(value)}
-              </td>
-            `
-          )
-          .join("")}
+        ${bulanan.map(value => `
+          <td>
+            ${
+              isTotal
+                ? `<strong>${rupiah(value)}</strong>`
+                : rupiah(value)
+            }
+          </td>
+        `).join("")}
 
         <td class="total-value">
-          ${rupiah(total)}
+          ${
+            isTotal
+              ? `<strong>${rupiah(total)}</strong>`
+              : rupiah(total)
+          }
         </td>
       `;
-
     }
 
+    // ==================================================
+    // RENDER PENDAPATAN DAN TOTAL
+    // ==================================================
 
-    // ======================================================
-    // RENDER TOTAL
-    // ======================================================
-
-    function renderTotal(
-      regulerValues,
-      sewaValues,
-      transaksiValues
-    ) {
-
-      const row =
-        document.getElementById(
-          "totalPendapatanRow"
-        );
-
-
-      if (!row) {
-
-        console.error(
-          "Row totalPendapatanRow tidak ditemukan."
-        );
-
-        return;
-
-      }
-
+    function renderPendapatan(data) {
 
       const reguler =
-        normalisasiBulanan(
-          regulerValues
-        );
-
+        normalisasiBulanan(data.reguler);
 
       const sewa =
-        normalisasiBulanan(
-          sewaValues
-        );
-
+        normalisasiBulanan(data.sewa);
 
       const transaksi =
-        normalisasiBulanan(
-          transaksiValues
-        );
+        normalisasiBulanan(data.transaksi);
 
-
-      const totalBulanan =
-        Array.from(
-          { length: 12 },
-          (_, index) =>
-            reguler[index] +
-            sewa[index] +
-            transaksi[index]
-        );
-
-
-      const totalTahunan =
-        totalBulanan.reduce(
-          (
-            jumlah,
-            nilai
-          ) =>
-            jumlah + nilai,
-          0
-        );
-
-
-      row.innerHTML = `
-        <td class="jenis-value">
-          <strong>
-            Total Pendapatan
-          </strong>
-        </td>
-
-        ${totalBulanan
-          .map(
-            value => `
-              <td>
-                <strong>
-                  ${rupiah(value)}
-                </strong>
-              </td>
-            `
-          )
-          .join("")}
-
-        <td class="total-value">
-          <strong>
-            ${rupiah(totalTahunan)}
-          </strong>
-        </td>
-      `;
-
-    }
-
-
-    // ======================================================
-    // LOADING
-    // ======================================================
-
-    function tampilkanLoading() {
-
-      const rowIds = [
+      renderJenis(
         "regulerRow",
-        "sewaRow",
-        "transaksiRow",
-        "totalPendapatanRow"
-      ];
-
-
-      rowIds.forEach(
-        rowId => {
-
-          const row =
-            document.getElementById(
-              rowId
-            );
-
-
-          if (row) {
-
-            row.innerHTML = `
-              <td
-                colspan="14"
-                class="loading-cell"
-              >
-                Memuat data...
-              </td>
-            `;
-
-          }
-
-        }
+        "Reguler/SLA",
+        reguler
       );
 
-    }
-
-
-    // ======================================================
-    // ERROR
-    // ======================================================
-
-    function tampilkanError(
-      message
-    ) {
-
-      const rowIds = [
-        "regulerRow",
+      renderJenis(
         "sewaRow",
-        "transaksiRow",
-        "totalPendapatanRow"
-      ];
-
-
-      rowIds.forEach(
-        rowId => {
-
-          const row =
-            document.getElementById(
-              rowId
-            );
-
-
-          if (row) {
-
-            row.innerHTML = `
-              <td
-                colspan="14"
-                class="error-cell"
-              >
-                ${message}
-              </td>
-            `;
-
-          }
-
-        }
+        "Sewa",
+        sewa
       );
 
+      renderJenis(
+        "transaksiRow",
+        "Transaksi",
+        transaksi
+      );
+
+      const totalBulanan = reguler.map(
+        (nilai, index) =>
+          nilai +
+          sewa[index] +
+          transaksi[index]
+      );
+
+      renderJenis(
+        "totalPendapatanRow",
+        "Total Pendapatan",
+        totalBulanan,
+        true
+      );
     }
 
+    // ==================================================
+    // PESAN LOADING / ERROR
+    // ==================================================
 
-    // ======================================================
-    // LOAD PENDAPATAN
-    // ======================================================
+    function tampilkanPesan(message, className) {
+
+      for (const rowId of rowIds) {
+
+        const row =
+          document.getElementById(rowId);
+
+        const cell =
+          document.createElement("td");
+
+        cell.colSpan = 14;
+        cell.className = className;
+        cell.textContent = message;
+
+        row.replaceChildren(cell);
+      }
+    }
+
+    // ==================================================
+    // AMBIL DATA DARI API
+    // ==================================================
 
     async function loadPendapatan() {
 
-      const pendapatanGroup =
-        document.getElementById(
-          "pendapatanGroup"
-        );
+      const id = ++requestId;
 
+      // Batalkan permintaan lama saat tahun diganti.
+      controller?.abort();
+      controller = new AbortController();
 
-      const regulerRow =
-        document.getElementById(
-          "regulerRow"
-        );
-
-
-      const sewaRow =
-        document.getElementById(
-          "sewaRow"
-        );
-
-
-      const transaksiRow =
-        document.getElementById(
-          "transaksiRow"
-        );
-
-
-      const totalPendapatanRow =
-        document.getElementById(
-          "totalPendapatanRow"
-        );
-
-
-      if (
-        !filterTahun ||
-        !pendapatanGroup ||
-        !regulerRow ||
-        !sewaRow ||
-        !transaksiRow ||
-        !totalPendapatanRow
-      ) {
-
-        console.error(
-          "Elemen tabel pendapatan tidak ditemukan."
-        );
-
-        return;
-
-      }
-
-
-      const tahun =
-        filterTahun.value;
-
+      const signal = controller.signal;
+      const tahun = filterTahun.value;
 
       if (!tahun) {
-
-        tampilkanError(
-          "Silakan pilih tahun."
+        tampilkanPesan(
+          "Silakan pilih tahun.",
+          "error-cell"
         );
-
         return;
-
       }
 
-
-      tampilkanLoading();
-
+      tampilkanPesan(
+        "Memuat data...",
+        "loading-cell"
+      );
 
       try {
 
-        const response =
-          await fetch(
-            `/api/pendapatan?tahun=${encodeURIComponent(
-              tahun
-            )}`
-          );
+        const response = await fetch(
+          `/api/pendapatan?tahun=${encodeURIComponent(tahun)}`,
+          {
+            credentials: "same-origin",
+            signal
+          }
+        );
 
+        if (id !== requestId) return;
 
         if (response.status === 401) {
-
-          window.location.href =
-            "/login.html";
-
+          window.location.href = "/login.html";
           return;
-
         }
-
 
         if (!response.ok) {
 
           const errorResult =
-            await response
-              .json()
-              .catch(
-                () => ({})
-              );
-
+            await response.json().catch(() => ({}));
 
           throw new Error(
             errorResult.error ||
             `Gagal mengambil data (${response.status})`
           );
-
         }
 
+        const data = await response.json();
 
-        const data =
-          await response.json();
+        if (id !== requestId) return;
 
+        if (
+          !data ||
+          typeof data !== "object" ||
+          ["reguler", "sewa", "transaksi"].some(
+            jenis => {
+              const values = data[jenis];
 
-        console.log(
-          "DATA PENDAPATAN:",
-          data
-        );
+              return (
+                !values ||
+                typeof values !== "object"
+              );
+            }
+          )
+        ) {
+          throw new Error(
+            "Format respons pendapatan tidak sesuai."
+          );
+        }
 
-
-        const reguler =
-          data.reguler || [];
-
-
-        const sewa =
-          data.sewa || [];
-
-
-        const transaksi =
-          data.transaksi || [];
-
-
-        renderJenis(
-          "regulerRow",
-          "Reguler/SLA",
-          reguler
-        );
-
-
-        renderJenis(
-          "sewaRow",
-          "Sewa",
-          sewa
-        );
-
-
-        renderJenis(
-          "transaksiRow",
-          "Transaksi",
-          transaksi
-        );
-
-
-        renderTotal(
-          reguler,
-          sewa,
-          transaksi
-        );
+        renderPendapatan(data);
 
       } catch (error) {
+
+        if (
+          id !== requestId ||
+          error.name === "AbortError"
+        ) {
+          return;
+        }
 
         console.error(
           "ERROR LOAD PENDAPATAN:",
           error
         );
 
-
-        tampilkanError(
+        tampilkanPesan(
           error.message ||
-          "Gagal memuat data pendapatan."
+          "Gagal memuat data pendapatan.",
+          "error-cell"
         );
-
       }
-
     }
 
+    // ==================================================
+    // MULAI
+    // ==================================================
 
-    // ======================================================
-    // FILTER CHANGE
-    // ======================================================
-
-    if (filterTahun) {
-
-      filterTahun.addEventListener(
-        "change",
-        loadPendapatan
-      );
-
-    }
-
-
-    // ======================================================
-    // START
-    // ======================================================
+    filterTahun.addEventListener(
+      "change",
+      loadPendapatan
+    );
 
     loadTahun();
-
     loadPendapatan();
+  }
+
+  if (document.readyState === "loading") {
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      initPendapatan,
+      { once: true }
+    );
+
+  } else {
+
+    initPendapatan();
 
   }
-);
+
+})();

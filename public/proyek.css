@@ -1,0 +1,540 @@
+/* ==================================================
+   TOMBOL TAMBAH DATA MASTER
+================================================== */
+
+.pm-add-button {
+  margin-top: 8px;
+  max-width: 100%;
+  white-space: normal;
+}
+
+
+/* ==================================================
+   KATEGORI DAN KLIEN: TULISAN BOLD
+================================================== */
+
+#tambahMasterKategoriButton,
+#tambahMasterKategoriButton:hover,
+#tambahMasterKategoriButton:active,
+#tambahMasterKlienButton,
+#tambahMasterKlienButton:hover,
+#tambahMasterKlienButton:active {
+  display: block;
+
+  width: auto;
+  min-height: 0;
+
+  margin: 8px 0 0;
+  padding: 0;
+
+  border: none;
+  border-radius: 0;
+
+  background: transparent;
+  box-shadow: none;
+
+  color: #4338ca;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+
+  text-align: left;
+  white-space: normal;
+
+  cursor: pointer;
+}
+
+#tambahMasterKategoriButton:focus-visible,
+#tambahMasterKlienButton:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 3px;
+}
+
+
+/* ==================================================
+   MODAL KATEGORI, KLIEN, DAN PARTNER
+================================================== */
+
+.pm-modal {
+  box-sizing: border-box;
+
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+
+  padding: 0;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+
+  background: #ffffff;
+  color: #334155;
+
+  font: inherit;
+
+  box-shadow:
+    0 20px 60px rgba(15, 23, 42, 0.2);
+
+  overflow: auto;
+}
+
+/* Posisi modal di tengah layar */
+
+dialog.pm-modal[open] {
+  position: fixed;
+  inset: 0;
+
+  margin: auto !important;
+
+  width: min(640px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+
+  transform: none;
+  overflow-y: auto;
+}
+
+.pm-modal::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.pm-modal *,
+.pm-modal *::before,
+.pm-modal *::after {
+  box-sizing: border-box;
+}
+
+.pm-modal [hidden] {
+  display: none !important;
+}
+
+
+/* ==================================================
+   HEADER MODAL
+================================================== */
+
+.pm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+  padding: 18px 20px;
+
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pm-header h2 {
+  margin: 0;
+
+  color: #0f172a;
+  font-size: 16px;
+}
+
+
+/* ==================================================
+   FORM MODAL
+================================================== */
+
+.pm-body {
+  padding: 20px;
+}
+
+.pm-fields {
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+}
+
+.pm-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+.pm-grid .pm-full {
+  grid-column: 1 / -1;
+}
+
+
+/* ==================================================
+   CHECKBOX PIC
+================================================== */
+
+.pm-pics {
+  display: grid;
+  gap: 8px;
+
+  max-height: 200px;
+  padding: 10px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  overflow: auto;
+}
+
+.pm-pics label {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+  margin: 0;
+}
+
+.pm-pics input {
+  width: 16px;
+  min-height: 16px;
+  height: 16px;
+
+  padding: 0;
+
+  flex-shrink: 0;
+}
+
+
+/* ==================================================
+   PESAN DAN AKSI MODAL
+================================================== */
+
+.pm-message {
+  margin: 14px 0 0;
+
+  color: #b91c1c;
+  font-size: 13px;
+
+  white-space: pre-wrap;
+}
+
+.pm-message:empty {
+  display: none;
+}
+
+.pm-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+
+  gap: 8px;
+  margin-top: 20px;
+}
+
+
+/* ==================================================
+   RESPONSIVE
+================================================== */
+
+@media (max-width: 560px) {
+  .pm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kp-search {
+      position: relative;
+      width: 100%;
+    }
+
+    .kp-search-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: #fff;
+      font: inherit;
+    }
+
+    .kp-search-input:focus {
+      outline: 2px solid #93c5fd;
+    }
+
+    .kp-search-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 4px;
+      max-height: 240px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      box-shadow: 0 6px 16px #0002;
+      z-index: 1000;
+    }
+
+    .kp-search-list[hidden] {
+      display: none;
+    }
+
+    .kp-search-option {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      border: 0;
+      background: #fff;
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+      color: #111827;
+    }
+
+    .kp-search-option:hover,
+    .kp-search-option[aria-selected="true"] {
+      background: #eff6ff;
+    }
+
+    .kp-search-info {
+      padding: 10px 12px;
+      color: #6b7280;
+    }
+
+    .pm-add-button {
+      margin-top: 8px;
+      max-width: 100%;
+      white-space: normal;
+    }
+
+    .pm-modal {
+      box-sizing: border-box;
+      width: min(640px, calc(100% - 32px));
+      max-height: calc(100dvh - 32px);
+      padding: 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      color: #334155;
+      background: #ffffff;
+      font: inherit;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+      overflow: auto;
+    }
+
+    .pm-modal::backdrop {
+      background: rgba(15, 23, 42, 0.45);
+    }
+
+    .pm-modal *,
+    .pm-modal *::before,
+    .pm-modal *::after {
+      box-sizing: border-box;
+    }
+
+    .pm-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .pm-header h2 {
+      margin: 0;
+      color: #0f172a;
+      font-size: 16px;
+    }
+
+    .pm-body {
+      padding: 20px;
+    }
+
+    .pm-fields {
+      border: 0;
+      padding: 0;
+      margin: 0;
+      min-width: 0;
+    }
+
+    .pm-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .pm-grid .pm-full {
+      grid-column: 1 / -1;
+    }
+
+    .pm-pics {
+      display: grid;
+      gap: 8px;
+      max-height: 200px;
+      overflow: auto;
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+
+    .pm-pics label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .pm-pics input {
+      width: 16px;
+      min-height: 16px;
+      height: 16px;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .pm-message {
+      margin: 14px 0 0;
+      font-size: 13px;
+      color: #b91c1c;
+      white-space: pre-wrap;
+    }
+
+    .pm-message:empty {
+      display: none;
+    }
+
+    .pm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .pm-modal [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 560px) {
+      .pm-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+      #tambahMasterKlienButton,
+#tambahMasterKlienButton:hover,
+#tambahMasterKlienButton:active {
+  display: block;
+  width: auto;
+  min-height: 0;
+  margin: 8px 0 0;
+  padding: 0;
+
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+}
+
+#tambahMasterKlienButton:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 3px;
+}
+
+dialog.pm-modal[open] {
+  position: fixed;
+  inset: 0;
+  margin: auto !important;
+
+  width: min(640px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+
+  transform: none;
+  overflow-y: auto;
+}
+
+/* ==================================================
+   PENCARIAN KATEGORI
+================================================== */
+
+.kategori-search {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.kategori-search-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 13px;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+}
+
+.kategori-search-input:focus {
+  outline: 2px solid #93c5fd;
+  border-color: #2563eb;
+}
+
+.kategori-search-input:disabled {
+  background: #f1f5f9;
+}
+
+.kategori-search-list {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+
+  z-index: 1000;
+  max-height: 260px;
+  overflow-y: auto;
+
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+
+  background: #ffffff;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.kategori-search-list[hidden] {
+  display: none;
+}
+
+.kategori-search-item {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 13px;
+
+  border: 0;
+  border-bottom: 1px solid #edf0f5;
+
+  background: #ffffff;
+  color: #172033;
+
+  text-align: left;
+  font: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  cursor: pointer;
+}
+
+.kategori-search-item:hover,
+.kategori-search-item[aria-selected="true"] {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.kategori-search-message {
+  padding: 11px 13px;
+  color: #64748b;
+}

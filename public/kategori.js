@@ -26,7 +26,7 @@ let editId = null;
 
 let currentPage = 1;
 
-const itemsPerPage = 10;
+const itemsPerPage = 25;
 
 
 function renderKategoriPagination(
@@ -210,8 +210,6 @@ function tampilkan(data) {
 
 
     row.innerHTML = `
-
-      <td>${item.id}</td>
 
       <td>
         <strong>

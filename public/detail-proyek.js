@@ -849,24 +849,456 @@ function formatNamaDokumenDetail(
 }
 
 // =====================================================
-// EDIT KATEGORI
-// ======================================================
-async function loadKategoriEdit() {
+// EDIT KATEGORI — PENCARIAN
+// Menggunakan editKategoriDipilih yang sudah ada.
+// =====================================================
 
-  const select =
-    document.getElementById(
-      "editKategoriSelect"
+let editKategoriSearchUI = null;
+
+function initEditKategoriSearch() {
+  if (editKategoriSearchUI) {
+    return editKategoriSearchUI;
+  }
+
+  const select = document.getElementById(
+    "editKategoriSelect"
+  );
+
+  if (!select) {
+    return null;
+  }
+
+  // ===================================================
+  // STYLE
+  // ===================================================
+
+  if (
+    !document.getElementById(
+      "edit-kategori-search-style"
+    )
+  ) {
+    const style = document.createElement("style");
+
+    style.id = "edit-kategori-search-style";
+
+    style.textContent = `
+      .edit-kategori-search {
+        position: relative;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .edit-kategori-search-input {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+        color: #172033;
+        font: inherit;
+      }
+
+      .edit-kategori-search-input:focus {
+        outline: 2px solid #93c5fd;
+        border-color: #2563eb;
+      }
+
+      .edit-kategori-search-list {
+        position: absolute;
+        top: calc(100% + 5px);
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        max-height: 240px;
+        overflow-y: auto;
+        border: 1px solid #dbe2ea;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .12);
+      }
+
+      .edit-kategori-search-list[hidden] {
+        display: none;
+      }
+
+      .edit-kategori-search-item {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        padding: 10px 12px;
+        border: 0;
+        border-bottom: 1px solid #edf0f5;
+        background: #fff;
+        color: #172033;
+        font: inherit;
+        text-align: left;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        cursor: pointer;
+      }
+
+      .edit-kategori-search-item:hover,
+      .edit-kategori-search-item[aria-selected="true"] {
+        background: #eff6ff;
+        color: #1d4ed8;
+      }
+
+      .edit-kategori-search-message {
+        padding: 10px 12px;
+        color: #64748b;
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  // ===================================================
+  // BUAT INPUT PENCARIAN
+  // ===================================================
+
+  const wrapper = document.createElement("div");
+
+  wrapper.className = "edit-kategori-search";
+
+  const input = document.createElement("input");
+
+  input.id = "editKategoriSearchInput";
+  input.type = "text";
+  input.className = "edit-kategori-search-input";
+  input.placeholder = "Ketik nama kategori...";
+  input.autocomplete = "off";
+  input.disabled = select.disabled;
+
+  input.setAttribute("role", "combobox");
+  input.setAttribute("aria-label", "Cari kategori");
+  input.setAttribute("aria-autocomplete", "list");
+  input.setAttribute("aria-expanded", "false");
+
+  const list = document.createElement("div");
+
+  list.id = "editKategoriSearchList";
+  list.className = "edit-kategori-search-list";
+  list.hidden = true;
+
+  list.setAttribute("role", "listbox");
+
+  input.setAttribute("aria-controls", list.id);
+
+  const labels = Array.from(select.labels || []);
+
+  select.before(wrapper);
+
+  wrapper.append(
+    input,
+    list,
+    select
+  );
+
+  select.hidden = true;
+  select.style.display = "none";
+  select.required = false;
+
+  labels.forEach(label => {
+    if (label.htmlFor === select.id) {
+      label.htmlFor = input.id;
+    }
+  });
+
+  // Klik hasil langsung menambahkan kategori.
+  const tambahButton = document.getElementById(
+    "tambahEditKategori"
+  );
+
+  if (tambahButton) {
+    tambahButton.hidden = true;
+    tambahButton.style.display = "none";
+  }
+
+  let buttons = [];
+  let active = -1;
+
+  // ===================================================
+  // TUTUP / RESET PENCARIAN
+  // ===================================================
+
+  function close() {
+    list.hidden = true;
+    active = -1;
+
+    input.setAttribute(
+      "aria-expanded",
+      "false"
     );
 
-  try {
+    input.removeAttribute(
+      "aria-activedescendant"
+    );
+  }
 
-    const response =
-      await fetch(
-        "/api/proyek/kategori"
+  function reset() {
+    input.value = "";
+    select.value = "";
+
+    close();
+  }
+
+  // ===================================================
+  // TAMPILKAN HASIL PENCARIAN
+  // ===================================================
+
+  function render() {
+    list.replaceChildren();
+
+    buttons = [];
+    active = -1;
+
+    input.removeAttribute(
+      "aria-activedescendant"
+    );
+
+    const query = input.value
+      .trim()
+      .toLocaleLowerCase("id-ID");
+
+    if (!query || input.disabled) {
+      close();
+      return;
+    }
+
+    const selectedIds = new Set(
+      editKategoriDipilih.map(
+        item => Number(item.id)
+      )
+    );
+
+    const matches = Array.from(
+      select.options
+    ).filter(option => {
+      const id = Number(option.value);
+
+      return (
+        Number.isInteger(id) &&
+        id > 0 &&
+        !option.disabled &&
+        !option.parentElement?.disabled &&
+        !selectedIds.has(id) &&
+        option.textContent
+          .trim()
+          .toLocaleLowerCase("id-ID")
+          .includes(query)
+      );
+    });
+
+    matches
+      .slice(0, 50)
+      .forEach((option, index) => {
+        const button = document.createElement(
+          "button"
+        );
+
+        button.type = "button";
+        button.tabIndex = -1;
+
+        button.id =
+          `editKategoriSearchOption-${index}`;
+
+        button.className =
+          "edit-kategori-search-item";
+
+        button.textContent =
+          option.textContent.trim();
+
+        button.setAttribute("role", "option");
+
+        button.setAttribute(
+          "aria-selected",
+          "false"
+        );
+
+        button.addEventListener(
+          "mousedown",
+          event => {
+            event.preventDefault();
+          }
+        );
+
+        button.addEventListener("click", () => {
+          tambahEditKategori(
+            Number(option.value),
+            option.textContent.trim()
+          );
+        });
+
+        list.appendChild(button);
+
+        buttons.push(button);
+      });
+
+    if (
+      !matches.length ||
+      matches.length > 50
+    ) {
+      const message = document.createElement(
+        "div"
       );
 
-    const data =
-      await response.json();
+      message.className =
+        "edit-kategori-search-message";
+
+      message.textContent = matches.length
+        ? "Menampilkan 50 hasil. Ketik nama lebih lengkap."
+        : "Kategori tidak ditemukan atau sudah ditambahkan.";
+
+      list.appendChild(message);
+    }
+
+    list.hidden = false;
+
+    input.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+  }
+
+  // ===================================================
+  // EVENT INPUT
+  // ===================================================
+
+  input.addEventListener("input", render);
+  input.addEventListener("focus", render);
+  input.addEventListener("blur", close);
+
+  input.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      close();
+      return;
+    }
+
+    if (
+      event.key === "Enter" &&
+      !list.hidden
+    ) {
+      event.preventDefault();
+
+      if (active >= 0) {
+        buttons[active].click();
+      }
+
+      return;
+    }
+
+    if (
+      event.key !== "ArrowDown" &&
+      event.key !== "ArrowUp"
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (list.hidden) {
+      render();
+    }
+
+    if (!buttons.length) {
+      return;
+    }
+
+    active = event.key === "ArrowDown"
+      ? (active + 1) % buttons.length
+      : (
+          active <= 0
+            ? buttons.length - 1
+            : active - 1
+        );
+
+    buttons.forEach((button, index) => {
+      button.setAttribute(
+        "aria-selected",
+        String(index === active)
+      );
+    });
+
+    input.setAttribute(
+      "aria-activedescendant",
+      buttons[active].id
+    );
+
+    buttons[active].scrollIntoView({
+      block: "nearest"
+    });
+  });
+
+  // ===================================================
+  // SINKRONISASI OPTION KATEGORI
+  // ===================================================
+
+  new MutationObserver(() => {
+    input.disabled = select.disabled;
+
+    if (input.disabled) {
+      close();
+
+    } else if (
+      document.activeElement === input &&
+      !list.hidden
+    ) {
+      render();
+    }
+
+  }).observe(select, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: [
+      "disabled",
+      "value",
+      "label"
+    ]
+  });
+
+  editKategoriSearchUI = {
+    input,
+    list,
+    close,
+    reset,
+    render
+  };
+
+  return editKategoriSearchUI;
+}
+
+// =====================================================
+// LOAD KATEGORI EDIT
+// =====================================================
+
+async function loadKategoriEdit() {
+  const select = document.getElementById(
+    "editKategoriSelect"
+  );
+
+  if (!select) {
+    return;
+  }
+
+  const ui = initEditKategoriSearch();
+
+  ui.reset();
+
+  ui.input.disabled = true;
+  ui.input.placeholder = "Memuat kategori...";
+
+  try {
+    const response = await fetch(
+      "/api/proyek/kategori",
+      {
+        credentials: "same-origin"
+      }
+    );
+
+    const data = await response.json();
 
     if (!response.ok) {
       throw new Error(
@@ -875,166 +1307,214 @@ async function loadKategoriEdit() {
       );
     }
 
-    select.innerHTML = `
-      <option value="">
-        Pilih Kategori
-      </option>
-    `;
+    const rows = Array.isArray(data)
+      ? data
+      : data.data;
 
-    data.forEach(item => {
+    if (!Array.isArray(rows)) {
+      throw new Error(
+        "Format data kategori tidak sesuai."
+      );
+    }
 
-      const option =
-        document.createElement(
-          "option"
-        );
+    const placeholder = document.createElement(
+      "option"
+    );
 
-      option.value =
-        item.id;
+    placeholder.value = "";
+    placeholder.textContent = "Pilih Kategori";
+
+    select.replaceChildren(placeholder);
+
+    rows.forEach(item => {
+      const option = document.createElement(
+        "option"
+      );
+
+      option.value = item.id;
 
       option.textContent =
         item.nama_kategori_produk;
 
-      select.appendChild(
-        option
-      );
-
+      select.appendChild(option);
     });
 
-  } catch (error) {
+    ui.input.disabled = select.disabled;
 
+    ui.input.placeholder =
+      "Ketik nama kategori...";
+
+  } catch (error) {
     console.error(
       "ERROR LOAD KATEGORI EDIT:",
       error
     );
 
+    ui.input.disabled = true;
+
+    ui.input.placeholder =
+      "Kategori gagal dimuat";
+
+    alert(
+      error.message ||
+      "Gagal mengambil kategori."
+    );
+  }
+}
+
+// =====================================================
+// TAMBAH KATEGORI EDIT
+// =====================================================
+
+function tambahEditKategori(id, nama) {
+  id = Number(id);
+
+  if (
+    !Number.isInteger(id) ||
+    id <= 0
+  ) {
+    return;
   }
 
-}
-
-function renderEditKategori() {
-
-  const container =
-    document.getElementById(
-      "editKategoriTerpilih"
-    );
-
-  container.innerHTML = "";
-
-  editKategoriDipilih.forEach(
-    kategori => {
-
-      const chip =
-        document.createElement(
-          "div"
-        );
-
-      chip.style.display = "flex";
-      chip.style.alignItems = "center";
-      chip.style.gap = "6px";
-      chip.style.padding = "6px 10px";
-      chip.style.border = "1px solid #d1d5db";
-      chip.style.borderRadius = "20px";
-
-      chip.innerHTML = `
-        <span>
-          ${kategori.nama}
-        </span>
-
-        <button
-          type="button"
-          data-id="${kategori.id}"
-          style="
-            border:none;
-            background:none;
-            cursor:pointer;
-            font-size:16px;
-          "
-        >
-          ×
-        </button>
-      `;
-
-      container.appendChild(
-        chip
-      );
-
-    }
+  const sudahAda = editKategoriDipilih.some(
+    item => Number(item.id) === id
   );
 
-}
-
-document.getElementById(
-  "tambahEditKategori"
-    ).addEventListener(
-  "click",
-  () => {
-
-    const select =
-      document.getElementById(
-        "editKategoriSelect"
-      );
-
-    const id =
-      Number(select.value);
-
-    if (!id) return;
-
-    const nama =
-      select.options[
-        select.selectedIndex
-      ].textContent;
-
-    const sudahAda =
-      editKategoriDipilih.some(
-        item =>
-          item.id === id
-      );
-
-    if (sudahAda) {
-      return;
-    }
-
+  if (!sudahAda) {
     editKategoriDipilih.push({
       id,
-      nama
+      nama: String(nama || "").trim()
     });
 
     renderEditKategori();
-
-    select.value = "";
-
   }
-);
+
+  const ui = initEditKategoriSearch();
+
+  ui?.reset();
+
+  if (ui && !ui.input.disabled) {
+    ui.input.focus();
+  }
+}
+
+// =====================================================
+// RENDER KATEGORI EDIT TERPILIH
+// =====================================================
+
+function renderEditKategori() {
+  const container = document.getElementById(
+    "editKategoriTerpilih"
+  );
+
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren();
+
+  editKategoriDipilih.forEach(kategori => {
+    const chip = document.createElement("div");
+
+    Object.assign(chip.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "6px 10px",
+      border: "1px solid #d1d5db",
+      borderRadius: "20px"
+    });
+
+    const label = document.createElement("span");
+
+    label.textContent = kategori.nama;
+
+    const button = document.createElement(
+      "button"
+    );
+
+    button.type = "button";
+    button.dataset.id = String(kategori.id);
+    button.textContent = "×";
+
+    button.setAttribute(
+      "aria-label",
+      "Hapus kategori"
+    );
+
+    Object.assign(button.style, {
+      border: "none",
+      background: "none",
+      cursor: "pointer",
+      fontSize: "16px"
+    });
+
+    chip.append(label, button);
+
+    container.appendChild(chip);
+  });
+
+  const ui = editKategoriSearchUI;
+
+  if (
+    ui &&
+    document.activeElement === ui.input &&
+    !ui.list.hidden
+  ) {
+    ui.render();
+  }
+}
+
+// =====================================================
+// EVENT TOMBOL TAMBAH LAMA
+// =====================================================
+
+document.getElementById(
+  "tambahEditKategori"
+)?.addEventListener("click", () => {
+  const select = document.getElementById(
+    "editKategoriSelect"
+  );
+
+  const option = select?.selectedOptions[0];
+
+  if (option?.value) {
+    tambahEditKategori(
+      option.value,
+      option.textContent.trim()
+    );
+  }
+});
+
+// =====================================================
+// HAPUS KATEGORI EDIT
+// =====================================================
 
 document.getElementById(
   "editKategoriTerpilih"
-).addEventListener(
-  "click",
-  event => {
+)?.addEventListener("click", event => {
+  const button = event.target.closest(
+    "button[data-id]"
+  );
 
-    const button =
-      event.target.closest(
-        "button[data-id]"
-      );
-
-    if (!button) return;
-
-    const id =
-      Number(
-        button.dataset.id
-      );
-
-    editKategoriDipilih =
-      editKategoriDipilih.filter(
-        item =>
-          item.id !== id
-      );
-
-    renderEditKategori();
-
+  if (!button) {
+    return;
   }
-);
 
+  const id = Number(button.dataset.id);
+
+  editKategoriDipilih = editKategoriDipilih.filter(
+    item => Number(item.id) !== id
+  );
+
+  renderEditKategori();
+});
+
+// =====================================================
+// INISIALISASI PENCARIAN
+// =====================================================
+
+initEditKategoriSearch();
 // ======================================================
 // LOAD LAST UPDATE PROYEK
 // ======================================================
@@ -1332,12 +1812,9 @@ const nilaiKlien =
 
 const nilaiPartnerDariData =
   daftarPartner.reduce(
-    (total, partner) => {
-      return (
-        total +
-        nilaiTerakhir(partner)
-      );
-    },
+    (total, partner) =>
+      total +
+      nilaiFinalPartnerTampil(partner),
     0
   );
 
@@ -1375,13 +1852,15 @@ const nilaiPartner =
   totalSeluruhTerminPartner > 0
     ? totalSeluruhTerminPartner
     : (
+        nilaiPartnerDariData ||
+
         angka(
           summary?.nilai_partner
         ) ||
+
         angka(
           summary?.nilai_final_partner
-        ) ||
-        nilaiPartnerDariData
+        )
       );
 
 
@@ -1430,7 +1909,7 @@ const dibayarPartner =
   daftarPartner.reduce(
     (totalPartner, partner) => {
       const nilaiFinalPartner =
-        nilaiTerakhir(partner);
+  nilaiFinalPartnerTampil(partner);
 
       const terminPartner =
         Array.isArray(partner.termin)
@@ -2296,103 +2775,120 @@ function getNilaiFinalTerminAktif() {
 
 }
 
+function getNilaiDasarPartnerTermin() {
+  if (!(Number(activePartnerId) > 0)) return 0;
+
+  const partner = getDataTerminAktif();
+
+  const nilai = [
+    partner?.nilai_nego_3,
+    partner?.nilai_nego_2,
+    partner?.nilai_nego_1,
+    partner?.nilai_submit
+  ];
+
+  return (
+    nilai
+      .map(angkaTermin)
+      .find(angka => angka > 0) || 0
+  );
+}
+
+function getAcuanNominalTermin(nominalBaru) {
+  // Perhitungan klien tetap menggunakan fungsi sebelumnya.
+  if (!(Number(activePartnerId) > 0)) {
+    return getNilaiFinalTerminAktif();
+  }
+
+  const nilaiDasar = getNilaiDasarPartnerTermin();
+
+  if (nilaiDasar > 0) {
+    return nilaiDasar;
+  }
+
+  const partner = getDataTerminAktif();
+
+  const daftarTermin = Array.isArray(partner?.termin)
+    ? partner.termin
+    : [];
+
+  const idEdit = Number(
+    document.getElementById("terminId")?.value ||
+    activePartnerTerminId ||
+    0
+  );
+
+  const totalTerminLain = daftarTermin.reduce(
+    (total, item) => {
+      // Saat edit, keluarkan nominal lama termin tersebut.
+      if (idEdit > 0 && Number(item.id) === idEdit) {
+        return total;
+      }
+
+      return total + angkaTermin(item.nominal);
+    },
+    0
+  );
+
+  return totalTerminLain + nominalBaru;
+}
 
 // ======================================================
 // ATUR INPUT PERSENTASE DAN NOMINAL
 // ======================================================
 
 function aturInputTermin() {
+  for (const id of [
+    "persentaseTerminGroup",
+    "nominalTerminGroup"
+  ]) {
+    const group = document.getElementById(id);
 
-  const persentaseGroup =
-    document.getElementById(
-      "persentaseTerminGroup"
-    );
-
-  const nominalGroup =
-    document.getElementById(
-      "nominalTerminGroup"
-    );
-
-  const persentaseInput =
-    document.getElementById(
-      "persentaseTermin"
-    );
-
-  const nominalInput =
-    document.getElementById(
-      "nominalTermin"
-    );
-
-
-  if (persentaseGroup) {
-
-    persentaseGroup.style.display =
-      "";
-
+    if (group) {
+      group.style.display = "";
+    }
   }
 
+  const persen =
+    document.getElementById("persentaseTermin");
 
-  if (nominalGroup) {
+  const nominal =
+    document.getElementById("nominalTermin");
 
-    nominalGroup.style.display =
-      "";
+  if (!persen || !nominal) return;
 
+  const otomatisDariNominal =
+    Number(activePartnerId) > 0 &&
+    getNilaiDasarPartnerTermin() <= 0;
+
+  const nilaiFinal = getNilaiFinalTerminAktif();
+
+  nominal.disabled = false;
+  nominal.required = true;
+  nominal.placeholder = "Isi nominal";
+
+  persen.disabled =
+    !otomatisDariNominal && nilaiFinal <= 0;
+
+  persen.readOnly = otomatisDariNominal;
+
+  persen.required =
+    !otomatisDariNominal && nilaiFinal > 0;
+
+  persen.min =
+    otomatisDariNominal ? "0" : "0.000001";
+
+  persen.max = "100";
+  persen.step = "any";
+  persen.setCustomValidity("");
+
+  persen.placeholder = otomatisDariNominal
+    ? "Otomatis dari total nominal termin"
+    : "Isi persentase";
+
+  if (otomatisDariNominal) {
+    inputTerminTerakhir = "nominal";
   }
-
-
-  if (
-    !persentaseInput ||
-    !nominalInput
-  ) {
-
-    return;
-
-  }
-
-
-  const nilaiFinal =
-    getNilaiFinalTerminAktif();
-
-
-  nominalInput.disabled =
-    false;
-
-  nominalInput.required =
-    true;
-
-  nominalInput.placeholder =
-    "Isi nominal";
-
-
-  /*
-   * Persentase tetap dapat diisi apabila
-   * nilai final tersedia.
-   */
-
-  if (nilaiFinal > 0) {
-
-    persentaseInput.disabled =
-      false;
-
-    persentaseInput.required =
-      true;
-
-    persentaseInput.placeholder =
-      "Isi persentase";
-
-  } else {
-
-    persentaseInput.disabled =
-      true;
-
-    persentaseInput.required =
-      false;
-
-    persentaseInput.placeholder =
-      "Nilai final belum tersedia";
-
-  }
-
 }
 
 
@@ -2487,68 +2983,34 @@ if (
   // NOMINAL → PERSENTASE
   // ====================================================
 
-  nominalTerminInput.addEventListener(
-    "input",
-    () => {
+ nominalTerminInput.addEventListener("input", () => {
+  inputTerminTerakhir = "nominal";
 
-      inputTerminTerakhir =
-        "nominal";
+  const nominal =
+    nominalOrNull(nominalTerminInput.value) || 0;
 
+  const nilaiAcuan =
+    getAcuanNominalTermin(nominal);
 
-      const nilaiFinal =
-        getNilaiFinalTerminAktif();
+  if (
+    !Number.isFinite(nominal) ||
+    nominal <= 0 ||
+    nilaiAcuan <= 0
+  ) {
+    persentaseTerminInput.value = "";
+    return;
+  }
 
-
-      const nominal =
-        nominalOrNull(
-          nominalTerminInput.value
-        ) || 0;
-
-
-      console.log(
-        "HITUNG PERSENTASE PARTNER:",
-        {
-          activePartnerId,
-
-          nilaiFinal,
-
-          nominal
-        }
-      );
-
-
-      if (
-        nilaiFinal <= 0 ||
-        !Number.isFinite(
-          nominal
-        ) ||
-        nominal <= 0
-      ) {
-
-        persentaseTerminInput.value =
-          "";
-
-        return;
-
-      }
-
-
-      const persentase =
-        nominal /
-        nilaiFinal *
-        100;
-
-
-      /*
-       * Batasi dua angka desimal.
-       * Contoh: 90.90909 menjadi 90.91
-       */
-
-      persentaseTerminInput.value =
-        persentase.toFixed(2);
-
-    }
+  persentaseTerminInput.value = String(
+    Number(
+      (
+        nominal / nilaiAcuan * 100
+      ).toFixed(6)
+    )
   );
+
+  persentaseTerminInput.setCustomValidity("");
+});
 
 }
 // ======================================================
@@ -3241,7 +3703,12 @@ if (terminForm) {
       // Jangan lagi membuat persentase null hanya karena
       // nilaiFinal tidak ditemukan di frontend.
       // ==================================================
-
+        if (
+          Number(activePartnerId) > 0 &&
+          getNilaiDasarPartnerTermin() <= 0
+        ) {
+          modeInput = "nominal";
+        }
       const payload = {
 
         nama_termin:
@@ -5764,16 +6231,19 @@ function editTerminPartner(id) {
 
 
   if (nominalInput) {
+  setNilaiNominal(
+    nominalInput,
+    nominalValue > 0 ? nominalValue : ""
+  );
 
-    setNilaiNominal(
-      nominalInput,
-      nominalValue > 0
-        ? nominalValue
-        : ""
+  if (getNilaiDasarPartnerTermin() <= 0) {
+    nominalInput.dispatchEvent(
+      new Event("input", {
+        bubbles: true
+      })
     );
-
   }
-
+}
 
   if (statusInput) {
 
@@ -7210,12 +7680,10 @@ function renderPartner(partners) {
     partners
       .map((item, index) => {
         const nilaiSubmitPartner =
-          Number(
-            item.nilai_submit || 0
-          );
+  nilaiSubmitPartnerTampil(item);
 
-        const nilaiFinalPartner =
-          nilaiTerakhir(item);
+const nilaiFinalPartner =
+  nilaiFinalPartnerTampil(item);
 
         const bisnisPerformance =
           nilaiSubmitPartner > 0
@@ -9846,42 +10314,61 @@ if (batalEditPartner) {
 // NILAI SUBMIT PARTNER TAMPIL
 // ======================================================
 
+// =====================================================
+// NILAI FINAL PARTNER UNTUK TAMPILAN
+// =====================================================
+function nilaiFinalPartnerTampil(partner) {
+  // Prioritaskan nilai kontrak yang sudah tersedia.
+  // Jika kosong / nol, gunakan total nominal termin.
+  return (
+    nilaiTerakhir(partner) ||
+    ambilNilaiFinal(partner)
+  );
+}
+
+// =====================================================
+// NILAI SUBMIT PARTNER UNTUK TAMPILAN
+// =====================================================
 function nilaiSubmitPartnerTampil(partner) {
+  const jenis = String(
+    detailData?.proyek?.jenis_proyek || ""
+  )
+    .trim()
+    .toLowerCase();
 
-  // TRANSAKSI:
-  // Nilai Submit Partner =
-  // total nominal seluruh termin partner
+  const termin = Array.isArray(partner?.termin)
+    ? partner.termin
+    : [];
 
-  if (
-    detailData?.proyek?.jenis_proyek ===
-    "Transaksi"
-  ) {
-
-    const termin =
-      partner?.termin || [];
-
+  // Transaksi: nilai submit berasal dari total termin.
+  if (jenis.includes("transaksi")) {
     return termin.reduce(
-      (total, item) => {
-
-        return (
-          total +
-          Number(item.nominal || 0)
-        );
-
-      },
+      (total, item) =>
+        total +
+        Math.max(
+          angkaTermin(item?.nominal),
+          0
+        ),
       0
     );
-
   }
 
-
-  // REGULER / SLA / SEWA
-  // tetap menggunakan nilai submit partner
-
-  return Number(
-    partner?.nilai_submit || 0
+  const nilaiSubmit = angkaTermin(
+    partner?.nilai_submit
   );
 
+  const nilaiKontrak = nilaiTerakhir(partner);
+
+  if (
+    nilaiSubmit > 0 ||
+    nilaiKontrak > 0
+  ) {
+    return nilaiSubmit;
+  }
+
+  // Submit dan final sama-sama nol:
+  // gunakan jumlah nominal seluruh termin partner.
+  return nilaiFinalPartnerTampil(partner);
 }
 
 // ======================================================
@@ -12274,5 +12761,437 @@ async function mulaiDetailProyek() {
 
 }
 
+// =====================================================
+// PENCARIAN KLIEN DAN PARTNER DI DETAIL
+// =====================================================
+(() => {
+  const controls = new Map();
+  let counter = 0;
+
+  const style = document.createElement("style");
+
+  style.textContent = `
+    .detail-kp-search {
+      position: relative;
+      width: 100%;
+    }
+
+    .detail-kp-search-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: #fff;
+      font: inherit;
+    }
+
+    .detail-kp-search-input:focus {
+      outline: 2px solid #93c5fd;
+    }
+
+    .detail-kp-search-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 4px;
+      max-height: 240px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      box-shadow: 0 6px 16px #0002;
+      z-index: 1000;
+    }
+
+    .detail-kp-search-list[hidden] {
+      display: none;
+    }
+
+    .detail-kp-search-option {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      border: 0;
+      background: #fff;
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+      color: #111827;
+    }
+
+    .detail-kp-search-option:hover,
+    .detail-kp-search-option[aria-selected="true"] {
+      background: #eff6ff;
+    }
+
+    .detail-kp-search-info {
+      padding: 10px 12px;
+      color: #6b7280;
+    }
+  `;
+
+  document.head.appendChild(style);
+
+  function enhance(select, kind) {
+    if (!select || controls.has(select)) return;
+
+    const id = `detailKpSearch-${++counter}`;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "detail-kp-search";
+
+    const input = document.createElement("input");
+
+    input.id = `${id}-input`;
+    input.type = "text";
+    input.className = "detail-kp-search-input";
+    input.placeholder = `Ketik nama ${kind}...`;
+    input.autocomplete = "off";
+    input.required = select.required;
+    input.disabled = select.disabled;
+
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-label", `Cari ${kind}`);
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-expanded", "false");
+    input.setAttribute("aria-controls", `${id}-list`);
+
+    const list = document.createElement("div");
+
+    list.id = `${id}-list`;
+    list.className = "detail-kp-search-list";
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
+
+    const labels = Array.from(select.labels || []);
+
+    select.before(wrapper);
+    wrapper.append(input, list, select);
+
+    labels.forEach(label => {
+      label.htmlFor = input.id;
+    });
+
+    // Select asli tetap menyimpan ID untuk proses simpan.
+    select.hidden = true;
+    select.style.display = "none";
+    select.required = false;
+
+    let buttons = [];
+    let active = -1;
+    let editing = false;
+
+    function close() {
+      list.hidden = true;
+      active = -1;
+
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    }
+
+    function sync() {
+      const option = select.selectedOptions[0];
+
+      input.value = select.value && option
+        ? option.textContent.trim()
+        : "";
+
+      input.disabled = select.disabled;
+      input.setCustomValidity("");
+
+      close();
+    }
+
+    function unavailable(option) {
+      if (
+        option.disabled ||
+        option.parentElement?.disabled
+      ) {
+        return true;
+      }
+
+      if (kind !== "partner") return false;
+
+      // Jangan tampilkan partner yang sudah dipilih
+      // pada kartu partner lain.
+      return Array.from(
+        document.querySelectorAll(
+          "#editPartnerContainer .edit-partner-id"
+        )
+      ).some(other =>
+        other !== select &&
+        other.value === option.value
+      );
+    }
+
+    function render() {
+      if (input.disabled) return close();
+
+      list.replaceChildren();
+      buttons = [];
+      active = -1;
+
+      input.removeAttribute("aria-activedescendant");
+
+      const query = input.value.trim().toLowerCase();
+
+      const matches = Array.from(select.options)
+        .filter(option =>
+          option.value &&
+          !unavailable(option) &&
+          option.textContent
+            .toLowerCase()
+            .includes(query)
+        );
+
+      matches.slice(0, 50).forEach((option, index) => {
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.id = `${id}-option-${index}`;
+        button.className = "detail-kp-search-option";
+        button.tabIndex = -1;
+        button.textContent = option.textContent.trim();
+
+        button.setAttribute("role", "option");
+        button.setAttribute("aria-selected", "false");
+
+        button.addEventListener("mousedown", event => {
+          event.preventDefault();
+        });
+
+        button.addEventListener("click", () => {
+          if (unavailable(option)) return render();
+
+          select.value = option.value;
+
+          select.dispatchEvent(
+            new Event("change", {
+              bubbles: true
+            })
+          );
+
+          sync();
+          input.focus();
+          close();
+        });
+
+        buttons.push(button);
+        list.appendChild(button);
+      });
+
+      if (!matches.length || matches.length > 50) {
+        const info = document.createElement("div");
+
+        info.className = "detail-kp-search-info";
+
+        info.textContent = !matches.length
+          ? `${
+              kind === "klien" ? "Klien" : "Partner"
+            } tidak ditemukan atau belum tersedia.`
+          : "Ketik lebih lengkap untuk mempersempit hasil.";
+
+        list.appendChild(info);
+      }
+
+      list.hidden = false;
+
+      input.setAttribute("aria-expanded", "true");
+    }
+
+    input.addEventListener("input", () => {
+      const hadValue = Boolean(select.value);
+
+      // Ketika teks diubah, pilihan sebelumnya dibatalkan.
+      select.value = "";
+
+      editing = true;
+
+      if (hadValue) {
+        select.dispatchEvent(
+          new Event("change", {
+            bubbles: true
+          })
+        );
+      }
+
+      editing = false;
+
+      // Teks harus dipilih dari hasil pencarian.
+      input.setCustomValidity(
+        input.value.trim()
+          ? `Klik salah satu hasil pencarian ${kind}.`
+          : ""
+      );
+
+      render();
+    });
+
+    input.addEventListener("focus", render);
+    input.addEventListener("click", render);
+    input.addEventListener("blur", close);
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        return close();
+      }
+
+      if (event.key === "Enter" && !list.hidden) {
+        event.preventDefault();
+
+        if (active >= 0) {
+          buttons[active]?.click();
+        }
+
+        return;
+      }
+
+      if (
+        !["ArrowDown", "ArrowUp"].includes(event.key)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (list.hidden) render();
+      if (!buttons.length) return;
+
+      active = active < 0
+        ? (
+            event.key === "ArrowDown"
+              ? 0
+              : buttons.length - 1
+          )
+        : (
+            active +
+            (event.key === "ArrowDown" ? 1 : -1) +
+            buttons.length
+          ) % buttons.length;
+
+      buttons.forEach((button, index) => {
+        button.setAttribute(
+          "aria-selected",
+          String(index === active)
+        );
+      });
+
+      input.setAttribute(
+        "aria-activedescendant",
+        buttons[active].id
+      );
+
+      buttons[active].scrollIntoView({
+        block: "nearest"
+      });
+    });
+
+    select.addEventListener("change", () => {
+      if (!editing) {
+        queueMicrotask(sync);
+      }
+    });
+
+    // Sinkronkan ketika opsi dimuat atau modal dibuka ulang.
+    const observer = new MutationObserver(() => {
+      input.disabled = select.disabled;
+
+      if (select.value) {
+        sync();
+      } else if (document.activeElement === input) {
+        render();
+      } else {
+        close();
+      }
+    });
+
+    observer.observe(select, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true
+    });
+
+    controls.set(select, {
+      sync,
+      observer
+    });
+
+    sync();
+  }
+
+  // ===================================================
+  // EDIT KLIEN
+  // ===================================================
+  enhance(
+    document.getElementById("editKlienId"),
+    "klien"
+  );
+
+  // ===================================================
+  // EDIT PARTNER
+  // ===================================================
+  const container = document.getElementById(
+    "editPartnerContainer"
+  );
+
+  function initPartners() {
+    container
+      ?.querySelectorAll("select.edit-partner-id")
+      .forEach(select => {
+        enhance(select, "partner");
+      });
+
+    // Bersihkan observer kartu yang sudah dihapus.
+    for (const [select, control] of controls) {
+      if (!select.isConnected) {
+        control.observer.disconnect();
+        controls.delete(select);
+      }
+    }
+  }
+
+  initPartners();
+
+  // Menangani kartu yang dibuat saat membuka modal
+  // dan saat menekan Tambah Partner.
+  if (container) {
+    new MutationObserver(initPartners).observe(
+      container,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
+  }
+
+  // ===================================================
+  // RESET FORM MODAL
+  // ===================================================
+  document.addEventListener(
+    "reset",
+    event => {
+      if (
+        ![
+          "editKlienForm",
+          "editPartnerForm"
+        ].includes(event.target.id)
+      ) {
+        return;
+      }
+
+      queueMicrotask(() => {
+        controls.forEach((control, select) => {
+          if (event.target.contains(select)) {
+            control.sync();
+          }
+        });
+      });
+    },
+    true
+  );
+})();
 
 mulaiDetailProyek();
