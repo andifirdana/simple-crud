@@ -75,6 +75,93 @@
   width: calc(100% - 32px);
   margin: 14px 16px 18px;
 }
+/* Sidebar */
+.sidebar {
+  background: linear-gradient(
+    180deg,
+    #073568 0%,
+    #05264f 55%,
+    #031c3c 100%
+  );
+  color: #ffffff;
+  border-right: 1px solid #315a76;
+}
+
+/* Menu */
+.sidebar a {
+  background: transparent;
+  color: #d2e4e9;
+  border-radius: 10px;
+  text-decoration: none;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.sidebar a svg {
+  color: inherit;
+}
+
+.sidebar a:hover {
+  background: #174566;
+  color: #ffffff;
+}
+
+/* Menu aktif */
+.sidebar a.active,
+.sidebar a[aria-current="page"] {
+  background: #c7dcaf;
+  color: #24432d;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.sidebar a.active:hover,
+.sidebar a[aria-current="page"]:hover {
+  background: #b8d19c;
+  color: #24432d;
+}
+
+/* Tombol sidebar */
+.sidebar button {
+  background: #174566;
+  color: #ffffff;
+  border: 1px solid #47758b;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.sidebar button:hover {
+  background: #1c506f;
+  border-color: #76a9b7;
+}
+
+/* Fokus keyboard */
+.sidebar a:focus-visible,
+.sidebar button:focus-visible {
+  outline: 2px solid #85bfc6;
+  outline-offset: 2px;
+}
+
+/* Scrollbar */
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: #47758b #05264f;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #05264f;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #47758b;
+  border-radius: 10px;
+}
+
 </style>
 <aside class="sidebar">
 

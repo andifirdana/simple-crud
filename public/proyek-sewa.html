@@ -492,6 +492,90 @@
 
   color: #111827;
 }
+
+/* Summary proyek sewa */
+
+.sewa-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sewa-summary .summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 12px;
+
+  position: relative;
+  min-width: 0;
+  height: auto;
+  padding: 22px 24px;
+
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+}
+
+.sewa-summary .summary-label {
+  width: 100%;
+  margin: 0;
+
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.sewa-summary .summary-value {
+  width: 100%;
+  margin: 0;
+
+  color: #111827;
+  font-size: clamp(18px, 1.7vw, 26px);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.4px;
+
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.sewa-summary .summary-note {
+  width: 100%;
+  margin: auto 0 0;
+
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+  .sewa-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .sewa-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .sewa-summary .summary-card {
+    padding: 18px 20px;
+  }
+
+  .sewa-summary .summary-value {
+    font-size: 22px;
+  }
+}
   </style>
 
 </head>
@@ -544,10 +628,8 @@
     <!-- =====================================
          SUMMARY
     ====================================== -->
-
-    <section class="sewa-summary">
-
-
+<div class="summary-grid sewa-summary">
+  
       <!-- TOTAL NILAI -->
 
       <div class="summary-card">
@@ -616,9 +698,7 @@
 
       </div>
 
-    </section>
-
-
+</div>
     <!-- =====================================
          FILTER
     ====================================== -->

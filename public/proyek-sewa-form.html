@@ -554,7 +554,104 @@
 
     }
 
-    
+    /* ==================================================
+   PRODUK DAN LOKASI: KETIK DAN PILIH
+================================================== */
+
+.sewa-search-select {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.sewa-search-original[hidden],
+.sewa-search-options[hidden] {
+  display: none !important;
+}
+
+.sewa-search-select .sewa-search-input {
+  box-sizing: border-box;
+
+  width: 100%;
+  min-width: 0;
+
+  padding: 10px 12px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #172033;
+
+  font: inherit;
+}
+
+.sewa-search-select .sewa-search-input:focus {
+  outline: 2px solid #c4b5fd;
+  outline-offset: 1px;
+
+  border-color: #8b5cf6;
+}
+
+.sewa-search-options {
+  position: absolute;
+
+  z-index: 100;
+
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+
+  max-height: 240px;
+  overflow-y: auto;
+
+  padding: 4px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 8px 24px rgb(15 23 42 / 12%);
+}
+
+.sewa-search-options .sewa-search-option {
+  display: block;
+
+  width: 100%;
+
+  margin: 0;
+  padding: 9px 10px;
+
+  border: 0;
+  border-radius: 5px;
+
+  background: transparent;
+  color: #334155;
+
+  font: inherit;
+  text-align: left;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  cursor: pointer;
+}
+
+.sewa-search-options .sewa-search-option:hover,
+.sewa-search-options .sewa-search-option.is-active {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.sewa-search-empty {
+  padding: 10px;
+
+  color: #64748b;
+  font-size: 12px;
+}
+  
   </style>
 
 </head>
@@ -685,31 +782,28 @@
 
 
                 <!-- =========================================
-                     KLIEN
+                     PROYEK EXISTING
                 ========================================== -->
 
                 <div class="form-group">
 
-                  <label for="klienId">
-                    Klien
-                    <span class="required">*</span>
+                  <label for="proyekId">
+                  Pilih Proyek 
                   </label>
 
                   <select
-                    id="klienId"
-                    name="klien_id"
+                    id="proyekId"
+                    name="proyek_id"
                     class="form-control"
-                    required
                   >
 
                     <option value="">
-                      Pilih Klien
+                      Pilih Nama Proyek
                     </option>
 
                   </select>
 
-                </div>
-
+                </div>                
 
                 <!-- =========================================
                      RUJUKAN KONTRAK
@@ -734,29 +828,32 @@
 
 
                 <!-- =========================================
-                     PROYEK EXISTING
+                     KLIEN
                 ========================================== -->
 
                 <div class="form-group">
 
-                  <label for="proyekId">
-                    Atau Pilih Proyek yang Sudah Ada
+                  <label for="klienId">
+                    Klien
+                    <span class="required">*</span>
                   </label>
 
                   <select
-                    id="proyekId"
-                    name="proyek_id"
+                    id="klienId"
+                    name="klien_id"
                     class="form-control"
+                    required
                   >
 
                     <option value="">
-                      Pilih Nama Proyek
+                      Pilih Klien
                     </option>
 
                   </select>
 
                 </div>
-                <div class="form-group">
+                
+<div class="form-group">
 
               <label for="proyekPartnerId">
                 Partner Proyek
@@ -780,7 +877,6 @@
                 Partner diambil dari kontrak/proyek yang dipilih.
               </div>
             </div>
-
 
               </div>
 

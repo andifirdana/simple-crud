@@ -894,6 +894,38 @@ body.activity-modal-open {
     transform: rotate(90deg);
   }
 }
+/* Semua filter proyek dalam satu baris */
+.project-page .filter-card {
+  display: grid !important;
+
+  grid-template-columns:
+    minmax(180px, 1.5fr)
+    repeat(6, minmax(140px, 1fr)) !important;
+
+  grid-auto-flow: row;
+
+  align-items: center;
+
+  gap: 12px;
+
+  overflow-x: auto;
+}
+
+.project-page .filter-card > input,
+.project-page .filter-card > select {
+  width: 100% !important;
+
+  min-width: 0 !important;
+
+  max-width: none !important;
+
+  grid-column: auto !important;
+
+  grid-row: auto !important;
+
+  box-sizing: border-box;
+}
+
   </style>
 
 </head>
@@ -997,7 +1029,17 @@ body.activity-modal-open {
 
           </select>
 
+        <select id="statusFilter">
+          <option value="">
+            Semua Status
+          </option>
+        </select>
 
+        <select id="picFilter">
+          <option value="">
+            Semua PIC
+          </option>
+        </select>
         </div>
 
 

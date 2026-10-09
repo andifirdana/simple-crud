@@ -1598,16 +1598,15 @@ function renderPagination() {
 async function hapusProyekSewa(
   id
 ) {
-
-  const proyekSewaId =
+  const proyekId =
     Number(id);
 
-
   if (
-    !Number.isInteger(proyekSewaId) ||
-    proyekSewaId <= 0
+    !Number.isInteger(
+      proyekId
+    ) ||
+    proyekId <= 0
   ) {
-
     alert(
       "ID proyek sewa tidak valid."
     );
@@ -1615,82 +1614,81 @@ async function hapusProyekSewa(
     return;
   }
 
+  const proyek =
+    semuaProyekSewa.find(
+      item =>
+        Number(item.id) ===
+        proyekId
+    );
+
+  const nomorPr =
+    proyek?.nomor_pr ||
+    `ID ${proyekId}`;
 
   const yakin =
     window.confirm(
-      "Apakah Anda yakin ingin menghapus proyek sewa ini?"
+      `Hapus Proyek Sewa ${nomorPr}?\n\n` +
+      "Produk, order dan pembayaran di dalam proyek ini juga akan dihapus."
     );
-
 
   if (!yakin) {
     return;
   }
 
-
   try {
-
     const response =
       await fetch(
-        `/api/proyek-sewa/${encodeURIComponent(proyekSewaId)}`,
+        `/api/proyek-sewa/${encodeURIComponent(
+          proyekId
+        )}`,
         {
-          method:
-            "DELETE",
+          method: "DELETE",
 
           headers: {
-            "Accept":
+            Accept:
               "application/json"
-          }
+          },
+
+          credentials:
+            "include"
         }
       );
 
+    if (
+      response.status === 401
+    ) {
+      window.location.href =
+        "/login.html";
 
-    let result = {};
-
-
-    try {
-
-      result =
-        await response.json();
-
-    } catch (parseError) {
-
-      result = {};
-
+      return;
     }
 
+    const result =
+      await response
+        .json()
+        .catch(
+          () => ({})
+        );
 
     if (!response.ok) {
-
       throw new Error(
         result.error ||
-        `Gagal menghapus proyek sewa. Status ${response.status}.`
+        "Gagal menghapus proyek sewa."
       );
-
     }
-
-
-    alert(
-      result.message ||
-      "Proyek sewa berhasil dihapus."
-    );
-
 
     await loadProyekSewa();
 
-
   } catch (error) {
-
     console.error(
       "ERROR DELETE PROYEK SEWA:",
       error
     );
 
-
     alert(
       error.message ||
       "Gagal menghapus proyek sewa."
     );
-
   }
 }
 

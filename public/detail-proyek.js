@@ -3533,55 +3533,50 @@ function renderTermin(
    * Sisa Termin =
    * 100% - Total Persentase
    */
+    // ================================================
+  // RINGKASAN TERMIN
+  // ================================================
+
+  // Jika total nominal sama dengan nilai final,
+  // total persentase menjadi 100%.
+  // Bandingkan sampai dua desimal nominal.
+
+  if (
+    nilaiFinalAsli > 0 &&
+    Math.round(totalNominalTampil * 100) ===
+      Math.round(nilaiFinalAsli * 100)
+  ) {
+    totalPersentase = 100;
+  }
+
   const sisaTermin =
     Math.max(
       0,
-      100 -
-      totalPersentase
+      100 - totalPersentase
     );
 
-
-  if (
-    totalTerminElement
-  ) {
-
+  if (totalTerminElement) {
     totalTerminElement.textContent =
       `${totalPersentase.toFixed(2)}%`;
-
   }
 
-
-  if (
-    totalNominalElement
-  ) {
-
+  if (totalNominalElement) {
     totalNominalElement.textContent =
       rupiah(
         totalNominalTampil
       );
-
   }
 
-
-  if (
-    nilaiFinalElement
-  ) {
-
+  if (nilaiFinalElement) {
     nilaiFinalElement.textContent =
       rupiah(
         nilaiFinalAsli
       );
-
   }
 
-
-  if (
-    sisaTerminElement
-  ) {
-
+  if (sisaTerminElement) {
     sisaTerminElement.textContent =
       `${sisaTermin.toFixed(2)}%`;
-
   }
 
 }
@@ -4690,10 +4685,7 @@ const timelineForm =
     "timelineForm"
   );
 
-
-// ======================================================
-// HITUNG SELISIH HARI
-// ======================================================
+// HITUNG SELISIH HARI TIMELINE PROYEK
 
 function selisihHariTimeline(
   tanggalAwal,
@@ -4732,10 +4724,7 @@ function selisihHariTimeline(
   );
 }
 
-
-// ======================================================
-// DURASI DAN BERAKHIR DALAM
-// ======================================================
+// DURASI DAN BERAKHIR DALAM TIMELINE PROYEK
 
 function updatePerhitunganTimeline() {
   const mulai =
@@ -4808,7 +4797,6 @@ function updatePerhitunganTimeline() {
   }
 }
 
-
 [
   "timelineTanggalMulai",
   "timelineTanggalAkhir"
@@ -4820,10 +4808,7 @@ function updatePerhitunganTimeline() {
     );
 });
 
-
-// ======================================================
-// LOAD TIMELINE
-// ======================================================
+// LOAD TIMELINE PROYEK
 
 async function loadTimeline() {
   try {
@@ -4857,10 +4842,7 @@ async function loadTimeline() {
   }
 }
 
-
-// ======================================================
-// RENDER TIMELINE
-// ======================================================
+// RENDER TIMELINE PROYEK
 
 function renderTimeline() {
   const container =
@@ -5154,9 +5136,7 @@ function renderTimeline() {
   `;
 }
 
-// ======================================================
-// BUKA TAMBAH TIMELINE
-// ======================================================
+// BUKA TAMBAH TIMELINE PROYEK
 
 document.getElementById(
   "tambahTimelineButton"
@@ -5183,9 +5163,7 @@ document.getElementById(
 );
 
 
-// ======================================================
-// EDIT TIMELINE
-// ======================================================
+// EDIT TIMELINE PROYEK
 
 function editTimeline(id) {
   const item =
@@ -5244,9 +5222,7 @@ function editTimeline(id) {
   );
 }
 
-// ======================================================
-// SIMPAN TIMELINE
-// ======================================================
+// SIMPAN TIMELINE PROYEK
 
 timelineForm?.addEventListener(
   "submit",
@@ -5345,9 +5321,7 @@ timelineForm?.addEventListener(
   }
 );
 
-// ======================================================
-// HAPUS TIMELINE
-// ======================================================
+// HAPUS TIMELINE PROYEK
 
 async function hapusTimeline(id) {
   if (
@@ -5384,9 +5358,7 @@ async function hapusTimeline(id) {
   }
 }
 
-// ======================================================
-// TUTUP MODAL TIMELINE
-// ======================================================
+// TUTUP MODAL TIMELINE PROYEK
 
 document.getElementById(
   "batalTimeline"
@@ -5398,6 +5370,7 @@ document.getElementById(
     );
   }
 );
+
 
 // =====================================================
 // SELECT DOKUMEN DARI MASTER

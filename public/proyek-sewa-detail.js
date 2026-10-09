@@ -1,9 +1,4 @@
 // =====================================================
-// PROYEK SEWA DETAIL
-// =====================================================
-
-
-// =====================================================
 // ID DARI URL
 // =====================================================
 
@@ -802,18 +797,18 @@ function renderDetail(result) {
       proyek.total_nilai_per_bulan
     );
 
-  const totalDibayar =
-    pembayaran.reduce(
-      (
-        total,
-        item
-      ) =>
-        total +
-        angka(
-          item.nominal
-        ),
-      0
-    );
+ const totalDibayar = pembayaran
+  .filter(
+    item =>
+      normalisasiStatusPembayaranSewa(
+        item.status_pembayaran
+      ) === "Sudah Dibayar"
+  )
+  .reduce(
+    (total, item) =>
+      total + Number(item.nominal || 0),
+    0
+  );
 
   const sisa =
     Math.max(
@@ -948,6 +943,438 @@ renderDokumenSewa(
 
 
 // =====================================================
+// PRODUK DAN LOKASI: KETIK DAN PILIH
+// =====================================================
+
+let inlineSearchCounter = 0;
+
+function buatSelectInlineBisaDicari(
+  select,
+  placeholder
+) {
+  if (
+    !select ||
+    select.dataset.sewaSearchReady === "true"
+  ) {
+    return;
+  }
+
+  select.dataset.sewaSearchReady = "true";
+
+  const uid =
+    `inline-search-${++inlineSearchCounter}`;
+
+  const wrapper =
+    document.createElement("div");
+
+  wrapper.className =
+    "sewa-search-select";
+
+  const input =
+    document.createElement("input");
+
+  input.type = "text";
+
+  input.className =
+    "inline-control sewa-search-input";
+
+  input.id =
+    select.id || `${uid}-input`;
+
+  if (select.id) {
+    select.id = `${uid}-select`;
+  }
+
+  input.placeholder = placeholder;
+  input.autocomplete = "off";
+  input.required = true;
+  input.disabled = select.disabled;
+
+  input.setAttribute("role", "combobox");
+  input.setAttribute("aria-label", placeholder);
+  input.setAttribute("aria-autocomplete", "list");
+  input.setAttribute("aria-expanded", "false");
+  input.setAttribute("aria-controls", `${uid}-list`);
+
+  const list =
+    document.createElement("div");
+
+  list.id = `${uid}-list`;
+
+  list.className =
+    "sewa-search-options";
+
+  list.setAttribute("role", "listbox");
+
+  list.hidden = true;
+
+  // Select asli tetap menyimpan ID untuk harga dan payload.
+
+  select.required = false;
+  select.hidden = true;
+
+  select.classList.add(
+    "sewa-search-original"
+  );
+
+  select.before(wrapper);
+
+  wrapper.append(
+    input,
+    select,
+    list
+  );
+
+  let filtered = [];
+  let activeIndex = -1;
+
+  function validasi() {
+    input.setCustomValidity(
+      select.value
+        ? ""
+        : "Pilih salah satu pilihan dari daftar."
+    );
+  }
+
+  function tutup() {
+    list.hidden = true;
+
+    input.setAttribute(
+      "aria-expanded",
+      "false"
+    );
+
+    input.removeAttribute(
+      "aria-activedescendant"
+    );
+
+    activeIndex = -1;
+  }
+
+  function tandaiAktif() {
+    list.querySelectorAll(
+      ".sewa-search-option"
+    ).forEach(
+      (item, index) => {
+        const aktif =
+          index === activeIndex;
+
+        item.classList.toggle(
+          "is-active",
+          aktif
+        );
+
+        item.setAttribute(
+          "aria-selected",
+          String(aktif)
+        );
+
+        if (aktif) {
+          input.setAttribute(
+            "aria-activedescendant",
+            item.id
+          );
+
+          item.scrollIntoView({
+            block: "nearest"
+          });
+        }
+      }
+    );
+  }
+
+  function pilih(option) {
+    if (!option) {
+      return;
+    }
+
+    select.value =
+      option.value;
+
+    input.value =
+      option.textContent.trim();
+
+    validasi();
+    tutup();
+
+    // Memicu event change yang sudah ada
+    // untuk menghitung ulang harga produk.
+
+    select.dispatchEvent(
+      new Event(
+        "change",
+        { bubbles: true }
+      )
+    );
+  }
+
+  function tampilkan(query = "") {
+    const keyword =
+      query.trim().toLowerCase();
+
+    filtered = [
+      ...select.options
+    ].filter(
+      option =>
+        option.value &&
+        !option.disabled &&
+        option.textContent
+          .toLowerCase()
+          .includes(keyword)
+    );
+
+    list.replaceChildren();
+
+    activeIndex = -1;
+
+    if (filtered.length === 0) {
+      const empty =
+        document.createElement("div");
+
+      empty.className =
+        "sewa-search-empty";
+
+      empty.textContent =
+        "Data tidak ditemukan";
+
+      list.appendChild(empty);
+    }
+
+    filtered.forEach(
+      (option, index) => {
+        const button =
+          document.createElement("button");
+
+        button.type = "button";
+        button.tabIndex = -1;
+
+        button.id =
+          `${uid}-option-${index}`;
+
+        button.className =
+          "sewa-search-option";
+
+        button.textContent =
+          option.textContent.trim();
+
+        button.setAttribute(
+          "role",
+          "option"
+        );
+
+        button.setAttribute(
+          "aria-selected",
+          "false"
+        );
+
+        button.addEventListener(
+          "mousedown",
+          event => {
+            event.preventDefault();
+          }
+        );
+
+        button.addEventListener(
+          "click",
+          () => {
+            pilih(option);
+          }
+        );
+
+        list.appendChild(button);
+      }
+    );
+
+    list.hidden = false;
+
+    input.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+
+    input.removeAttribute(
+      "aria-activedescendant"
+    );
+  }
+
+  // Tampilkan produk/lokasi existing saat edit.
+
+  const selected =
+    select.selectedOptions[0];
+
+  input.value =
+    selected?.value
+      ? selected.textContent.trim()
+      : "";
+
+  validasi();
+
+  input.addEventListener(
+    "focus",
+    () => {
+      tampilkan(
+        select.value
+          ? ""
+          : input.value
+      );
+    }
+  );
+
+  input.addEventListener(
+    "input",
+    () => {
+      const sebelumnya =
+        select.value;
+
+      // Kosongkan ID lama ketika teks diubah.
+
+      select.value = "";
+
+      validasi();
+
+      if (sebelumnya) {
+        select.dispatchEvent(
+          new Event(
+            "change",
+            { bubbles: true }
+          )
+        );
+      }
+
+      tampilkan(input.value);
+    }
+  );
+
+  input.addEventListener(
+    "keydown",
+    event => {
+      if (event.key === "Escape") {
+        if (!list.hidden) {
+          event.preventDefault();
+          event.stopPropagation();
+
+          tutup();
+        }
+
+        return;
+      }
+
+      if (
+        event.key === "ArrowDown" ||
+        event.key === "ArrowUp"
+      ) {
+        event.preventDefault();
+
+        if (list.hidden) {
+          tampilkan(
+            select.value
+              ? ""
+              : input.value
+          );
+        }
+
+        if (filtered.length === 0) {
+          return;
+        }
+
+        if (event.key === "ArrowDown") {
+          activeIndex =
+            (activeIndex + 1) %
+            filtered.length;
+        } else {
+          activeIndex =
+            activeIndex <= 0
+              ? filtered.length - 1
+              : activeIndex - 1;
+        }
+
+        tandaiAktif();
+
+        return;
+      }
+
+      if (
+        event.key === "Enter" &&
+        !list.hidden
+      ) {
+        event.preventDefault();
+
+        if (activeIndex >= 0) {
+          pilih(
+            filtered[activeIndex]
+          );
+        } else if (
+          filtered.length === 1
+        ) {
+          pilih(filtered[0]);
+        }
+      }
+    }
+  );
+
+  wrapper.addEventListener(
+    "focusout",
+    event => {
+      if (
+        !wrapper.contains(
+          event.relatedTarget
+        )
+      ) {
+        tutup();
+      }
+    }
+  );
+
+  select.addEventListener(
+    "change",
+    () => {
+      const option =
+        select.selectedOptions[0];
+
+      if (option?.value) {
+        input.value =
+          option.textContent.trim();
+      }
+
+      validasi();
+    }
+  );
+}
+
+
+// =====================================================
+// AKTIFKAN PENCARIAN PADA PRODUK DAN ORDER
+// =====================================================
+
+function initPencarianProdukLokasiInline(root) {
+  if (!root) {
+    return;
+  }
+
+  root.querySelectorAll(
+    ".inlineProdukSelect"
+  ).forEach(
+    select => {
+      buatSelectInlineBisaDicari(
+        select,
+        "Ketik atau pilih produk"
+      );
+    }
+  );
+
+  root.querySelectorAll(
+    ".inlineCabang"
+  ).forEach(
+    select => {
+      buatSelectInlineBisaDicari(
+        select,
+        "Ketik atau pilih lokasi"
+      );
+    }
+  );
+}
+
+// =====================================================
 // OPTION PRODUK
 // =====================================================
 
@@ -1039,10 +1466,11 @@ function buatCabangOptions(
 // RENDER PRODUK
 // =====================================================
 
-function renderProduk(
-  produk
-) {
+// =====================================================
+// RENDER PRODUK
+// =====================================================
 
+function renderProduk(produk) {
   const container =
     document.getElementById(
       "productEditContainer"
@@ -1056,7 +1484,6 @@ function renderProduk(
     !Array.isArray(produk) ||
     produk.length === 0
   ) {
-
     container.innerHTML = `
       <div class="message">
         Belum ada produk.
@@ -1064,22 +1491,16 @@ function renderProduk(
     `;
 
     if (modeEditProduk) {
-
       hitungSemuaProduk();
-
     }
 
     return;
-
   }
 
   container.innerHTML =
     produk
       .map(
-        (
-          item,
-          index
-        ) =>
+        (item, index) =>
           buatProdukInline(
             item,
             index
@@ -1088,28 +1509,24 @@ function renderProduk(
       .join("");
 
   if (modeEditProduk) {
+    initPencarianProdukLokasiInline(
+      container
+    );
 
-    container
-      .querySelectorAll(
-        ".inline-product-card"
-      )
-      .forEach(
-        product => {
-
-          hitungProdukInline(
-            product,
-            false
-          );
-
-        }
-      );
+    container.querySelectorAll(
+      ".inline-product-card"
+    ).forEach(
+      product => {
+        hitungProdukInline(
+          product,
+          false
+        );
+      }
+    );
 
     hitungSemuaProduk();
-
   }
-
 }
-
 
 // =====================================================
 // PRODUK HTML
@@ -2558,6 +2975,9 @@ document
           jumlahProduk
         )
       );
+      initPencarianProdukLokasiInline(
+        container
+      );
 
       hitungSemuaProduk();
 
@@ -2696,6 +3116,10 @@ document
 
             total_harga: 0
           })
+        );
+
+               initPencarianProdukLokasiInline(
+          product
         );
 
         hitungProdukInline(
@@ -3222,178 +3646,347 @@ document
 // RENDER PEMBAYARAN
 // =====================================================
 
-function renderPembayaran(
-  pembayaran,
-  totalProyek
-) {
-  const tbody =
-    document.getElementById(
-      "paymentBody"
-    );
+// =====================================================
+// DAFTAR ORDER DARI PRODUK & ORDER
+// =====================================================
 
-  if (!tbody) {
-    return;
-  }
-
-  const dataPembayaran =
-    Array.isArray(pembayaran)
-      ? pembayaran
-      : [];
-
-  /*
-   * Total Dibayar hanya menghitung pembayaran
-   * dengan status Sudah Dibayar.
-   */
-
-  const totalDibayar =
-    dataPembayaran
-      .filter(
-        item =>
-          normalisasiStatusPembayaranSewa(
-            item.status_pembayaran
-          ) ===
-          "Sudah Dibayar"
+function daftarOrderPembayaran() {
+  return (detailProyekSewa?.produk || []).flatMap(
+    produk =>
+      (produk.orders || []).map(
+        order => ({
+          ...order,
+          produk
+        })
       )
-      .reduce(
-        (
-          total,
-          item
-        ) =>
-          total +
-          angka(
-            item.nominal
-          ),
-        0
-      );
-
-  const sisa =
-    Math.max(
-      0,
-      angka(totalProyek) -
-      totalDibayar
-    );
-
-  if (
-    dataPembayaran.length === 0
-  ) {
-    tbody.innerHTML = `
-      <tr>
-        <td
-          colspan="6"
-          class="message"
-        >
-          Belum ada pembayaran.
-        </td>
-      </tr>
-    `;
-
-  } else {
-    tbody.innerHTML =
-      dataPembayaran
-        .map(
-          (
-            item,
-            index
-          ) => {
-            const status =
-              normalisasiStatusPembayaranSewa(
-                item.status_pembayaran
-              );
-
-            let statusClass =
-              "payment-status-unpaid";
-
-            if (
-              status ===
-              "Sudah Dibayar"
-            ) {
-              statusClass =
-                "payment-status-paid";
-
-            } else if (
-              status === "Proses"
-            ) {
-              statusClass =
-                "payment-status-process";
-            }
-
-            return `
-              <tr>
-                <td>
-                  ${index + 1}
-                </td>
-
-                <td>
-                  ${escapeHtml(
-                    item.deskripsi ||
-                    "-"
-                  )}
-                </td>
-
-                <td class="currency">
-                  ${rupiah(
-                    item.nominal
-                  )}
-                </td>
-
-                <td>
-                  <span
-                    class="
-                      payment-status
-                      ${statusClass}
-                    "
-                  >
-                    ${escapeHtml(
-                      status
-                    )}
-                  </span>
-                </td>
-
-                <td>
-                  ${
-                    item.tanggal_bayar
-                      ? formatTanggal(
-                          item.tanggal_bayar
-                        )
-                      : "-"
-                  }
-                </td>
-
-                <td>
-                  ${escapeHtml(
-                    item.syarat_pembayaran ||
-                    "-"
-                  )}
-                </td>
-              </tr>
-            `;
-          }
-        )
-        .join("");
-  }
-
-  setText(
-    "paymentTotalProyek",
-    rupiah(
-      totalProyek
-    )
   );
+}
 
-  setText(
-    "paymentTotalDibayar",
-    rupiah(
-      totalDibayar
-    )
+
+// =====================================================
+// FORMAT NOMINAL PEMBAYARAN
+// =====================================================
+
+function rupiahPembayaranSewa(value) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(Number(value) || 0);
+}
+
+function totalTerminPembayaran(daftar = []) {
+  return daftar.reduce(
+    (total, item) =>
+      total + Number(item.nominal || 0),
+    0
   );
+}
 
-  setText(
-    "paymentSisa",
-    rupiah(
-      sisa
+function totalLunasPembayaran(daftar = []) {
+  return totalTerminPembayaran(
+    daftar.filter(
+      item =>
+        normalisasiStatusPembayaranSewa(
+          item.status_pembayaran
+        ) === "Sudah Dibayar"
     )
   );
 }
 
+function tombolGrupPembayaran(produkId, orderId = "") {
+  return `
+    <div class="payment-group-actions">
+      <button
+        type="button"
+        class="btn btn-secondary payment-group-edit"
+        data-produk-id="${escapeHtml(String(produkId))}"
+        data-order-id="${escapeHtml(String(orderId))}"
+      >
+        Edit
+      </button>
+    </div>
+  `;
+}
+
+function ringkasanGrupPembayaran(daftar) {
+  return `
+    <div class="payment-group-summary">
+      <span>
+        Total Termin:
+        <strong>
+          ${rupiahPembayaranSewa(
+            totalTerminPembayaran(daftar)
+          )}
+        </strong>
+      </span>
+
+      <span>
+        Sudah Dibayar:
+        <strong>
+          ${rupiahPembayaranSewa(
+            totalLunasPembayaran(daftar)
+          )}
+        </strong>
+      </span>
+    </div>
+  `;
+}
+
+// =====================================================
+// RENDER RIWAYAT PEMBAYARAN PER ORDER
+// =====================================================
+
+function renderPembayaran(
+  pembayaran = [],
+  totalProyek = 0
+) {
+  const tbody =
+    document.getElementById("paymentBody");
+
+  if (!tbody) return;
+
+  const orders = daftarOrderPembayaran();
+
+  const table = tbody.closest("table");
+
+  const thead =
+    table.tHead || table.createTHead();
+
+  thead.innerHTML = `
+  <tr>
+    <th>No</th>
+    <th>Termin</th>
+    <th>Total Harga</th>
+    <th>Bulan Dibayar</th>
+    <th>Total Dibayar</th>
+    <th>Tanggal Tagihan</th>
+    <th>Tanggal Dibayar</th>
+    <th>Status</th>
+  </tr>
+`;
+
+table.classList.add("payment-group-table");
+
+const grupProduk = new Map();
+
+for (const item of pembayaran) {
+  const order = orders.find(
+    row =>
+      String(row.id) ===
+      String(item.proyek_sewa_order_id)
+  );
+
+  const produkKey = order
+    ? String(order.produk.id)
+    : "data-lama";
+
+  if (!grupProduk.has(produkKey)) {
+    grupProduk.set(produkKey, {
+      nama:
+        order?.produk.item_produk ||
+        "Data lama — belum dikaitkan",
+      lokasi: new Map()
+    });
+  }
+
+  const grup = grupProduk.get(produkKey);
+
+  const orderKey = order
+    ? String(order.id)
+    : "tanpa-order";
+
+  if (!grup.lokasi.has(orderKey)) {
+    grup.lokasi.set(orderKey, {
+      order,
+      pembayaran: []
+    });
+  }
+
+  grup.lokasi
+    .get(orderKey)
+    .pembayaran.push(item);
+}
+
+let nomor = 0;
+let html = "";
+
+for (const [produkKey, grup] of grupProduk.entries()) {
+ html += `
+  <tr class="payment-product-group">
+    <th colspan="8">
+      ${escapeHtml(grup.nama)}
+    </th>
+  </tr>
+`;
+
+  for (const lokasi of grup.lokasi.values()) {
+    const order = lokasi.order;
+
+    html += `
+      <tr class="payment-location-group">
+        <th colspan="8">
+          <div class="payment-group-heading">
+            <span>
+              ${escapeHtml(
+                order
+                  ? order.nama_cabang || "-"
+                  : "Lokasi belum dikaitkan"
+              )}
+
+              ${
+                order
+                  ? `<span class="payment-order-note">
+                       Order #${escapeHtml(String(order.id))}
+                     </span>`
+                  : ""
+              }
+            </span>
+
+            ${
+              order
+                ? tombolGrupPembayaran(
+                    produkKey,
+                    order.id
+                  )
+                : ""
+            }
+          </div>
+
+          ${ringkasanGrupPembayaran(
+            lokasi.pembayaran
+          )}
+        </th>
+      </tr>
+    `;
+
+    // Lanjutkan kode const daftar dan render termin
+    // yang sudah ada di bawah bagian ini.
+
+    const daftar = [...lokasi.pembayaran].sort(
+      (a, b) =>
+        String(a.deskripsi || "").localeCompare(
+          String(b.deskripsi || ""),
+          "id",
+          { numeric: true }
+        )
+    );
+
+    for (const item of daftar) {
+      nomor += 1;
+
+      const status =
+        normalisasiStatusPembayaranSewa(
+          item.status_pembayaran
+        );
+
+      const statusClass =
+        status === "Sudah Dibayar"
+          ? "payment-status-paid"
+          : status === "Proses"
+            ? "payment-status-process"
+            : "payment-status-unpaid";
+
+      html += `
+        <tr class="payment-term-row">
+          <td>${nomor}</td>
+
+          <td class="payment-term-name">
+            ${escapeHtml(item.deskripsi || "-")}
+          </td>
+
+          <td class="currency">
+            ${
+              order
+                ? rupiahPembayaranSewa(order.total_harga)
+                : "-"
+            }
+          </td>
+
+          <td>
+            ${
+              item.bulan_dibayar == null
+                ? "-"
+                : Number(item.bulan_dibayar)
+                    .toLocaleString("id-ID")
+            }
+          </td>
+
+          <td class="currency">
+            ${rupiahPembayaranSewa(item.nominal)}
+          </td>
+
+          <td>
+            ${
+              item.tanggal_tagihan
+                ? formatTanggal(item.tanggal_tagihan)
+                : "-"
+            }
+          </td>
+
+          <td>
+            ${
+              item.tanggal_bayar
+                ? formatTanggal(item.tanggal_bayar)
+                : "-"
+            }
+          </td>
+
+          <td>
+            <span class="payment-status ${statusClass}">
+              ${escapeHtml(status)}
+            </span>
+          </td>
+        </tr>
+        
+        
+      `;
+    }
+  }
+}
+
+tbody.innerHTML = html || `
+  <tr>
+    <td colspan="8" class="message">
+      Belum ada pembayaran.
+    </td>
+  </tr>
+`;
+
+  const totalDibayar = pembayaran
+    .filter(
+      item =>
+        normalisasiStatusPembayaranSewa(
+          item.status_pembayaran
+        ) === "Sudah Dibayar"
+    )
+    .reduce(
+      (total, item) =>
+        total + Number(item.nominal || 0),
+      0
+    );
+
+  const sisa = Math.max(
+    0,
+    Number(totalProyek) - totalDibayar
+  );
+
+  setText(
+    "paymentTotalProyek",
+    rupiahPembayaranSewa(totalProyek)
+  );
+
+  setText(
+    "paymentTotalDibayar",
+    rupiahPembayaranSewa(totalDibayar)
+  );
+
+  setText(
+    "paymentSisa",
+    rupiahPembayaranSewa(sisa)
+  );
+}
 
 // =====================================================
 // EDIT INFORMASI
@@ -3800,642 +4393,694 @@ function normalisasiStatusPembayaranSewa(
   return "Belum Dibayar";
 }
 
-// =====================================================
-// HTML PEMBAYARAN EDIT
-// =====================================================
-
-function buatEditPembayaranHtml(
-  item = {}
-) {
-  const statusPembayaran =
-    normalisasiStatusPembayaranSewa(
-      item.status_pembayaran
-    );
-
-  const belumDibayarSelected =
-    statusPembayaran ===
-      "Belum Dibayar"
-      ? "selected"
-      : "";
-
-  const prosesSelected =
-    statusPembayaran ===
-      "Proses"
-      ? "selected"
-      : "";
-
-  const sudahDibayarSelected =
-    statusPembayaran ===
-      "Sudah Dibayar"
-      ? "selected"
-      : "";
-
-  const tanggalBayarWajib =
-    statusPembayaran ===
-      "Sudah Dibayar"
-      ? "required"
-      : "";
-
-  return `
-    <div
-      class="edit-payment-row"
-      data-payment-id="${
-        item.id || ""
-      }"
-    >
-      <!-- DESKRIPSI -->
-
-      <div class="modal-form-group">
-        <label>
-          Deskripsi
-          <span class="required">*</span>
-        </label>
-
-        <input
-          type="text"
-          class="
-            modal-form-control
-            editPaymentDeskripsi
-          "
-          value="${escapeHtml(
-            item.deskripsi || ""
-          )}"
-          placeholder="Contoh: Pembayaran sewa Januari"
-          required
-        >
-      </div>
-
-      <!-- NOMINAL -->
-
-      <div class="modal-form-group">
-        <label>
-          Nominal
-          <span class="required">*</span>
-        </label>
-    <input
-      type="text"
-      inputmode="numeric"
-      autocomplete="off"
-      class="
-        modal-form-control
-        editPaymentNominal
-      "
-      value="${formatAngkaTitik(
-        item.nominal
-      )}"
-      placeholder="0"
-      required
-    >
-      </div>
-
-      <!-- STATUS PEMBAYARAN -->
-
-      <div class="modal-form-group">
-        <label>
-          Status Pembayaran
-          <span class="required">*</span>
-        </label>
-
-        <select
-          class="
-            modal-form-control
-            editPaymentStatus
-          "
-          required
-        >
-          <option
-            value="Belum Dibayar"
-            ${belumDibayarSelected}
-          >
-            Belum Dibayar
-          </option>
-
-          <option
-            value="Proses"
-            ${prosesSelected}
-          >
-            Proses
-          </option>
-
-          <option
-            value="Sudah Dibayar"
-            ${sudahDibayarSelected}
-          >
-            Sudah Dibayar
-          </option>
-        </select>
-      </div>
-
-      <!-- TANGGAL BAYAR -->
-
-      <div class="modal-form-group">
-        <label>
-          Tanggal Bayar
-        </label>
-
-        <input
-          type="date"
-          class="
-            modal-form-control
-            editPaymentTanggal
-          "
-          value="${tanggalInput(
-            item.tanggal_bayar
-          )}"
-          ${tanggalBayarWajib}
-        >
-      </div>
-
-      <!-- SYARAT PEMBAYARAN -->
-
-      <div class="modal-form-group">
-        <label>
-          Syarat Pembayaran
-        </label>
-
-        <textarea
-          class="
-            modal-form-control
-            editPaymentSyarat
-          "
-          rows="2"
-          placeholder="Masukkan syarat pembayaran"
-        >${escapeHtml(
-          item.syarat_pembayaran || ""
-        )}</textarea>
-      </div>
-
-      <!-- AKSI -->
-
-      <div class="modal-form-group">
-        <label>
-          &nbsp;
-        </label>
-
-        <button
-          type="button"
-          class="
-            btn
-            btn-danger
-            btnHapusPayment
-          "
-        >
-          Hapus
-        </button>
-      </div>
-    </div>
-  `;
-}
 
 // =====================================================
 // RENDER EDIT PEMBAYARAN
 // =====================================================
+// =====================================================
+// OPSI LOKASI BERDASARKAN PRODUK KONTRAK
+// Value lokasi menggunakan ID order.
+// =====================================================
 
-function renderEditPembayaran() {
-  const container =
-    document.getElementById(
-      "editPaymentContainer"
-    );
-
-  if (!container) {
-    return;
-  }
-
-  const pembayaran =
-    Array.isArray(
-      detailProyekSewa
-        ?.pembayaran
+function opsiLokasiPembayaran(
+  produkId,
+  orderId = ""
+) {
+  const opsi = daftarOrderPembayaran()
+    .filter(
+      order =>
+        String(order.produk.id) ===
+        String(produkId)
     )
-      ? detailProyekSewa
-          .pembayaran
-      : [];
+    .map(order => {
+      const selected =
+        String(order.id) === String(orderId)
+          ? "selected"
+          : "";
 
-  if (
-    pembayaran.length === 0
-  ) {
-    container.innerHTML = `
-      <div class="message">
-        Belum ada pembayaran.
-        Klik "+ Tambah Pembayaran".
-      </div>
-    `;
+      const label =
+        `${order.nama_cabang || "-"} · Order #${order.id}` +
+        (order.no_do
+          ? ` · DO ${order.no_do}`
+          : "");
 
-    return;
-  }
+      return `
+        <option
+          value="${order.id}"
+          ${selected}
+        >
+          ${escapeHtml(label)}
+        </option>
+      `;
+    })
+    .join("");
 
-  container.innerHTML =
-    pembayaran
-      .map(
-        item =>
-          buatEditPembayaranHtml(
-            item
-          )
-      )
-      .join("");
+  return `
+    <option value="">
+      Pilih lokasi / order
+    </option>
+    ${opsi}
+  `;
 }
 
+
 // =====================================================
-// OPEN EDIT PEMBAYARAN
+// HTML FORM PEMBAYARAN
 // =====================================================
 
-document
-  .getElementById(
-    "btnEditPembayaran"
+function buatEditPembayaranHtml(item = {}) {
+  const order = daftarOrderPembayaran().find(
+    row =>
+      String(row.id) ===
+      String(item.proyek_sewa_order_id)
+  );
+
+  const dataLama = Boolean(
+    item.id && !item.proyek_sewa_order_id
+  );
+
+  const orderTersimpan = Boolean(
+    item.proyek_sewa_order_id
+  );
+
+  const status =
+    normalisasiStatusPembayaranSewa(
+      item.status_pembayaran
+    );
+
+  const field = (label, input) => `
+    <div class="modal-form-group">
+      <label>${label}</label>
+      ${input}
+    </div>
+  `;
+
+  const opsiProduk = (
+    detailProyekSewa?.produk || []
   )
-  ?.addEventListener(
-    "click",
-    () => {
-      renderEditPembayaran();
+    .map(produk => {
+      const selected =
+        String(produk.id) ===
+        String(order?.produk.id)
+          ? "selected"
+          : "";
 
-      bukaModal(
-        "modalEditPembayaran"
+      return `
+        <option
+          value="${produk.id}"
+          ${selected}
+        >
+          ${escapeHtml(
+            `${produk.item_produk} · ${produk.durasi_bulan} bulan · #${produk.id}`
+          )}
+        </option>
+      `;
+    })
+    .join("");
+
+  return `
+    <div
+      class="edit-payment-row"
+      data-payment-id="${item.id || ""}"
+      data-legacy="${dataLama ? "1" : "0"}"
+    >
+
+      ${field(
+        "Produk",
+        `
+        <select
+          class="modal-form-control editPaymentProduk"
+          ${orderTersimpan ? "disabled" : ""}
+          ${dataLama ? "" : "required"}
+        >
+          <option value="">
+            ${
+              dataLama
+                ? "Data lama — belum dikaitkan"
+                : "Pilih produk"
+            }
+          </option>
+
+          ${opsiProduk}
+        </select>
+        `
+      )}
+
+      ${field(
+        "Lokasi",
+        `
+        <select
+          class="modal-form-control editPaymentOrder"
+          ${orderTersimpan ? "disabled" : ""}
+          ${dataLama ? "" : "required"}
+        >
+          ${opsiLokasiPembayaran(
+            order?.produk.id,
+            order?.id
+          )}
+        </select>
+        `
+      )}
+
+      ${field(
+        "Termin",
+        `
+        <input
+          type="text"
+          class="modal-form-control editPaymentTermin"
+          value="${escapeHtml(
+            item.deskripsi || "Termin 1"
+          )}"
+          placeholder="Termin 1"
+          required
+        >
+        `
+      )}
+
+      ${field(
+        "Total Harga",
+        `
+        <input
+          type="text"
+          class="modal-form-control editPaymentTotalHarga"
+          readonly
+        >
+        `
+      )}
+
+     ${field(
+  "Bulan Dibayar",
+  `
+  <input
+    type="number"
+    step="any"
+    min="0"
+    class="modal-form-control editPaymentBulan"
+    value="${escapeHtml(
+      item.bulan_dibayar == null ||
+      item.bulan_dibayar === ""
+        ? ""
+        : String(Number(item.bulan_dibayar))
+    )}"
+    ${dataLama ? "disabled" : "required"}
+  >
+  `
+)}
+
+      ${field(
+        "Total Dibayar",
+        `
+        <input
+          type="text"
+          class="modal-form-control editPaymentNominal"
+          readonly
+        >
+        `
+      )}
+
+      ${field(
+        "Tanggal Tagihan",
+        `
+        <input
+          type="date"
+          class="modal-form-control editPaymentTanggalTagihan"
+          value="${tanggalInput(
+            item.tanggal_tagihan
+          )}"
+        >
+        `
+      )}
+
+      ${field(
+        "Tanggal Dibayar",
+        `
+        <input
+          type="date"
+          class="modal-form-control editPaymentTanggal"
+          value="${tanggalInput(
+            item.tanggal_bayar
+          )}"
+        >
+        `
+      )}
+
+      ${field(
+        "Status",
+        `
+        <select
+          class="modal-form-control editPaymentStatus"
+          required
+        >
+          ${[
+            "Belum Dibayar",
+            "Proses",
+            "Sudah Dibayar"
+          ]
+            .map(value => `
+              <option
+                value="${value}"
+                ${
+                  value === status
+                    ? "selected"
+                    : ""
+                }
+              >
+                ${value}
+              </option>
+            `)
+            .join("")}
+        </select>
+        `
+      )}
+
+      <div>
+        <button
+          type="button"
+          class="btn btn-danger btnHapusPayment"
+        >
+          Hapus
+        </button>
+      </div>
+
+    </div>
+  `;
+}
+
+
+// =====================================================
+// HITUNG NOMINAL PER BARIS
+// Quantity × harga per item per bulan × bulan dibayar
+// =====================================================
+
+function hitungBarisPembayaran(
+  row,
+  gantiOrder = false
+) {
+  const orderSelect =
+    row.querySelector(".editPaymentOrder");
+
+  const bulanInput =
+    row.querySelector(".editPaymentBulan");
+
+  const totalHargaInput =
+    row.querySelector(".editPaymentTotalHarga");
+
+  const nominalInput =
+    row.querySelector(".editPaymentNominal");
+
+  const order = daftarOrderPembayaran().find(
+    item =>
+      String(item.id) === orderSelect.value
+  );
+
+  const pembayaranLama = (
+    detailProyekSewa?.pembayaran || []
+  ).find(
+    item =>
+      String(item.id) === row.dataset.paymentId
+  );
+
+  bulanInput.disabled = !order;
+
+  bulanInput.required =
+    Boolean(order) ||
+    row.dataset.legacy !== "1";
+
+  if (order) {
+    const durasi =
+      Number(order.produk.durasi_bulan);
+
+    bulanInput.max = String(durasi);
+
+    if (
+      gantiOrder ||
+      bulanInput.value === ""
+    ) {
+      const jumlahTermin =
+        durasi >= 3 ? 3 : 1;
+
+      bulanInput.value = String(
+        Math.ceil(durasi / jumlahTermin)
       );
     }
+
+  } else {
+    bulanInput.value = "";
+  }
+
+  totalHargaInput.value = order
+    ? rupiahPembayaranSewa(
+        order.total_harga
+      )
+    : "-";
+
+  const hasilHitung = order
+    ? Math.round(
+        Number(order.quantity) *
+        Number(order.produk.harga_per_item) *
+        Number(bulanInput.value || 0) *
+        100
+      ) / 100
+    : 0;
+
+  // Pertahankan selisih pembulatan termin otomatis
+  // selama order dan bulan tidak berubah.
+  const tidakBerubah =
+    pembayaranLama &&
+    String(
+      pembayaranLama.proyek_sewa_order_id
+    ) === orderSelect.value &&
+    Number(
+      pembayaranLama.bulan_dibayar
+    ) === Number(bulanInput.value) &&
+    Math.abs(
+      Number(pembayaranLama.nominal) -
+      hasilHitung
+    ) <= 0.010001;
+
+  const nominal = !order
+    ? Number(pembayaranLama?.nominal || 0)
+    : tidakBerubah
+      ? Number(pembayaranLama.nominal)
+      : hasilHitung;
+
+  nominalInput.value =
+    rupiahPembayaranSewa(
+      Math.round(nominal * 100) / 100
+    );
+}
+
+
+// =====================================================
+// RENDER MODAL EDIT PEMBAYARAN
+// =====================================================
+
+let pembayaranDalamModal = [];
+let konteksPembayaranModal = {
+  produkId: "",
+  orderId: ""
+};
+
+function renderEditPembayaran(
+  produkId = "",
+  orderId = ""
+) {
+  const container = document.getElementById(
+    "editPaymentContainer"
   );
 
-// =====================================================
-// TAMBAH PEMBAYARAN
-// =====================================================
+  if (!container) return;
 
-document
-  .getElementById(
-    "btnModalTambahPembayaran"
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      const container =
-        document.getElementById(
-          "editPaymentContainer"
-        );
+  konteksPembayaranModal = {
+    produkId: String(produkId),
+    orderId: String(orderId)
+  };
 
-      if (!container) {
-        return;
-      }
+  const orderGrup = new Set(
+    daftarOrderPembayaran()
+      .filter(order =>
+        (!produkId ||
+          String(order.produk.id) === String(produkId)) &&
+        (!orderId ||
+          String(order.id) === String(orderId))
+      )
+      .map(order => String(order.id))
+  );
 
-      container
-        .querySelector(
-          ".message"
+  pembayaranDalamModal = (
+    detailProyekSewa?.pembayaran || []
+  ).filter(item =>
+    !produkId && !orderId
+      ? true
+      : orderGrup.has(
+          String(item.proyek_sewa_order_id)
         )
-        ?.remove();
-
-      container
-        .insertAdjacentHTML(
-          "beforeend",
-          buatEditPembayaranHtml({
-            status_pembayaran:
-              "Belum Dibayar"
-          })
-        );
-        
-    }
   );
 
-// =====================================================
-// HAPUS PEMBAYARAN DARI FORM
-// =====================================================
+  container.innerHTML = pembayaranDalamModal
+    .map(buatEditPembayaranHtml)
+    .join("");
+
+  container
+    .querySelectorAll(".edit-payment-row")
+    .forEach(row => hitungBarisPembayaran(row));
+}
+
+function tambahBarisPembayaranModal() {
+  const container = document.getElementById(
+    "editPaymentContainer"
+  );
+
+  if (!container) return;
+
+  const { produkId, orderId } =
+    konteksPembayaranModal;
+
+  container.insertAdjacentHTML(
+    "beforeend",
+    buatEditPembayaranHtml()
+  );
+
+  const row = container.lastElementChild;
+
+  if (produkId) {
+    row.querySelector(
+      ".editPaymentProduk"
+    ).value = produkId;
+
+    row.querySelector(
+      ".editPaymentOrder"
+    ).innerHTML = opsiLokasiPembayaran(
+      produkId,
+      orderId
+    );
+  }
+
+  if (orderId) {
+    row.querySelector(
+      ".editPaymentOrder"
+    ).value = orderId;
+  }
+
+  hitungBarisPembayaran(row);
+}
 
 document
-  .getElementById(
-    "editPaymentContainer"
-  )
+  .getElementById("paymentBody")
+  ?.addEventListener("click", event => {
+    const button = event.target.closest(
+      ".payment-group-edit, .payment-group-add"
+    );
+
+    if (!button) return;
+
+    renderEditPembayaran(
+      button.dataset.produkId,
+      button.dataset.orderId
+    );
+
+    if (
+      button.classList.contains(
+        "payment-group-add"
+      )
+    ) {
+      tambahBarisPembayaranModal();
+    }
+
+    bukaModal("modalEditPembayaran");
+  });
+
+document
+  .getElementById("btnModalTambahPembayaran")
   ?.addEventListener(
     "click",
-    event => {
-      const button =
-        event.target.closest(
-          ".btnHapusPayment"
-        );
-
-      if (!button) {
-        return;
-      }
-
-      const row =
-        button.closest(
-          ".edit-payment-row"
-        );
-
-      if (!row) {
-        return;
-      }
-
-      const yakin =
-        window.confirm(
-          "Hapus data pembayaran ini?"
-        );
-
-      if (!yakin) {
-        return;
-      }
-
-      row.remove();
-
-      const container =
-        document.getElementById(
-          "editPaymentContainer"
-        );
-
-      if (
-        container &&
-        container.querySelectorAll(
-          ".edit-payment-row"
-        ).length === 0
-      ) {
-        container.innerHTML = `
-          <div class="message">
-            Belum ada pembayaran.
-            Klik "+ Tambah Pembayaran".
-          </div>
-        `;
-      }
-    }
+    tambahBarisPembayaranModal
   );
 
 // =====================================================
-// STATUS PEMBAYARAN -> TANGGAL BAYAR
+// HAPUS BARIS DARI FORM
+// Penghapusan database dilakukan saat Simpan.
 // =====================================================
 
 document
-  .getElementById(
-    "editPaymentContainer"
-  )
-  ?.addEventListener(
-    "change",
-    event => {
-      const statusInput =
-        event.target.closest(
-          ".editPaymentStatus"
-        );
+  .getElementById("editPaymentContainer")
+  ?.addEventListener("click", event => {
+    const button = event.target.closest(
+      ".btnHapusPayment"
+    );
 
-      if (!statusInput) {
-        return;
-      }
+    if (!button) return;
 
-      const row =
-        statusInput.closest(
-          ".edit-payment-row"
-        );
+    button
+      .closest(".edit-payment-row")
+      ?.remove();
+  });
 
-      const tanggalInput =
-        row?.querySelector(
-          ".editPaymentTanggal"
-        );
-
-      if (!tanggalInput) {
-        return;
-      }
-
-      tanggalInput.required =
-        statusInput.value ===
-        "Sudah Dibayar";
-    }
-  );
 
 // =====================================================
-// SEPARATOR NOMINAL PEMBAYARAN
+// PILIH PRODUK / LOKASI
 // =====================================================
 
 document
-  .getElementById(
-    "editPaymentContainer"
-  )
-  ?.addEventListener(
-    "input",
-    event => {
-      const input =
-        event.target.closest(
-          ".editPaymentNominal"
+  .getElementById("editPaymentContainer")
+  ?.addEventListener("change", event => {
+    const row = event.target.closest(
+      ".edit-payment-row"
+    );
+
+    if (!row) return;
+
+    if (
+      event.target.matches(
+        ".editPaymentProduk"
+      )
+    ) {
+      const orderSelect =
+        row.querySelector(
+          ".editPaymentOrder"
         );
 
-      if (!input) {
-        return;
-      }
+      orderSelect.innerHTML =
+        opsiLokasiPembayaran(
+          event.target.value
+        );
 
-      const angkaMurni =
-        String(input.value || "")
-          .replace(/\D/g, "")
-          .replace(
-            /^0+(?=\d)/,
-            ""
-          );
+      orderSelect.required =
+        Boolean(event.target.value) ||
+        row.dataset.legacy !== "1";
 
-      input.value =
-        angkaMurni
-          ? angkaMurni.replace(
-              /\B(?=(\d{3})+(?!\d))/g,
-              "."
-            )
-          : "";
+      hitungBarisPembayaran(
+        row,
+        true
+      );
+
+    } else if (
+      event.target.matches(
+        ".editPaymentOrder"
+      )
+    ) {
+      hitungBarisPembayaran(
+        row,
+        true
+      );
     }
-  );
+  });
+
+
 // =====================================================
-// BUILD PAYLOAD PEMBAYARAN
+// PERUBAHAN BULAN DIBAYAR
+// =====================================================
+
+document
+  .getElementById("editPaymentContainer")
+  ?.addEventListener("input", event => {
+    if (
+      !event.target.matches(
+        ".editPaymentBulan"
+      )
+    ) {
+      return;
+    }
+
+    const row = event.target.closest(
+      ".edit-payment-row"
+    );
+
+    if (row) {
+      hitungBarisPembayaran(row);
+    }
+  });
+
+
+// =====================================================
+// PAYLOAD PEMBAYARAN
+// Nominal dihitung ulang oleh server.
 // =====================================================
 
 function buildPembayaranPayload() {
   const rows = [
-    ...document
-      .querySelectorAll(
-        "#editPaymentContainer .edit-payment-row"
-      )
+    ...document.querySelectorAll(
+      "#editPaymentContainer .edit-payment-row"
+    )
   ];
 
-  return rows
-    .map(
-      row => {
-        const id =
-          Number(
-            row.dataset
-              .paymentId
-          ) || null;
+  return rows.map(row => {
+    const value = selector =>
+      row.querySelector(selector).value;
 
-        const deskripsi =
-          row
-            .querySelector(
-              ".editPaymentDeskripsi"
-            )
-            ?.value
-            ?.trim() || "";
+    return {
+      id:
+        Number(
+          row.dataset.paymentId
+        ) || null,
 
-        const nominal =
-          angka(
-            row
-              .querySelector(
-                ".editPaymentNominal"
-              )
-              ?.value
-          );
+      proyek_sewa_order_id:
+        Number(
+          value(".editPaymentOrder")
+        ) || null,
 
-        const statusPembayaran =
-          normalisasiStatusPembayaranSewa(
-            row
-              .querySelector(
-                ".editPaymentStatus"
-              )
-              ?.value
-          );
+      deskripsi:
+        value(
+          ".editPaymentTermin"
+        ).trim(),
 
-        const tanggalBayar =
-          row
-            .querySelector(
-              ".editPaymentTanggal"
-            )
-            ?.value ||
-          null;
+      bulan_dibayar:
+        value(
+          ".editPaymentBulan"
+        ) || null,
 
-        const syaratPembayaran =
-          row
-            .querySelector(
-              ".editPaymentSyarat"
-            )
-            ?.value
-            ?.trim() || "";
+      status_pembayaran:
+        value(
+          ".editPaymentStatus"
+        ),
 
-        return {
-          id:
-            id,
+      tanggal_tagihan:
+        row.querySelector(
+          ".editPaymentTanggalTagihan"
+        )?.value || null,
 
-          deskripsi:
-            deskripsi,
-
-          nominal:
-            nominal,
-
-          status_pembayaran:
-            statusPembayaran,
-
-          tanggal_bayar:
-            tanggalBayar,
-
-          syarat_pembayaran:
-            syaratPembayaran ||
-            null
-        };
-      }
-    )
-    .filter(
-      item =>
-        item.id !== null ||
-        Boolean(
-          item.deskripsi
-        ) ||
-        item.nominal > 0 ||
-        Boolean(
-          item.tanggal_bayar
-        ) ||
-        Boolean(
-          item.syarat_pembayaran
-        )
-    );
+      tanggal_bayar:
+        value(
+          ".editPaymentTanggal"
+        ) || null
+    };
+  });
 }
+
+
 // =====================================================
 // SIMPAN PEMBAYARAN
+// Tanggal dibayar opsional untuk semua status.
 // =====================================================
 
 document
-  .getElementById(
-    "formEditPembayaran"
-  )
+  .getElementById("formEditPembayaran")
   ?.addEventListener(
     "submit",
     async event => {
       event.preventDefault();
 
+      if (
+        !event.currentTarget.reportValidity()
+      ) {
+        return;
+      }
+
       const pembayaran =
         buildPembayaranPayload();
 
-      // =============================================
-      // VALIDASI PEMBAYARAN
-      // =============================================
+      const idDisimpan = new Set(
+        pembayaran
+          .filter(item => item.id)
+          .map(item => String(item.id))
+      );
 
-      const statusValid = [
-        "Belum Dibayar",
-        "Proses",
-        "Sudah Dibayar"
-      ];
-
-      for (
-        let index = 0;
-        index < pembayaran.length;
-        index += 1
-      ) {
-        const item =
-          pembayaran[index];
-
-        // ===========================================
-        // VALIDASI DESKRIPSI
-        // ===========================================
-
-        if (!item.deskripsi) {
-          alert(
-            `Deskripsi pembayaran ke-${
-              index + 1
-            } wajib diisi.`
-          );
-
-          return;
-        }
-
-        // ===========================================
-        // VALIDASI NOMINAL
-        // ===========================================
-
-        if (
-          !Number.isFinite(
-            item.nominal
-          ) ||
-          item.nominal < 0
-        ) {
-          alert(
-            `Nominal pembayaran ke-${
-              index + 1
-            } tidak valid.`
-          );
-
-          return;
-        }
-
-        // ===========================================
-        // VALIDASI STATUS PEMBAYARAN
-        // ===========================================
-
-        if (
-          !statusValid.includes(
-            item.status_pembayaran
-          )
-        ) {
-          alert(
-            `Status pembayaran ke-${
-              index + 1
-            } tidak valid.`
-          );
-
-          return;
-        }
-
-        // ===========================================
-        // VALIDASI TANGGAL BAYAR
-        // ===========================================
-
-        if (
-          item.status_pembayaran ===
-            "Sudah Dibayar" &&
-          !item.tanggal_bayar
-        ) {
-          alert(
-            `Tanggal bayar pembayaran ke-${
-              index + 1
-            } wajib diisi karena statusnya Sudah Dibayar.`
-          );
-
-          return;
-        }
-      }
-
-      // =============================================
-      // BUTTON LOADING
-      // =============================================
+    const hapus_ids = pembayaranDalamModal
+      .filter(
+        item =>
+          !idDisimpan.has(String(item.id))
+      )
+      .map(item => item.id);
 
       const button =
         document.getElementById(
@@ -4449,65 +5094,62 @@ document
       try {
         if (button) {
           button.disabled = true;
-
           button.textContent =
             "Menyimpan...";
         }
 
-        // ===========================================
-        // REQUEST SIMPAN
-        // ===========================================
+       const hasilSimpan = await fetchJSON(
+  `/api/proyek-sewa/${encodeURIComponent(
+    proyekSewaId
+  )}/pembayaran`,
+  {
+    method: "PUT",
 
-        await fetchJSON(
-          `/api/proyek-sewa/${encodeURIComponent(
-            proyekSewaId
-          )}/pembayaran`,
-          {
-            method:
-              "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
 
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
+    body: JSON.stringify({
+      pembayaran,
+      hapus_ids
+    })
+  }
+);
 
-            body:
-              JSON.stringify({
-                pembayaran
-              })
-          }
-        );
+// Periksa hasil yang dikembalikan API setelah simpan.
+console.table(
+  (hasilSimpan.pembayaran || []).map(item => ({
+    id: item.id,
+    termin: item.deskripsi,
+    bulan_dibayar: item.bulan_dibayar,
+    nominal: item.nominal
+  }))
+);
 
-        tutupModal(
-          "modalEditPembayaran"
-        );
+tutupModal("modalEditPembayaran");
 
-        alert(
-          "Data pembayaran berhasil disimpan."
-        );
+await loadDetail();
 
-        await loadDetail();
+alert("Pembayaran berhasil disimpan.");
 
-      } catch (error) {
-        console.error(
-          "ERROR SAVE PEMBAYARAN:",
-          error
-        );
+} catch (error) {
+  console.error(
+    "ERROR SAVE PEMBAYARAN:",
+    error
+  );
 
-        alert(
-          error.message
-        );
+  alert(error.message);
 
       } finally {
         if (button) {
           button.disabled = false;
-
           button.textContent =
             textAwal;
         }
       }
     }
   );
+
 
 function buatSummaryProyek(
   produkSummary
@@ -5110,8 +5752,26 @@ document
       }
     }
   );
+// =====================================================
+// MODAL TAMBAH PEMBAYARAN
+// =====================================================
+document
+  .getElementById("btnTambahPembayaran")
+  ?.addEventListener("click", () => {
+    konteksPembayaranModal = {
+      produkId: "",
+      orderId: ""
+    };
 
+    pembayaranDalamModal = [];
 
+    document.getElementById(
+      "editPaymentContainer"
+    ).innerHTML = "";
+
+    tambahBarisPembayaranModal();
+    bukaModal("modalEditPembayaran");
+  });
 // =====================================================
 // SIMPAN PEMBAYARAN PARTNER
 // =====================================================

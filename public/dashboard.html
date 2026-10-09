@@ -3746,6 +3746,202 @@ svg {
   position: relative;
   background: #ffffff;
 }
+/* BACKGROUND BANNER DASHBOARD */
+
+.executive-hero {
+  position: relative;
+  isolation: isolate;
+
+  background-color: #312078;
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(25, 18, 65, 0.2),
+      rgba(25, 18, 65, 0.05)
+    ),
+    url("/images/banner-dashboard.png");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  color: #fff;
+}
+
+/* Hapus dekorasi background lama */
+.executive-hero::before,
+.executive-hero::after {
+  content: none;
+}
+
+.executive-hero .hero-main,
+.executive-hero .hero-controls {
+  position: relative;
+  z-index: 1;
+}
+
+/* Filter tetap terbaca di atas gambar */
+.executive-hero .hero-controls {
+  background: rgba(30, 20, 70, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Periode laporan */
+.executive-hero .hero-report-badge {
+  background: rgba(49, 32, 120, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Tombol notifikasi */
+.executive-hero .notification-button {
+  background: rgba(49, 32, 120, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 768px) {
+  .executive-hero {
+    background-position: left center;
+  }
+}
+
+/* Wadah filter */
+.executive-hero .hero-controls {
+  background: rgba(5, 38, 79, 0.94);
+  border: 1px solid rgba(125, 190, 204, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 20, 45, 0.16);
+}
+
+/* Label */
+.executive-hero .dashboard-filter-field label {
+  color: #d2e4e9;
+}
+
+/* Pilihan filter */
+.executive-hero .dashboard-filter-field select {
+  background: #174566;
+  color: #ffffff;
+  border: 1px solid #47758b;
+  color-scheme: dark;
+  box-shadow: none;
+}
+
+.executive-hero .dashboard-filter-field select:hover {
+  background: #1c506f;
+  border-color: #76a9b7;
+}
+
+.executive-hero .dashboard-filter-field select:focus {
+  outline: 2px solid #85bfc6;
+  outline-offset: 2px;
+  border-color: #85bfc6;
+}
+
+.executive-hero .dashboard-filter-field select option {
+  background: #123b59;
+  color: #ffffff;
+}
+
+/* Reset filter */
+.executive-hero .hero-controls .refresh-button {
+  background: #c7dcaf;
+  color: #24432d;
+  border: 1px solid #abc68e;
+  box-shadow: none;
+}
+
+.executive-hero .hero-controls .refresh-button:hover {
+  background: #b8d19c;
+  border-color: #99b879;
+}
+
+.executive-hero .hero-controls .refresh-button svg {
+  color: inherit;
+}
+
+.executive-hero .hero-controls .refresh-button:focus-visible {
+  outline: 2px solid #d9e9c7;
+  outline-offset: 3px;
+}
+/* Periode laporan */
+.executive-hero .hero-report-badge {
+  background: #05264f;
+  border: 1px solid #47758b;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.executive-hero .hero-report-badge small {
+  color: #d2e4e9;
+}
+
+.executive-hero .hero-report-badge strong {
+  color: #ffffff;
+}
+
+.executive-hero .hero-report-icon {
+  background: #174566;
+  color: #c7dcaf;
+}
+
+/* Tombol notifikasi */
+.executive-hero .notification-button {
+  background: #174566;
+  border: 1px solid #47758b;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.executive-hero .notification-button:hover {
+  background: #1c506f;
+  border-color: #76a9b7;
+}
+
+.executive-hero .notification-button svg {
+  stroke: currentColor;
+}
+
+.executive-hero .notification-button:focus-visible {
+  outline: 2px solid #85bfc6;
+  outline-offset: 3px;
+}
+
+/* Jumlah notifikasi */
+.executive-hero .notification-badge {
+  background: #dc4545;
+  color: #ffffff;
+  border: 2px solid #05264f;
+}
+
+/* Panel notifikasi */
+.executive-hero .notification-dropdown {
+  background: #ffffff;
+  color: #24435a;
+  border: 1px solid #d4e1e7;
+  box-shadow: 0 12px 32px rgba(3, 28, 60, 0.2);
+}
+
+.executive-hero .notification-header {
+  background: #f1f6f4;
+  border-bottom: 1px solid #d4e1e7;
+}
+
+.executive-hero .notification-header strong {
+  color: #05264f;
+}
+
+.executive-hero .notification-header small {
+  color: #607787;
+}
+
+.executive-hero .notification-close {
+  background: #e3ece8;
+  color: #24432d;
+  border: none;
+}
+
+.executive-hero .notification-close:hover {
+  background: #c7dcaf;
+}
   </style>
 </head>
 
@@ -4107,7 +4303,7 @@ svg {
 
 
     <h1 class="hero-title">
-      Dashboard
+      Business Dashboard 
     </h1>
 
 

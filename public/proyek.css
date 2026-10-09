@@ -538,3 +538,35 @@ dialog.pm-modal[open] {
   padding: 11px 13px;
   color: #64748b;
 }
+
+/* Container filter proyek */
+:has(> #searchInput):has(> #kategoriFilter) {
+  display: grid !important;
+
+  grid-template-columns:
+    minmax(200px, 2fr)
+    repeat(6, minmax(130px, 1fr)) !important;
+
+  gap: 12px;
+
+  overflow-x: auto;
+}
+
+/* Ukuran setiap filter */
+#searchInput,
+#kategoriFilter,
+#jenisFilter,
+#klienFilter,
+#partnerFilter,
+#statusFilter,
+#picFilter {
+  width: 100% !important;
+
+  min-width: 0 !important;
+
+  max-width: none !important;
+
+  grid-column: auto !important;
+
+  box-sizing: border-box;
+}

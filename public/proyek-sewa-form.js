@@ -169,7 +169,6 @@ function rupiah(value) {
 
 }
 
-
 // =====================================================
 // ESCAPE HTML
 // =====================================================
@@ -483,6 +482,442 @@ function updateRujukanKontrak() {
 
 }
 
+// =====================================================
+// DROPDOWN BISA DIKETIK DAN DIPILIH
+// =====================================================
+
+let sewaSearchCounter = 0;
+
+function buatSelectBisaDicari(
+  select,
+  placeholder
+) {
+  if (
+    !select ||
+    select.dataset.sewaSearchReady === "true"
+  ) {
+    return;
+  }
+
+  select.dataset.sewaSearchReady = "true";
+
+  const uid =
+    `sewa-search-${++sewaSearchCounter}`;
+
+  const wrapper =
+    document.createElement("div");
+
+  wrapper.className =
+    "sewa-search-select";
+
+  const input =
+    document.createElement("input");
+
+  input.type = "text";
+
+  input.className =
+    "sewa-search-input";
+
+  input.id =
+    select.id || `${uid}-input`;
+
+  if (select.id) {
+    select.id = `${uid}-select`;
+  }
+
+  input.placeholder = placeholder;
+  input.autocomplete = "off";
+  input.required = true;
+  input.disabled = select.disabled;
+
+  input.setAttribute(
+    "role",
+    "combobox"
+  );
+
+  input.setAttribute(
+    "aria-label",
+    placeholder
+  );
+
+  input.setAttribute(
+    "aria-autocomplete",
+    "list"
+  );
+
+  input.setAttribute(
+    "aria-expanded",
+    "false"
+  );
+
+  input.setAttribute(
+    "aria-controls",
+    `${uid}-list`
+  );
+
+  const list =
+    document.createElement("div");
+
+  list.id = `${uid}-list`;
+
+  list.className =
+    "sewa-search-options";
+
+  list.setAttribute(
+    "role",
+    "listbox"
+  );
+
+  list.hidden = true;
+
+  // Select lama tetap menyimpan ID
+  // untuk perhitungan harga dan payload.
+
+  select.required = false;
+  select.hidden = true;
+
+  select.classList.add(
+    "sewa-search-original"
+  );
+
+  select.before(wrapper);
+
+  wrapper.append(
+    input,
+    select,
+    list
+  );
+
+  let filtered = [];
+  let activeIndex = -1;
+
+  function ambilOptions() {
+    return [...select.options].filter(
+      option =>
+        option.value &&
+        !option.disabled
+    );
+  }
+
+  function validasi() {
+    input.setCustomValidity(
+      select.value
+        ? ""
+        : "Pilih salah satu pilihan dari daftar."
+    );
+  }
+
+  function tutup() {
+    list.hidden = true;
+
+    input.setAttribute(
+      "aria-expanded",
+      "false"
+    );
+
+    input.removeAttribute(
+      "aria-activedescendant"
+    );
+
+    activeIndex = -1;
+  }
+
+  function tandaiAktif() {
+    const items = [
+      ...list.querySelectorAll(
+        ".sewa-search-option"
+      )
+    ];
+
+    items.forEach(
+      (item, index) => {
+        const active =
+          index === activeIndex;
+
+        item.classList.toggle(
+          "is-active",
+          active
+        );
+
+        item.setAttribute(
+          "aria-selected",
+          String(active)
+        );
+
+        if (active) {
+          input.setAttribute(
+            "aria-activedescendant",
+            item.id
+          );
+
+          item.scrollIntoView({
+            block: "nearest"
+          });
+        }
+      }
+    );
+
+    if (activeIndex < 0) {
+      input.removeAttribute(
+        "aria-activedescendant"
+      );
+    }
+  }
+
+  function pilih(option) {
+    if (!option) {
+      return;
+    }
+
+    select.value =
+      option.value;
+
+    input.value =
+      option.textContent.trim();
+
+    validasi();
+    tutup();
+
+    select.dispatchEvent(
+      new Event(
+        "change",
+        { bubbles: true }
+      )
+    );
+  }
+
+  function tampilkan(query = "") {
+    const kata =
+      query
+        .trim()
+        .toLocaleLowerCase("id-ID");
+
+    filtered =
+      ambilOptions().filter(
+        option =>
+          option.textContent
+            .toLocaleLowerCase("id-ID")
+            .includes(kata)
+      );
+
+    list.replaceChildren();
+
+    activeIndex = -1;
+
+    if (filtered.length === 0) {
+      const empty =
+        document.createElement("div");
+
+      empty.className =
+        "sewa-search-empty";
+
+      empty.textContent =
+        "Data tidak ditemukan";
+
+      list.appendChild(empty);
+    }
+
+    filtered.forEach(
+      (option, index) => {
+        const item =
+          document.createElement("button");
+
+        item.type = "button";
+        item.tabIndex = -1;
+
+        item.id =
+          `${uid}-option-${index}`;
+
+        item.className =
+          "sewa-search-option";
+
+        item.setAttribute(
+          "role",
+          "option"
+        );
+
+        item.setAttribute(
+          "aria-selected",
+          "false"
+        );
+
+        item.textContent =
+          option.textContent.trim();
+
+        item.addEventListener(
+          "mousedown",
+          event => {
+            event.preventDefault();
+          }
+        );
+
+        item.addEventListener(
+          "click",
+          () => {
+            pilih(option);
+          }
+        );
+
+        list.appendChild(item);
+      }
+    );
+
+    list.hidden = false;
+
+    input.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+
+    input.removeAttribute(
+      "aria-activedescendant"
+    );
+  }
+
+  // Tampilkan pilihan existing saat edit.
+
+  const selected =
+    select.selectedOptions[0];
+
+  input.value =
+    selected?.value
+      ? selected.textContent.trim()
+      : "";
+
+  validasi();
+
+  input.addEventListener(
+    "focus",
+    () => {
+      tampilkan(
+        select.value
+          ? ""
+          : input.value
+      );
+    }
+  );
+
+  input.addEventListener(
+    "input",
+    () => {
+      const sebelumnya =
+        select.value;
+
+      // Hapus ID lama saat pengguna mengetik
+      // agar tidak tersimpan pilihan yang salah.
+
+      select.value = "";
+
+      validasi();
+
+      if (sebelumnya) {
+        select.dispatchEvent(
+          new Event(
+            "change",
+            { bubbles: true }
+          )
+        );
+      }
+
+      tampilkan(input.value);
+    }
+  );
+
+  input.addEventListener(
+    "keydown",
+    event => {
+      if (event.key === "Escape") {
+        if (!list.hidden) {
+          event.preventDefault();
+          event.stopPropagation();
+
+          tutup();
+        }
+
+        return;
+      }
+
+      if (
+        event.key === "ArrowDown" ||
+        event.key === "ArrowUp"
+      ) {
+        event.preventDefault();
+
+        if (list.hidden) {
+          tampilkan(
+            select.value
+              ? ""
+              : input.value
+          );
+        }
+
+        if (filtered.length === 0) {
+          return;
+        }
+
+        if (event.key === "ArrowDown") {
+          activeIndex =
+            (activeIndex + 1) %
+            filtered.length;
+        } else {
+          activeIndex =
+            activeIndex <= 0
+              ? filtered.length - 1
+              : activeIndex - 1;
+        }
+
+        tandaiAktif();
+
+        return;
+      }
+
+      if (
+        event.key === "Enter" &&
+        !list.hidden
+      ) {
+        event.preventDefault();
+
+        if (activeIndex >= 0) {
+          pilih(
+            filtered[activeIndex]
+          );
+        } else if (
+          filtered.length === 1
+        ) {
+          pilih(filtered[0]);
+        }
+      }
+    }
+  );
+
+  wrapper.addEventListener(
+    "focusout",
+    event => {
+      if (
+        !wrapper.contains(
+          event.relatedTarget
+        )
+      ) {
+        tutup();
+      }
+    }
+  );
+
+  select.addEventListener(
+    "change",
+    () => {
+      const option =
+        select.selectedOptions[0];
+
+      if (option?.value) {
+        input.value =
+          option.textContent.trim();
+      }
+
+      validasi();
+    }
+  );
+}
 
 // =====================================================
 // LOAD MASTER KLIEN
@@ -817,122 +1252,91 @@ function isiProdukSelect(
   select,
   selectedId = null
 ) {
-
   if (!select) {
     return;
   }
 
-
-  select.innerHTML =
-    `
-      <option value="">
-        Pilih Produk
-      </option>
-    `;
-
+  select.replaceChildren(
+    new Option(
+      "Pilih Produk",
+      ""
+    )
+  );
 
   masterProduk.forEach(
     item => {
-
       const option =
-        document.createElement(
-          "option"
+        new Option(
+          item.item_produk ||
+          item.nama_produk ||
+          `Produk ${item.id}`,
+          String(item.id)
         );
-
-
-      option.value =
-        item.id;
-
-
-      option.textContent =
-        item.item_produk ||
-        item.nama_produk ||
-        `Produk ${item.id}`;
-
 
       if (
         String(item.id) ===
         String(selectedId)
       ) {
-
-        option.selected =
-          true;
-
+        option.selected = true;
       }
 
-
-      select.appendChild(
-        option
-      );
-
+      select.appendChild(option);
     }
   );
 
+  buatSelectBisaDicari(
+    select,
+    "Ketik atau pilih produk"
+  );
 }
 
 
 // =====================================================
-// OPTION CABANG
+// OPTION LOKASI / CABANG
 // =====================================================
 
 function isiCabangSelect(
   select,
   selectedId = null
 ) {
-
   if (!select) {
     return;
   }
 
-
-  select.innerHTML =
-    `
-      <option value="">
-        Pilih Lokasi / Cabang
-      </option>
-    `;
-
+  select.replaceChildren(
+    new Option(
+      "Pilih Lokasi / Cabang",
+      ""
+    )
+  );
 
   masterCabang.forEach(
     item => {
-
       const option =
-        document.createElement(
-          "option"
+        new Option(
+          item.nama_cabang ||
+          item.nama ||
+          item.cabang ||
+          `Cabang ${item.id}`,
+          String(item.id)
         );
-
-
-      option.value =
-        item.id;
-
-
-      option.textContent =
-        item.nama_cabang ||
-        item.nama ||
-        item.cabang ||
-        `Cabang ${item.id}`;
-
 
       if (
         String(item.id) ===
         String(selectedId)
       ) {
-
-        option.selected =
-          true;
-
+        option.selected = true;
       }
 
-
-      select.appendChild(
-        option
-      );
-
+      select.appendChild(option);
     }
   );
 
+  buatSelectBisaDicari(
+    select,
+    "Ketik atau pilih lokasi / cabang"
+  );
 }
-
 
 // =====================================================
 // CARI MASTER PRODUK
