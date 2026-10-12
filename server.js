@@ -27283,6 +27283,9 @@ app.get(
 
             NULL::date
               AS tanggal_jatuh_tempo,
+              
+             pembayaran.tanggal_tagihan::date
+              AS tanggal_tagihan,
 
             pembayaran.tanggal_bayar,
 
@@ -31216,7 +31219,6 @@ app.post(
 
       let totalNilai = 0;
 
-
       const produkValid = [];
 
 
@@ -32026,6 +32028,43 @@ const tanggalBayarSimpan = tanggalBayarInput;
   }
 }
 
+// =================================================
+// ACTIVITY LOG
+// =================================================
+const activityUser =
+  getActivityUser(req);
+
+const nilaiBaru = [
+  `Nomor PR = ${proyekSewa.nomor_pr}`,
+  `Proyek ID = ${proyekSewa.proyek_id || "-"}`,
+  `Partner Proyek ID = ${proyekSewa.proyek_partner_id || "-"}`,
+  `Klien ID = ${proyekSewa.klien_id}`,
+  `Tanggal PR = ${proyekSewa.tanggal_pr || "-"}`,
+  `Jumlah Produk = ${produkValid.length}`,
+  `Jumlah Pembayaran = ${Array.isArray(pembayaran) ? pembayaran.length : 0}`,
+  `Total Nilai per Bulan = ${totalNilaiPerBulan}`,
+  `Total Nilai = ${totalNilai}`
+].join(", ");
+
+await simpanActivityLog(
+  client,
+  {
+    ...activityUser,
+
+    aktivitas: "CREATE",
+    modul: "PROYEK_SEWA",
+
+    entity_id: proyekSewa.id,
+    entity_nama: proyekSewa.nomor_pr,
+
+    field_name: null,
+    nilai_lama: null,
+    nilai_baru: nilaiBaru,
+
+    deskripsi:
+      `menambahkan Proyek Sewa dengan Nomor PR ${proyekSewa.nomor_pr}`
+  }
+);
       // =================================================
       // COMMIT
       // =================================================
@@ -38255,9 +38294,12 @@ app.get(
             nilai_pengeluaran,
             status_pembayaran,
             status_pembayaran_asli,
-            tanggal_jatuh_tempo,
-            tanggal_bayar,
-            tanggal_acuan,
+            TO_CHAR(tanggal_jatuh_tempo::date, 'YYYY-MM-DD')
+              AS tanggal_jatuh_tempo,
+            TO_CHAR(tanggal_bayar::date, 'YYYY-MM-DD')
+              AS tanggal_bayar,
+            TO_CHAR(tanggal_acuan::date, 'YYYY-MM-DD')
+              AS tanggal_acuan,
             syarat_pembayaran,
             created_at,
             updated_at
@@ -38429,196 +38471,133 @@ app.get(
 // =====================================================
 app.get("/api/total-pengeluaran", async (req, res) => {
   if (!req.session?.user) {
-    return res.status(401).json({
-      error: "Belum login"
-    });
+    return res.status(401).json({ error: "Belum login" });
   }
 
   const tahun = req.query.tahun === undefined
     ? new Date().getFullYear()
     : Number(req.query.tahun);
 
-  if (
-    !Number.isInteger(tahun) ||
-    tahun < 1 ||
-    tahun > 9998
-  ) {
-    return res.status(400).json({
-      error: "Tahun tidak valid"
-    });
+  if (!Number.isInteger(tahun) || tahun < 1 || tahun > 9998) {
+    return res.status(400).json({ error: "Tahun tidak valid" });
   }
 
   const user = req.session.user;
-
   const isAdmin = String(user.role || "")
     .trim()
     .toLowerCase() === "admin";
 
-  const picId = isAdmin
-    ? null
-    : Number(user.id);
+  // Admin dapat memilih PIC. PIC biasa hanya melihat proyeknya sendiri.
+  let picId = null;
+
+  if (isAdmin) {
+    if (req.query.pic_id !== undefined && req.query.pic_id !== "") {
+      picId = Number(req.query.pic_id);
+    }
+  } else {
+    picId = Number(user.id);
+  }
 
   if (
-    !isAdmin &&
+    picId !== null &&
     (!Number.isSafeInteger(picId) || picId <= 0)
   ) {
-    return res.status(403).json({
-      error: "PIC pengguna tidak valid"
-    });
+    return res.status(400).json({ error: "PIC tidak valid" });
   }
 
   try {
     const { rows } = await pool.query(
       `
-      WITH pembayaran_sewa AS (
+      WITH sumber_pengeluaran AS (
+        -- Pembayaran termin partner
         SELECT
-          CASE
-            WHEN LOWER(
-              TRIM(COALESCE(p.jenis_proyek, ''))
-            ) LIKE '%transaksi%'
-              THEN 'transaksi'
-
-            WHEN LOWER(
-              TRIM(COALESCE(p.jenis_proyek, ''))
-            ) LIKE '%sewa%'
-              THEN 'sewa'
-
-            ELSE 'reguler'
-          END AS jenis,
-
-          bayar.tanggal_bayar::date AS tanggal,
-
-          COALESCE(
-            bayar.nominal,
-            0
-          )::numeric AS nilai
-
-        FROM public.proyek_sewa_pembayaran_partner bayar
-
-        JOIN public.proyek_sewa sewa
-          ON sewa.id = bayar.proyek_sewa_id
-
-        JOIN public.proyek p
-          ON p.id = sewa.proyek_id
-
-        WHERE LOWER(
-          TRIM(
-            REGEXP_REPLACE(
-              COALESCE(bayar.status_pembayaran, ''),
-              '[[:space:]]+',
-              ' ',
-              'g'
-            )
-          )
-        ) IN (
-          'dibayar',
-          'sudah dibayar',
-          'lunas',
-          'paid'
-        )
-
-        AND bayar.tanggal_bayar >=
-          MAKE_DATE($1::int, 1, 1)
-
-        AND bayar.tanggal_bayar <
-          MAKE_DATE($1::int + 1, 1, 1)
-
-        AND (
-          $2::boolean = TRUE
-
-          OR EXISTS (
-            SELECT 1
-            FROM public.proyek_pic akses
-
-            WHERE akses.proyek_id = sewa.proyek_id
-              AND akses.pic_id = $3
-          )
-        )
-      ),
-
-      pembayaran_termin AS (
-        SELECT
-          CASE
-            WHEN LOWER(
-              TRIM(COALESCE(p.jenis_proyek, ''))
-            ) LIKE '%transaksi%'
-              THEN 'transaksi'
-
-            WHEN LOWER(
-              TRIM(COALESCE(p.jenis_proyek, ''))
-            ) LIKE '%sewa%'
-              THEN 'sewa'
-
-            ELSE 'reguler'
-          END AS jenis,
-
-          termin.tanggal_bayar::date AS tanggal,
+          partner.proyek_id,
+          proyek.jenis_proyek,
+          termin.status_pembayaran,
+          termin.tanggal_bayar::date AS tanggal_bayar,
 
           COALESCE(
             NULLIF(termin.nominal, 0),
-
-            COALESCE(
-              NULLIF(partner.nilai_nego_3, 0),
-              NULLIF(partner.nilai_nego_2, 0),
-              NULLIF(partner.nilai_nego_1, 0),
-              NULLIF(partner.nilai_submit, 0),
-              0
-            )
-            * COALESCE(termin.persentase, 0)
-            / 100.0,
-
+            CASE
+              WHEN COALESCE(termin.persentase, 0) > 0
+              THEN
+                COALESCE(
+                  NULLIF(partner.nilai_nego_3, 0),
+                  NULLIF(partner.nilai_nego_2, 0),
+                  NULLIF(partner.nilai_nego_1, 0),
+                  NULLIF(partner.nilai_submit, 0),
+                  0
+                ) * termin.persentase / 100.0
+              ELSE 0
+            END,
             0
           )::numeric AS nilai
 
         FROM public.proyek_partner_termin termin
-
         JOIN public.proyek_partner partner
           ON partner.id = termin.proyek_partner_id
+        JOIN public.proyek proyek
+          ON proyek.id = partner.proyek_id
 
-        JOIN public.proyek p
-          ON p.id = partner.proyek_id
+        UNION ALL
+
+        -- Pembayaran partner pada proyek sewa
+        SELECT
+          sewa.proyek_id,
+          COALESCE(proyek.jenis_proyek, 'Sewa') AS jenis_proyek,
+          bayar.status_pembayaran,
+          bayar.tanggal_bayar::date AS tanggal_bayar,
+          COALESCE(bayar.nominal, 0)::numeric AS nilai
+
+        FROM public.proyek_sewa_pembayaran_partner bayar
+        JOIN public.proyek_sewa sewa
+          ON sewa.id = bayar.proyek_sewa_id
+        LEFT JOIN public.proyek proyek
+          ON proyek.id = sewa.proyek_id
+      ),
+
+      pembayaran AS (
+        SELECT
+          CASE
+            WHEN LOWER(TRIM(COALESCE(jenis_proyek, '')))
+              LIKE '%transaksi%'
+              THEN 'transaksi'
+
+            WHEN LOWER(TRIM(COALESCE(jenis_proyek, '')))
+              LIKE '%sewa%'
+              THEN 'sewa'
+
+            ELSE 'reguler'
+          END AS jenis,
+
+          EXTRACT(MONTH FROM tanggal_bayar)::int AS bulan,
+          nilai
+
+        FROM sumber_pengeluaran sumber
 
         WHERE LOWER(
-          TRIM(
+          BTRIM(
             REGEXP_REPLACE(
-              COALESCE(termin.status_pembayaran, ''),
+              COALESCE(status_pembayaran, ''),
               '[[:space:]]+',
               ' ',
               'g'
             )
           )
-        ) IN (
-          'dibayar',
-          'sudah dibayar',
-          'lunas',
-          'paid'
-        )
+        ) IN ('dibayar', 'sudah dibayar', 'lunas', 'paid')
 
-        AND termin.tanggal_bayar >=
-          MAKE_DATE($1::int, 1, 1)
+          AND tanggal_bayar >= MAKE_DATE($1::int, 1, 1)
+          AND tanggal_bayar < MAKE_DATE($1::int + 1, 1, 1)
 
-        AND termin.tanggal_bayar <
-          MAKE_DATE($1::int + 1, 1, 1)
-
-        AND (
-          $2::boolean = TRUE
-
-          OR EXISTS (
-            SELECT 1
-            FROM public.proyek_pic akses
-
-            WHERE akses.proyek_id = partner.proyek_id
-              AND akses.pic_id = $3
+          AND (
+            $2::bigint IS NULL
+            OR EXISTS (
+              SELECT 1
+              FROM public.proyek_pic akses
+              WHERE akses.proyek_id = sumber.proyek_id
+                AND akses.pic_id = $2
+            )
           )
-        )
-      ),
-
-      pembayaran AS (
-        SELECT * FROM pembayaran_sewa
-
-        UNION ALL
-
-        SELECT * FROM pembayaran_termin
       ),
 
       rekap AS (
@@ -38626,132 +38605,76 @@ app.get("/api/total-pengeluaran", async (req, res) => {
           bulan.nomor AS bulan,
 
           COALESCE(
-            SUM(bayar.nilai) FILTER (
-              WHERE bayar.jenis = 'reguler'
-            ),
+            SUM(p.nilai) FILTER (WHERE p.jenis = 'reguler'),
             0
           )::numeric AS reguler,
 
           COALESCE(
-            SUM(bayar.nilai) FILTER (
-              WHERE bayar.jenis = 'sewa'
-            ),
+            SUM(p.nilai) FILTER (WHERE p.jenis = 'sewa'),
             0
           )::numeric AS sewa,
 
           COALESCE(
-            SUM(bayar.nilai) FILTER (
-              WHERE bayar.jenis = 'transaksi'
-            ),
+            SUM(p.nilai) FILTER (WHERE p.jenis = 'transaksi'),
             0
           )::numeric AS transaksi,
 
-          COALESCE(
-            SUM(bayar.nilai),
-            0
-          )::numeric AS total,
-
-          COUNT(
-            bayar.jenis
-          )::int AS jumlah_pembayaran
+          COALESCE(SUM(p.nilai), 0)::numeric AS total,
+          COUNT(p.jenis)::int AS jumlah_pembayaran
 
         FROM GENERATE_SERIES(1, 12) AS bulan(nomor)
-
-        LEFT JOIN pembayaran bayar
-          ON EXTRACT(
-            MONTH FROM bayar.tanggal
-          )::int = bulan.nomor
-
+        LEFT JOIN pembayaran p
+          ON p.bulan = bulan.nomor
         GROUP BY bulan.nomor
       )
 
       SELECT
         *,
-
         SUM(reguler) OVER () AS total_reguler,
-
         SUM(sewa) OVER () AS total_sewa,
-
         SUM(transaksi) OVER () AS total_transaksi,
-
         SUM(total) OVER () AS total_pengeluaran,
-
         SUM(jumlah_pembayaran) OVER ()
           AS jumlah_pembayaran_tahun
-
       FROM rekap
-
       ORDER BY bulan
       `,
-      [tahun, isAdmin, picId]
+      [tahun, picId]
     );
 
-    const ringkasan = rows[0] || {};
+    const ringkasan = rows[0];
 
     return res.json({
       tahun,
-
       dasar_tanggal: "tanggal_bayar",
 
-      status_pembayaran: [
-        "Dibayar",
-        "Sudah Dibayar",
-        "Lunas",
-        "Paid"
-      ],
-
       ringkasan: {
-        reguler: String(
-          ringkasan.total_reguler ?? "0"
-        ),
-
-        sewa: String(
-          ringkasan.total_sewa ?? "0"
-        ),
-
-        transaksi: String(
-          ringkasan.total_transaksi ?? "0"
-        ),
-
-        total: String(
-          ringkasan.total_pengeluaran ?? "0"
-        ),
-
+        reguler: String(ringkasan?.total_reguler ?? 0),
+        sewa: String(ringkasan?.total_sewa ?? 0),
+        transaksi: String(ringkasan?.total_transaksi ?? 0),
+        total: String(ringkasan?.total_pengeluaran ?? 0),
         jumlah_pembayaran: Number(
-          ringkasan.jumlah_pembayaran_tahun || 0
+          ringkasan?.jumlah_pembayaran_tahun ?? 0
         )
       },
 
       bulanan: rows.map(row => ({
         bulan: Number(row.bulan),
-
         reguler: String(row.reguler),
-
         sewa: String(row.sewa),
-
         transaksi: String(row.transaksi),
-
         total: String(row.total),
-
-        jumlah_pembayaran: Number(
-          row.jumlah_pembayaran
-        )
+        jumlah_pembayaran: Number(row.jumlah_pembayaran)
       }))
     });
-
   } catch (error) {
-    console.error(
-      "ERROR TOTAL PENGELUARAN:",
-      error
-    );
+    console.error("ERROR TOTAL PENGELUARAN:", error);
 
     return res.status(500).json({
-      error:
-        "Gagal mengambil total pengeluaran. Periksa log server."
+      error: "Gagal mengambil total pengeluaran"
     });
   }
 });
-
 // ======================================================
 // START SERVER
 // ======================================================

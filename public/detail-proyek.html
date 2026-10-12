@@ -3002,7 +3002,54 @@ body.modal-open {
 .timeline-expiry-text.timeline-completed {
   color: #1e40af;
 }
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
 
+.app-layout > .main-content {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: 0;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+#sidebarContainer {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  z-index: 1000;
+}
+
+#sidebarContainer .sidebar {
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.app-layout > .main-content {
+  width: auto;
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: 0;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .app-layout > .main-content {
+    padding: 20px;
+  }
+}
 
   </style>
 </head>
@@ -3551,7 +3598,7 @@ body.modal-open {
           </th>
 
           <th>
-            Jatuh Tempo
+            Tanggal Tagihan
           </th>
 
           <th>
@@ -4030,7 +4077,7 @@ body.modal-open {
         <div class="form-group">
 
           <label for="tanggalJatuhTempo">
-            Tanggal Jatuh Tempo
+            Tanggal Tagihan
           </label>
 
           <input

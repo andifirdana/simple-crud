@@ -372,7 +372,12 @@ function normalisasiItem(item) {
 
 
   const sumberSewa =
-    jenis === "Sewa";
+  String(item.sumber || "").trim().toLowerCase() === "proyek sewa" ||
+  item.proyek_sewa_id != null;
+
+const tanggalTagihan = sumberSewa
+  ? item.tanggal_tagihan
+  : item.tanggal_jatuh_tempo;
 
 
   return {
@@ -438,6 +443,8 @@ function normalisasiItem(item) {
 
     tanggal_bayar:
       tanggalBayar,
+
+    tanggal_tagihan: tanggalTagihan || null,
 
 
     /*
@@ -1648,6 +1655,10 @@ function renderTable() {
                 </span>
               </td>
 
+            <td>
+              ${formatTanggal(item.tanggal_tagihan)}
+            </td>
+            
               <td>
                 ${formatTanggal(
                   item.tanggal_bayar

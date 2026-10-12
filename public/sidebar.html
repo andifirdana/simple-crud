@@ -162,11 +162,293 @@
   border-radius: 10px;
 }
 
-</style>
-<aside class="sidebar">
+/* ==================================================
+   SIDEBAR MINIMIZE / MAXIMIZE
+================================================== */
 
-  <div class="logo">
-    Portopro
+body {
+  --sidebar-width: 260px;
+}
+
+body.sidebar-collapsed {
+  --sidebar-width: 64px;
+}
+
+.collapsible-sidebar {
+  box-sizing: border-box;
+
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+
+  flex-shrink: 0;
+
+  transition:
+    width 0.25s ease,
+    min-width 0.25s ease;
+}
+
+/* Tombol tetap terlihat saat sidebar mengecil */
+
+.sidebar-toggle-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  padding: 12px;
+}
+
+.sidebar-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+
+  flex-shrink: 0;
+
+  padding: 0;
+
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+
+  font-family: inherit;
+  font-size: 28px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition: background 0.2s ease;
+}
+
+.sidebar-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.sidebar-toggle-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+/* Sembunyikan isi sidebar, sisakan tombol */
+
+body.sidebar-collapsed
+.collapsible-sidebar > :not(.sidebar-toggle-bar) {
+  display: none;
+}
+
+body.sidebar-collapsed .sidebar-toggle-bar {
+  justify-content: center;
+}
+
+.main-content {
+  margin-left: var(--sidebar-width);
+
+  min-width: 0;
+
+  transition: margin-left 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapsible-sidebar,
+  .main-content {
+    transition: none;
+  }
+}
+/* ==================================================
+   SIDEBAR MINIMIZE / MAXIMIZE
+================================================== */
+
+body {
+  --sidebar-width: 260px;
+}
+
+body.sidebar-collapsed {
+  --sidebar-width: 64px;
+}
+
+#sidebar {
+  box-sizing: border-box;
+
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+
+  flex-shrink: 0;
+
+  transition:
+    width 0.25s ease,
+    min-width 0.25s ease;
+}
+
+/* Logo dan tombol berada dalam satu baris */
+
+#sidebar .sidebar-toggle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  width: 100%;
+  margin-bottom: 18px;
+  padding: 0;
+}
+
+#sidebar .sidebar-toggle-bar .logo {
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+}
+
+/* Tombol dengan warna yang jelas */
+
+#sidebar .sidebar-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  box-sizing: border-box;
+
+  width: 36px;
+  height: 36px;
+
+  flex-shrink: 0;
+
+  margin: 0;
+  padding: 0;
+
+  border: 1px solid #b7d6c5;
+  border-radius: 10px;
+
+  background: #e9f5ee;
+  color: #14532d;
+
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition: background 0.2s ease;
+}
+
+#sidebar .sidebar-toggle-button:hover {
+  background: #cfe8da;
+}
+
+#sidebar .sidebar-toggle-button:focus-visible {
+  outline: 2px solid #15803d;
+  outline-offset: 3px;
+}
+
+/* Sidebar mengecil */
+
+body.sidebar-collapsed #sidebar {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* Sisakan baris tombol */
+
+body.sidebar-collapsed
+#sidebar > :not(.sidebar-toggle-bar) {
+  display: none;
+}
+
+/* Logo ikut disembunyikan */
+
+body.sidebar-collapsed
+#sidebar .sidebar-toggle-bar .logo {
+  display: none;
+}
+
+body.sidebar-collapsed
+#sidebar .sidebar-toggle-bar {
+  justify-content: center;
+}
+
+/* Untuk sidebar dengan position: fixed.
+   Sesuaikan selector dengan pembungkus konten kamu. */
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  min-width: 0;
+
+  transition: margin-left 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sidebar,
+  .main-content {
+    transition: none;
+  }
+}
+body.sidebar-collapsed {
+  --sidebar-width: 64px;
+}
+
+body.sidebar-collapsed #sidebar {
+  box-sizing: border-box;
+
+  width: 64px !important;
+  min-width: 64px !important;
+  max-width: 64px !important;
+
+  flex-basis: 64px !important;
+
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+body.sidebar-collapsed
+#sidebar > :not(.sidebar-toggle-bar) {
+  display: none !important;
+}
+
+body.sidebar-collapsed
+#sidebar .sidebar-toggle-bar {
+  display: flex !important;
+  justify-content: center;
+}
+
+body.sidebar-collapsed
+#sidebar .sidebar-toggle-bar .logo {
+  display: none !important;
+}
+
+body.sidebar-collapsed .main-content {
+  margin-left: 64px !important;
+}
+</style>
+<aside
+  id="sidebar"
+  class="sidebar"
+  aria-label="Menu utama"
+>
+
+  <div class="sidebar-toggle-bar">
+
+    <div class="logo">
+      Portopro
+    </div>
+
+    <button
+      type="button"
+      id="sidebarToggle"
+      class="sidebar-toggle-button"
+      title="Kecilkan sidebar"
+      aria-label="Kecilkan sidebar"
+      aria-controls="sidebarMenu"
+      aria-expanded="true"
+    >
+      ‹
+    </button>
+
   </div>
 
   <div class="sidebar-user">
@@ -180,8 +462,7 @@
   <div
     class="menu"
     id="sidebarMenu"
-  >
-  </div>
+  ></div>
 
   <button
     type="button"
@@ -191,3 +472,4 @@
   </button>
 
 </aside>
+<script src="/sidebar.js" defer></script>

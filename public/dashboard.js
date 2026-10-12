@@ -1450,20 +1450,11 @@ function gambarGrafikPendapatan(
   const data =
     normalisasiBulanan(rows);
 
-  const series = [
-    {
-      key: "reguler",
-      color: "#4f46e5"
-    },
-    {
-      key: "sewa",
-      color: "#0891b2"
-    },
-    {
-      key: "transaksi",
-      color: "#7c3aed"
-    }
-  ];
+ const series = [
+  { key: "reguler", color: "#4f46e5" },
+  { key: "sewa", color: "#a78bfa" },
+  { key: "transaksi", color: "#f5b45d" }
+];
 
   const padding = {
     top: 24,
@@ -1696,29 +1687,20 @@ function gambarGrafikPendapatan(
 }
 
 
-function gambarGrafikPartner(
-  rows = []
-) {
-  const canvas =
-    document.getElementById(
-      "partnerChart"
-    );
+function gambarGrafikPartner(rows = []) {
+  const canvas = document.getElementById("partnerChart");
+  const prepared = siapkanCanvas(canvas);
 
-  const prepared =
-    siapkanCanvas(canvas);
+  if (!prepared) return;
 
-  if (!prepared) {
-    return;
-  }
+  const { context, width, height } = prepared;
+  const data = normalisasiBulanan(rows);
 
-  const {
-    context,
-    width,
-    height
-  } = prepared;
-
-  const data =
-    normalisasiBulanan(rows);
+  const series = [
+    { key: "reguler", color: "#4f46e5" },
+    { key: "sewa", color: "#a78bfa" },
+    { key: "transaksi", color: "#f5b45d" }
+  ];
 
   const padding = {
     top: 24,
@@ -1728,78 +1710,42 @@ function gambarGrafikPartner(
   };
 
   const chartWidth =
-    width -
-    padding.left -
-    padding.right;
+    width - padding.left - padding.right;
 
   const chartHeight =
-    height -
-    padding.top -
-    padding.bottom;
+    height - padding.top - padding.bottom;
 
-  const maxValue =
-    maksimumBagus(
-      Math.max(
-        ...data.map(
-          row =>
-            angka(
-              row.dibayar
-            )
-        ),
-        0
+  const maxValue = maksimumBagus(
+    Math.max(
+      0,
+      ...data.flatMap(row =>
+        series.map(item => angka(row[item.key]))
       )
-    );
+    )
+  );
 
-  context.font =
-    "11px Inter, Arial";
+  context.font = "11px Inter, Arial";
 
-  for (
-    let step = 0;
-    step <= 4;
-    step += 1
-  ) {
+  // Sumbu dan garis horizontal
+  for (let step = 0; step <= 4; step++) {
     const y =
       padding.top +
-      (
-        chartHeight *
-        step /
-        4
-      );
+      chartHeight * step / 4;
 
     const value =
       maxValue -
-      (
-        maxValue *
-        step /
-        4
-      );
-
-    context.strokeStyle =
-      "#e2e8f0";
-
-    context.lineWidth =
-      1;
+      maxValue * step / 4;
 
     context.beginPath();
+    context.moveTo(padding.left, y);
+    context.lineTo(width - padding.right, y);
 
-    context.moveTo(
-      padding.left,
-      y
-    );
-
-    context.lineTo(
-      width -
-      padding.right,
-      y
-    );
-
+    context.strokeStyle = "#e2e8f0";
+    context.lineWidth = 1;
     context.stroke();
 
-    context.fillStyle =
-      "#64748b";
-
-    context.textAlign =
-      "right";
+    context.fillStyle = "#64748b";
+    context.textAlign = "right";
 
     context.fillText(
       formatCompact(value),
@@ -1808,112 +1754,260 @@ function gambarGrafikPartner(
     );
   }
 
-  const slot =
-    chartWidth / 12;
+  // Nama bulan
+  data.forEach((_, index) => {
+    const x =
+      padding.left +
+      chartWidth * index / 11;
 
-  const barWidth =
-    Math.min(
-      34,
-      slot * 0.6
+    context.fillStyle = "#64748b";
+    context.textAlign = "center";
+
+    context.fillText(
+      bulanSingkat[index],
+      x,
+      height - 12
     );
+  });
 
-  data.forEach(
-    (row, index) => {
-      const value =
-        angka(
-          row.dibayar
-        );
+  // Tiga garis jenis proyek
+  series.forEach(item => {
+    context.beginPath();
 
-      const barHeight =
-        value /
-        maxValue *
-        chartHeight;
-
+    data.forEach((row, index) => {
       const x =
         padding.left +
-        slot * index +
-        (
-          slot -
-          barWidth
-        ) / 2;
+        chartWidth * index / 11;
 
       const y =
         padding.top +
         chartHeight -
-        barHeight;
+        angka(row[item.key]) /
+          maxValue * chartHeight;
 
-      const gradient =
-        context.createLinearGradient(
-          0,
-          y,
-          0,
-          padding.top +
-          chartHeight
-        );
+      if (index === 0) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    });
 
-      gradient.addColorStop(
-        0,
-        "#4f46e5"
-      );
+    context.strokeStyle = item.color;
+    context.lineWidth = 3;
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.stroke();
 
-      gradient.addColorStop(
-        1,
-        "#818cf8"
-      );
+    // Titik putih seperti grafik pendapatan
+    data.forEach((row, index) => {
+      const x =
+        padding.left +
+        chartWidth * index / 11;
 
-      context.fillStyle =
-        gradient;
+      const y =
+        padding.top +
+        chartHeight -
+        angka(row[item.key]) /
+          maxValue * chartHeight;
 
       context.beginPath();
+      context.arc(x, y, 4, 0, Math.PI * 2);
 
-      context.roundRect(
-        x,
-        y,
-        barWidth,
-        Math.max(
-          barHeight,
-          2
-        ),
-        6
-      );
-
+      context.fillStyle = "#fff";
       context.fill();
 
-      context.fillStyle =
-        "#64748b";
+      context.strokeStyle = item.color;
+      context.lineWidth = 2;
+      context.stroke();
+    });
+  });
+}
 
-      context.textAlign =
-        "center";
+function pasangTooltipGrafik(
+  canvasId,
+  tooltipId,
+  rows = []
+) {
+  const canvas = document.getElementById(canvasId);
+  const tooltip = document.getElementById(tooltipId);
 
-      context.fillText(
-        bulanSingkat[index],
-        x +
-        barWidth / 2,
-        height - 12
-      );
+  if (!canvas || !tooltip) return;
+
+  const shell = canvas.parentElement;
+  const data = normalisasiBulanan(rows);
+
+  const series = [
+    {
+      key: "reguler",
+      label: "Reguler / SLA",
+      color: "#4f46e5"
+    },
+    {
+      key: "sewa",
+      label: "Sewa",
+      color: "#a78bfa"
+    },
+    {
+      key: "transaksi",
+      label: "Transaksi",
+      color: "#f5b45d"
     }
+  ];
+
+  let crosshair = shell.querySelector(
+    ".chart-crosshair"
   );
+
+  if (!crosshair) {
+    crosshair = document.createElement("div");
+    crosshair.className = "chart-crosshair";
+    shell.append(crosshair);
+  }
+
+  function sembunyikanTooltip() {
+    tooltip.style.display = "none";
+    crosshair.style.display = "none";
+  }
+
+  canvas.onpointermove = event => {
+    const rect = canvas.getBoundingClientRect();
+
+    const padding = {
+      left: 66,
+      right: 22,
+      top: 24,
+      bottom: 42
+    };
+
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const plotWidth =
+      rect.width -
+      padding.left -
+      padding.right;
+
+    const dalamGrafik =
+      plotWidth > 0 &&
+      x >= padding.left - 12 &&
+      x <= rect.width - padding.right + 12 &&
+      y >= padding.top - 12 &&
+      y <= rect.height - padding.bottom + 12;
+
+    if (!dalamGrafik) {
+      sembunyikanTooltip();
+      return;
+    }
+
+    const index = Math.max(
+      0,
+      Math.min(
+        11,
+        Math.round(
+          (x - padding.left) /
+          plotWidth * 11
+        )
+      )
+    );
+
+    const row = data[index] || {};
+
+    // Garis tepat pada posisi bulan terpilih.
+    const posisiBulan =
+      padding.left +
+      plotWidth * index / 11;
+
+    crosshair.style.left =
+      `${canvas.offsetLeft + posisiBulan}px`;
+
+    crosshair.style.display = "block";
+
+    const judul = document.createElement("strong");
+    judul.className = "chart-tooltip-title";
+    judul.textContent = bulanSingkat[index];
+
+    const isiTooltip = series.map(item => {
+      const baris = document.createElement("div");
+      baris.className = "chart-tooltip-row";
+
+      const titik = document.createElement("span");
+      titik.className = "chart-tooltip-dot";
+      titik.style.backgroundColor = item.color;
+
+      const informasi = document.createElement("span");
+      informasi.textContent =
+        `${item.label}: ${formatRupiah(row[item.key])}`;
+
+      baris.append(titik, informasi);
+
+      return baris;
+    });
+
+    tooltip.replaceChildren(
+      judul,
+      ...isiTooltip
+    );
+
+    tooltip.style.display = "block";
+
+    const shellRect = shell.getBoundingClientRect();
+
+    const mouseX =
+      event.clientX - shellRect.left;
+
+    const mouseY =
+      event.clientY - shellRect.top;
+
+    const left = Math.max(
+      4,
+      Math.min(
+        mouseX + 14,
+        shell.clientWidth -
+          tooltip.offsetWidth - 4
+      )
+    );
+
+    const top = Math.max(
+      4,
+      Math.min(
+        mouseY + 14,
+        shell.clientHeight -
+          tooltip.offsetHeight - 4
+      )
+    );
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  };
+
+  canvas.onpointerleave = sembunyikanTooltip;
 }
 
 
 function renderCharts(data) {
-  gambarGrafikPendapatan(
-    Array.isArray(
-      data.income_monthly
-    )
-      ? data.income_monthly
-      : []
+  const incomeRows = Array.isArray(data.income_monthly)
+    ? data.income_monthly
+    : [];
+
+  const partnerRows = Array.isArray(data.partner_monthly)
+    ? data.partner_monthly
+    : [];
+
+  gambarGrafikPendapatan(incomeRows);
+  gambarGrafikPartner(partnerRows);
+
+  pasangTooltipGrafik(
+    "incomeChart",
+    "incomeTooltip",
+    incomeRows
   );
 
-  gambarGrafikPartner(
-    Array.isArray(
-      data.partner_monthly
-    )
-      ? data.partner_monthly
-      : []
+  pasangTooltipGrafik(
+    "partnerChart",
+    "partnerTooltip",
+    partnerRows
   );
 }
-
 
 // ######################################################
 // #                                                    #
@@ -2175,6 +2269,164 @@ async function ambilDashboardBagian(
   }
 }
 
+function totalPengeluaranPadaBulan(rows, tahun, bulan) {
+  return rows.reduce((total, item) => {
+    const status = String(
+      item.status_pembayaran || ""
+    )
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+
+    if (
+      ![
+        "dibayar",
+        "sudah dibayar",
+        "lunas",
+        "paid"
+      ].includes(status)
+    ) {
+      return total;
+    }
+
+    const proyekSewa =
+      String(item.sumber || "")
+        .trim()
+        .toLowerCase() === "proyek sewa";
+
+    const tanggal = proyekSewa
+      ? item.tanggal_bayar
+      : (
+          item.tanggal_bayar ||
+          item.tanggal_jatuh_tempo
+        );
+
+    if (!tanggal) {
+      return total;
+    }
+
+    // Format dari API: YYYY-MM-DD atau ISO timestamp.
+    const periodeData =
+      String(tanggal).slice(0, 7);
+
+    const periodeDipilih =
+      `${tahun}-${String(bulan).padStart(2, "0")}`;
+
+    if (periodeData !== periodeDipilih) {
+      return total;
+    }
+
+    return total + angka(
+      item.nilai_pengeluaran ??
+      item.nominal ??
+      0
+    );
+  }, 0);
+}
+
+async function muatPengeluaranBulanBerjalan() {
+  const nilaiElement = document.getElementById(
+    "pengeluaranBulanBerjalan"
+  );
+
+  const trendElement = document.getElementById(
+    "pengeluaranMonthlyTrend"
+  );
+
+  if (!nilaiElement) return;
+
+  try {
+    const hasil = await ambilDashboardBagian(
+      "Pengeluaran Bulan Berjalan",
+      "/api/pengeluaran/detail"
+    );
+
+    const rows = Array.isArray(hasil.pengeluaran)
+      ? hasil.pengeluaran
+      : [];
+
+    const periode = dapatkanPeriodeJakarta();
+
+    const current = totalPengeluaranPadaBulan(
+      rows,
+      periode.tahun,
+      periode.bulan
+    );
+
+    const tahunSebelumnya =
+      periode.bulan === 1
+        ? periode.tahun - 1
+        : periode.tahun;
+
+    const bulanSebelumnya =
+      periode.bulan === 1
+        ? 12
+        : periode.bulan - 1;
+
+    const previous = totalPengeluaranPadaBulan(
+      rows,
+      tahunSebelumnya,
+      bulanSebelumnya
+    );
+
+    nilaiElement.textContent =
+      formatRupiah(current);
+
+    if (trendElement) {
+      trendElement.classList.remove(
+        "up",
+        "down",
+        "flat"
+      );
+
+      if (previous === 0) {
+        trendElement.classList.add("flat");
+
+        trendElement.textContent =
+          current === 0
+            ? "— Belum ada perbandingan"
+            : "— Belum ada pembanding bulan lalu";
+      } else {
+        const perubahan =
+          (current - previous) /
+          previous * 100;
+
+        trendElement.classList.add(
+          perubahan > 0
+            ? "up"
+            : perubahan < 0
+              ? "down"
+              : "flat"
+        );
+
+        const persen = Math.abs(
+          perubahan
+        ).toLocaleString("id-ID", {
+          maximumFractionDigits: 1
+        });
+
+        trendElement.textContent =
+          perubahan > 0
+            ? `↑ ${persen}% dari bulan sebelumnya`
+            : perubahan < 0
+              ? `↓ ${persen}% dari bulan sebelumnya`
+              : "— Sama dengan bulan sebelumnya";
+      }
+    }
+  } catch (error) {
+    console.error(
+      "ERROR PENGELUARAN BULAN BERJALAN:",
+      error
+    );
+
+    nilaiElement.textContent = "—";
+
+    if (trendElement) {
+      trendElement.textContent =
+        "— Gagal memuat perbandingan";
+    }
+  }
+}
 
 async function loadDashboard() {
   const {
@@ -2187,31 +2439,37 @@ async function loadDashboard() {
 
   try {
     const [
-      projectData,
-      financialData,
-      contractData,
-      businessData
-    ] = await Promise.all([
-      ambilDashboardBagian(
-        "Project Overview",
-        `/api/dashboard/project?${query}`
-      ),
+  projectData,
+  financialData,
+  contractData,
+  businessData,
+  pengeluaranData
+] = await Promise.all([
+  ambilDashboardBagian(
+    "Project Overview",
+    `/api/dashboard/project?${query}`
+  ),
 
-      ambilDashboardBagian(
-        "Financial Overview",
-        `/api/dashboard/financial?${query}`
-      ),
+  ambilDashboardBagian(
+    "Financial Overview",
+    `/api/dashboard/financial?${query}`
+  ),
 
-      ambilDashboardBagian(
-        "Contract Overview",
-        `/api/dashboard/contract?${query}`
-      ),
+  ambilDashboardBagian(
+    "Contract Overview",
+    `/api/dashboard/contract?${query}`
+  ),
 
-      ambilDashboardBagian(
-        "Business Performance",
-        `/api/dashboard/business?${query}`
-      )
-    ]);
+  ambilDashboardBagian(
+    "Business Performance",
+    `/api/dashboard/business?${query}`
+  ),
+
+  ambilDashboardBagian(
+    "Total Pengeluaran",
+    `/api/total-pengeluaran?${query}`
+  )
+]);
 
     const data = {
       tahun:
@@ -2245,14 +2503,10 @@ async function loadDashboard() {
               .income_monthly
           : [],
 
-      partner_monthly:
-        Array.isArray(
-          financialData
-            .partner_monthly
-        )
-          ? financialData
-              .partner_monthly
-          : [],
+     partner_monthly:
+  Array.isArray(pengeluaranData.bulanan)
+    ? pengeluaranData.bulanan
+    : [],
 
       contract_overview:
         contractData
@@ -2311,6 +2565,7 @@ async function loadDashboard() {
     }
 
     renderDashboard(data);
+    await muatPengeluaranBulanBerjalan();
 
     // Simpan filter ke URL dashboard
 
@@ -2756,26 +3011,26 @@ function bukaDetailCard(card) {
   // FINANCIAL OVERVIEW — PENGELUARAN
   // ====================================================
 
-  } else if (
-  route === "expense"
-) {
-  path =
-    "/pengeluaran.html";
+ // FINANCIAL OVERVIEW — PENGELUARAN
+} else if (route === "expense") {
+  path = "/pengeluaran.html";
 
   if (card.dataset.jenis) {
-    params.set(
-      "jenis_proyek",
-      card.dataset.jenis
-    );
+    params.set("jenis_proyek", card.dataset.jenis);
   }
 
   if (card.dataset.status) {
-    params.set(
-      "status_pembayaran",
-      card.dataset.status
-    );
+    params.set("status_pembayaran", card.dataset.status);
   }
-}
+
+  if (card.dataset.currentMonth === "true") {
+    params.delete("jenis_proyek");
+    params.delete("pic_id");
+    params.set("tahun", String(periode.tahun));
+    params.set("bulan", String(periode.bulan));
+    params.set("status_pembayaran", "Sudah Dibayar");
+  }
+} 
   // ====================================================
   // CONTRACT OVERVIEW — TIMELINE
   // ====================================================
@@ -2831,7 +3086,7 @@ function bukaDetailCard(card) {
     route === "total-expense"
   ) {
     path =
-      "/pengeluaran.html";
+      "/total-pengeluaran.html";
   }
 
   // ====================================================
@@ -3050,6 +3305,14 @@ function konfigurasiSemuaCard() {
     }
   );
 
+  aturDataCard(
+  "pengeluaranBulanBerjalan",
+  {
+    route: "expense",
+    status: "Sudah Dibayar",
+    currentMonth: "true"
+  }
+);
 
   // ====================================================
   // FINANCIAL OVERVIEW — PENDAPATAN
@@ -3496,4 +3759,225 @@ if (
 
 } else {
   mulaiDashboard();
+}
+
+(() => {
+  function initPresenterMovement() {
+    const section = document.querySelector(
+      ".project-overview-section"
+    );
+
+    const character = section?.querySelector(
+      ".project-overview-character"
+    );
+
+    if (!section || !character) return;
+
+    if (
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches
+    ) {
+      return;
+    }
+
+    let frame = 0;
+
+    function setPosition(x, y) {
+      cancelAnimationFrame(frame);
+
+      frame = requestAnimationFrame(() => {
+        character.style.setProperty(
+          "--move-x",
+          `${x}px`
+        );
+
+        character.style.setProperty(
+          "--move-y",
+          `${y}px`
+        );
+      });
+    }
+
+    section.addEventListener(
+      "pointermove",
+      event => {
+        if (event.pointerType !== "mouse") return;
+
+        const rect =
+          section.getBoundingClientRect();
+
+        const horizontal =
+          (event.clientX - rect.left) /
+          rect.width - 0.5;
+
+        const vertical =
+          (event.clientY - rect.top) /
+          rect.height - 0.5;
+
+        setPosition(
+          Math.round(horizontal * 36),
+          Math.round(vertical * 24)
+        );
+      }
+    );
+
+    section.addEventListener(
+      "pointerleave",
+      () => setPosition(0, 0)
+    );
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      initPresenterMovement,
+      { once: true }
+    );
+  } else {
+    initPresenterMovement();
+  }
+})();
+
+(() => {
+  function initFinancialOverview() {
+    const section = document.querySelector(".financial-overview-section");
+    if (!section) return;
+
+    const readAmount = id => {
+      const text = document.getElementById(id)?.textContent || "";
+      return Number(text.replace(/[^\d]/g, "")) || 0;
+    };
+
+    const updateDonut = (donutId, paidId, unpaidId) => {
+      const donut = document.getElementById(donutId);
+      if (!donut) return;
+
+      const paid = readAmount(paidId);
+      const unpaid = readAmount(unpaidId);
+      const total = paid + unpaid;
+      const percentage = total ? Math.round((paid / total) * 100) : 0;
+
+      donut.style.setProperty("--progress", `${percentage}%`);
+      donut.querySelector(".payment-donut-value").textContent =
+        `${percentage}%`;
+    };
+
+    const refreshDonuts = () => {
+      updateDonut(
+        "paymentClientDonut",
+        "sudahDibayarKlien",
+        "piutangKlien"
+      );
+
+      updateDonut(
+        "paymentPartnerDonut",
+        "dibayarPartner",
+        "hutangPartner"
+      );
+    };
+
+    const watchedIds = [
+      "sudahDibayarKlien",
+      "piutangKlien",
+      "dibayarPartner",
+      "hutangPartner"
+    ];
+
+    const observer = new MutationObserver(refreshDonuts);
+
+    watchedIds.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        observer.observe(element, {
+          childList: true,
+          characterData: true,
+          subtree: true
+        });
+      }
+    });
+
+    refreshDonuts();
+
+    section.querySelectorAll("[data-finance-tab]").forEach(button => {
+      button.addEventListener("click", () => {
+        const showExpense = button.dataset.financeTab === "expense";
+
+        document.getElementById("financeIncomePanel").hidden = showExpense;
+        document.getElementById("financeExpensePanel").hidden = !showExpense;
+
+        section.querySelectorAll("[data-finance-tab]").forEach(tab => {
+          tab.classList.toggle("active", tab === button);
+        });
+
+    
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initFinancialOverview);
+  } else {
+    initFinancialOverview();
+  }
+})();
+
+async function ambilBulananPengeluaranDetail(filter) {
+  const params = new URLSearchParams();
+
+  if (filter.pic_id) {
+    params.set("pic_id", filter.pic_id);
+  }
+
+  const query = params.toString();
+  const hasil = await fetchJson(
+    `/api/pengeluaran/detail${query ? `?${query}` : ""}`
+  );
+
+  const bulanan = Array.from(
+    { length: 12 },
+    (_, index) => ({
+      bulan: index + 1,
+      dibayar: 0
+    })
+  );
+
+  for (const item of hasil.pengeluaran || []) {
+    if (
+      item.status_pembayaran !== "Sudah Dibayar" ||
+      !item.tanggal_bayar
+    ) {
+      continue;
+    }
+
+    const tanggal = String(item.tanggal_bayar).slice(0, 10);
+    const tahun = Number(tanggal.slice(0, 4));
+    const bulan = Number(tanggal.slice(5, 7));
+
+    const jenis = item.sumber === "Proyek Sewa"
+      ? "Sewa"
+      : String(item.jenis_proyek || "Reguler");
+
+    if (
+      filter.jenis_proyek &&
+      jenis !== filter.jenis_proyek &&
+      !jenis.startsWith(filter.jenis_proyek)
+    ) {
+      continue;
+    }
+
+    if (
+      tahun !== Number(filter.tahun) ||
+      bulan < 1 ||
+      bulan > 12
+    ) {
+      continue;
+    }
+
+    bulanan[bulan - 1].dibayar += Number(
+      item.nilai_pengeluaran ?? item.nominal ?? 0
+    );
+  }
+
+  return bulanan;
 }

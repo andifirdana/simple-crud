@@ -855,21 +855,7 @@
       gap: 12px;
     }
 
-    .section-accent {
-      flex: 0 0 auto;
-
-      width: 5px;
-      height: 42px;
-
-      background:
-        linear-gradient(
-          180deg,
-          #4f46e5,
-          #22d3ee
-        );
-
-      border-radius: 999px;
-    }
+  
 
     .section-title {
       margin: 0;
@@ -1836,7 +1822,36 @@
       pointer-events: none;
     }
 
+.chart-shell .chart-crosshair {
+  position: absolute;
+  z-index: 2;
+  top: 24px;
+  bottom: 42px;
+  display: none;
+  width: 0;
+  border-left: 1px dashed #94a3b8;
+  pointer-events: none;
+}
 
+.chart-tooltip-title {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.chart-tooltip-dot {
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
     /* =========================================
        CONTRACT CARD
     ========================================= */
@@ -3962,6 +3977,1793 @@ svg {
 .executive-hero #notificationDropdown {
   z-index: 7;
 }
+
+/* ==================================================
+   PROJECT OVERVIEW
+================================================== */
+
+.project-overview-section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 28px;
+  border-radius: 28px;
+  background: #edf0fb;
+}
+
+.project-overview-section::before {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  width: 43%;
+  height: 100%;
+  border-radius: 0;
+  background: #5a60e9;
+  content: "";
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  .project-overview-section::before {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 330px;
+    border-radius: 0;
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .project-overview-section::before {
+    height: 250px;
+  }
+}
+
+/* Header */
+.project-overview-section .section-header {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.project-overview-section .section-title {
+  margin: 0;
+  color: #111827;
+  font-size: 25px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.project-overview-section .section-description {
+  margin: 6px 0 0;
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.project-overview-section .section-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #243b58;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.project-overview-section .section-updated::before {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border-radius: 50%;
+  background: #86c841;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.28);
+  content: "";
+}
+
+/* Susunan kartu: 2 di atas, lalu 3 dan 3 */
+.project-overview-section .stats-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 70%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    "pipeline submitted ."
+    "procurement contract active"
+    "completed overdue total";
+  gap: 18px;
+}
+
+.project-overview-section .stat-card:nth-child(1) {
+  grid-area: pipeline;
+}
+
+.project-overview-section .stat-card:nth-child(2) {
+  grid-area: submitted;
+}
+
+.project-overview-section .stat-card:nth-child(3) {
+  grid-area: procurement;
+}
+
+.project-overview-section .stat-card:nth-child(4) {
+  grid-area: contract;
+}
+
+.project-overview-section .stat-card:nth-child(5) {
+  grid-area: active;
+}
+
+.project-overview-section .stat-card:nth-child(6) {
+  grid-area: completed;
+}
+
+.project-overview-section .stat-card:nth-child(7) {
+  grid-area: overdue;
+}
+
+.project-overview-section .stat-card:nth-child(8) {
+  grid-area: total;
+}
+
+/* Kartu */
+.project-overview-section .stat-card {
+  --card-accent: #3273ff;
+  --card-tint: #eef4ff;
+  --card-border: #cfddff;
+
+  display: flex;
+  min-width: 0;
+  min-height: 245px;
+  flex-direction: column;
+  padding: 21px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  background: linear-gradient(145deg, #fff, #f9fbff);
+  box-shadow: 0 12px 30px rgba(31, 41, 75, 0.08);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.project-overview-section .stat-card:hover {
+  z-index: 4;
+  transform: translateY(-4px);
+  box-shadow: 0 18px 34px rgba(31, 41, 75, 0.16);
+}
+
+.project-overview-section .stat-card:focus-visible {
+  outline: 3px solid var(--card-accent);
+  outline-offset: 3px;
+}
+
+.project-overview-section .stat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.project-overview-section .stat-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border: 1px solid var(--card-border);
+  border-radius: 15px;
+  background: var(--card-tint);
+  color: var(--card-accent);
+}
+
+.project-overview-section .stat-icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.project-overview-section .stat-chip {
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: var(--card-tint);
+  color: var(--card-accent);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.project-overview-section .stat-chip::before {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+  vertical-align: 1px;
+}
+
+.project-overview-section .stat-label {
+  margin-top: 20px;
+  color: #4b5b73;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.project-overview-section .stat-number {
+  margin-top: 10px;
+  color: #111827;
+  font-size: clamp(34px, 3vw, 46px);
+  font-weight: 850;
+  line-height: 1;
+}
+
+.project-overview-section .stat-footer {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 15px;
+  border-top: 1px solid #e9edf4;
+}
+
+.project-overview-section .stat-footer-copy {
+  min-width: 0;
+}
+
+.project-overview-section .stat-footer-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #95a4ba;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.project-overview-section .stat-footer-value {
+  display: block;
+  overflow: hidden;
+  color: #394960;
+  font-size: 13px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-overview-section .stat-open {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--card-tint);
+  color: var(--card-accent);
+}
+
+.project-overview-section .stat-open svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Warna kartu */
+.project-overview-section .card-blue {
+  --card-accent: #3273ff;
+  --card-tint: #edf3ff;
+  --card-border: #cbdcff;
+}
+
+.project-overview-section .card-indigo {
+  --card-accent: #594cff;
+  --card-tint: #f0efff;
+  --card-border: #d9d5ff;
+}
+
+.project-overview-section .card-violet {
+  --card-accent: #8b45f3;
+  --card-tint: #f5efff;
+  --card-border: #e7d5ff;
+}
+
+.project-overview-section .card-cyan {
+  --card-accent: #0798b3;
+  --card-tint: #effafd;
+  --card-border: #cceef3;
+}
+
+.project-overview-section .card-green {
+  --card-accent: #0d9b70;
+  --card-tint: #effaf5;
+  --card-border: #ccebdd;
+}
+
+.project-overview-section .card-slate {
+  --card-accent: #566477;
+  --card-tint: #f3f5f7;
+  --card-border: #d7dde5;
+}
+
+.project-overview-section .card-red {
+  --card-accent: #ef3838;
+  --card-tint: #fff2f2;
+  --card-border: #ffd2d2;
+}
+
+/* Keterangan dan ilustrasi di kanan */
+.project-overview-story {
+  position: absolute;
+  z-index: 1;
+  top: 105px;
+  right: 0;
+  display: flex;
+  width: 43%;
+  height: calc(100% - 110px);
+  align-items: center;
+  padding: 32px 20px 32px 55px;
+  overflow: hidden;
+  color: #fff;
+}
+
+.project-overview-story p {
+  position: relative;
+  z-index: 2;
+  width: 74%;
+  margin: 0;
+  font-size: clamp(17px, 1.5vw, 23px);
+  line-height: 1.45;
+}
+
+
+.illustration-head {
+  position: absolute;
+  top: 5%;
+  right: 15%;
+  width: 42%;
+  aspect-ratio: 0.82;
+  border: 12px solid #19131a;
+  border-radius: 48% 48% 45% 45%;
+  background: #f3b49c;
+}
+
+.illustration-body {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 82%;
+  height: 58%;
+  border-radius: 42% 42% 5% 5%;
+  background: #a51d21;
+}
+
+.illustration-arm {
+  position: absolute;
+  z-index: 2;
+  right: 54%;
+  bottom: 24%;
+  width: 48%;
+  height: 13%;
+  border-radius: 999px;
+  background: #f3b49c;
+  transform: rotate(-28deg);
+  transform-origin: right center;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  .project-overview-section::before {
+    top: 60%;
+    right: -20%;
+    width: 90%;
+    height: 65%;
+  }
+
+  .project-overview-section .section-updated {
+    color: #46506b;
+  }
+
+  .project-overview-section .stats-grid {
+    width: 100%;
+    grid-template-areas: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .project-overview-section .stat-card:nth-child(n) {
+    grid-area: auto;
+  }
+
+  .project-overview-story {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    height: 280px;
+    margin-top: 24px;
+    padding: 24px;
+  }
+
+  .project-overview-story p {
+    width: 58%;
+    font-size: 17px;
+  }
+}
+
+/* Ponsel */
+@media (max-width: 640px) {
+  .project-overview-section {
+    padding: 18px;
+  }
+
+  .project-overview-section .section-header {
+    align-items: flex-start;
+  }
+
+  .project-overview-section .section-title {
+    font-size: 19px;
+  }
+
+  .project-overview-section .section-description {
+    font-size: 12px;
+  }
+
+  .project-overview-section .section-updated {
+    font-size: 10px;
+  }
+
+  .project-overview-section .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+  }
+
+  .project-overview-section .stat-card {
+    min-height: 185px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .project-overview-section .stat-icon {
+    width: 39px;
+    height: 39px;
+    flex-basis: 39px;
+  }
+
+  .project-overview-section .stat-icon svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .project-overview-section .stat-chip {
+    padding: 6px 7px;
+    font-size: 8px;
+  }
+
+  .project-overview-section .stat-label {
+    margin-top: 16px;
+    font-size: 10px;
+  }
+
+  .project-overview-section .stat-number {
+    font-size: 34px;
+  }
+
+  .project-overview-section .stat-footer-label {
+    font-size: 8px;
+  }
+
+  .project-overview-section .stat-footer-value {
+    font-size: 10px;
+  }
+
+  .project-overview-section .stat-open {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .project-overview-story {
+    height: 230px;
+  }
+
+  .project-overview-story p {
+    width: 60%;
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-overview-section .stat-card {
+    transition: none;
+  }
+}
+/* Beri ruang yang cukup untuk tiga kartu */
+.project-overview-section {
+  container-type: inline-size;
+}
+
+.project-overview-section .stats-grid {
+  width: min(100%, max(70%, 900px));
+  gap: 18px;
+}
+
+.project-overview-section .stat-card {
+  min-height: 230px;
+}
+
+.project-overview-section .stat-chip {
+  max-width: calc(100% - 56px);
+  padding: 7px 9px;
+  font-size: 9px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.project-overview-section .stat-footer-value {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Teks keterangan ditempatkan di area kosong baris pertama */
+.project-overview-section .project-overview-story {
+  align-items: flex-start;
+  padding-top: 34px;
+}
+
+.project-overview-section .project-overview-story p {
+  width: 86%;
+  font-size: clamp(15px, 1.25vw, 20px);
+  line-height: 1.4;
+}
+
+/* Saat ruang dashboard sempit, gunakan dua kolom */
+@container (max-width: 850px) {
+  .project-overview-section .stats-grid {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: none;
+  }
+
+  .project-overview-section .stat-card:nth-child(n) {
+    grid-area: auto;
+  }
+
+  .project-overview-section .project-overview-story {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    height: 230px;
+    margin-top: 20px;
+    padding: 28px;
+    background: #5a60e9;
+  }
+
+  .project-overview-section .project-overview-story p {
+    width: 65%;
+  }
+}
+
+@container (max-width: 480px) {
+  .project-overview-section .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.project-overview-section {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.project-overview-section::before {
+  content: none;
+}
+
+.project-overview-section .project-overview-story {
+  background: transparent;
+  color: #334155;
+}
+
+.project-overview-section .section-updated {
+   color: #243b58;
+}
+
+.project-overview-section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.project-overview-section .stats-grid {
+  position: relative;
+  z-index: 3;
+}
+
+.project-overview-section .section-header {
+  position: relative;
+  z-index: 4;
+}
+
+.project-overview-section .project-overview-story {
+  z-index: 2;
+}
+
+.project-overview-character {
+  position: absolute;
+  z-index: 1;
+  right: 2%;
+  bottom: 0;
+  width: min(34%, 440px);
+  pointer-events: none;
+  user-select: none;
+  transform: translate3d(
+    var(--move-x, 0px),
+    var(--move-y, 0px),
+    0
+  );
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+/* Wanita project overview */
+.project-overview-section .project-overview-character img {
+  width: 85% !important;
+  height: auto;
+  margin-inline: auto;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+@keyframes presenter-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
+@media (max-width: 900px) {
+  .project-overview-character {
+    right: 1%;
+    width: 38%;
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 640px) {
+  .project-overview-character {
+    width: 45%;
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-overview-character {
+    transition: none;
+  }
+
+  .project-overview-character img {
+    animation: none;
+  }
+}
+.project-overview-character {
+  position: absolute;
+  z-index: 1;
+  right: -8%;
+  bottom: -12px;
+
+  /* Perbesar karakter seperti referensi */
+  width: clamp(540px, 62%, 850px);
+  max-width: none;
+
+  pointer-events: none;
+  user-select: none;
+
+  transform: translate3d(
+    var(--move-x, 0px),
+    var(--move-y, 0px),
+    0
+  );
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+
+.project-overview-character img {
+  display: block;
+  width: 100%;
+  height: auto;
+  animation: presenter-float 5s ease-in-out infinite;
+}
+
+@media (max-width: 900px) {
+  .project-overview-character {
+    right: -14%;
+    bottom: 0;
+    width: min(78%, 560px);
+    opacity: 0.8;
+  }
+}
+
+@media (max-width: 640px) {
+ .project-overview-character {
+  right: -13%;
+  bottom: 100px;
+  width: min(78%, 1100px);
+}
+}
+
+.project-overview-section {
+  position: relative;
+  overflow: visible;
+}
+
+.project-overview-character {
+  position: absolute;
+  right: 1%;
+  bottom: 10px; /* mengangkat tangan ke atas card Proyek Aktif */
+  width: min(48%, 1100px);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.project-overview-character img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.project-overview-section .stats-grid {
+  position: relative;
+  z-index: 2;
+}
+
+.project-overview-section .project-overview-story {
+  transform: translateX(-170px);
+}
+
+.project-overview-section .project-overview-story p {
+color: #243b58;
+  font-size: 15px;
+  line-height: 1.5;
+  top: 30px;
+}
+
+@media (max-width: 900px) {
+  .project-overview-section .project-overview-story {
+    transform: none;
+  }
+}
+.project-overview-character {
+  isolation: isolate;
+}
+
+.project-overview-character::before {
+  content: "";
+  position: absolute;
+  inset: -8%;
+  z-index: -1;
+  pointer-events: none;
+}
+@media (min-width: 901px) {
+  .project-overview-section .stats-grid {
+    position: relative;
+    left: -15px;
+  }
+}
+.project-overview-section .project-overview-story {
+  pointer-events: none;
+}
+/* ==================================================
+   FINANCIAL OVERVIEW
+================================================== */
+
+.financial-overview-section {
+  background: transparent;
+}
+
+.financial-overview-section::before {
+  content: none;
+}
+
+.financial-overview-section .section-header {
+  margin-bottom: 8px;
+}
+
+.financial-overview-section .section-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.financial-overview-section .section-accent {
+  display: block;
+  flex: 0 0 5px;
+  width: 5px;
+  height: 55px;
+  border-radius: 20px;
+  background: linear-gradient(#6255ee, #26c6e9);
+}
+
+.financial-overview-section .section-title {
+  margin: 0 0 5px;
+  color: #172033;
+  font-size: clamp(24px, 2vw, 32px);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.financial-overview-section .section-description {
+  margin: 0;
+  color: #536078;
+  font-size: 15px;
+}
+
+
+/* ==================================================
+   SECTION 1: KIRI ILUSTRASI, KANAN KPI DAN GRAFIK
+================================================== */
+
+.financial-top-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  width: 100%;
+}
+
+.financial-top-heading,
+.financial-top-content {
+  min-width: 0;
+}
+
+.financial-top-content {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.financial-top-layout .financial-bento {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+}
+
+
+/* Ilustrasi pria */
+
+.financial-top-layout .financial-top-heading {
+  position: relative;
+  align-self: stretch;
+  min-height: 680px;
+}
+
+.financial-top-heading .section-header {
+  position: relative;
+  z-index: 2;
+}
+
+.financial-hero-art {
+  position: absolute;
+  inset: 125px 0 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.financial-hero-circle {
+  position: absolute;
+  left: 12%;
+  bottom: 7%;
+  width: min(160%, 1000px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: linear-gradient(
+    145deg,
+    #fff0bd 0%,
+    #deedb5 55%,
+    #b9dec6 100%
+  );
+  box-shadow: 0 20px 45px rgba(104, 153, 113, 0.14);
+  transform: translateX(-50%);
+}
+
+.financial-hero-man {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: min(150%, 1100px);
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+
+/* KPI */
+
+.finance-kpi-panel {
+  min-width: 0;
+  padding: 22px;
+  border-radius: 24px;
+  color: #fff;
+  background: linear-gradient(115deg, #332f91, #6150f4);
+  box-shadow: 0 20px 35px rgba(55, 48, 145, 0.14);
+}
+
+.finance-kpi-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.finance-kpi-heading h3 {
+  margin: 0 0 5px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.finance-kpi-heading span {
+  color: #dcd9ff;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.finance-kpi-panel .kpi-percentage {
+  flex: 0 0 auto;
+  padding: 6px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 14px;
+}
+
+.financial-top-layout .finance-kpi-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+  margin: 15px 0 13px;
+}
+
+.financial-top-layout .target-card,
+.financial-top-layout .realisasi-card {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  box-shadow: none;
+}
+
+.financial-top-layout .target-card {
+  padding: 0 0 0 26px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+}
+
+.financial-top-layout .target-card::before,
+.financial-top-layout .target-card::after {
+  content: none;
+  display: none;
+}
+
+.financial-top-layout .target-kpi-label {
+  position: relative;
+  z-index: 2;
+  display: block;
+  margin-bottom: 8px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.financial-top-layout .realisasi-card {
+  padding: 13px;
+  border: 0;
+  border-radius: 14px;
+  background: #fff;
+  color: #202a48;
+}
+
+.finance-kpi-panel .feature-overline {
+  margin: 0 0 8px;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.financial-top-layout .finance-kpi-panel .feature-value {
+  color: inherit;
+  font-size: clamp(16px, 1.35vw, 22px);
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.financial-top-layout .finance-kpi-panel .feature-note,
+.financial-top-layout .finance-kpi-panel small {
+  display: block;
+  margin-top: 5px;
+  color: inherit;
+  font-size: 9px;
+  line-height: 1.45;
+  opacity: 0.78;
+}
+
+.finance-kpi-progress-label {
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.finance-kpi-panel .kpi-progress-track {
+  height: 9px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.finance-kpi-panel .kpi-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #43e0d6, #54a9f9);
+}
+
+
+/* Card bulan berjalan */
+
+.financial-top-layout .finance-monthly-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.financial-top-layout .month-card {
+  min-width: 0;
+  min-height: 145px;
+  padding: 15px;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.financial-top-layout .month-income {
+  background: linear-gradient(135deg, #fff, #edfff5);
+}
+
+.financial-top-layout .month-expense {
+  background: linear-gradient(135deg, #fff, #fff1f3);
+}
+
+.financial-top-layout .month-card .feature-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.financial-top-layout .month-card .feature-icon {
+  display: grid;
+  width: 33px;
+  height: 33px;
+  place-items: center;
+  border-radius: 12px;
+  color: #009d71;
+  background: #d8fae9;
+}
+
+.financial-top-layout .month-card .feature-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.financial-top-layout .month-card .stat-chip {
+  color: #009d71;
+  background: #d8fae9;
+}
+
+.financial-top-layout .month-expense .feature-icon,
+.financial-top-layout .month-expense .stat-chip {
+  color: #e23748;
+  background: #ffe6e8;
+}
+
+.financial-top-layout .month-card .feature-overline {
+  position: static;
+  color: #65738c;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.financial-top-layout .month-card .feature-value {
+  margin-top: 9px;
+  color: #111b30;
+  font-size: clamp(16px, 1.3vw, 22px);
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.financial-top-layout .month-card .monthly-trend {
+  display: inline-block;
+  margin-top: 13px;
+  padding: 5px 8px;
+  border-radius: 20px;
+  background: #e6f8ee;
+  color: #08875f;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.financial-top-layout .month-expense .monthly-trend {
+  background: #ffe9e9;
+  color: #b83540;
+}
+
+
+/* Grafik */
+
+.financial-top-layout .financial-chart-area {
+  min-width: 0;
+  width: 100%;
+  margin-top: 0;
+}
+
+.financial-chart-tabs {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.financial-chart-tabs button {
+  padding: 8px 13px;
+  border: 0;
+  border-radius: 9px;
+  background: #fff;
+  color: #52617b;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.financial-chart-tabs button.active {
+  background: #477cff;
+  color: #fff;
+}
+
+.financial-top-layout .chart-grid {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.financial-top-layout .chart-card {
+  min-width: 0;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 17px;
+  background: #fff;
+}
+
+.financial-top-layout .chart-card[hidden] {
+  display: none;
+}
+
+.financial-top-layout .chart-card-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.financial-top-layout .chart-shell {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  min-width: 0;
+  margin-top: 8px;
+}
+
+.financial-top-layout .chart-shell canvas {
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  height: 100% !important;
+}
+
+
+/* ==================================================
+   SECTION 2: PEMBAYARAN DAN PENDAPATAN
+================================================== */
+
+.financial-payment-section {
+  margin-top: 32px;
+}
+
+.financial-payment-section .financial-bottom-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 42%) minmax(0, 58%);
+  gap: 28px;
+  align-items: start;
+}
+
+.financial-bottom-payments,
+.financial-bottom-income {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.financial-bottom-payments {
+  grid-template-columns: 1fr;
+}
+
+
+/* Panel Klien dan Partner: atas–bawah */
+
+.financial-payment-section .payment-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 22px;
+  border-radius: 23px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.financial-payment-section .payment-panel h3 {
+  width: 100%;
+  margin: 0;
+  color: #605def;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.financial-payment-section .payment-donut {
+  --progress: 0%;
+  display: grid;
+  flex: none;
+  width: 140px;
+  height: 140px;
+  margin: 22px auto 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    #a887f6 0 var(--progress),
+    #e8e9f5 var(--progress) 100%
+  );
+}
+
+.financial-payment-section .payment-donut::before {
+  content: "";
+  grid-area: 1 / 1;
+  width: 94px;
+  height: 94px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.financial-payment-section .payment-donut-value {
+  grid-area: 1 / 1;
+  z-index: 1;
+  color: #625df0;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.financial-payment-section .payment-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: min(100%, 560px);
+  margin-inline: auto;
+}
+
+
+/* Card finansial */
+
+.financial-overview-section .stat-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 18px;
+  border: 0;
+  border-radius: 19px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.financial-overview-section .stat-card .stat-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 15px;
+}
+
+.financial-overview-section .stat-card .stat-icon {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+}
+
+.financial-overview-section .stat-card .stat-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.financial-overview-section .stat-card .stat-chip {
+  max-width: 54%;
+  padding: 6px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.financial-overview-section .stat-card .stat-label {
+  color: #516078;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.financial-overview-section .stat-card .stat-number {
+  margin: 10px 0 14px;
+  color: #111b30;
+  font-size: clamp(17px, 1.6vw, 24px);
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.financial-overview-section .stat-card .stat-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid #e9edf3;
+}
+
+.financial-overview-section .stat-footer-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.financial-overview-section .stat-footer-label {
+  color: #91a0b5;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.financial-overview-section .stat-footer-value {
+  color: #35445c;
+  font-size: 11px;
+}
+
+.financial-overview-section .stat-open {
+  display: grid;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border-radius: 9px;
+  background: #f2f1ff;
+  color: #625df0;
+}
+
+/* Ukuran card Klien dan Partner dibuat sama */
+
+.financial-payment-section .payment-card-grid .stat-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.financial-payment-section .payment-card-grid .stat-label {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.financial-payment-section .payment-card-grid .stat-number {
+  margin: 4px 0 12px;
+}
+
+.financial-payment-section .payment-card-grid .stat-footer {
+  margin-top: auto;
+}
+
+.financial-payment-section .payment-card-grid .stat-chip {
+  max-width: none;
+  white-space: nowrap;
+  font-size: 8px;
+}
+
+.payment-card-grid .card-amber {
+  background: linear-gradient(135deg, #fff4e8, #fff);
+}
+
+.payment-card-grid .card-green {
+  background: linear-gradient(135deg, #e9fbf3, #fff);
+}
+
+.payment-card-grid .card-red {
+  background: linear-gradient(135deg, #fff0f0, #fff);
+}
+
+.payment-card-grid .card-blue {
+  background: linear-gradient(135deg, #edf3ff, #fff);
+}
+
+
+/* Tiga card pendapatan */
+
+.financial-payment-section .finance-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.financial-payment-section .finance-stats-grid .stat-card {
+  min-height: 150px;
+}
+
+.financial-payment-section .finance-stats-grid .stat-number {
+  font-size: clamp(14px, 1.2vw, 20px);
+}
+
+.financial-payment-section .finance-stats-grid .card-indigo {
+  background: linear-gradient(125deg, #eeeefe, #fff 48%);
+}
+
+.financial-payment-section .finance-stats-grid .card-cyan {
+  background: linear-gradient(125deg, #e8f8fc, #fff 48%);
+}
+
+.financial-payment-section .finance-stats-grid .card-violet {
+  background: linear-gradient(125deg, #f4ebff, #fff 48%);
+}
+
+
+/* Ilustrasi wanita */
+
+.financial-payment-section .financial-bottom-art {
+  position: relative;
+  width: 100%;
+  height: 650px;
+  margin-top: 32px;
+  overflow: hidden;
+}
+
+.financial-payment-section .financial-bottom-circle {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  width: min(78%, 590px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #5f69e2;
+  box-shadow: 0 20px 45px rgba(95, 105, 226, 0.22);
+  transform: translateX(-50%);
+}
+
+.financial-payment-section .financial-bottom-woman {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 50%;
+  display: block;
+  width: min(80%, 590px);
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  transform: translateX(-50%);
+}
+
+
+/* ==================================================
+   RESPONSIVE
+================================================== */
+
+/* Tablet dan laptop sedang */
+
+@media (max-width: 1300px) {
+  .financial-payment-section .financial-bottom-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .financial-payment-section .financial-bottom-art {
+    width: min(100%, 760px);
+    justify-self: end;
+  }
+
+  .financial-payment-section .finance-stats-grid .stat-number {
+    font-size: clamp(15px, 1.7vw, 20px);
+  }
+}
+
+/* Tablet */
+
+@media (max-width: 1100px) {
+  .financial-top-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .financial-top-layout .financial-top-heading {
+    min-height: 370px;
+  }
+
+  .financial-hero-art {
+    inset: 95px 0 0;
+  }
+
+  .financial-hero-circle {
+    left: 50%;
+    width: min(100%, 500px);
+  }
+
+  .financial-hero-man {
+    width: min(42%, 260px);
+  }
+
+  .financial-payment-section .financial-bottom-art {
+    height: 420px;
+  }
+
+  .financial-payment-section .financial-bottom-circle {
+    width: min(100%, 370px);
+  }
+
+  .financial-payment-section .financial-bottom-woman {
+    width: min(100%, 370px);
+  }
+}
+
+/* Layar kecil */
+
+@media (max-width: 760px) {
+  .financial-payment-section .finance-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .financial-payment-section .financial-bottom-art {
+    width: 100%;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 680px) {
+  .financial-top-layout .financial-top-heading {
+    min-height: 290px;
+  }
+
+  .financial-hero-art {
+    inset: 90px 0 0;
+  }
+
+  .financial-hero-man {
+    width: min(100%, 210px);
+  }
+
+  .financial-top-layout .finance-kpi-values,
+  .financial-top-layout .finance-monthly-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .financial-top-layout .chart-shell {
+    height: 200px;
+  }
+
+  .financial-payment-section .financial-bottom-art {
+    height: 300px;
+  }
+
+  .financial-payment-section .financial-bottom-circle {
+    width: min(100%, 270px);
+  }
+
+  .financial-payment-section .financial-bottom-woman {
+    width: min(100%, 270px);
+  }
+}
+
+/* Ponsel */
+
+@media (max-width: 600px) {
+  .financial-payment-section .payment-card-grid,
+  .financial-payment-section .finance-stats-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .financial-payment-section .payment-panel {
+    padding: 16px;
+  }
+
+  .financial-payment-section .payment-panel h3 {
+    font-size: 18px;
+  }
+
+  .financial-payment-section .payment-card-grid {
+    width: 100%;
+  }
+
+  .financial-payment-section .payment-card-grid .stat-chip {
+    white-space: normal;
+  }
+}
+.project-overview-character {
+  isolation: isolate;
+}
+
+.project-overview-section .project-overview-character::before {
+  content: "";
+  position: absolute;
+  inset: auto auto calc(4% + 100px) 50%;
+  z-index: -1;
+  width: min(300%, 1000px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: linear-gradient(
+    to top,
+    #153e73 0%,
+    #4d86bd 28%,
+    #91c3e3 58%,
+    #badcf1 100%
+  );
+  box-shadow: 0 24px 55px rgba(95, 105, 226, 0.18);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .project-overview-character::before {
+    width: 115%;
+    bottom: 6%;
+  }
+}
+
+.project-overview-section .section-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.project-overview-section .section-title-wrap::before {
+  content: "";
+  display: block;
+  flex: 0 0 5px;
+  width: 5px;
+  height: 55px;
+  border-radius: 20px;
+  background: linear-gradient(#6255ee, #26c6e9);
+}
+.financial-payment-section .payment-card-grid .stat-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.financial-payment-section .payment-card-grid .stat-label {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.financial-payment-section .payment-card-grid .stat-number {
+  margin: 4px 0 12px;
+}
+
+.financial-payment-section .payment-card-grid .stat-footer {
+  margin-top: auto;
+}
+
+.financial-payment-section
+.financial-bottom-payments
+.payment-panel:first-child
+.payment-card-grid .stat-card:first-child .stat-label {
+  width: 100%;
+  align-self: stretch;
+  margin-left: 0;
+  text-align: left;
+}
+
+.financial-payment-section
+.financial-bottom-payments
+.payment-panel
+.payment-card-grid .stat-card:first-child .stat-label {
+  width: 100%;
+  align-self: stretch;
+  margin-left: 0;
+  text-align: left;
+}
+.financial-payment-section
+.financial-bottom-payments
+.payment-card-grid .stat-number.currency {
+  width: 100%;
+  min-width: 0;
+  margin-top: 6px;
+  font-size: clamp(12px, 1.15vw, 16px);
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.financial-payment-section
+.financial-bottom-payments
+.payment-panel
+.payment-card-grid .stat-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.financial-payment-section
+.financial-bottom-payments
+.payment-panel
+.payment-card-grid .stat-card {
+  min-height: 0;
+  height: auto;
+}
+
+.project-overview-section .stat-footer {
+  gap: 4px;
+}
+
+.project-overview-section .stat-footer-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-overview-section .stat-footer-value {
+  font-size: 13px;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
   </style>
 </head>
 
@@ -4559,1315 +6361,876 @@ svg {
              PROJECT OVERVIEW
         ====================================== -->
 
-        <section class="dashboard-section">
-
-          <div class="section-header">
-
-            <div class="section-title-wrap">
-
-              <span class="section-accent"></span>
-
-              <div>
-
-                <h2 class="section-title">
-                  Project Overview
-                </h2>
-
-                <p class="section-description">
-                  Proyek yang masuk pada tahun
-                  laporan berdasarkan status
-                  pengadaan dan status final.
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <span
-              class="section-updated"
-              id="lastUpdated"
-            >
-              -
-            </span>
-
-          </div>
-
-
-          <div class="stats-grid">
-
-
-            <!-- PIPELINE -->
-
-            <button
-              type="button"
-              class="stat-card card-blue"
-              data-route="project"
-              data-status-final="Aktif"
-              data-status-pengadaan="Pipeline"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-                  <svg>
-                    <use href="#icon-layers"></use>
-                  </svg>
-                </span>
-
-                <span class="stat-chip">
-                  Pipeline
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Pipeline
-              </div>
-
-              <div
-                class="stat-number"
-                id="totalPipeline"
-              >
-                0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Estimasi Nilai Proyek
-                  </span>
-
-                  <strong
-                    class="stat-footer-value"
-                    id="nilaiPipeline"
-                  >
-                    Rp 0
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-                </span>
-
-              </div>
-
-            </button>
-
-
-            <!-- SUBMIT PENAWARAN -->
-
-            <button
-              type="button"
-              class="stat-card card-indigo"
-              data-route="project"
-              data-status-final="Aktif"
-              data-status-pengadaan="Submit Penawaran"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-                  <svg>
-                    <use href="#icon-send"></use>
-                  </svg>
-                </span>
-
-                <span class="stat-chip">
-                  Submitted
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Submit Penawaran
-              </div>
-
-              <div
-                class="stat-number"
-                id="totalSubmitPenawaran"
-              >
-                0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Estimasi Nilai Proyek
-                  </span>
-
-                  <strong
-                    class="stat-footer-value"
-                    id="nilaiSubmitPenawaran"
-                  >
-                    Rp 0
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-                </span>
-
-              </div>
-
-            </button>
-
-
-            <!-- SUBMIT PENGADAAN -->
-
-            <button
-              type="button"
-              class="stat-card card-violet"
-              data-route="project"
-              data-status-final="Aktif"
-              data-status-pengadaan="Submit Pengadaan"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-                  <svg>
-                    <use href="#icon-clipboard"></use>
-                  </svg>
-                </span>
-
-                <span class="stat-chip">
-                  Procurement
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Proses Pengadaan
-              </div>
-
-              <div
-                class="stat-number"
-                id="totalSubmitPengadaan"
-              >
-                0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Estimasi Nilai Proyek
-                  </span>
-
-                  <strong
-                    class="stat-footer-value"
-                    id="nilaiSubmitPengadaan"
-                  >
-                    Rp 0
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-                </span>
-
-              </div>
-
-            </button>
-
-
-            <!-- KONTRAK -->
-
-            <button
-              type="button"
-              class="stat-card card-cyan"
-              data-route="project"
-              data-status-final="Aktif"
-              data-status-pengadaan="Kontrak"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-                  <svg>
-                    <use href="#icon-contract"></use>
-                  </svg>
-                </span>
-
-                <span class="stat-chip">
-                  Contract
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Proses Kontrak
-              </div>
-
-              <div
-                class="stat-number"
-                id="totalKontrak"
-              >
-                0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Nilai Proyek
-                  </span>
-
-                  <strong
-                    class="stat-footer-value"
-                    id="nilaiKontrak"
-                  >
-                    Rp 0
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-                </span>
-
-              </div>
-
-            </button>
-
-
-<!-- ============================================= -->
-<!-- PROYEK AKTIF -->
-<!-- ============================================= -->
-
-<button
-  type="button"
-  class="stat-card card-green"
-  data-route="project"
->
-  <div class="stat-head">
-    <span class="stat-icon">
-      <svg>
-        <use href="#icon-activity"></use>
-      </svg>
-    </span>
-
-    <span class="stat-chip">
-      Active
-    </span>
-  </div>
-
-  <div class="stat-label">
-    Proyek Aktif
-  </div>
-
-  <div
-    class="stat-number"
-    id="totalProyekAktif"
-  >
-    0
-  </div>
-
-  <div class="stat-footer">
-    <div class="stat-footer-copy">
-      <span class="stat-footer-label">
-        Nilai Proyek
-      </span>
-
-      <strong
-        class="stat-footer-value"
-        id="nilaiProyekAktif"
-      >
-        Rp 0
-      </strong>
+  <section class="dashboard-section project-overview-section">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <span class="section-accent"></span>
+
+      <div>
+        <h2 class="section-title">Proyek Overview</h2>
+        <p class="section-description">Ringkasan proyek bisnis</p>
+      </div>
     </div>
 
-    <span class="stat-open">
-      <svg>
-        <use href="#icon-arrow"></use>
-      </svg>
-    </span>
-  </div>
-</button>
-
-
-<!-- ============================================= -->
-<!-- PROYEK SELESAI -->
-<!-- ============================================= -->
-
-<button
-  type="button"
-  class="stat-card card-slate"
-  data-route="project"
-  data-status-final="Done"
->
-  <div class="stat-head">
-    <span class="stat-icon">
-      <svg>
-        <use href="#icon-check"></use>
-      </svg>
-    </span>
-
-    <span class="stat-chip">
-      Completed
-    </span>
+    <span class="section-updated" id="lastUpdated">-</span>
   </div>
 
-  <div class="stat-label">
-    Proyek Selesai
-  </div>
+  <div class="stats-grid">
+    <!-- PIPELINE -->
+    <button
+      type="button"
+      class="stat-card card-blue"
+      data-route="project"
+      data-status-final="Aktif"
+      data-status-pengadaan="Pipeline"
+    >
+      <div class="stat-head">
+        <span class="stat-icon">
+          <svg><use href="#icon-layers"></use></svg>
+        </span>
+        <span class="stat-chip">Pipeline</span>
+      </div>
 
-  <div
-    class="stat-number"
-    id="totalProyekDone"
+      <div class="stat-label">Pipeline</div>
+      <div class="stat-number" id="totalPipeline">0</div>
+
+      <div class="stat-footer">
+        <div class="stat-footer-copy">
+          <span class="stat-footer-label">Estimasi Nilai Proyek</span>
+          <strong class="stat-footer-value" id="nilaiPipeline">Rp 0</strong>
+        </div>
+        <span class="stat-open">
+          <svg><use href="#icon-arrow"></use></svg>
+        </span>
+      </div>
+    </button>
+
+    <!-- SUBMIT PENAWARAN -->
+    <button
+      type="button"
+      class="stat-card card-indigo"
+      data-route="project"
+      data-status-final="Aktif"
+      data-status-pengadaan="Submit Penawaran"
+    >
+      <div class="stat-head">
+        <span class="stat-icon">
+          <svg><use href="#icon-send"></use></svg>
+        </span>
+        <span class="stat-chip">Submitted</span>
+      </div>
+
+      <div class="stat-label">Submit Penawaran</div>
+      <div class="stat-number" id="totalSubmitPenawaran">0</div>
+
+      <div class="stat-footer">
+        <div class="stat-footer-copy">
+          <span class="stat-footer-label">Estimasi Nilai Proyek</span>
+          <strong
+            class="stat-footer-value"
+            id="nilaiSubmitPenawaran"
+          >Rp 0</strong>
+        </div>
+        <span class="stat-open">
+          <svg><use href="#icon-arrow"></use></svg>
+        </span>
+      </div>
+    </button>
+
+    <!-- PROSES PENGADAAN -->
+    <button
+      type="button"
+      class="stat-card card-violet"
+      data-route="project"
+      data-status-final="Aktif"
+      data-status-pengadaan="Submit Pengadaan"
+    >
+      <div class="stat-head">
+        <span class="stat-icon">
+          <svg><use href="#icon-clipboard"></use></svg>
+        </span>
+        <span class="stat-chip">Procurement</span>
+      </div>
+
+      <div class="stat-label">Proses Pengadaan</div>
+      <div class="stat-number" id="totalSubmitPengadaan">0</div>
+
+      <div class="stat-footer">
+        <div class="stat-footer-copy">
+          <span class="stat-footer-label">Estimasi Nilai Proyek</span>
+          <strong
+            class="stat-footer-value"
+            id="nilaiSubmitPengadaan"
+          >Rp 0</strong>
+        </div>
+        <span class="stat-open">
+          <svg><use href="#icon-arrow"></use></svg>
+        </span>
+      </div>
+    </button>
+
+    <!-- PROSES KONTRAK -->
+    <button
+      type="button"
+      class="stat-card card-cyan"
+      data-route="project"
+      data-status-final="Aktif"
+      data-status-pengadaan="Kontrak"
+    >
+      <div class="stat-head">
+        <span class="stat-icon">
+          <svg><use href="#icon-contract"></use></svg>
+        </span>
+        <span class="stat-chip">Contract</span>
+      </div>
+
+      <div class="stat-label">Proses Kontrak</div>
+      <div class="stat-number" id="totalKontrak">0</div>
+
+      <div class="stat-footer">
+        <div class="stat-footer-copy">
+          <span class="stat-footer-label">Nilai Proyek</span>
+          <strong class="stat-footer-value" id="nilaiKontrak">Rp 0</strong>
+        </div>
+        <span class="stat-open">
+          <svg><use href="#icon-arrow"></use></svg>
+        </span>
+      </div>
+    </button>
+
+    <!-- PROYEK AKTIF -->
+    <button
+      type="button"
+      class="stat-card card-green"
+      data-route="project"
+    >
+      <div class="stat-head">
+        <span class="stat-icon">
+          <svg><use href="#icon-activity"></use></svg>
+        </span>
+        <span class="stat-chip">Active</span>
+      </div>
+
+      <div class="stat-label">Proyek Aktif</div>
+      <div class="stat-number" id="totalProyekAktif">0</div>
+
+      <div class="stat-footer">
+        <div class="stat-footer-copy">
+          <span class="stat-footer-label">Nilai Proyek</span>
+          <strong
+            class="stat-footer-value"
+            id="nilaiProyekAktif"
+          >Rp 0</strong>
+        </div>
+        <span class="stat-open">
+          <svg><use href="#icon-arrow"></use></svg>
+        </span>
+      </div>
+    </button>
+
+    <!-- PROYEK SELESAI -->
+    <button
+      type="button"
+      class="stat-card card-slate"
+      data-route="project"
+      data-status-final="Done"
+    >
+      <div class="stat-head">
+        <span class="stat-icon">
+          <svg><use href="#icon-check"></use></svg>
+        </span>
+        <span class="stat-chip">Completed</span>
+      </div>
+
+      <div class="stat-label">Proyek Selesai</div>
+      <div class="stat-number" id="totalProyekDone">0</div>
+
+      <div class="stat-footer">
+        <div class="stat-footer-copy">
+          <span class="stat-footer-label">Nilai Proyek</span>
+          <strong
+            class="stat-footer-value"
+            id="nilaiProyekDone"
+          >Rp 0</strong>
+        </div>
+        <span class="stat-open">
+          <svg><use href="#icon-arrow"></use></svg>
+        </span>
+      </div>
+    </button>
+
+    <!-- PROYEK TERLAMBAT -->
+    <button
+      type="button"
+      class="stat-card card-red"
+      data-route="project"
+      data-contract="proyek-terlambat"
+    >
+      <div class="stat-head">
+        <span class="stat-icon">
+          <svg><use href="#icon-alert"></use></svg>
+        </span>
+        <span class="stat-chip">Overdue</span>
+      </div>
+
+      <div class="stat-label">Proyek Terlambat</div>
+      <div class="stat-number" id="totalProyekTerlambat">0</div>
+
+      <div class="stat-footer">
+        <div class="stat-footer-copy">
+          <span class="stat-footer-label">Nilai Proyek</span>
+          <strong
+            class="stat-footer-value"
+            id="nilaiProyekTerlambat"
+          >Rp 0</strong>
+        </div>
+        <span class="stat-open">
+          <svg><use href="#icon-arrow"></use></svg>
+        </span>
+      </div>
+    </button>
+
+    <!-- TOTAL PROYEK -->
+    <button
+      type="button"
+      class="stat-card card-indigo"
+      data-route="project"
+    >
+      <div class="stat-head">
+        <span class="stat-icon">
+          <svg><use href="#icon-layers"></use></svg>
+        </span>
+        <span class="stat-chip">Total</span>
+      </div>
+
+      <div class="stat-label">Total Proyek</div>
+      <div class="stat-number" id="totalSemuaProyek">0</div>
+
+      <div class="stat-footer">
+        <div class="stat-footer-copy">
+          <span class="stat-footer-label">Total Nilai Proyek</span>
+          <strong
+            class="stat-footer-value"
+            id="nilaiTotalProyek"
+          >Rp 0</strong>
+        </div>
+        <span class="stat-open">
+          <svg><use href="#icon-arrow"></use></svg>
+        </span>
+      </div>
+    </button>
+  </div>
+<div class="project-overview-character" aria-hidden="true">
+  <img
+    src="/images/batik2.png"
+    alt=""
+    draggable="false"
   >
-    0
-  </div>
+</div>
+  <aside class="project-overview-story">
+    <p>
+      Ringkasan proyek yang masih belum berjalan, dalam proses
+      pengadaan, dan aktif. Proyek yang masuk pada tahun laporan
+      dikelompokkan berdasarkan status pengadaan dan status final.
+    </p>
 
-  <div class="stat-footer">
-    <div class="stat-footer-copy">
-      <span class="stat-footer-label">
-        Nilai Proyek
-      </span>
-
-      <strong
-        class="stat-footer-value"
-        id="nilaiProyekDone"
-      >
-        Rp 0
-      </strong>
-    </div>
-
-    <span class="stat-open">
-      <svg>
-        <use href="#icon-arrow"></use>
-      </svg>
-    </span>
-  </div>
-</button>
-
-
-<!-- ============================================= -->
-<!-- PROYEK TERLAMBAT -->
-<!-- ============================================= -->
-
-<button
-  type="button"
-  class="stat-card card-red"
-  data-route="project"
-  data-contract="proyek-terlambat"
->
-  <div class="stat-head">
-    <span class="stat-icon">
-      <svg>
-        <use href="#icon-alert"></use>
-      </svg>
-    </span>
-
-    <span class="stat-chip">
-      Overdue
-    </span>
-  </div>
-
-  <div class="stat-label">
-    Proyek Terlambat
-  </div>
-
-  <div
-    class="stat-number"
-    id="totalProyekTerlambat"
-  >
-    0
-  </div>
-
-  <div class="stat-footer">
-    <div class="stat-footer-copy">
-      <span class="stat-footer-label">
-        Nilai Proyek
-      </span>
-
-      <strong
-        class="stat-footer-value"
-        id="nilaiProyekTerlambat"
-      >
-        Rp 0
-      </strong>
-    </div>
-
-    <span class="stat-open">
-      <svg>
-        <use href="#icon-arrow"></use>
-      </svg>
-    </span>
-  </div>
-</button>
-
-
-<!-- ============================================= -->
-<!-- TOTAL PROYEK -->
-<!-- ============================================= -->
-
-<button
-  type="button"
-  class="stat-card card-indigo"
-  data-route="project"
->
-  <div class="stat-head">
-    <span class="stat-icon">
-      <svg>
-        <use href="#icon-layers"></use>
-      </svg>
-    </span>
-
-    <span class="stat-chip">
-      Total
-    </span>
-  </div>
-
-  <div class="stat-label">
-    Total Proyek
-  </div>
-
-  <div
-    class="stat-number"
-    id="totalSemuaProyek"
-  >
-    0
-  </div>
-
-  <div class="stat-footer">
-    <div class="stat-footer-copy">
-      <span class="stat-footer-label">
-        Total Nilai Proyek
-      </span>
-
-      <strong
-        class="stat-footer-value"
-        id="nilaiTotalProyek"
-      >
-        Rp 0
-      </strong>
-    </div>
-
-    <span class="stat-open">
-      <svg>
-        <use href="#icon-arrow"></use>
-      </svg>
-    </span>
-  </div>
-</button>
-
-          </div>
-
-        </section>
+  </aside>
+</section>
 
         
+ <!-- =============================================
+       FINANCIAL OVERVIEW
+============================================== -->
 
+<!-- ==================================================
+     SECTION 1: FINANCIAL OVERVIEW
+================================================== -->
+<section class="dashboard-section financial-overview-section">
+  <div class="financial-top-layout">
 
+  <div class="financial-top-heading">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <span class="section-accent"></span>
+      <div>
+        <h2 class="section-title">Financial Overview</h2>
+        <p class="section-description">
+          Ringkasan pengeluaran dan pendapatan bisnis
+        </p>
+      </div>
+    </div>
+  </div>
 
-        <!-- =============================================
-             FINANCIAL OVERVIEW
-        ============================================== -->
+  <div class="financial-hero-art" aria-hidden="true">
+    <div class="financial-hero-circle"></div>
+    <img src="images/pria1.png" alt="" class="financial-hero-man">
+  </div>
+</div>
 
-        <section class="dashboard-section">
+    <div class="financial-top-content">
 
-          <div class="section-header">
+      <!-- KPI DAN BULAN BERJALAN -->
+      <div class="financial-bento">
 
-            <div class="section-title-wrap">
-
-              <span class="section-accent"></span>
-
-              <div>
-
-                <h2 class="section-title">
-
-                  Financial Overview
-
-                </h2>
-
-                <p class="section-description">
-
-                  KPI, realisasi pendapatan,
-                  piutang, dan pembayaran partner
-                  pada tahun laporan.
-
-                </p>
-
-              </div>
-
+        <div class="finance-kpi-panel">
+          <div class="finance-kpi-heading">
+            <div>
+              <h3>Kinerja KPI Tahun Berjalan</h3>
+              <span>Target tahunan dan realisasi KPI Reguler + Sewa</span>
             </div>
 
+            <strong class="kpi-percentage" id="persentaseKpi">
+              0%
+            </strong>
           </div>
 
-
-          <!-- KPI BENTO -->
-
-          <div class="financial-bento">
-
-
+          <div class="finance-kpi-values">
             <article class="finance-feature target-card">
+              <div class="target-kpi-label">Target KPI</div>
 
-              <div class="feature-head">
-
-                <span class="feature-icon">
-
-                  <svg>
-                    <use href="#icon-target"></use>
-                  </svg>
-
-                </span>
-
-                <span class="stat-chip">
-                  Annual Target
-                </span>
-
-              </div>
-
-
-              <div
-                class="feature-overline"
-                style="margin-top:22px;"
-              >
-
-                KPI Tahun Berjalan
-
-              </div>
-
-
-              <div
-                class="feature-value"
-                id="nilaiKpi"
-              >
-
+              <div class="feature-value" id="nilaiKpi">
                 Rp 0
-
               </div>
-
 
               <div class="feature-note">
-
-                Target nominal sesuai
-                Master KPI pada tahun terpilih.
-
+                Target nominal sesuai Master KPI pada tahun terpilih.
               </div>
-
             </article>
-
 
             <article class="finance-feature realisasi-card">
-
-              <div class="feature-head">
-
-                <span class="feature-icon">
-
-                  <svg>
-                    <use href="#icon-wallet"></use>
-                  </svg>
-
-                </span>
-
-                <span
-                  class="kpi-percentage"
-                  id="persentaseKpi"
-                >
-
-                  0%
-
-                </span>
-
+              <div class="feature-overline">
+                Realisasi KPI
               </div>
 
+              <small>Reguler + Sewa</small>
 
-              <div
-                class="feature-overline"
-                style="margin-top:22px;"
-              >
-
-                Realisasi KPI Reguler + Sewa
-
-              </div>
-
-
-              <div
-                class="feature-value"
-                id="realisasiKpi"
-              >
-
+              <div class="feature-value" id="realisasiKpi">
                 Rp 0
-
               </div>
-
-
-              <div class="kpi-progress-track">
-
-                <div
-                  class="kpi-progress-fill"
-                  id="kpiProgress"
-                ></div>
-
-              </div>
-
 
               <div class="feature-note">
-
-                Pendapatan berstatus sudah
-                dibayar dibandingkan target KPI.
-
+                Pendapatan berstatus sudah dibayar.
               </div>
-
             </article>
-
-
-            <article class="finance-feature month-card">
-
-              <div class="feature-head">
-
-                <span class="feature-icon">
-
-                  <svg>
-                    <use href="#icon-activity"></use>
-                  </svg>
-
-                </span>
-
-                <span
-                  class="stat-chip"
-                  style="
-                    --accent:#059669;
-                    --accent-rgb:5,150,105;
-                  "
-                >
-
-                  This Month
-
-                </span>
-
-              </div>
-
-
-              <div
-                class="feature-overline"
-                style="margin-top:22px;"
-              >
-
-                Pendapatan Bulan Berjalan
-
-              </div>
-
-
-              <div
-                class="feature-value"
-                id="pendapatanBulanBerjalan"
-              >
-
-                Rp 0
-
-              </div>
-
-
-              <div
-                class="monthly-trend flat"
-                id="monthlyTrend"
-              >
-
-                — Belum ada perbandingan
-
-              </div>
-
-            </article>
-
           </div>
 
-
-         <!-- FINANCIAL CARDS -->
-
-          <div class="finance-stats-grid">
-
-
-            <button
-              type="button"
-              class="stat-card card-indigo"
-              data-route="income"
-              data-jenis="Reguler"
-              data-status="Sudah Dibayar"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-
-                  <svg>
-                    <use href="#icon-wallet"></use>
-                  </svg>
-
-                </span>
-
-                <span class="stat-chip">
-                  Paid
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Pendapatan Reguler
-              </div>
-
-              <div
-                class="stat-number currency"
-                id="regulerDibayar"
-              >
-                Rp 0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Status
-                  </span>
-
-                  <strong class="stat-footer-value">
-                    Sudah Dibayar
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-
-                </span>
-
-              </div>
-
-            </button>
-
-
-            <button
-              type="button"
-              class="stat-card card-cyan"
-              data-route="income"
-              data-jenis="Sewa"
-              data-status="Sudah Dibayar"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-
-                  <svg>
-                    <use href="#icon-wallet"></use>
-                  </svg>
-
-                </span>
-
-                <span class="stat-chip">
-                  Paid
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Pendapatan Sewa
-              </div>
-
-              <div
-                class="stat-number currency"
-                id="sewaDibayar"
-              >
-                Rp 0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Status
-                  </span>
-
-                  <strong class="stat-footer-value">
-                    Sudah Dibayar
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-
-                </span>
-
-              </div>
-
-            </button>
-
-
-            <button
-              type="button"
-              class="stat-card card-violet"
-              data-route="income"
-              data-jenis="Transaksi"
-              data-status="Sudah Dibayar"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-
-                  <svg>
-                    <use href="#icon-wallet"></use>
-                  </svg>
-
-                </span>
-
-                <span class="stat-chip">
-                  Paid
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Pendapatan Transaksi
-              </div>
-
-              <div
-                class="stat-number currency"
-                id="transaksiDibayar"
-              >
-                Rp 0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Status
-                  </span>
-
-                  <strong class="stat-footer-value">
-                    Sudah Dibayar
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-
-                </span>
-
-              </div>
-
-            </button>
-
-
-            <button
-              type="button"
-              class="stat-card card-amber"
-              data-route="income"
-              data-status="Selain Dibayar"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-
-                  <svg>
-                    <use href="#icon-clock"></use>
-                  </svg>
-
-                </span>
-
-                <span class="stat-chip">
-                  Receivable
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Piutang Klien
-              </div>
-
-              <div
-                class="stat-number currency"
-                id="piutangKlien"
-              >
-                Rp 0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Status
-                  </span>
-
-                  <strong class="stat-footer-value">
-                    Belum Dibayar & Proses
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-
-                </span>
-
-              </div>
-
-            </button>
-
-
-            <button
-              type="button"
-              class="stat-card card-green"
-              data-route="income"
-              data-status="Sudah Dibayar"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-
-                  <svg>
-                    <use href="#icon-check"></use>
-                  </svg>
-
-                </span>
-
-                <span class="stat-chip">
-                  Received
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Sudah Dibayar oleh Klien
-              </div>
-
-              <div
-                class="stat-number currency"
-                id="sudahDibayarKlien"
-              >
-                Rp 0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Periode
-                  </span>
-
-                  <strong class="stat-footer-value">
-                    Tahun Laporan
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-
-                </span>
-
-              </div>
-
-            </button>
-
-
-            <button
-              type="button"
-              class="stat-card card-red"
-              data-route="expense"
-              data-status="Selain Dibayar"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-
-                  <svg>
-                    <use href="#icon-alert"></use>
-                  </svg>
-
-                </span>
-
-                <span class="stat-chip">
-                  Payable
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Hutang ke Partner
-              </div>
-
-              <div
-                class="stat-number currency"
-                id="hutangPartner"
-              >
-                Rp 0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Status
-                  </span>
-
-                  <strong class="stat-footer-value">
-                    Belum Dibayar & Proses
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-
-                </span>
-
-              </div>
-
-            </button>
-
-
-            <button
-              type="button"
-              class="stat-card card-blue"
-              data-route="expense"
-              data-status="Sudah Dibayar"
-            >
-
-              <div class="stat-head">
-
-                <span class="stat-icon">
-
-                  <svg>
-                    <use href="#icon-check"></use>
-                  </svg>
-
-                </span>
-
-                <span class="stat-chip">
-                  Paid
-                </span>
-
-              </div>
-
-              <div class="stat-label">
-                Sudah Dibayar ke Partner
-              </div>
-
-              <div
-                class="stat-number currency"
-                id="dibayarPartner"
-              >
-                Rp 0
-              </div>
-
-              <div class="stat-footer">
-
-                <div class="stat-footer-copy">
-
-                  <span class="stat-footer-label">
-                    Periode
-                  </span>
-
-                  <strong class="stat-footer-value">
-                    Tahun Laporan
-                  </strong>
-
-                </div>
-
-                <span class="stat-open">
-
-                  <svg>
-                    <use href="#icon-arrow"></use>
-                  </svg>
-
-                </span>
-
-              </div>
-
-            </button>
-
+          <div class="finance-kpi-progress-label">
+            Pencapaian terhadap target
           </div>
 
+          <div class="kpi-progress-track">
+            <div class="kpi-progress-fill" id="kpiProgress"></div>
+          </div>
+        </div>
 
-          <!-- CHART -->
+        <div class="finance-monthly-grid">
+          <article class="finance-feature month-card month-income">
+            <div class="feature-head">
+              <span class="feature-icon">
+                <svg>
+                  <use href="#icon-activity"></use>
+                </svg>
+              </span>
 
-          <div class="chart-grid">
+              <span class="stat-chip">
+                This Month
+              </span>
+            </div>
 
+            <div class="feature-overline">
+              Pendapatan Bulan Berjalan
+            </div>
 
-            <article class="chart-card">
+            <div class="feature-value" id="pendapatanBulanBerjalan">
+              Rp 0
+            </div>
 
-              <div class="chart-card-head">
+            <div class="monthly-trend flat" id="pengeluaranMonthlyTrend">
+              — Belum ada perbandingan
+            </div>
+          </article>
 
-                <div>
+          <article class="finance-feature month-card month-expense">
+            <div class="feature-head">
+              <span class="feature-icon">
+                <svg>
+                  <use href="#icon-wallet"></use>
+                </svg>
+              </span>
 
-                  <h3 class="chart-card-title">
+              <span class="stat-chip">
+                This Month
+              </span>
+            </div>
 
-                    Grafik Pendapatan Tahunan
+            <div class="feature-overline">
+              Pengeluaran Bulan Berjalan
+            </div>
 
-                  </h3>
+            <div class="feature-value" id="pengeluaranBulanBerjalan">
+              —
+            </div>
 
-                  <p class="chart-card-description">
+            <div class="monthly-trend flat" id="expenseMonthlyTrend">
+              — Belum ada perbandingan
+            </div>
+          </article>
+        </div>
+      </div>
 
-                    Pendapatan berstatus sudah
-                    dibayar per bulan.
+      <!-- GRAFIK -->
+      <div class="financial-chart-area">
+        <div
+          class="financial-chart-tabs"
+          role="tablist"
+          aria-label="Jenis grafik"
+        >
+          <button
+            type="button"
+            class="active"
+            data-finance-tab="income"
+          >
+            Pendapatan
+          </button>
 
-                  </p>
+          <button
+            type="button"
+            data-finance-tab="expense"
+          >
+            Pengeluaran
+          </button>
+        </div>
 
-                </div>
+        <div class="chart-grid">
 
+          <article class="chart-card" id="financeIncomePanel">
+            <div class="chart-card-head">
+              <div>
+                <h3 class="chart-card-title">
+                  Grafik Pendapatan Tahunan
+                </h3>
 
-                <div class="chart-legend">
-
-                  <span class="legend-item">
-
-                    <i
-                      class="legend-dot"
-                      style="background:#4f46e5;"
-                    ></i>
-
-                    Reguler
-
-                  </span>
-
-
-                  <span class="legend-item">
-
-                    <i
-                      class="legend-dot"
-                      style="background:#0891b2;"
-                    ></i>
-
-                    Sewa
-
-                  </span>
-
-
-                  <span class="legend-item">
-
-                    <i
-                      class="legend-dot"
-                      style="background:#7c3aed;"
-                    ></i>
-
-                    Transaksi
-
-                  </span>
-
-                </div>
-
+                <p class="chart-card-description">
+                  Pendapatan yang sudah dibayar per bulan.
+                </p>
               </div>
 
+              <div class="chart-legend">
+                <span class="legend-item">
+                  <i
+                    class="legend-dot"
+                    style="background:#477cff"
+                  ></i>
+                  Reguler
+                </span>
 
-              <div class="chart-shell">
+                <span class="legend-item">
+                  <i
+                    class="legend-dot"
+                    style="background:#a78bfa"
+                  ></i>
+                  Sewa
+                </span>
 
-                <canvas id="incomeChart"></canvas>
+                <span class="legend-item">
+                  <i
+                    class="legend-dot"
+                    style="background:#f6b766"
+                  ></i>
+                  Transaksi
+                </span>
+              </div>
+            </div>
 
-                <div
-                  class="chart-tooltip"
-                  id="incomeTooltip"
-                ></div>
+            <div class="chart-shell">
+              <canvas id="incomeChart"></canvas>
+              <div
+                class="chart-tooltip"
+                id="incomeTooltip"
+              ></div>
+            </div>
+          </article>
 
+          <article
+            class="chart-card"
+            id="financeExpensePanel"
+            hidden
+          >
+            <div class="chart-card-head">
+              <div>
+                <h3 class="chart-card-title">
+                  Pembayaran Partner Tahunan
+                </h3>
+
+                <p class="chart-card-description">
+                  Pembayaran partner yang sudah dibayar per bulan.
+                </p>
               </div>
 
-            </article>
+             <div class="chart-legend">
+  <span class="legend-item">
+    <i
+      class="legend-dot"
+      style="background:#4f46e5;"
+    ></i>
+    Reguler / SLA
+  </span>
+
+  <span class="legend-item">
+    <i
+      class="legend-dot"
+      style="background:#a78bfa;"
+    ></i>
+    Sewa
+  </span>
+
+  <span class="legend-item">
+    <i
+      class="legend-dot"
+      style="background:#f5b45d;"
+    ></i>
+    Transaksi
+  </span>
+</div>
+            </div>
+
+            <div class="chart-shell">
+              <canvas id="partnerChart"></canvas>
+              <div
+                class="chart-tooltip"
+                id="partnerTooltip"
+              ></div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
 
 
-            <article class="chart-card">
+<!-- ==================================================
+     SECTION 2: PEMBAYARAN DAN PENDAPATAN
+================================================== -->
+<section
+  class="dashboard-section financial-overview-section financial-payment-section"
+>
+  <div class="financial-bottom-layout">
 
-              <div class="chart-card-head">
+    <!-- KOLOM KIRI: PEMBAYARAN -->
+    <div class="financial-bottom-payments">
 
-                <div>
+      <article class="payment-panel">
+        <h3>Pembayaran Klien</h3>
 
-                  <h3 class="chart-card-title">
+        <div class="payment-donut" id="paymentClientDonut">
+          <strong class="payment-donut-value">
+            0%
+          </strong>
+        </div>
 
-                    Pembayaran Partner Tahunan
+        <div class="payment-card-grid">
 
-                  </h3>
+          <button
+            type="button"
+            class="stat-card card-amber"
+            data-route="income"
+            data-status="Selain Dibayar"
+          >
 
-                  <p class="chart-card-description">
+            <div class="stat-label"> Piutang Klien </div>
 
-                    Pembayaran partner berstatus
-                    sudah dibayar.
+            <div
+              class="stat-number currency"
+              id="piutangKlien"
+            >
+              Rp 0
+            </div>
 
-                  </p>
+            <div class="stat-footer">
+              <div class="stat-footer-copy">
+                <span class="stat-footer-label">
+                  Status
+                </span>
 
-                </div>
-
-
-                <div class="chart-legend">
-
-                  <span class="legend-item">
-
-                    <i
-                      class="legend-dot"
-                      style="background:#2563eb;"
-                    ></i>
-
-                    Dibayar
-
-                  </span>
-
-                </div>
-
+                <strong class="stat-footer-value">
+                  Belum Dibayar &amp; Proses
+                </strong>
               </div>
 
+              <span class="stat-open">→</span>
+            </div>
+          </button>
 
-              <div class="chart-shell">
+          <button
+            type="button"
+            class="stat-card card-green"
+            data-route="income"
+            data-status="Sudah Dibayar"
+          >
 
-                <canvas id="partnerChart"></canvas>
+            <div class="stat-label">
+              Sudah Dibayar oleh Klien
+            </div>
 
-                <div
-                  class="chart-tooltip"
-                  id="partnerTooltip"
-                ></div>
+            <div
+              class="stat-number currency"
+              id="sudahDibayarKlien"
+            >
+              Rp 0
+            </div>
 
+            <div class="stat-footer">
+              <div class="stat-footer-copy">
+                <span class="stat-footer-label">
+                  Periode
+                </span>
+
+                <strong class="stat-footer-value">
+                  Tahun Laporan
+                </strong>
               </div>
 
-            </article>
+              <span class="stat-open">→</span>
+            </div>
+          </button>
 
+        </div>
+      </article>
+
+      <article class="payment-panel">
+        <h3>Pembayaran Partner</h3>
+
+        <div class="payment-donut" id="paymentPartnerDonut">
+          <strong class="payment-donut-value">
+            0%
+          </strong>
+        </div>
+
+        <div class="payment-card-grid">
+
+          <button
+            type="button"
+            class="stat-card card-red"
+            data-route="expense"
+            data-status="Selain Dibayar"
+          >
+
+            <div class="stat-label">
+              Hutang ke Partner
+            </div>
+
+            <div
+              class="stat-number currency"
+              id="hutangPartner"
+            >
+              Rp 0
+            </div>
+
+            <div class="stat-footer">
+              <div class="stat-footer-copy">
+                <span class="stat-footer-label">
+                  Status
+                </span>
+
+                <strong class="stat-footer-value">
+                  Belum Dibayar &amp; Proses
+                </strong>
+              </div>
+
+              <span class="stat-open">→</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="stat-card card-blue"
+            data-route="expense"
+            data-status="Sudah Dibayar"
+          >
+
+            <div class="stat-label">
+              Sudah Dibayar ke Partner
+            </div>
+
+            <div
+              class="stat-number currency"
+              id="dibayarPartner"
+            >
+              Rp 0
+            </div>
+
+            <div class="stat-footer">
+              <div class="stat-footer-copy">
+                <span class="stat-footer-label">
+                  Periode
+                </span>
+
+                <strong class="stat-footer-value">
+                  Tahun Laporan
+                </strong>
+              </div>
+
+              <span class="stat-open">→</span>
+            </div>
+          </button>
+
+        </div>
+      </article>
+
+    </div>
+
+    <!-- KOLOM KANAN: PENDAPATAN -->
+    <div class="financial-bottom-income">
+      <div class="finance-stats-grid">
+
+        <button
+          type="button"
+          class="stat-card card-indigo"
+          data-route="income"
+          data-jenis="Reguler"
+          data-status="Sudah Dibayar"
+        >
+          <div class="stat-head">
+            <span class="stat-icon">
+              <svg>
+                <use href="#icon-wallet"></use>
+              </svg>
+            </span>
+
+            <span class="stat-chip">
+              Paid
+            </span>
           </div>
 
-        </section>
+          <div class="stat-label">
+            Pendapatan Reguler
+          </div>
+
+          <div
+            class="stat-number currency"
+            id="regulerDibayar"
+          >
+            Rp 0
+          </div>
+
+          <div class="stat-footer">
+            <div class="stat-footer-copy">
+              <span class="stat-footer-label">
+                Status
+              </span>
+
+              <strong class="stat-footer-value">
+                Sudah Dibayar
+              </strong>
+            </div>
+
+            <span class="stat-open">→</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="stat-card card-cyan"
+          data-route="income"
+          data-jenis="Sewa"
+          data-status="Sudah Dibayar"
+        >
+          <div class="stat-head">
+            <span class="stat-icon">
+              <svg>
+                <use href="#icon-wallet"></use>
+              </svg>
+            </span>
+
+            <span class="stat-chip">
+              Paid
+            </span>
+          </div>
+
+          <div class="stat-label">
+            Pendapatan Sewa
+          </div>
+
+          <div
+            class="stat-number currency"
+            id="sewaDibayar"
+          >
+            Rp 0
+          </div>
+
+          <div class="stat-footer">
+            <div class="stat-footer-copy">
+              <span class="stat-footer-label">
+                Status
+              </span>
+
+              <strong class="stat-footer-value">
+                Sudah Dibayar
+              </strong>
+            </div>
+
+            <span class="stat-open">→</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="stat-card card-violet"
+          data-route="income"
+          data-jenis="Transaksi"
+          data-status="Sudah Dibayar"
+        >
+          <div class="stat-head">
+            <span class="stat-icon">
+              <svg>
+                <use href="#icon-wallet"></use>
+              </svg>
+            </span>
+
+            <span class="stat-chip">
+              Paid
+            </span>
+          </div>
+
+          <div class="stat-label">
+            Pendapatan Transaksi
+          </div>
+
+          <div
+            class="stat-number currency"
+            id="transaksiDibayar"
+          >
+            Rp 0
+          </div>
+
+          <div class="stat-footer">
+            <div class="stat-footer-copy">
+              <span class="stat-footer-label">
+                Status
+              </span>
+
+              <strong class="stat-footer-value">
+                Sudah Dibayar
+              </strong>
+            </div>
+
+            <span class="stat-open">→</span>
+          </div>
+        </button>
+
+      </div>
+    
+<div class="financial-bottom-art" aria-hidden="true">
+  <div class="financial-bottom-circle"></div>
+  <img src="images/wanita.png" alt="" class="financial-bottom-woman">
+</div>
+
+</div>
+  </div>
+</section>
 
 
         <!-- =============================================

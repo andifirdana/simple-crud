@@ -2,45 +2,22 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0"
+    content="width=device-width, initial-scale=1"
   >
-
   <title>Pendapatan - Portopro</title>
-
-  <link
-    rel="stylesheet"
-    href="/style.css"
-  >
+  <link rel="stylesheet" href="/style.css">
 
   <style>
     :root {
       --page-bg: #f3f6fb;
       --surface: #ffffff;
       --line: #e5eaf2;
-      --line-strong: #d7deea;
       --text: #172033;
-      --muted: #6b768a;
+      --muted: #64748b;
       --indigo: #4f46e5;
-      --indigo-soft: #eef2ff;
-      --green: #059669;
-      --green-soft: #ecfdf5;
-      --amber: #d97706;
-      --amber-soft: #fffbeb;
-      --blue: #2563eb;
-      --blue-soft: #eff6ff;
-      --rose: #e11d48;
-      --rose-soft: #fff1f2;
-
-      --shadow-sm:
-        0 8px 24px
-        rgba(15, 23, 42, 0.05);
-
-      --shadow-md:
-        0 18px 45px
-        rgba(15, 23, 42, 0.08);
+      --lebar-sidebar-pendapatan: 260px;
     }
 
     * {
@@ -49,25 +26,9 @@
 
     body {
       margin: 0;
-
+      background: var(--page-bg);
       color: var(--text);
-
-      background:
-        radial-gradient(
-          circle at 88% 2%,
-          rgba(79, 70, 229, 0.08),
-          transparent 26rem
-        ),
-        var(--page-bg);
-
-      font-family:
-        Inter,
-        ui-sans-serif,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+      font-family: Inter, Arial, sans-serif;
     }
 
     button,
@@ -76,1272 +37,608 @@
       font: inherit;
     }
 
+    /* HALAMAN DAN SIDEBAR */
+
     .pendapatan-page {
-      width: calc(100% - 260px);
+      width: calc(
+        100% - var(--lebar-sidebar-pendapatan)
+      ) !important;
+      min-width: 0;
       min-height: 100vh;
-      margin-left: 260px;
+      margin-left:
+        var(--lebar-sidebar-pendapatan) !important;
       padding: 28px;
+      transition:
+        width 180ms ease,
+        margin-left 180ms ease;
     }
 
     .pendapatan-content {
       width: 100%;
-      max-width: 1680px;
-      margin: 0 auto;
+      max-width: none !important;
+      min-width: 0;
+      margin: 0 !important;
     }
 
-    /* ================================================
-       HEADER
-    ================================================ */
-
-    .pendapatan-header {
-      position: relative;
-
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 24px;
-
-      overflow: hidden;
-
-      margin-bottom: 20px;
-      padding: 28px 30px;
-
-      color: #ffffff;
-
-      background:
-        linear-gradient(
-          125deg,
-          #111c44 0%,
-          #26347a 56%,
-          #4f46e5 100%
-        );
-
-      border:
-        1px solid
-        rgba(255, 255, 255, 0.1);
-
-      border-radius: 22px;
-
-      box-shadow:
-        var(--shadow-md);
-    }
-
-    .pendapatan-header::before,
-    .pendapatan-header::after {
-      position: absolute;
-
-      border:
-        1px solid
-        rgba(255, 255, 255, 0.11);
-
-      border-radius: 999px;
-
-      content: "";
-
-      pointer-events: none;
-    }
-
-    .pendapatan-header::before {
-      top: -80px;
-      right: -45px;
-
-      width: 240px;
-      height: 240px;
-    }
-
-    .pendapatan-header::after {
-      right: 90px;
-      bottom: -130px;
-
-      width: 220px;
-      height: 220px;
-
-      background:
-        rgba(255, 255, 255, 0.04);
-    }
-
-    .header-copy,
-    .header-status {
-      position: relative;
-      z-index: 1;
-    }
-
-    .header-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-
-      margin-bottom: 12px;
-      padding: 6px 10px;
-
-      color: #dbeafe;
-
-      background:
-        rgba(255, 255, 255, 0.1);
-
-      border:
-        1px solid
-        rgba(255, 255, 255, 0.14);
-
-      border-radius: 999px;
-
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .header-eyebrow::before {
-      width: 7px;
-      height: 7px;
-
-      background: #6ee7b7;
-      border-radius: 50%;
-
-      box-shadow:
-        0 0 0 4px
-        rgba(110, 231, 183, 0.14);
-
-      content: "";
-    }
-
-    .pendapatan-header h1 {
-      margin: 0 0 8px;
-
-      font-size:
-        clamp(28px, 3vw, 40px);
-
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      line-height: 1.08;
-    }
-
-    .pendapatan-header p {
-      max-width: 760px;
-      margin: 0;
-
-      color:
-        rgba(255, 255, 255, 0.72);
-
-      font-size: 13px;
-      line-height: 1.65;
-    }
-
-    .header-status {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-
-      flex: 0 0 auto;
-
-      padding: 11px 14px;
-
-      color: #ffffff;
-
-      background:
-        rgba(15, 23, 42, 0.24);
-
-      border:
-        1px solid
-        rgba(255, 255, 255, 0.15);
-
-      border-radius: 13px;
-
-      backdrop-filter: blur(10px);
-
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .header-status svg {
-      width: 17px;
-      height: 17px;
-
-      color: #a7f3d0;
-    }
-
-    /* ================================================
-       SUMMARY
-    ================================================ */
+    /* KARTU RINGKASAN */
 
     .pendapatan-summary {
-      display: grid;
-
+      display: grid !important;
       grid-template-columns:
-        repeat(5, minmax(0, 1fr));
-
-      gap: 14px;
-
-      margin-bottom: 20px;
+        repeat(3, minmax(0, 1fr)) !important;
+      gap: 16px;
+      margin-bottom: 22px;
     }
 
-    .summary-card {
+    .pendapatan-summary .summary-card {
       position: relative;
-
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      grid-column: auto !important;
       min-width: 0;
+      min-height: 175px;
       overflow: hidden;
-
-      padding: 18px;
-
+      padding: 22px !important;
       background: var(--surface);
-
-      border:
-        1px solid
-        var(--line);
-
-      border-radius: 17px;
-
-      box-shadow:
-        var(--shadow-sm);
-
-      transition:
-        transform 180ms ease,
-        box-shadow 180ms ease,
-        border-color 180ms ease;
+      border: 1px solid var(--line);
+      border-radius: 19px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
     }
 
-    .summary-card:hover {
-      transform:
-        translateY(-3px);
-
-      border-color: #cfd7e6;
-
-      box-shadow:
-        0 15px 35px
-        rgba(15, 23, 42, 0.09);
+    .pendapatan-summary .summary-card::before {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 5px;
+      background: var(--indigo);
+      content: "";
     }
 
-    .summary-card.primary {
+    .pendapatan-summary .summary-card.primary {
       color: #ffffff;
-
-      background:
-        linear-gradient(
-          145deg,
-          #172554,
-          #3730a3
-        );
-
+      background: linear-gradient(
+        145deg,
+        #1d2b63,
+        #3730a3
+      );
       border-color: transparent;
     }
 
-    .summary-card.primary::after {
+    .pendapatan-summary .summary-card.primary::after {
       position: absolute;
-      right: -34px;
-      bottom: -55px;
-
-      width: 135px;
-      height: 135px;
-
-      background:
-        rgba(255, 255, 255, 0.06);
-
+      right: -35px;
+      bottom: -65px;
+      width: 150px;
+      height: 150px;
       border-radius: 50%;
-
+      background: rgba(255, 255, 255, 0.07);
       content: "";
+      pointer-events: none;
     }
 
-    .summary-top {
+    .pendapatan-summary .summary-top {
       position: relative;
       z-index: 1;
-
-      display: flex;
-      align-items: center;
+      display: flex !important;
+      align-items: flex-start;
       justify-content: space-between;
-      gap: 12px;
-
-      margin-bottom: 18px;
+      width: 100%;
+      margin: 0 0 20px !important;
     }
 
-    .summary-icon {
+    .pendapatan-summary .summary-icon {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-
-      width: 38px;
-      height: 38px;
-
-      border-radius: 11px;
+      flex: 0 0 42px;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      color: #4f46e5;
+      background: #eef2ff;
     }
 
-    .summary-icon svg {
-      width: 19px;
-      height: 19px;
-
+    .pendapatan-summary .summary-icon svg {
+      width: 21px;
+      height: 21px;
       fill: none;
       stroke: currentColor;
-
+      stroke-width: 1.9;
       stroke-linecap: round;
       stroke-linejoin: round;
-      stroke-width: 1.9;
     }
 
-    .summary-icon.green {
-      color: var(--green);
-      background: var(--green-soft);
+    .pendapatan-summary .summary-icon.amber {
+      color: #d97706;
+      background: #fffbeb;
     }
 
-    .summary-icon.amber {
-      color: var(--amber);
-      background: var(--amber-soft);
+    .pendapatan-summary .summary-icon.blue {
+      color: #2563eb;
+      background: #eff6ff;
     }
 
-    .summary-icon.blue {
-      color: var(--blue);
-      background: var(--blue-soft);
+    .pendapatan-summary .summary-icon.green {
+      color: #059669;
+      background: #ecfdf5;
     }
 
-    .summary-icon.indigo {
-      color: var(--indigo);
-      background: var(--indigo-soft);
+    .pendapatan-summary .summary-icon.rose {
+      color: #e11d48;
+      background: #fff1f2;
     }
 
-    .summary-icon.rose {
-      color: var(--rose);
-      background: var(--rose-soft);
-    }
-
-    .summary-card.primary
+    .pendapatan-summary .summary-card.primary
     .summary-icon {
       color: #ffffff;
-
-      background:
-        rgba(255, 255, 255, 0.13);
+      background: rgba(255, 255, 255, 0.14);
     }
 
-    .summary-tag {
-      padding: 4px 7px;
-
+    .pendapatan-summary .summary-tag {
+      padding: 6px 9px;
+      border-radius: 8px;
       color: #64748b;
       background: #f1f5f9;
-
-      border-radius: 7px;
-
-      font-size: 9px;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-
-    .summary-card.primary
-    .summary-tag {
-      color: #c7d2fe;
-
-      background:
-        rgba(255, 255, 255, 0.1);
-    }
-
-    .summary-label {
-      position: relative;
-      z-index: 1;
-
-      display: block;
-
-      margin-bottom: 7px;
-
-      color: var(--muted);
-
       font-size: 10px;
       font-weight: 800;
-      letter-spacing: 0.07em;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-    }
-
-    .summary-card.primary
-    .summary-label {
-      color: #c7d2fe;
-    }
-
-    .summary-value {
-      position: relative;
-      z-index: 1;
-
-      display: block;
-
-      overflow: hidden;
-
-      color: var(--text);
-
-      font-size:
-        clamp(19px, 1.45vw, 27px);
-
-      font-weight: 850;
-      letter-spacing: -0.04em;
-      line-height: 1.2;
-
-      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .summary-card.primary
+    .pendapatan-summary .summary-card.primary
+    .summary-tag {
+      color: #dbe2ff;
+      background: rgba(255, 255, 255, 0.13);
+    }
+
+    .pendapatan-summary .summary-label {
+      position: relative;
+      z-index: 1;
+      display: block !important;
+      width: 100%;
+      margin: 0 0 8px !important;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      line-height: 1.4;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    .pendapatan-summary .summary-card.primary
+    .summary-label {
+      color: #d2dcff;
+    }
+
+    .pendapatan-summary .summary-value {
+      position: relative;
+      z-index: 1;
+      display: block !important;
+      width: 100%;
+      margin: 0 !important;
+      color: var(--text);
+      font-size: clamp(19px, 1.6vw, 28px);
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.035em;
+      text-align: left;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pendapatan-summary .summary-card.primary
     .summary-value {
       color: #ffffff;
     }
 
-    /* ================================================
-       FILTER
-    ================================================ */
-
-    .filter-panel {
-      margin-bottom: 20px;
-      padding: 18px;
-
-      background:
-        rgba(255, 255, 255, 0.92);
-
-      border:
-        1px solid
-        var(--line);
-
-      border-radius: 18px;
-
-      box-shadow:
-        var(--shadow-sm);
-
-      backdrop-filter: blur(14px);
+    #jumlahTerminDibayar,
+    #jumlahTerminBelumDibayar {
+      font-size: clamp(26px, 2vw, 34px);
     }
 
-    .filter-heading {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+    /* FILTER */
 
-      margin-bottom: 15px;
-    }
-
-    .filter-title {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-
-      margin: 0;
-
-      color: #27344d;
-
-      font-size: 14px;
-      font-weight: 800;
-    }
-
-    .filter-title svg {
-      width: 18px;
-      height: 18px;
-
-      fill: none;
-      stroke: var(--indigo);
-
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-width: 2;
-    }
-
-    .filter-note {
-      color: #94a3b8;
-
-      font-size: 11px;
-    }
-
-    .filter-card {
+    .pendapatan-filter-row {
       display: grid;
-
       grid-template-columns:
-        minmax(270px, 1.8fr)
-        repeat(
-          4,
-          minmax(145px, 1fr)
-        )
-        auto;
-
+        minmax(220px, 1.7fr)
+        minmax(120px, 0.8fr)
+        minmax(105px, 0.7fr)
+        minmax(155px, 1fr)
+        minmax(165px, 1fr)
+        minmax(100px, 0.65fr);
       align-items: end;
-
-      gap: 11px;
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 22px;
+      padding: 18px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
     }
 
-    .filter-field {
+    .pendapatan-filter-field {
       min-width: 0;
     }
 
-    .filter-field label {
+    .pendapatan-filter-field label,
+    .pendapatan-filter-field .filter-label-spacer {
       display: block;
-
-      margin:
-        0 0 7px 2px;
-
+      height: 17px;
+      margin-bottom: 8px;
       color: #64748b;
-
       font-size: 10px;
       font-weight: 800;
       letter-spacing: 0.06em;
       text-transform: uppercase;
+      white-space: nowrap;
     }
 
-    .filter-input-wrap {
-      position: relative;
-    }
-
-    .filter-input-wrap svg {
-      position: absolute;
-
-      top: 50%;
-      left: 13px;
-
-      width: 17px;
-      height: 17px;
-
-      fill: none;
-      stroke: #94a3b8;
-
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-width: 2;
-
-      transform:
-        translateY(-50%);
-
-      pointer-events: none;
-    }
-
-    .filter-card input,
-    .filter-card select {
+    .pendapatan-filter-field input,
+    .pendapatan-filter-field select,
+    .pendapatan-filter-field button {
       width: 100%;
       height: 44px;
+      min-width: 0;
+      margin: 0;
+      border: 1px solid #d7deea;
+      border-radius: 11px;
+      font-size: 12px;
+    }
 
+    .pendapatan-filter-field input,
+    .pendapatan-filter-field select {
       padding: 0 12px;
-
       color: #334155;
       background: #ffffff;
+    }
 
-      border:
-        1px solid
-        var(--line-strong);
-
-      border-radius: 11px;
-
+    .pendapatan-filter-field input:focus,
+    .pendapatan-filter-field select:focus {
       outline: none;
-
-      font-size: 12px;
-      font-weight: 600;
-
-      transition:
-        border-color 160ms ease,
-        box-shadow 160ms ease,
-        background 160ms ease;
-    }
-
-    .filter-card input {
-      padding-left: 40px;
-    }
-
-    .filter-card
-    input::placeholder {
-      color: #9ca7b8;
-
-      font-weight: 500;
-    }
-
-    .filter-card input:hover,
-    .filter-card select:hover {
-      border-color: #bcc6d7;
-    }
-
-    .filter-card input:focus,
-    .filter-card select:focus {
-      background: #ffffff;
       border-color: #818cf8;
-
-      box-shadow:
-        0 0 0 4px
-        rgba(99, 102, 241, 0.11);
+      box-shadow: 0 0 0 3px
+        rgba(99, 102, 241, 0.12);
     }
 
-    #resetPendapatanFilter {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-
-      height: 44px;
-
-      padding: 0 15px;
-
+    .pendapatan-filter-field button {
       color: #475569;
       background: #f8fafc;
-
-      border:
-        1px solid
-        var(--line-strong);
-
-      border-radius: 11px;
-
-      font-size: 12px;
       font-weight: 800;
-
       cursor: pointer;
-
-      transition: 160ms ease;
-
-      white-space: nowrap;
     }
 
-    #resetPendapatanFilter svg {
-      width: 16px;
-      height: 16px;
-
-      fill: none;
-      stroke: currentColor;
-
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-width: 2;
-    }
-
-    #resetPendapatanFilter:hover {
+    .pendapatan-filter-field button:hover {
       color: #4338ca;
-      background:
-        var(--indigo-soft);
-
-      border-color: #a5b4fc;
+      background: #eef2ff;
     }
 
-    /* ================================================
-       GROUP JENIS
-    ================================================ */
+    /* TABEL */
 
-    .jenis-group {
-      overflow: hidden;
-
-      margin-bottom: 20px;
-
-      background: var(--surface);
-
-      border:
-        1px solid
-        var(--line);
-
-      border-radius: 19px;
-
-      box-shadow:
-        var(--shadow-sm);
-    }
-
-    .jenis-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-
-      padding: 17px 20px;
-
-      color: #ffffff;
-
-      background:
-        linear-gradient(
-          100deg,
-          #172033,
-          #263657
-        );
-    }
-
-    .jenis-title {
-      font-size: 14px;
-      font-weight: 850;
-      letter-spacing: 0.035em;
-      text-transform: uppercase;
-    }
-
-    .jenis-total {
-      padding: 7px 11px;
-
-      color: #e0e7ff;
-
-      background:
-        rgba(255, 255, 255, 0.08);
-
-      border:
-        1px solid
-        rgba(255, 255, 255, 0.09);
-
-      border-radius: 9px;
-
-      font-size: 12px;
-      font-weight: 800;
-
-      white-space: nowrap;
-    }
-
-    /* ================================================
-       SUB JENIS DAN KATEGORI
-    ================================================ */
-
-    .subjenis-group {
-      border-bottom:
-        1px solid
-        var(--line);
-    }
-
-    .subjenis-group:last-child {
-      border-bottom: 0;
-    }
-
-    .subjenis-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 15px;
-
-      padding: 13px 20px;
-
-      background: #f8fafc;
-
-      border-bottom:
-        1px solid
-        var(--line);
-    }
-
-    .subjenis-title {
-      color: #334155;
-
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    .subjenis-total {
-      color: #64748b;
-
-      font-size: 12px;
-      font-weight: 750;
-
-      white-space: nowrap;
-    }
-
-    .kategori-group {
-      overflow: hidden;
-
-      margin: 14px;
-
-      background: #ffffff;
-
-      border:
-        1px solid
-        var(--line);
-
-      border-radius: 13px;
-    }
-
-    .kategori-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 15px;
-
-      padding: 12px 15px;
-
-      color: #3730a3;
-
-      background:
-        linear-gradient(
-          90deg,
-          #eef2ff,
-          #f8faff
-        );
-
-      border-bottom:
-        1px solid
-        #e0e7ff;
-    }
-
-    .kategori-title {
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .kategori-total {
-      font-size: 11px;
-      font-weight: 800;
-
-      white-space: nowrap;
-    }
-
-    /* ================================================
-       TABLE DARI PENDAPATAN.JS
-    ================================================ */
-
-    .table-wrapper {
+    #pendapatanGroup {
       width: 100%;
+      min-width: 0;
+    }
 
+    #pendapatanGroup .pendapatan-table-wrap {
+      width: 100%;
+      max-width: 100%;
       overflow-x: auto;
-
-      scrollbar-color:
-        #cbd5e1 transparent;
-
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 17px;
       scrollbar-width: thin;
+      scrollbar-color: #bdc8d9 transparent;
     }
 
-    .table-wrapper::-webkit-scrollbar {
-      height: 8px;
-    }
-
-    .table-wrapper::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-
-      border:
-        2px solid
-        #ffffff;
-
-      border-radius: 999px;
-    }
-
-    .prognosa-table,
-    .pendapatan-table {
+    #pendapatanGroup .pendapatan-table {
       width: 100%;
-      min-width: 1450px;
-
+      min-width: 1700px;
       border-collapse: separate;
       border-spacing: 0;
     }
 
-    .prognosa-table th,
-    .pendapatan-table th {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-
-      padding: 11px 13px;
-
-      color: #6b768a;
-      background: #fbfcfe;
-
-      border-bottom:
-        1px solid
-        var(--line);
-
+    #pendapatanGroup .pendapatan-table th {
+      padding: 13px 14px;
+      color: #64748b;
+      background: #f5f7fc;
+      border-bottom: 1px solid var(--line);
       font-size: 10px;
-      font-weight: 850;
-      letter-spacing: 0.045em;
+      font-weight: 800;
       text-align: left;
       text-transform: uppercase;
-
       white-space: nowrap;
     }
 
-    .prognosa-table td,
-    .pendapatan-table td {
-      padding: 13px;
-
-      color: #3d485c;
+    #pendapatanGroup .pendapatan-table td {
+      padding: 14px;
+      color: #334155;
       background: #ffffff;
-
-      border-bottom:
-        1px solid
-        #edf1f6;
-
-      font-size: 11px;
-      line-height: 1.5;
+      border-bottom: 1px solid #edf0f5;
+      font-size: 12px;
+      font-weight: 400;
+      text-align: left;
       vertical-align: middle;
     }
 
-    .prognosa-table
-    tbody tr:last-child td,
-    .pendapatan-table
+    #pendapatanGroup .pendapatan-table
+    tbody tr:hover td {
+      background: #f8faff;
+    }
+
+    #pendapatanGroup .pendapatan-table
     tbody tr:last-child td {
       border-bottom: 0;
     }
 
-    .prognosa-table
-    tbody tr:hover td,
-    .pendapatan-table
-    tbody tr:hover td {
-      background: #fafbff;
+    #pendapatanGroup .pendapatan-table
+    th:nth-child(2),
+    #pendapatanGroup .pendapatan-table
+    td:nth-child(2) {
+      width: 260px;
+      min-width: 260px;
+      max-width: 260px;
     }
 
-    .proyek-name {
-      min-width: 190px;
-
-      color: var(--text);
-
-      font-weight: 800;
-    }
-
-    .project-link,
-    .proyek-link {
-      color: #4338ca;
-
-      font-weight: 800;
+    #pendapatanGroup .pendapatan-project-link {
+      display: block;
+      max-width: 230px;
+      overflow: hidden;
+      color: #3449a5;
+      font-weight: 700;
       text-decoration: none;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .project-link:hover,
-    .proyek-link:hover {
-      color: #312e81;
-
+    #pendapatanGroup
+    a.pendapatan-project-link:hover {
       text-decoration: underline;
-      text-underline-offset: 3px;
     }
 
-    .nilai {
-      color: #1e293b;
+    #pendapatanGroup .pendapatan-subtext {
+      display: block;
+      margin-top: 4px;
+      color: #94a3b8;
+      font-size: 11px;
+    }
 
-      font-weight: 800;
-
+    #pendapatanGroup .pendapatan-table
+    .amount {
+      font-weight: 700;
       white-space: nowrap;
     }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
+    /* Nilai Kontrak tidak perlu bold */
+    #pendapatanGroup .pendapatan-table
+    td:nth-child(6) {
+      font-weight: 400;
+    }
 
-      padding: 5px 8px;
+    #pendapatanGroup .pendapatan-table
+    .tanggal-cell,
+    #pendapatanGroup .pendapatan-table
+    .periode-cell,
+    #pendapatanGroup .pendapatan-table
+    .persentase-cell {
+      white-space: nowrap;
+    }
 
-      color: #4338ca;
-      background:
-        var(--indigo-soft);
+    #pendapatanGroup .pendapatan-table
+    .deskripsi-cell,
+    #pendapatanGroup .pendapatan-table
+    .syarat-cell {
+      min-width: 145px;
+      max-width: 220px;
+      overflow-wrap: anywhere;
+    }
 
-      border:
-        1px solid
-        #e0e7ff;
-
+    #pendapatanGroup .pendapatan-status {
+      display: inline-block;
+      padding: 6px 10px;
       border-radius: 999px;
-
-      font-size: 10px;
-      font-weight: 750;
-
+      font-size: 11px;
+      font-weight: 700;
       white-space: nowrap;
     }
 
-    .detail-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-
-      min-height: 32px;
-
-      padding: 0 11px;
-
-      color: #4338ca;
-      background:
-        var(--indigo-soft);
-
-      border:
-        1px solid
-        #dfe3ff;
-
-      border-radius: 8px;
-
-      font-size: 10px;
-      font-weight: 800;
-
-      text-decoration: none;
-
-      transition: 150ms ease;
+    #pendapatanGroup
+    .pendapatan-status.sudah-dibayar {
+      color: #16804a;
+      background: #e8f7ee;
     }
 
-    .detail-button:hover {
-      color: #ffffff;
-      background: var(--indigo);
-
-      border-color:
-        var(--indigo);
+    #pendapatanGroup
+    .pendapatan-status.proses {
+      color: #9a6500;
+      background: #fff3d6;
     }
 
-    /* ================================================
-       EMPTY STATE
-    ================================================ */
+    #pendapatanGroup
+    .pendapatan-status.belum-dibayar {
+      color: #b42332;
+      background: #feecec;
+    }
 
     .empty-state {
-      padding: 58px 20px;
-
-      color: #94a3b8;
-
-      background:
-        rgba(255, 255, 255, 0.88);
-
-      border:
-        1px dashed
-        #cbd5e1;
-
-      border-radius: 17px;
-
-      box-shadow:
-        var(--shadow-sm);
-
-      font-size: 13px;
+      padding: 28px;
+      color: #64748b;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
       text-align: center;
     }
 
-    /* ================================================
-       PAGINATION
-    ================================================ */
+    .error-state {
+      color: #b42332;
+    }
+
+    /* PAGINATION */
 
     .pagination {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 15px;
-
-      margin-top: 20px;
-      padding: 14px 16px;
-
-      background:
-        rgba(255, 255, 255, 0.9);
-
-      border:
-        1px solid
-        var(--line);
-
-      border-radius: 14px;
-
-      box-shadow:
-        var(--shadow-sm);
-    }
-
-    .pagination-info {
+      gap: 16px;
+      margin-top: 16px;
       color: #64748b;
-
-      font-size: 11px;
-      font-weight: 650;
+      font-size: 12px;
     }
 
     .pagination-buttons {
       display: flex;
       flex-wrap: wrap;
-
-      gap: 6px;
+      gap: 7px;
     }
 
-    .page-button {
-      min-width: 36px;
-      height: 36px;
-
+    .pagination-buttons button {
+      min-width: 34px;
+      height: 34px;
       padding: 0 9px;
-
+      border: 1px solid #d7deea;
+      border-radius: 9px;
       color: #475569;
       background: #ffffff;
-
-      border:
-        1px solid
-        var(--line-strong);
-
-      border-radius: 9px;
-
-      font-size: 11px;
-      font-weight: 800;
-
       cursor: pointer;
-
-      transition: 150ms ease;
     }
 
-    .page-button:hover:not(:disabled),
-    .page-button.active {
+    .pagination-buttons button.active {
       color: #ffffff;
-      background: var(--indigo);
-
-      border-color:
-        var(--indigo);
-
-      box-shadow:
-        0 7px 16px
-        rgba(79, 70, 229, 0.2);
+      background: #4f46e5;
+      border-color: #4f46e5;
     }
 
-    .page-button:disabled {
-      opacity: 0.42;
-
+    .pagination-buttons button:disabled {
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
-    /* ================================================
-       RESPONSIVE
-    ================================================ */
+    /* RESPONSIVE */
 
-    @media (max-width: 1450px) {
-      .pendapatan-summary {
+    @media (max-width: 1150px) {
+      .pendapatan-filter-row {
         grid-template-columns:
           repeat(3, minmax(0, 1fr));
       }
 
-      .filter-card {
-        grid-template-columns:
-          repeat(4, minmax(145px, 1fr));
-      }
-
-      .filter-field.search-field {
-        grid-column: span 2;
-      }
-    }
-
-    @media (max-width: 1100px) {
-      .pendapatan-page {
-        width: 100%;
-        margin-left: 0;
-        padding: 20px;
-      }
-
-      .filter-card {
-        grid-template-columns:
-          repeat(2, minmax(0, 1fr));
-      }
-
-      .filter-field.search-field {
+      .pendapatan-filter-field.pencarian {
         grid-column: 1 / -1;
       }
     }
 
     @media (max-width: 760px) {
       .pendapatan-page {
+        width: 100% !important;
+        margin-left: 0 !important;
         padding: 14px;
-      }
-
-      .pendapatan-header {
-        align-items: flex-start;
-        flex-direction: column;
-
-        padding: 23px 20px;
-
-        border-radius: 18px;
-      }
-
-      .header-status {
-        width: 100%;
       }
 
       .pendapatan-summary {
         grid-template-columns:
+          repeat(2, minmax(0, 1fr)) !important;
+      }
+
+      .pendapatan-filter-row {
+        grid-template-columns:
           repeat(2, minmax(0, 1fr));
       }
 
-      .summary-card.primary {
+      .pendapatan-filter-field.pencarian,
+      .pendapatan-filter-field.reset-field {
         grid-column: 1 / -1;
       }
+    }
 
-      .filter-heading {
-        align-items: flex-start;
-        flex-direction: column;
+    @media (max-width: 520px) {
+      .pendapatan-summary {
+        grid-template-columns: 1fr !important;
       }
 
-      .filter-card {
+      .pendapatan-filter-row {
         grid-template-columns: 1fr;
       }
 
-      .filter-field.search-field {
+      .pendapatan-filter-field.pencarian,
+      .pendapatan-filter-field.reset-field {
         grid-column: auto;
-      }
-
-      #resetPendapatanFilter {
-        width: 100%;
-      }
-
-      .jenis-header,
-      .subjenis-header,
-      .kategori-header {
-        align-items: flex-start;
-        flex-direction: column;
       }
 
       .pagination {
-        align-items: stretch;
+        align-items: flex-start;
         flex-direction: column;
       }
-
-      .pagination-buttons {
-        justify-content: center;
-      }
     }
 
-    @media (max-width: 480px) {
-      .pendapatan-summary {
-        grid-template-columns: 1fr;
-      }
+    .pendapatan-summary {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin-bottom: 18px !important;
+}
 
-      .summary-card.primary {
-        grid-column: auto;
-      }
-    }
-
-    /* ================================================
-   PERBAIKAN SUMMARY AGAR ANGKA TERLIHAT
-================================================ */
-
-.pendapatan-summary .summary-card {
-  display: block !important;
-  min-width: 0;
+.pendapatan-summary .summary-card,
+.pendapatan-summary .summary-card.primary {
+  grid-column: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  aspect-ratio: auto !important;
+  padding: 14px 16px !important;
 }
 
 .pendapatan-summary .summary-top {
   display: flex !important;
-  width: 100%;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  margin: 0 0 10px !important;
+}
+
+.pendapatan-summary .summary-icon {
+  width: 36px !important;
+  height: 36px !important;
+  flex: 0 0 36px !important;
 }
 
 .pendapatan-summary .summary-label {
   display: block !important;
-  width: 100%;
-  margin-bottom: 8px;
+  width: 100% !important;
+  margin: 0 0 4px !important;
+  font-size: 10px !important;
+  line-height: 1.3 !important;
 }
 
-.pendapatan-summary .summary-value {
+.pendapatan-summary .summary-value,
+.pendapatan-summary #jumlahTerminDibayar,
+.pendapatan-summary #jumlahTerminBelumDibayar {
   display: block !important;
-
-  width: 100%;
-  max-width: 100%;
-
-  overflow: visible;
-
-  font-size:
-    clamp(17px, 1.35vw, 26px);
-
-  line-height: 1.25;
-  letter-spacing: -0.04em;
-
-  text-overflow: clip;
-  white-space: nowrap;
+  width: 100% !important;
+  margin: 0 !important;
+  font-size: clamp(17px, 1.4vw, 23px) !important;
+  line-height: 1.25 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
-/* Nominal dibuat sedikit lebih kecil agar tidak terpotong */
-#totalPendapatan,
-#totalBelumDibayar,
-#totalProses {
-  font-size:
-    clamp(16px, 1.2vw, 24px);
-}
-
-/* Jumlah termin tetap besar */
-#jumlahTerminDibayar,
-#jumlahTerminBelumDibayar {
-  font-size:
-    clamp(24px, 2vw, 32px);
-}
-
-/* Tablet */
-@media (max-width: 1450px) {
+@media (max-width: 900px) {
   .pendapatan-summary {
-    grid-template-columns:
-      repeat(3, minmax(0, 1fr));
-  }
-
-  #totalPendapatan,
-  #totalBelumDibayar,
-  #totalProses {
-    font-size:
-      clamp(18px, 2vw, 26px);
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
-/* Mobile */
-@media (max-width: 760px) {
+@media (max-width: 600px) {
   .pendapatan-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .pendapatan-summary
-  .summary-card.primary {
-    grid-column: auto;
-  }
-
-  #totalPendapatan,
-  #totalBelumDibayar,
-  #totalProses {
-    font-size: 24px;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    grid-template-columns: 1fr !important;
   }
 }
   </style>
@@ -1349,326 +646,181 @@
 
 <body>
   <div class="app-layout">
-    <!-- SIDEBAR -->
     <div id="sidebarContainer"></div>
 
-    <!-- MAIN CONTENT -->
     <main class="pendapatan-page">
       <div class="pendapatan-content">
 
-
-        <!-- SUMMARY -->
         <section class="pendapatan-summary">
-
-          <!-- TOTAL PENDAPATAN -->
           <article class="summary-card primary">
             <div class="summary-top">
               <span class="summary-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M3 3v18h18"></path>
                   <path d="m7 15 4-4 3 3 5-7"></path>
                 </svg>
               </span>
-
-              <span class="summary-tag">
-                Accrual
-              </span>
+              <span class="summary-tag">Accrual</span>
             </div>
-
             <span class="summary-label">
               Total Pendapatan
             </span>
-
             <span
               class="summary-value"
               id="totalPendapatan"
-            >
-              Rp 0
-            </span>
+            >Rp 0</span>
           </article>
 
-          <!-- TOTAL BELUM DIBAYAR -->
           <article class="summary-card">
             <div class="summary-top">
               <span class="summary-icon amber">
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                  ></circle>
-
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9"></circle>
                   <path d="M12 7v5l3 2"></path>
                 </svg>
               </span>
-
-              <span class="summary-tag">
-                Outstanding
-              </span>
+              <span class="summary-tag">Outstanding</span>
             </div>
-
             <span class="summary-label">
               Total Belum Ditagih
             </span>
-
             <span
               class="summary-value"
               id="totalBelumDibayar"
-            >
-              Rp 0
-            </span>
+            >Rp 0</span>
           </article>
 
-          <!-- TOTAL PROSES -->
           <article class="summary-card">
             <div class="summary-top">
               <span class="summary-icon blue">
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     d="M20 12a8 8 0 1 1-2.34-5.66"
                   ></path>
-
                   <path d="M20 4v6h-6"></path>
                 </svg>
               </span>
-
-              <span class="summary-tag">
-                On Process
-              </span>
+              <span class="summary-tag">On Process</span>
             </div>
-
             <span class="summary-label">
               Total Request Invoice
             </span>
-
             <span
               class="summary-value"
               id="totalProses"
-            >
-              Rp 0
-            </span>
+            >Rp 0</span>
           </article>
 
-          <!-- TERMIN DIBAYAR -->
           <article class="summary-card">
             <div class="summary-top">
               <span class="summary-icon green">
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                  ></circle>
-
-                  <path
-                    d="m8 12 2.5 2.5L16 9"
-                  ></path>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="m8 12 2.5 2.5L16 9"></path>
                 </svg>
               </span>
-
-              <span class="summary-tag">
-                Paid
-              </span>
+              <span class="summary-tag">Paid</span>
             </div>
-
             <span class="summary-label">
               Termin Dibayar
             </span>
-
             <span
               class="summary-value"
               id="jumlahTerminDibayar"
-            >
-              0
-            </span>
+            >0</span>
           </article>
 
-          <!-- TERMIN BELUM DIBAYAR -->
           <article class="summary-card">
             <div class="summary-top">
               <span class="summary-icon rose">
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                  ></circle>
-
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9"></circle>
                   <path d="M12 8v5"></path>
                   <path d="M12 17h.01"></path>
                 </svg>
               </span>
-
-              <span class="summary-tag">
-                Unpaid
-              </span>
+              <span class="summary-tag">Unpaid</span>
             </div>
-
             <span class="summary-label">
               Termin Belum Dibayar
             </span>
-
             <span
               class="summary-value"
               id="jumlahTerminBelumDibayar"
-            >
-              0
-            </span>
+            >0</span>
           </article>
         </section>
 
-        <!-- FILTER -->
-        <section class="filter-panel">
-          <div class="filter-heading">
-            <h2 class="filter-title">
-              <svg
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path d="M4 6h16"></path>
-                <path d="M7 12h10"></path>
-                <path d="M10 18h4"></path>
-              </svg>
-
-              Filter dan Pencarian
-            </h2>
-
-            <span class="filter-note">
-              Default: tahun berjalan dan sudah dibayar
-            </span>
+        <div class="pendapatan-filter-row">
+          <div class="pendapatan-filter-field pencarian">
+            <label for="searchPendapatan">
+              Pencarian
+            </label>
+            <input
+              id="searchPendapatan"
+              type="search"
+              placeholder="Cari proyek, klien, kategori atau termin..."
+            >
           </div>
 
-          <div class="filter-card">
+          <div class="pendapatan-filter-field">
+            <label for="filterBulanPendapatan">
+              Bulan
+            </label>
+            <select
+              id="filterBulanPendapatan"
+            ></select>
+          </div>
 
-            <!-- PENCARIAN -->
-            <div class="filter-field search-field">
-              <label for="searchPendapatan">
-                Pencarian
-              </label>
+          <div class="pendapatan-filter-field">
+            <label for="filterTahunPendapatan">
+              Tahun
+            </label>
+            <select
+              id="filterTahunPendapatan"
+            ></select>
+          </div>
 
-              <div class="filter-input-wrap">
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="11"
-                    cy="11"
-                    r="7"
-                  ></circle>
+          <div class="pendapatan-filter-field">
+            <label for="filterJenisPendapatan">
+              Jenis Proyek
+            </label>
+            <select
+              id="filterJenisPendapatan"
+            ></select>
+          </div>
 
-                  <path d="m20 20-4-4"></path>
-                </svg>
-
-                <input
-                  type="search"
-                  id="searchPendapatan"
-                  placeholder="Cari proyek, klien, kategori atau termin..."
-                  autocomplete="off"
-                >
-              </div>
-            </div>
-
-            <!-- BULAN -->
-            <div class="filter-field">
-              <label for="filterBulanPendapatan">
-                Bulan
-              </label>
-
-              <select id="filterBulanPendapatan">
-                <option value="">
-                  Semua Bulan
-                </option>
-              </select>
-            </div>
-
-            <!-- TAHUN -->
-            <div class="filter-field">
-              <label for="filterTahunPendapatan">
-                Tahun
-              </label>
-
-              <select id="filterTahunPendapatan">
-                <option value="">
-                  Semua Tahun
-                </option>
-              </select>
-            </div>
-
-            <!-- JENIS PROYEK -->
-            <div class="filter-field">
-              <label for="filterJenisPendapatan">
-                Jenis Proyek
-              </label>
-
-              <select id="filterJenisPendapatan">
-                <option value="">
-                  Semua Jenis Proyek
-                </option>
-              </select>
-            </div>
-
-            <!-- STATUS PEMBAYARAN -->
-            <div class="filter-field">
-              <label
-                for="filterStatusPembayaranPendapatan"
-              >
-                Status Pembayaran
-              </label>
-
-              <select
-                id="filterStatusPembayaranPendapatan"
-              >
-                <option value="">
-                  Semua Status Pembayaran
-                </option>
-              </select>
-            </div>
-
-            <!-- RESET -->
-            <button
-              type="button"
-              id="resetPendapatanFilter"
+          <div class="pendapatan-filter-field">
+            <label
+              for="filterStatusPembayaranPendapatan"
             >
-              <svg
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  d="M3 12a9 9 0 1 0 3-6.7"
-                ></path>
+              Status Pembayaran
+            </label>
+            <select
+              id="filterStatusPembayaranPendapatan"
+            ></select>
+          </div>
 
-                <path d="M3 4v6h6"></path>
-              </svg>
-
+          <div class="pendapatan-filter-field reset-field">
+            <span
+              class="filter-label-spacer"
+              aria-hidden="true"
+            >&nbsp;</span>
+            <button
+              id="resetPendapatanFilter"
+              type="button"
+            >
               Reset
             </button>
           </div>
-        </section>
+        </div>
 
-        <!-- GROUPING DAN TABLE -->
         <div id="pendapatanGroup">
           <div class="empty-state">
             Memuat data pendapatan...
           </div>
         </div>
 
-        <!-- PAGINATION -->
         <div
           class="pagination"
           id="pendapatanPagination"
@@ -1677,9 +829,7 @@
           <div
             class="pagination-info"
             id="pendapatanPaginationInfo"
-          >
-            -
-          </div>
+          ></div>
 
           <div
             class="pagination-buttons"
@@ -1693,5 +843,93 @@
   <script src="/layout.js"></script>
   <script src="/sidebar.js"></script>
   <script src="/pendapatan.js"></script>
+
+  <script>
+    (() => {
+      const host =
+        document.getElementById(
+          "sidebarContainer"
+        );
+
+      if (!host) return;
+
+      let sidebarTerpantau = null;
+
+      const pengamatUkuran =
+        new ResizeObserver(
+          perbaruiLebarSidebar
+        );
+
+      function perbaruiLebarSidebar() {
+        const sidebar =
+          host.querySelector(
+            "aside, .sidebar, .app-sidebar"
+          );
+
+        if (!sidebar) return;
+
+        if (
+          sidebarTerpantau !== sidebar
+        ) {
+          if (sidebarTerpantau) {
+            pengamatUkuran.unobserve(
+              sidebarTerpantau
+            );
+          }
+
+          sidebarTerpantau = sidebar;
+          pengamatUkuran.observe(
+            sidebar
+          );
+        }
+
+        const batas =
+          sidebar.getBoundingClientRect();
+
+        const lebarTerlihat =
+          Math.max(
+            0,
+            Math.min(
+              batas.right,
+              window.innerWidth
+            ) -
+            Math.max(
+              batas.left,
+              0
+            )
+          );
+
+        document.documentElement.style
+          .setProperty(
+            "--lebar-sidebar-pendapatan",
+            `${Math.round(lebarTerlihat)}px`
+          );
+      }
+
+      new MutationObserver(() => {
+        requestAnimationFrame(
+          perbaruiLebarSidebar
+        );
+      }).observe(
+        host,
+        {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: [
+            "class",
+            "style"
+          ]
+        }
+      );
+
+      window.addEventListener(
+        "resize",
+        perbaruiLebarSidebar
+      );
+
+      perbaruiLebarSidebar();
+    })();
+  </script>
 </body>
 </html>

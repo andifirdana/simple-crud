@@ -8076,7 +8076,7 @@ function renderTerminPartner(
             <th>Persentase</th>
             <th>Nominal</th>
             <th>Status</th>
-            <th>Jatuh Tempo</th>
+            <th>Tanggal Tagihan</th>
             <th>Tanggal Bayar</th>
             <th>Syarat Pembayaran</th>
             <th>Aksi</th>

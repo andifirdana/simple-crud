@@ -263,49 +263,23 @@ function getBulan(value) {
 // ======================================================
 
 function getTanggalPendapatan(item) {
-  const jenis =
-    String(
-      item?.jenis_proyek || ""
-    )
-      .trim()
-      .toLowerCase();
+  const tanggalTagihan =
+    item?.tanggal_tagihan ||
+    item?.tanggal_jatuh_tempo ||
+    null;
 
-  const sumber =
-    String(
-      item?.sumber_pendapatan || ""
-    )
-      .trim()
-      .toLowerCase();
+  const tanggalBayar =
+    item?.tanggal_bayar ||
+    null;
 
-  const proyekSewa =
-    jenis.includes("sewa") ||
-    sumber.includes("sewa");
-
-  /*
-   * Proyek:
-   * 1. Tanggal bayar
-   * 2. Tanggal jatuh tempo
-   *
-   * Proyek Sewa:
-   * 1. Tanggal bayar
-   * 2. Tanggal DO
-   */
-
-  if (proyekSewa) {
-    return (
-      item?.tanggal_bayar ||
-      item?.tanggal_do ||
-      item?.created_at ||
-      null
-    );
+  // Sudah dibayar: gunakan tanggal bayar.
+  // Jika tanggal bayar kosong, gunakan tanggal tagihan.
+  if (statusSudahDibayar(item)) {
+    return tanggalBayar || tanggalTagihan;
   }
 
-  return (
-    item?.tanggal_bayar ||
-    item?.tanggal_jatuh_tempo ||
-    item?.created_at ||
-    null
-  );
+  // Belum dibayar / proses: gunakan tanggal tagihan.
+  return tanggalTagihan || tanggalBayar;
 }
 
 function getKategoriPendapatan(item) {
@@ -1000,49 +974,35 @@ function loadPendapatanFilters() {
   const daftarTahun = [
     ...new Set([
       tahunBerjalan,
-
       ...allPendapatan
         .map(item =>
           getTahun(
             getTanggalPendapatan(item)
           )
         )
-        .filter(value =>
-          Number.isInteger(value)
-        )
+        .filter(Number.isInteger)
     ])
-  ].sort(
-    (a, b) => b - a
-  );
+  ].sort((a, b) => b - a);
 
   isiSelectPendapatan(
-  filterStatusPembayaranPendapatan,
-  [
-    "Pendapatan Diakui",
-    "Sudah Dibayar",
-    "Selain Dibayar",
-    "Belum Dibayar",
-    "Proses"
-  ],
-  "Semua Status Pembayaran"
-);
+    filterTahunPendapatan,
+    daftarTahun,
+    "Semua Tahun"
+  );
 
   loadFilterBulanPendapatan();
 
   const daftarJenis = [
     ...new Set(
       allPendapatan
-        .map(item =>
-          item.jenis_proyek
-        )
+        .map(item => item.jenis_proyek)
         .filter(Boolean)
     )
-  ].sort(
-    (a, b) =>
-      String(a).localeCompare(
-        String(b),
-        "id"
-      )
+  ].sort((a, b) =>
+    String(a).localeCompare(
+      String(b),
+      "id"
+    )
   );
 
   isiSelectPendapatan(
@@ -1054,7 +1014,9 @@ function loadPendapatanFilters() {
   isiSelectPendapatan(
     filterStatusPembayaranPendapatan,
     [
+      "Pendapatan Diakui",
       "Sudah Dibayar",
+      "Selain Dibayar",
       "Belum Dibayar",
       "Proses"
     ],
@@ -1713,430 +1675,258 @@ function isPendapatanSewa(item) {
 // RENDER TABLE
 // STRUKTUR TABEL TETAP
 // ======================================================
-
-function renderPendapatanTable(data) {
-
-  const tabelSewa =
-    data.length > 0 &&
-    data.every(
-      item =>
-        isPendapatanSewa(item)
-    );
-
-  const judulKolomPertama =
-    tabelSewa
-      ? "Nomor PR"
-      : "Proyek";
-
+// ======================================================
+// RENDER TABEL PENDAPATAN
+// ======================================================
+function renderPendapatanTable(
+  data,
+  startIndex = 0
+) {
   return `
-    <div class="table-wrapper">
-
-      <table class="prognosa-table">
-
+    <div class="pendapatan-table-wrap">
+      <table class="pendapatan-table">
         <thead>
-
           <tr>
-
-            <th>
-              ${escapeHtml(
-                judulKolomPertama
-              )}
-            </th>
-
+            <th>No</th>
+            <th>Proyek</th>
             <th>Klien</th>
-
+            <th>Jenis Proyek</th>
             <th>Periode Kontrak</th>
-
             <th>Nilai Kontrak</th>
-
-            <th>Status Pengadaan</th>
-
-            <th>Status Teknis</th>
-
-            <th>Termin</th>
-
+            <th>Deskripsi/Termin</th>
             <th>Persentase</th>
-
-            <th>Jatuh Tempo</th>
-
+            <th>Nominal</th>
+            <th>Status</th>
+            <th>Tanggal Tagihan</th>
             <th>Tanggal Bayar</th>
-
-            <th>Nilai Pendapatan</th>
-
-            <th>Aksi</th>
-
+            <th>Syarat Pembayaran</th>
           </tr>
-
         </thead>
 
-
         <tbody>
+          ${data.map((item, index) => {
+            const sewa =
+              isPendapatanSewa(item);
 
-          ${
-            data.map(item => {
+            const idDetail = Number(
+              sewa
+                ? item.proyek_sewa_id
+                : item.proyek_id
+            );
 
-              const pendapatanSewa =
-                isPendapatanSewa(
-                  item
-                );
+            const detailLink =
+              Number.isInteger(idDetail) &&
+              idDetail > 0
+                ? sewa
+                  ? `/proyek-sewa-detail.html?id=${encodeURIComponent(idDetail)}`
+                  : `/detail-proyek.html?id=${encodeURIComponent(idDetail)}`
+                : null;
 
-              /*
-               * Reguler/Transaksi:
-               * menampilkan nama proyek.
-               *
-               * Sewa:
-               * menampilkan nomor PR.
-               */
+            const namaProyek =
+              item.nama_proyek ||
+              item.nomor_pr ||
+              "-";
 
-              const namaKolomPertama =
-                pendapatanSewa
-                  ? (
-                      item.nomor_pr ||
-                      "-"
-                    )
-                  : (
-                      item.nama_proyek ||
-                      "-"
-                    );
+            const periodeMulai =
+              item.tanggal_mulai_kontrak ||
+              item.tanggal_mulai ||
+              null;
 
-              const nilaiPersentase =
-                Number(
-                  item.persentase
-                );
+            const periodeAkhir =
+              item.tanggal_akhir_kontrak ||
+              item.tanggal_akhir ||
+              null;
 
-              const persentase =
-                item.persentase !== null &&
-                item.persentase !== undefined &&
-                Number.isFinite(
-                  nilaiPersentase
-                )
-                  ? `${nilaiPersentase.toFixed(2)}%`
-                  : "-";
+            const periodeKontrak =
+              periodeMulai || periodeAkhir
+                ? `${formatTanggal(periodeMulai)} – ${formatTanggal(periodeAkhir)}`
+                : "-";
 
-              const detailId =
-                pendapatanSewa
-                  ? Number(
-                      item.proyek_sewa_id
-                    )
-                  : Number(
-                      item.proyek_id
-                    );
+            const nilaiKontrak =
+              item.nilai_kontrak ??
+              item.total_nilai ??
+              item.nilai_proyek ??
+              null;
 
-              const proyekValid =
-                Number.isInteger(
-                  detailId
-                ) &&
-                detailId > 0;
+            const deskripsi =
+              sewa
+                ? (
+                    item.deskripsi ||
+                    item.nama_termin ||
+                    "-"
+                  )
+                : (
+                    item.nama_termin ||
+                    item.deskripsi ||
+                    "-"
+                  );
 
-              const detailLink =
-                proyekValid
-                  ? pendapatanSewa
-                    ? `/proyek-sewa-detail.html?id=${encodeURIComponent(
-                        detailId
-                      )}`
-                    : `/detail-proyek.html?id=${encodeURIComponent(
-                        detailId
-                      )}`
-                  : "#";
+            const angkaPersentase =
+              Number(item.persentase);
 
-              return `
-                <tr>
-
-                  <td class="proyek-name">
-
-                    ${
-                      proyekValid
-                        ? `
-                          <a
-                            href="${detailLink}"
-                            class="project-link"
-                          >
-                            ${escapeHtml(
-                              namaKolomPertama
-                            )}
-                          </a>
-                        `
-                        : escapeHtml(
-                            namaKolomPertama
-                          )
+            const persentase =
+              item.persentase !== null &&
+              item.persentase !== undefined &&
+              item.persentase !== "" &&
+              Number.isFinite(angkaPersentase)
+                ? `${angkaPersentase.toLocaleString(
+                    "id-ID",
+                    {
+                      maximumFractionDigits: 2
                     }
+                  )}%`
+                : "-";
 
-                  </td>
+            // Reguler/SLA: jatuh tempo.
+            // Sewa: tanggal tagihan.
+            const tanggalTagihan =
+              sewa
+                ? item.tanggal_tagihan
+                : item.tanggal_jatuh_tempo;
 
+            const status =
+              getStatusPembayaranPendapatan(
+                item
+              );
 
-                  <td>
+            const kelasStatus =
+              status === "Sudah Dibayar"
+                ? "sudah-dibayar"
+                : status === "Proses"
+                  ? "proses"
+                  : "belum-dibayar";
 
-                    ${escapeHtml(
-                      item.nama_klien ||
-                      item.perusahaan_klien ||
-                      "-"
-                    )}
+            return `
+              <tr>
+                <td class="nomor">
+                  ${startIndex + index + 1}
+                </td>
 
-                  </td>
+                <td class="proyek-cell">
+                  ${
+                    detailLink
+                      ? `
+                        <a
+                          href="${detailLink}"
+                          class="pendapatan-project-link"
+                        >
+                          ${escapeHtml(namaProyek)}
+                        </a>
+                      `
+                      : escapeHtml(namaProyek)
+                  }
 
+                  ${
+                    sewa && item.nomor_pr &&
+                    item.nomor_pr !== namaProyek
+                      ? `
+                        <span class="pendapatan-subtext">
+                          PR ${escapeHtml(item.nomor_pr)}
+                        </span>
+                      `
+                      : ""
+                  }
+                </td>
 
-                  <td>
+                <td>
+                  ${escapeHtml(
+                    item.nama_klien ||
+                    item.perusahaan_klien ||
+                    "-"
+                  )}
+                </td>
 
-                    ${formatTanggal(
-                      item.tanggal_mulai_kontrak
-                    )}
+                <td>
+                  ${escapeHtml(
+                    item.jenis_proyek ||
+                    "-"
+                  )}
+                </td>
 
-                    -
+                <td class="periode-cell">
+                  ${periodeKontrak}
+                </td>
 
-                    ${formatTanggal(
-                      item.tanggal_akhir_kontrak
-                    )}
+                <td class="amount">
+                  ${
+                    nilaiKontrak === null
+                      ? "-"
+                      : formatRupiah(nilaiKontrak)
+                  }
+                </td>
 
-                  </td>
+                <td class="deskripsi-cell">
+                  ${escapeHtml(deskripsi)}
+                </td>
 
+                <td class="persentase-cell">
+                  ${persentase}
+                </td>
 
-                  <td class="nilai">
+                <td class="amount">
+                  ${formatRupiah(
+                    getNilaiPendapatan(item)
+                  )}
+                </td>
 
-                    ${formatRupiah(
-                      item.nilai_kontrak
-                    )}
+                <td>
+                  <span class="pendapatan-status ${kelasStatus}">
+                    ${escapeHtml(status)}
+                  </span>
+                </td>
 
-                  </td>
+                <td>
+                ${formatTanggal(
+                  isPendapatanSewa(item)
+                    ? item.tanggal_tagihan
+                    : item.tanggal_jatuh_tempo
+                )}
+              </td>
 
+                <td class="tanggal-cell">
+                  ${formatTanggal(item.tanggal_bayar)}
+                </td>
 
-                  <td>
-
-                    <span class="badge">
-
-                      ${escapeHtml(
-                        item.status_pengadaan ||
-                        "-"
-                      )}
-
-                    </span>
-
-                  </td>
-
-
-                  <td>
-
-                    <span class="badge">
-
-                      ${escapeHtml(
-                        item.status_teknis ||
-                        "-"
-                      )}
-
-                    </span>
-
-                  </td>
-
-
-                  <td>
-
-                    ${escapeHtml(
-                      item.nama_termin ||
-                      "-"
-                    )}
-
-                  </td>
-
-
-                  <td>
-                    ${persentase}
-                  </td>
-
-
-                  <td>
-
-                    ${formatTanggal(
-                      item.tanggal_jatuh_tempo
-                    )}
-
-                  </td>
-
-
-                  <td>
-
-                    ${formatTanggal(
-                      item.tanggal_bayar
-                    )}
-
-                  </td>
-
-
-                  <td class="nilai">
-
-                    ${formatRupiah(
-                      getNilaiPendapatan(
-                        item
-                      )
-                    )}
-
-                  </td>
-
-
-                  <td>
-
-                    ${
-                      proyekValid
-                        ? `
-                          <a
-                            href="${detailLink}"
-                            class="detail-button"
-                          >
-                            Detail
-                          </a>
-                        `
-                        : "-"
-                    }
-
-                  </td>
-
-                </tr>
-              `;
-
-            }).join("")
-          }
-
+                <td class="syarat-cell">
+                  ${escapeHtml(
+                    item.syarat_pembayaran ||
+                    "-"
+                  )}
+                </td>
+              </tr>
+            `;
+          }).join("")}
         </tbody>
-
       </table>
-
     </div>
   `;
-
 }
-// ======================================================
-// RENDER GROUPING
-// ======================================================
 
-function renderPendapatanGrouping(data) {
+// ======================================================
+// TAMPILKAN DAFTAR TANPA GROUPING
+// ======================================================
+function renderPendapatanGrouping(
+  data,
+  startIndex = 0
+) {
   if (!pendapatanGroup) {
     return;
   }
 
-  if (
-    !Array.isArray(data) ||
-    data.length === 0
-  ) {
+  if (!Array.isArray(data) || data.length === 0) {
     pendapatanGroup.innerHTML = `
       <div class="empty-state">
         Tidak ada pendapatan sesuai filter.
       </div>
     `;
-
     return;
   }
 
-  const grouped =
-    groupPendapatanData(data);
-
-  let html = "";
-
-  Object.entries(grouped)
-    .forEach(
-      ([
-        jenis,
-        subJenisData
-      ]) => {
-        const jenisRows =
-          flattenPendapatanJenis(
-            subJenisData
-          );
-
-        html += `
-          <section class="jenis-group">
-            <div class="jenis-header">
-              <div class="jenis-title">
-                ${escapeHtml(jenis)}
-              </div>
-
-              <div class="jenis-total">
-                ${formatRupiah(
-                  sumPendapatan(
-                    jenisRows
-                  )
-                )}
-              </div>
-            </div>
-        `;
-
-        Object.entries(
-          subJenisData
-        ).forEach(
-          ([
-            subJenis,
-            kategoriData
-          ]) => {
-            const subJenisRows =
-              flattenPendapatanSubJenis(
-                kategoriData
-              );
-
-            html += `
-              <div class="subjenis-group">
-                <div class="subjenis-header">
-                  <div class="subjenis-title">
-                    ${escapeHtml(
-                      subJenis
-                    )}
-                  </div>
-
-                  <div class="subjenis-total">
-                    ${formatRupiah(
-                      sumPendapatan(
-                        subJenisRows
-                      )
-                    )}
-                  </div>
-                </div>
-            `;
-
-            Object.entries(
-              kategoriData
-            ).forEach(
-              ([
-                kategori,
-                rows
-              ]) => {
-                html += `
-                  <div class="kategori-group">
-                    <div class="kategori-header">
-                      <div class="kategori-title">
-                        ${escapeHtml(
-                          kategori
-                        )}
-                      </div>
-
-                      <div class="kategori-total">
-                        ${formatRupiah(
-                          sumPendapatan(
-                            rows
-                          )
-                        )}
-                      </div>
-                    </div>
-
-                    ${
-                      renderPendapatanTable(
-                        rows
-                      )
-                    }
-                  </div>
-                `;
-              }
-            );
-
-            html += `
-              </div>
-            `;
-          }
-        );
-
-        html += `
-          </section>
-        `;
-      }
-    );
-
   pendapatanGroup.innerHTML =
-    html;
+    renderPendapatanTable(
+      data,
+      startIndex
+    );
 }
 
 // ======================================================
@@ -2181,8 +1971,9 @@ function renderPendapatanPage() {
     );
 
   renderPendapatanGrouping(
-    pageData
-  );
+  pageData,
+  startIndex
+);
 
   renderPendapatanPagination(
     totalItems,
@@ -2490,3 +2281,120 @@ if (resetPendapatanFilter) {
 // ======================================================
 
 loadPendapatan();
+
+(() => {
+  function initPosisiPendapatan() {
+    let sidebarTerpantau = null;
+
+    const pengamatUkuran =
+      new ResizeObserver(
+        perbaruiPosisi
+      );
+
+    function cariSidebar() {
+      return document.querySelector(
+        "#sidebarContainer aside, " +
+        "#sidebarContainer .sidebar, " +
+        "#sidebarContainer .app-sidebar, " +
+        "aside.sidebar, " +
+        "#sidebar"
+      );
+    }
+
+    function perbaruiPosisi() {
+      const sidebar =
+        cariSidebar();
+
+      if (!sidebar) {
+        return;
+      }
+
+      if (
+        sidebarTerpantau !==
+        sidebar
+      ) {
+        if (
+          sidebarTerpantau
+        ) {
+          pengamatUkuran.unobserve(
+            sidebarTerpantau
+          );
+        }
+
+        sidebarTerpantau =
+          sidebar;
+
+        pengamatUkuran.observe(
+          sidebar
+        );
+      }
+
+      const posisi =
+        sidebar.getBoundingClientRect();
+
+      const lebarSidebar =
+        Math.max(
+          0,
+          Math.min(
+            posisi.right,
+            window.innerWidth
+          ) -
+          Math.max(
+            posisi.left,
+            0
+          )
+        );
+
+      document.documentElement.style
+        .setProperty(
+          "--lebar-sidebar-pendapatan",
+          `${Math.round(lebarSidebar)}px`
+        );
+    }
+
+    const pengamatSidebar =
+      new MutationObserver(() => {
+        requestAnimationFrame(
+          perbaruiPosisi
+        );
+      });
+
+    pengamatSidebar.observe(
+      document.body,
+      {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: [
+          "class",
+          "style"
+        ]
+      }
+    );
+
+    window.addEventListener(
+      "resize",
+      perbaruiPosisi
+    );
+
+    document.addEventListener(
+      "transitionend",
+      perbaruiPosisi
+    );
+
+    perbaruiPosisi();
+  }
+
+  if (
+    document.readyState ===
+    "loading"
+  ) {
+    document.addEventListener(
+      "DOMContentLoaded",
+      initPosisiPendapatan,
+      { once: true }
+    );
+  } else {
+    initPosisiPendapatan();
+  }
+})();

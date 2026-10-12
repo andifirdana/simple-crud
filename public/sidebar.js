@@ -1,64 +1,171 @@
-async function loadSidebar() {
+// ==================================================
+// MINIMIZE / MAXIMIZE SIDEBAR
+// ==================================================
 
-  const sidebarMenu = document.getElementById('sidebarMenu');
+function initSidebarToggle() {
 
-  if (!sidebarMenu) {
+  // Hindari memasang handler lebih dari sekali.
+  if (
+    document.documentElement.dataset.sidebarToggleReady === "true"
+  ) {
     return;
   }
 
-  try {
+  document.documentElement.dataset.sidebarToggleReady = "true";
 
-    const response = await fetch('/api/menu');
+  function updateSidebar(collapsed) {
 
-    if (!response.ok) {
-      throw new Error('Gagal mengambil menu');
+    document.body.classList.toggle(
+      "sidebar-collapsed",
+      collapsed
+    );
+
+    const button =
+      document.getElementById("sidebarToggle");
+
+    if (button) {
+
+      button.textContent =
+        collapsed ? "›" : "‹";
+
+      const label =
+        collapsed
+          ? "Buka sidebar"
+          : "Kecilkan sidebar";
+
+      button.title = label;
+
+      button.setAttribute("aria-label", label);
+
+      button.setAttribute(
+        "aria-expanded",
+        String(!collapsed)
+      );
+
     }
 
-    const menus = await response.json();
+  }
 
-    sidebarMenu.innerHTML = '';
+  let collapsed = false;
 
-    const groupedMenus = {};
+  try {
+
+    collapsed =
+      localStorage.getItem("sidebarCollapsed") === "true";
+
+  } catch {}
+
+  updateSidebar(collapsed);
+
+  document.addEventListener(
+    "click",
+    function (event) {
+
+      if (!(event.target instanceof Element)) return;
+
+      const button =
+        event.target.closest("#sidebarToggle");
+
+      if (!button) return;
+
+      event.preventDefault();
+
+      const nextCollapsed =
+        !document.body.classList.contains(
+          "sidebar-collapsed"
+        );
+
+      updateSidebar(nextCollapsed);
+
+      try {
+
+        localStorage.setItem(
+          "sidebarCollapsed",
+          String(nextCollapsed)
+        );
+
+      } catch {}
+
+    },
+    true
+  );
+
+}
+
+// ==================================================
+// LOAD MENU SIDEBAR
+// ==================================================
+
+async function loadSidebar() {
+
+  const sidebarMenu =
+    document.getElementById("sidebarMenu");
+
+  if (!sidebarMenu) return;
+
+  try {
+
+    const response =
+      await fetch("/api/menu");
+
+    if (!response.ok) {
+      throw new Error("Gagal mengambil menu");
+    }
+
+    const menus =
+      await response.json();
+
+    sidebarMenu.replaceChildren();
+
+    const groupedMenus = new Map();
 
     menus.forEach(menu => {
 
-      const groupName = menu.group_menu || 'Menu';
+      const groupName =
+        menu.group_menu || "Menu";
 
-      if (!groupedMenus[groupName]) {
-        groupedMenus[groupName] = [];
+      if (!groupedMenus.has(groupName)) {
+        groupedMenus.set(groupName, []);
       }
 
-      groupedMenus[groupName].push(menu);
+      groupedMenus.get(groupName).push(menu);
 
     });
 
+    groupedMenus.forEach((items, groupName) => {
 
-    Object.entries(groupedMenus).forEach(([groupName, items]) => {
+      const title =
+        document.createElement("div");
 
-      // Judul group
-      const title = document.createElement('div');
-
-      title.className = 'menu-title';
-
+      title.className = "menu-title";
       title.textContent = groupName;
 
       sidebarMenu.appendChild(title);
 
-
-      // Menu
       items.forEach(menu => {
 
-        const link = document.createElement('a');
+        const link =
+          document.createElement("a");
 
-        link.href = menu.url || '#';
-
+        link.href = menu.url || "#";
         link.textContent = menu.nama_menu;
 
-        // Tandai menu aktif berdasarkan URL
+        const menuPath = new URL(
+          link.href,
+          window.location.origin
+        ).pathname;
+
         if (
-          window.location.pathname === menu.url
+          window.location.pathname === menuPath
         ) {
-          link.classList.add('active');
+
+          link.classList.add("active");
+
+          link.setAttribute(
+            "aria-current",
+            "page"
+          );
+
         }
 
         sidebarMenu.appendChild(link);
@@ -78,10 +185,52 @@ async function loadSidebar() {
     `;
 
   }
+
+}
+function initSidebar() {
+
+  initSidebarToggle();
+
+  loadSidebar();
+
 }
 
+if (document.readyState === "loading") {
 
-document.addEventListener(
-  'DOMContentLoaded',
-  loadSidebar
-);
+  document.addEventListener(
+    "DOMContentLoaded",
+    initSidebar,
+    { once: true }
+  );
+
+} else {
+
+  initSidebar();
+
+}
+
+// ==================================================
+// INISIALISASI
+// ==================================================
+
+function initSidebar() {
+
+  initSidebarToggle();
+
+  loadSidebar();
+
+}
+
+if (document.readyState === "loading") {
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    initSidebar,
+    { once: true }
+  );
+
+} else {
+
+  initSidebar();
+
+}
