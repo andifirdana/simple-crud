@@ -1091,9 +1091,169 @@ function renderProjectOverview(
       data.nilai_total_proyek
     )
   );
+
+    setText(
+    "nilaiTotalProyek",
+    formatRupiah(
+      data.nilai_total_proyek
+    )
+  );
+
+  // Tambahan rincian setiap card.
+  renderRincianJenisProyek(data);
+
 }
 
 
+// ======================================================
+// RINCIAN BARU DAN PERPANJANGAN
+// ======================================================
+
+function renderRincianJenisProyek(data = {}) {
+
+  const konfigurasi = [
+    [
+      "totalPipeline",
+      "total_pipeline"
+    ],
+    [
+      "totalSubmitPenawaran",
+      "total_submit_penawaran"
+    ],
+    [
+      "totalSubmitPengadaan",
+      "total_submit_pengadaan"
+    ],
+    [
+      "totalKontrak",
+      "total_kontrak"
+    ],
+    [
+      "totalProyekAktif",
+      "total_proyek_aktif"
+    ],
+    [
+      "totalProyekDone",
+      "total_proyek_done"
+    ],
+    [
+      "totalProyekTerlambat",
+      "total_proyek_terlambat"
+    ],
+    [
+      "totalSemuaProyek",
+      "total_semua_proyek"
+    ]
+  ];
+
+
+  function formatJumlah(value) {
+
+    const tipeValid =
+      typeof value === "number" ||
+      typeof value === "string";
+
+    if (
+      !tipeValid ||
+      (
+        typeof value === "string" &&
+        value.trim() === ""
+      )
+    ) {
+      return "—";
+    }
+
+    const jumlah = Number(value);
+
+    if (
+      !Number.isSafeInteger(jumlah) ||
+      jumlah < 0
+    ) {
+      return "—";
+    }
+
+    return jumlah.toLocaleString("id-ID");
+  }
+
+
+  konfigurasi.forEach(([id, key]) => {
+
+    const angkaElement =
+      document.getElementById(id);
+
+    if (!angkaElement) {
+      return;
+    }
+
+    const card = angkaElement.closest(
+      ".project-overview-section .stat-card"
+    );
+
+    if (!card) {
+      return;
+    }
+
+
+    // Dibuat sekali agar tidak berulang saat refresh.
+    let rincian = card.querySelector(
+      ".stat-project-breakdown"
+    );
+
+    if (!rincian) {
+
+      rincian = document.createElement("div");
+
+      rincian.className =
+        "stat-project-breakdown";
+
+      rincian.innerHTML = `
+        <div class="stat-project-part">
+          <span class="stat-project-part-label">
+            Baru
+          </span>
+
+          <strong
+            class="stat-project-part-value"
+            id="${id}Baru"
+          >—</strong>
+        </div>
+
+        <div class="stat-project-part">
+          <span class="stat-project-part-label">
+            Perpanjangan
+          </span>
+
+          <strong
+            class="stat-project-part-value"
+            id="${id}Perpanjangan"
+          >—</strong>
+        </div>
+      `;
+
+      angkaElement.insertAdjacentElement(
+        "afterend",
+        rincian
+      );
+    }
+
+
+    setText(
+      `${id}Baru`,
+      formatJumlah(
+        data[`${key}_baru`]
+      )
+    );
+
+    setText(
+      `${id}Perpanjangan`,
+      formatJumlah(
+        data[`${key}_perpanjangan`]
+      )
+    );
+
+  });
+
+}
 // ######################################################
 // #                                                    #
 // #               FINANCIAL OVERVIEW                   #
@@ -3531,11 +3691,15 @@ document.addEventListener(
       return;
     }
 
-
-    const card =
-      target.closest(
-        "[data-route]"
-      );
+// Selalu mengambil pembungkus card.
+// Angka di dalam card tidak dijadikan sumber filter.
+const card = target.closest(
+  [
+    "button[data-route]",
+    "a[data-route]",
+    "[role='button'][data-route]"
+  ].join(",")
+);
 
 
     if (!card) {
@@ -3594,10 +3758,15 @@ document.addEventListener(
     }
 
 
-    const card =
-      target.closest(
-        "[data-route]"
-      );
+// Selalu mengambil pembungkus card.
+// Angka di dalam card tidak dijadikan sumber filter.
+const card = target.closest(
+  [
+    "button[data-route]",
+    "a[data-route]",
+    "[role='button'][data-route]"
+  ].join(",")
+);
 
 
     if (!card) {

@@ -4387,15 +4387,6 @@ svg {
     grid-area: auto;
   }
 
-  .project-overview-story {
-    position: relative;
-    top: auto;
-    right: auto;
-    width: 100%;
-    height: 280px;
-    margin-top: 24px;
-    padding: 24px;
-  }
 
   .project-overview-story p {
     width: 58%;
@@ -4622,7 +4613,7 @@ svg {
 }
 /* Wanita project overview */
 .project-overview-section .project-overview-character img {
-  width: 85% !important;
+  width: 100% !important;
   height: auto;
   margin-inline: auto;
   margin-left: auto;
@@ -4745,9 +4736,9 @@ color: #243b58;
   top: 30px;
 }
 
-@media (max-width: 900px) {
-  .project-overview-section .project-overview-story {
-    transform: none;
+@media (min-width: 901px) {
+  .project-overview-section .project-overview-story p {
+    transform: translateX(-50px);
   }
 }
 .project-overview-character {
@@ -5764,6 +5755,265 @@ color: #243b58;
   overflow: visible;
   text-overflow: clip;
 }
+
+/* ==================================================
+   CATATAN BARU DAN PERPANJANGAN
+================================================== */
+
+.project-overview-section .stat-project-breakdown {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1.3fr);
+
+  gap: 8px;
+
+  margin: 12px 0;
+  padding: 10px;
+
+  border-radius: 12px;
+
+  background: #f3f6fb;
+}
+
+.project-overview-section .stat-project-part {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.project-overview-section
+.stat-project-part + .stat-project-part {
+  padding-left: 10px;
+
+  border-left: 1px solid #dce4ef;
+}
+
+.project-overview-section .stat-project-part-label {
+  color: #64748b;
+
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+
+  overflow-wrap: anywhere;
+}
+
+.project-overview-section .stat-project-part-value {
+  color: #334155;
+
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
+
+  font-variant-numeric: tabular-nums;
+
+  overflow-wrap: anywhere;
+}
+/* ==================================================
+   PERLEBAR CARD PROJECT OVERVIEW
+================================================== */
+
+.project-overview-section .stats-grid {
+  width: min(
+    100%,
+    max(74%, 990px)
+  );
+}
+
+
+/* Kolom Perpanjangan mengikuti lebar tulisannya. */
+.project-overview-section .stat-project-breakdown {
+  grid-template-columns:
+    minmax(0, 1fr)
+    max-content;
+
+  gap: 10px;
+}
+
+
+/* Hindari pemotongan kata Perpanjangan. */
+.project-overview-section .stat-project-part-label {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+
+/* Pertahankan tampilan responsif sebelumnya. */
+@container (max-width: 850px) {
+  .project-overview-section .stats-grid {
+    width: 100%;
+  }
+}
+/* ==================================================
+   CARD PROJECT OVERVIEW
+================================================== */
+
+.project-overview-section .stats-grid {
+  width: min(100%, max(74%, 990px));
+}
+
+.project-overview-section .stat-project-breakdown {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    max-content;
+
+  gap: 10px;
+
+  margin: 12px 0;
+  padding: 10px;
+
+  border-radius: 12px;
+  background: #f3f6fb;
+}
+
+.project-overview-section .stat-project-part {
+  display: flex;
+  min-width: 0;
+
+  flex-direction: column;
+  gap: 4px;
+}
+
+.project-overview-section
+.stat-project-part + .stat-project-part {
+  padding-left: 10px;
+  border-left: 1px solid #dce4ef;
+}
+
+.project-overview-section .stat-project-part-label {
+  color: #64748b;
+
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.project-overview-section .stat-project-part-value {
+  color: #334155;
+
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
+
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+@container (max-width: 850px) {
+  .project-overview-section .stats-grid {
+    width: 100%;
+  }
+}
+
+
+/* ==================================================
+   GAMBAR ORANG — KOMPUTER
+   Ukuran dibatasi lebar dan tinggi section.
+================================================== */
+
+@media (min-width: 901px) {
+
+  .project-overview-section {
+    position: relative;
+    isolation: isolate;
+
+    /* Batasi ilustrasi dan dekorasi di dalam section. */
+    overflow: hidden;
+  }
+
+  .project-overview-section .section-header {
+    position: relative;
+    z-index: 4;
+  }
+
+  .project-overview-section .stats-grid {
+    position: relative;
+    z-index: 2;
+  }
+
+  .project-overview-section .project-overview-character {
+    position: absolute;
+
+    /* Posisi atas tetap mengikuti section. */
+    top: 70px;
+    bottom: 10px;
+    right: 0;
+    left: auto;
+
+    width: 52%;
+    height: auto;
+
+    min-width: 0;
+    min-height: 0;
+
+    max-width: none;
+    max-height: none;
+
+    margin: 0;
+
+    z-index: 1;
+
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .project-overview-section
+  .project-overview-character img {
+    display: block;
+
+    position: absolute;
+    inset: 0;
+
+    width: 100% !important;
+    height: 100%;
+
+    min-width: 0;
+    min-height: 0;
+
+    max-width: 100%;
+    max-height: 100%;
+
+    margin: 0;
+
+    /*
+     * Seluruh gambar masuk dalam ruang tersedia,
+     * dengan proporsi tetap.
+     */
+    object-fit: contain;
+    object-position: right top;
+  }
+
+}
+
+
+/* ==================================================
+   AKSESIBILITAS ANIMASI
+================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .project-overview-section .project-overview-character {
+    transform: none;
+    transition: none;
+  }
+
+  .project-overview-section
+  .project-overview-character img {
+    animation: none;
+  }
+
+}
+
   </style>
 </head>
 

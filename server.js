@@ -185,52 +185,74 @@ app.post("/api/login",
 
       };
 
-      // SIMPAN SESSION SEBELUM RESPONSE
+     // SIMPAN SESSION SEBELUM RESPONSE
+req.session.save(async error => {
 
-      req.session.save(
-        error => {
+  if (error) {
 
-          if (error) {
+    console.error(
+      "ERROR SAVE SESSION:",
+      error
+    );
 
-            console.error(
-              "ERROR SAVE SESSION:",
-              error
-            );
+    return res.status(500).json({
+      error: "Gagal membuat session"
+    });
 
+  }
 
-            return res.status(500).json({
-              error:
-                "Gagal membuat session"
-            });
+  // ================================================
+  // SIMPAN ACTIVITY LOG LOGIN
+  // ================================================
+  try {
 
-          }
+    await simpanActivityLog(
+      pool,
+      {
+        ...getActivityUser(req),
 
+        aktivitas: "LOGIN",
 
-          console.log(
-            "LOGIN BERHASIL:",
-            req.session.user
-          );
+        modul: "LOGIN",
 
+        entity_id: user.id,
 
-          res.json({
+        entity_nama: user.nama,
 
-            success: true,
+        field_name: "STATUS LOGIN",
 
-            message:
-              "Login berhasil",
+        nilai_lama: null,
 
-            redirect:
-              "/dashboard.html",
+        nilai_baru: "Login berhasil",
 
-            user:
-              req.session.user
+        deskripsi:
+          `${user.nama} berhasil login`
+      }
+    );
 
-          });
+  } catch (logError) {
 
-        }
-      );
+    // Kegagalan mencatat log tidak menggagalkan login.
+    console.error(
+      "ERROR ACTIVITY LOG LOGIN:",
+      logError
+    );
 
+  }
 
+  return res.json({
+
+    success: true,
+
+    message: "Login berhasil",
+
+    redirect: "/dashboard.html",
+
+    user: req.session.user
+
+  });
+
+});
     } catch (error) {
 
       console.error(
@@ -238,10 +260,8 @@ app.post("/api/login",
         error
       );
 
-
-      res.status(500).json({
-        error:
-          error.message
+      return res.status(500).json({
+        error: "Terjadi kesalahan saat login"
       });
 
     }
@@ -3406,6 +3426,25 @@ app.get(
               p.jenis_proyek,
               p.created_at,
 
+              /*
+              * Prioritas:
+              * 1. Perpanjangan
+              * 2. Baru
+              * Nama tanpa kata kunci tidak diklasifikasikan.
+              */
+
+              CASE
+                WHEN COALESCE(p.nama_proyek, '') ~*
+                  '(renewal|enhancement|perpanjangan|change[[:space:]]+request)'
+                THEN 'perpanjangan'
+
+                WHEN COALESCE(p.nama_proyek, '') ~*
+                  '(pengadaan|pengembangan)'
+                THEN 'baru'
+
+                ELSE NULL
+              END AS klasifikasi_proyek,
+
               LOWER(
                 BTRIM(
                   COALESCE(
@@ -3836,7 +3875,147 @@ app.get(
                   )
               ),
               0
-            )::NUMERIC AS nilai_proyek_terlambat
+          )::NUMERIC AS nilai_proyek_terlambat,
+          
+          /* ==================================================
+            PIPELINE
+          ================================================== */
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND status_pengadaan LIKE '%pipeline%'
+              AND klasifikasi_proyek = 'baru'
+          )::INTEGER AS total_pipeline_baru,
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND status_pengadaan LIKE '%pipeline%'
+              AND klasifikasi_proyek = 'perpanjangan'
+          )::INTEGER AS total_pipeline_perpanjangan,
+
+
+          /* ==================================================
+            SUBMIT PENAWARAN
+          ================================================== */
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND status_pengadaan LIKE '%submit penawaran%'
+              AND klasifikasi_proyek = 'baru'
+          )::INTEGER AS total_submit_penawaran_baru,
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND status_pengadaan LIKE '%submit penawaran%'
+              AND klasifikasi_proyek = 'perpanjangan'
+          )::INTEGER AS total_submit_penawaran_perpanjangan,
+
+
+          /* ==================================================
+            PROSES PENGADAAN
+          ================================================== */
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND (
+                status_pengadaan LIKE '%submit%pengadaan%'
+                OR status_pengadaan LIKE '%negosiasi%'
+                OR status_pengadaan LIKE '%nego%'
+              )
+              AND klasifikasi_proyek = 'baru'
+          )::INTEGER AS total_submit_pengadaan_baru,
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND (
+                status_pengadaan LIKE '%submit%pengadaan%'
+                OR status_pengadaan LIKE '%negosiasi%'
+                OR status_pengadaan LIKE '%nego%'
+              )
+              AND klasifikasi_proyek = 'perpanjangan'
+          )::INTEGER AS total_submit_pengadaan_perpanjangan,
+
+
+          /* ==================================================
+            PROSES KONTRAK
+          ================================================== */
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND (
+                status_pengadaan LIKE '%proses%kontrak%'
+                OR status_pengadaan = 'kontrak'
+              )
+              AND klasifikasi_proyek = 'baru'
+          )::INTEGER AS total_kontrak_baru,
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND (
+                status_pengadaan LIKE '%proses%kontrak%'
+                OR status_pengadaan = 'kontrak'
+              )
+              AND klasifikasi_proyek = 'perpanjangan'
+          )::INTEGER AS total_kontrak_perpanjangan,
+
+
+          /* ==================================================
+            PROYEK AKTIF
+          ================================================== */
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND status_pengadaan = 'done'
+              AND masuk_tahun
+              AND klasifikasi_proyek = 'baru'
+          )::INTEGER AS total_proyek_aktif_baru,
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND status_pengadaan = 'done'
+              AND masuk_tahun
+              AND klasifikasi_proyek = 'perpanjangan'
+          )::INTEGER AS total_proyek_aktif_perpanjangan,
+
+
+          /* ==================================================
+            PROYEK SELESAI
+          ================================================== */
+
+          COUNT(*) FILTER (
+            WHERE status_final IN ('done', 'selesai')
+              AND masuk_tahun
+              AND klasifikasi_proyek = 'baru'
+          )::INTEGER AS total_proyek_done_baru,
+
+          COUNT(*) FILTER (
+            WHERE status_final IN ('done', 'selesai')
+              AND masuk_tahun
+              AND klasifikasi_proyek = 'perpanjangan'
+          )::INTEGER AS total_proyek_done_perpanjangan,
+
+
+          /* ==================================================
+            PROYEK TERLAMBAT
+          ================================================== */
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND status_pengadaan = 'done'
+              AND tanggal_akhir IS NOT NULL
+              AND tanggal_akhir < CURRENT_DATE
+              AND status_teknis NOT IN ('done', 'selesai')
+              AND klasifikasi_proyek = 'baru'
+          )::INTEGER AS total_proyek_terlambat_baru,
+
+          COUNT(*) FILTER (
+            WHERE status_final = 'aktif'
+              AND status_pengadaan = 'done'
+              AND tanggal_akhir IS NOT NULL
+              AND tanggal_akhir < CURRENT_DATE
+              AND status_teknis NOT IN ('done', 'selesai')
+              AND klasifikasi_proyek = 'perpanjangan'
+          )::INTEGER AS total_proyek_terlambat_perpanjangan
 
           FROM proyek_base
           `,
@@ -3867,7 +4046,6 @@ app.get(
 
       // ==================================================
       // PERHITUNGAN TOTAL PROYEK
-      //
       // Total merupakan penjumlahan seluruh card:
       // Pipeline
       // Submit Penawaran
@@ -3896,6 +4074,51 @@ app.get(
         angka(data.nilai_proyek_done) +
         angka(data.nilai_proyek_terlambat);
 
+    // ==================================================
+    // RINCIAN BARU DAN PERPANJANGAN
+    // ==================================================
+
+    const kelompokCard = [
+      "total_pipeline",
+      "total_submit_penawaran",
+      "total_submit_pengadaan",
+      "total_kontrak",
+      "total_proyek_aktif",
+      "total_proyek_done",
+      "total_proyek_terlambat"
+    ];
+
+    const rincianJenisProyek = {};
+
+    for (const klasifikasi of [
+      "baru",
+      "perpanjangan"
+    ]) {
+
+      let totalKlasifikasi = 0;
+
+      for (const kelompok of kelompokCard) {
+
+        const field =
+          `${kelompok}_${klasifikasi}`;
+
+        const jumlah =
+          angka(data[field]);
+
+        rincianJenisProyek[field] =
+          jumlah;
+
+        totalKlasifikasi += jumlah;
+
+      }
+
+      // Mengikuti perhitungan Total Proyek pada API awal.
+      rincianJenisProyek[
+        `total_semua_proyek_${klasifikasi}`
+      ] = totalKlasifikasi;
+
+    }
+
       // ==================================================
       // RESPONSE
       // ==================================================
@@ -3915,6 +4138,7 @@ app.get(
           new Date().toISOString(),
 
         project_overview: {
+          ...rincianJenisProyek,
           total_pipeline:
             dashboardAngka(
               data.total_pipeline
@@ -27283,7 +27507,7 @@ app.get(
 
             NULL::date
               AS tanggal_jatuh_tempo,
-              
+
              pembayaran.tanggal_tagihan::date
               AS tanggal_tagihan,
 
