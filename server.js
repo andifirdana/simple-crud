@@ -3439,7 +3439,7 @@ app.get(
                 THEN 'perpanjangan'
 
                 WHEN COALESCE(p.nama_proyek, '') ~*
-                  '(pengadaan|pengembangan)'
+                  '(pengadaan|pengembangan|pelaksanaan|peremajaan)'
                 THEN 'baru'
 
                 ELSE NULL
@@ -3876,7 +3876,7 @@ app.get(
               ),
               0
           )::NUMERIC AS nilai_proyek_terlambat,
-          
+
           /* ==================================================
             PIPELINE
           ================================================== */
@@ -16141,15 +16141,21 @@ app.post(
           req.params.proyekPartnerId
         );
 
-      const {
-        nama_termin,
-        persentase,
-        nominal,
-        input_terakhir,
-        status_pembayaran,
-        tanggal_jatuh_tempo,
-        tanggal_bayar
-      } = req.body;
+     const {
+  nama_termin,
+  persentase,
+  nominal,
+  input_terakhir,
+  status_pembayaran,
+  tanggal_jatuh_tempo,
+  tanggal_bayar,
+  syarat_pembayaran
+} = req.body;
+
+const syaratPembayaran =
+  syarat_pembayaran == null
+    ? null
+    : String(syarat_pembayaran).trim() || null;
 
 
       // ==================================================
@@ -16584,64 +16590,58 @@ app.post(
       // ==================================================
 
       const insertResult =
-        await client.query(
-          `
-          INSERT INTO
-            public.proyek_partner_termin
-          (
-            proyek_partner_id,
-            nama_termin,
-            persentase,
-            nominal,
-            status_pembayaran,
-            tanggal_jatuh_tempo,
-            tanggal_bayar,
-            created_at,
-            updated_at
-          )
+  await client.query(
+    `
+    INSERT INTO public.proyek_partner_termin
+    (
+      proyek_partner_id,
+      nama_termin,
+      persentase,
+      nominal,
+      status_pembayaran,
+      tanggal_jatuh_tempo,
+      tanggal_bayar,
+      syarat_pembayaran,
+      created_at,
+      updated_at
+    )
+    VALUES
+    (
+      $1,
+      $2,
+      $3,
+      $4,
+      $5,
+      $6,
+      $7,
+      $8,
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    )
+    RETURNING id
+    `,
+    [
+      proyekPartnerId,
 
-          VALUES
-          (
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6,
-            $7,
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
-          )
+      String(nama_termin).trim(),
 
-          RETURNING
-            id
-          `,
-          [
-            proyekPartnerId,
+      isTransaksi
+        ? null
+        : persentaseFinal,
 
-            String(
-              nama_termin
-            ).trim(),
+      nominalFinal,
 
-            isTransaksi
-              ? null
-              : persentaseFinal,
+      status_pembayaran
+        ? String(status_pembayaran).trim()
+        : null,
 
-            nominalFinal,
+      tanggal_jatuh_tempo || null,
 
-            status_pembayaran
-              ? String(
-                  status_pembayaran
-                ).trim()
-              : null,
+      tanggal_bayar || null,
 
-            tanggal_jatuh_tempo ||
-              null,
-
-            tanggal_bayar ||
-              null
-          ]
-        );
+      syaratPembayaran
+    ]
+  );
 
 
       const terminId =
@@ -16786,30 +16786,27 @@ if (
       // ==================================================
 
       const terminResult =
-        await client.query(
-          `
-          SELECT
-            id,
-            proyek_partner_id,
-            nama_termin,
-            persentase,
-            nominal,
-            status_pembayaran,
-            tanggal_jatuh_tempo,
-            tanggal_bayar,
-            created_at,
-            updated_at
-
-          FROM
-            public.proyek_partner_termin
-
-          WHERE
-            id = $1
-          `,
-          [
-            terminId
-          ]
-        );
+  await client.query(
+    `
+    SELECT
+      id,
+      proyek_partner_id,
+      nama_termin,
+      persentase,
+      nominal,
+      status_pembayaran,
+      tanggal_jatuh_tempo,
+      tanggal_bayar,
+      syarat_pembayaran,
+      created_at,
+      updated_at
+    FROM public.proyek_partner_termin
+    WHERE id = $1
+    `,
+    [
+      terminId
+    ]
+  );
 
 // ==================================================
 // ACTIVITY LOG TERMIN PARTNER
@@ -16985,8 +16982,13 @@ const nilaiBaruLog = [
 
   `TANGGAL BAYAR = ${
     formatTanggalTerminPartnerLog(
-      dataTerminBaru
-        .tanggal_bayar
+      dataTerminBaru.tanggal_bayar
+    )
+  }`,
+
+  `SYARAT PEMBAYARAN = ${
+    formatTeksTerminPartnerLog(
+      dataTerminBaru.syarat_pembayaran
     )
   }`
 ].join(", ");
