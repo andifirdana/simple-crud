@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Master Status Proyek | Portopro</title>
+
+  <link rel="stylesheet" href="/style.css">
+
+  <style>
+    body.master-status-page {
+      --status-sidebar-width: 0px;
+      --status-navy: #123e69;
+      --status-blue: #175c96;
+      --status-border: #dce5ee;
+      --status-muted: #60758a;
+
+      margin: 0;
+      overflow-x: hidden;
+      background: #f3f6fa;
+      color: #17324d;
+      font: 14px/1.5 system-ui, sans-serif;
+    }
+
+    .status-page,
+    .status-page *,
+    .status-modal,
+    .status-modal * {
+      box-sizing: border-box;
+    }
+
+    body.master-status-page main.status-page.main-content {
+      margin: 0 0 0 var(--status-sidebar-width) !important;
+      width: calc(100% - var(--status-sidebar-width)) !important;
+      max-width: calc(100% - var(--status-sidebar-width)) !important;
+      min-width: 0;
+      padding: 32px 24px;
+    }
+
+    .status-page .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .status-page .eyebrow {
+      margin: 0 0 4px;
+      color: var(--status-blue);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .status-page h1 {
+      margin: 0;
+      font-size: 27px;
+    }
+
+    .status-page .subtitle {
+      margin: 5px 0 0;
+      color: var(--status-muted);
+    }
+
+    :is(.status-page, .status-modal) button,
+    :is(.status-page, .status-modal) input,
+    :is(.status-page, .status-modal) select {
+      font: inherit;
+    }
+
+    :is(.status-page, .status-modal) button {
+      padding: 9px 15px;
+      border: 1px solid var(--status-border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--status-navy);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    :is(.status-page, .status-modal) button:hover:not(:disabled) {
+      background: #edf3f9;
+    }
+
+    :is(.status-page, .status-modal) button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    :is(.status-page, .status-modal) button.primary {
+      border-color: var(--status-blue);
+      background: var(--status-blue);
+      color: #fff;
+    }
+
+    :is(.status-page, .status-modal) button.primary:hover:not(:disabled) {
+      background: var(--status-navy);
+    }
+
+    :is(.status-page, .status-modal) button.danger {
+      border-color: #efcdd1;
+      color: #a82636;
+    }
+
+    :is(.status-page, .status-modal) input,
+    :is(.status-page, .status-modal) select {
+      padding: 10px 12px;
+      border: 1px solid #cad7e4;
+      border-radius: 8px;
+      background: #fff;
+      color: #17324d;
+    }
+
+    :is(.status-page, .status-modal) input:focus,
+    :is(.status-page, .status-modal) select:focus,
+    :is(.status-page, .status-modal) button:focus-visible {
+      outline: 3px solid #9ac5eb;
+      outline-offset: 2px;
+    }
+
+    :is(.status-page, .status-modal) label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .status-page .card {
+      overflow: hidden;
+      border: 1px solid var(--status-border);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 4px 20px #15355406;
+    }
+
+    .status-page .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 14px;
+      padding: 18px 20px;
+    }
+
+    .status-page .search-field {
+      flex: 1;
+      max-width: 460px;
+    }
+
+    .status-page .search-field input {
+      width: 100%;
+    }
+
+    .status-page .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-page .toolbar-actions label {
+      margin: 0;
+    }
+
+    .status-page .table-wrap {
+      overflow: auto;
+    }
+
+    .status-page table {
+      width: 100%;
+      border-collapse: collapse;
+      white-space: nowrap;
+    }
+
+    .status-page th {
+      background: #eaf1f8;
+      color: var(--status-navy);
+      text-align: left;
+      font-size: 12px;
+    }
+
+    .status-page th,
+    .status-page td {
+      padding: 13px 16px;
+      border-bottom: 1px solid #edf1f5;
+    }
+
+    .status-page td.description {
+      min-width: 220px;
+      max-width: 360px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .status-page .row-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .status-page .row-actions button {
+      padding: 6px 12px;
+    }
+
+    .status-page .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #edf3f9;
+      color: var(--status-navy);
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .status-page .table-message {
+      padding: 36px 16px;
+      color: var(--status-muted);
+      text-align: center;
+    }
+
+    .status-page .table-footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 20px;
+    }
+
+    .status-page .table-footer p {
+      margin: 0;
+      color: var(--status-muted);
+    }
+
+    .status-page .pagination {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    :is(.status-page, .status-modal) .notice {
+      margin: 0 0 18px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: #e7f4ed;
+      color: #195c3c;
+      overflow-wrap: anywhere;
+    }
+
+    :is(.status-page, .status-modal) .notice.error {
+      background: #fff0f1;
+      color: #9b2334;
+    }
+
+    :is(.status-page, .status-modal) [hidden] {
+      display: none !important;
+    }
+
+    dialog.status-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      width: min(520px, calc(100% - 32px));
+      max-height: calc(100dvh - 32px);
+      margin: auto;
+      padding: 0;
+      border: 0;
+      border-radius: 14px;
+      background: #fff;
+      color: #17324d;
+      box-shadow: 0 24px 80px #102a4640;
+    }
+
+    dialog.status-modal[open] {
+      display: block;
+    }
+
+    dialog.status-modal::backdrop {
+      background: #11283f80;
+    }
+
+    .status-modal .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--status-border);
+    }
+
+    .status-modal .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .status-modal button.close {
+      padding: 3px 10px;
+      border: 0;
+      font-size: 22px;
+    }
+
+    .status-modal .modal-body {
+      padding: 20px 24px;
+    }
+
+    .status-modal .field {
+      margin-bottom: 18px;
+    }
+
+    .status-modal .field:last-child {
+      margin-bottom: 0;
+    }
+
+    .status-modal .field input,
+    .status-modal .field select {
+      width: 100%;
+    }
+
+    .status-modal .help {
+      margin: 5px 0 0;
+      color: var(--status-muted);
+      font-size: 12px;
+    }
+
+    .status-modal .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--status-border);
+      background: #f8fafc;
+    }
+
+    .status-modal #deleteDescription {
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 768px) {
+      body.master-status-page main.status-page.main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 20px 12px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .status-page .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .status-page h1 {
+        font-size: 23px;
+      }
+
+      .status-page .toolbar-actions,
+      .status-page .pagination {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+
+<body class="master-status-page">
+
+  <!-- SIDEBAR PORTOPRO -->
+  <div id="sidebarContainer"></div>
+
+  <!-- KONTEN -->
+  <main class="main-content status-page">
+
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">
+          PORTOPRO · MASTER DATA
+        </p>
+
+        <h1>Master Status Proyek</h1>
+
+        <p class="subtitle">
+          Kelola deskripsi, flag, dan status proyek.
+        </p>
+      </div>
+
+      <button
+        id="addStatus"
+        type="button"
+        class="primary"
+      >
+        + Tambah Status
+      </button>
+    </header>
+
+    <div
+      id="pageNotice"
+      class="notice"
+      role="status"
+      aria-live="polite"
+      hidden
+    ></div>
+
+    <section
+      class="card"
+      aria-label="Daftar status proyek"
+    >
+
+      <div class="toolbar">
+        <div class="search-field">
+          <label for="searchStatus">
+            Cari status
+          </label>
+
+          <input
+            id="searchStatus"
+            type="search"
+            placeholder="Cari deskripsi, flag, atau status…"
+          >
+        </div>
+
+        <div class="toolbar-actions">
+          <label for="pageSize">
+            Tampilkan
+          </label>
+
+          <select id="pageSize">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+
+          <button
+            id="reloadStatus"
+            type="button"
+          >
+            Muat Ulang
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">No.</th>
+              <th scope="col">Deskripsi</th>
+              <th scope="col">Flag</th>
+              <th scope="col">Status</th>
+              <th scope="col">Dibuat</th>
+              <th scope="col">Diperbarui</th>
+              <th scope="col">Aksi</th>
+            </tr>
+          </thead>
+
+          <tbody id="statusRows"></tbody>
+        </table>
+      </div>
+
+      <footer class="table-footer">
+        <p
+          id="resultInfo"
+          aria-live="polite"
+        >
+          Memuat data…
+        </p>
+
+        <nav
+          class="pagination"
+          aria-label="Halaman daftar status"
+        >
+          <button
+            id="previousPage"
+            type="button"
+          >
+            Sebelumnya
+          </button>
+
+          <span id="pageInfo">1 / 1</span>
+
+          <button
+            id="nextPage"
+            type="button"
+          >
+            Berikutnya
+          </button>
+        </nav>
+      </footer>
+
+    </section>
+  </main>
+
+  <!-- MODAL TAMBAH / EDIT -->
+  <dialog
+    class="status-modal"
+    id="statusDialog"
+    aria-labelledby="statusDialogTitle"
+  >
+    <form id="statusForm">
+
+      <header class="modal-header">
+        <h2 id="statusDialogTitle">
+          Tambah Status
+        </h2>
+
+        <button
+          type="button"
+          class="close"
+          data-close="statusDialog"
+          aria-label="Tutup"
+        >
+          ×
+        </button>
+      </header>
+
+      <div class="modal-body">
+
+        <div
+          id="formError"
+          class="notice error"
+          role="alert"
+          hidden
+        ></div>
+
+        <div class="field">
+          <label for="deskripsi">
+            Deskripsi *
+          </label>
+
+          <input
+            id="deskripsi"
+            name="deskripsi"
+            maxlength="150"
+            required
+            autocomplete="off"
+          >
+
+          <p class="help">
+            Maksimal 150 karakter.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="flag">
+            Flag *
+          </label>
+
+          <select
+            id="flag"
+            name="flag"
+            required
+          >
+            <option value="">
+              Pilih Flag
+            </option>
+
+            <option value="pengadaan">
+              Pengadaan
+            </option>
+
+            <option value="teknis">
+              Teknis
+            </option>
+
+            <option value="final">
+              Final
+            </option>
+
+            <option value="pembayaran">
+              Pembayaran
+            </option>
+
+            <option value="mpengadaan">
+              MPengadaan
+            </option>
+          </select>
+
+           <option value="administrasi">
+              Administrasi
+            </option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="status">
+            Status *
+          </label>
+
+          <select
+            id="status"
+            name="status"
+            required
+          >
+            <option value="">
+              Pilih Status
+            </option>
+
+            <option value="Aktif">
+              Aktif
+            </option>
+
+            <option value="Nonaktif">
+              Nonaktif
+            </option>
+          </select>
+        </div>
+
+      </div>
+
+      <footer class="modal-footer">
+        <button
+          type="button"
+          data-close="statusDialog"
+        >
+          Batal
+        </button>
+
+        <button
+          id="saveStatus"
+          type="submit"
+          class="primary"
+        >
+          Simpan
+        </button>
+      </footer>
+
+    </form>
+  </dialog>
+
+  <!-- MODAL HAPUS -->
+  <dialog
+    class="status-modal"
+    id="deleteDialog"
+    aria-labelledby="deleteDialogTitle"
+  >
+    <header class="modal-header">
+      <h2 id="deleteDialogTitle">
+        Hapus Status
+      </h2>
+
+      <button
+        type="button"
+        class="close"
+        data-close="deleteDialog"
+        aria-label="Tutup"
+      >
+        ×
+      </button>
+    </header>
+
+    <div class="modal-body">
+      <div
+        id="deleteError"
+        class="notice error"
+        role="alert"
+        hidden
+      ></div>
+
+      <p>
+        Hapus status
+        <strong id="deleteDescription"></strong>?
+      </p>
+    </div>
+
+    <footer class="modal-footer">
+      <button
+        type="button"
+        data-close="deleteDialog"
+        autofocus
+      >
+        Batal
+      </button>
+
+      <button
+        id="confirmDelete"
+        type="button"
+        class="danger"
+      >
+        Hapus
+      </button>
+    </footer>
+  </dialog>
+
+  <!-- SCRIPT BERSAMA PORTOPRO -->
+  <script src="/layout.js"></script>
+  <script src="/sidebar.js"></script>
+
+  <!-- SCRIPT HALAMAN -->
+  <script src="/master-status.js"></script>
+
+</body>
+</html>

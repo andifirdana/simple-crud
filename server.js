@@ -61,6 +61,8 @@ app.use(
   })
 );
 
+require('./calendar-api')(app, pool);
+
 console.log(
   'API Master Produk Sewa terdaftar'
 );
@@ -2709,7 +2711,6 @@ app.put("/api/pic/:id",
 
 });
 
-
 // DELETE PIC
 app.delete("/api/pic/:id", 
   async (req, res) => {
@@ -2837,7 +2838,6 @@ app.get("/api/kategori-produk",
   }
 );
 
-
 // CREATE KATEGORI PRODUK
 app.post("/api/kategori-produk",
   async (req, res) => {
@@ -2956,7 +2956,6 @@ app.post("/api/kategori-produk",
 
   }
 );
-
 
 // UPDATE KATEGORI PRODUK
 app.put("/api/kategori-produk/:id",
@@ -3103,7 +3102,6 @@ app.put("/api/kategori-produk/:id",
 
   }
 );
-
 
 // DELETE KATEGORI PRODUK
 app.delete("/api/kategori-produk/:id",
@@ -11231,6 +11229,608 @@ if (klien) {
   }
 });
 
+// ======================================================
+// HELPER GENERATE TERMIN KLIEN
+// ======================================================
+
+function gagalGenerateTerminKlien(message, status = 400) {
+  const error = new Error(message);
+
+  error.status = status;
+
+  throw error;
+}
+
+
+function susunGenerateTerminKlien(klien, nilaiFinal, body) {
+  const model = String(klien.model_pembayaran || "")
+    .trim()
+    .toLowerCase();
+
+  if (!["termin", "bulanan"].includes(model)) {
+    gagalGenerateTerminKlien(
+      "Model Pembayaran wajib Termin atau Bulanan."
+    );
+  }
+
+  const nilai = Math.round(Number(nilaiFinal));
+
+  if (!Number.isSafeInteger(nilai) || nilai <= 0) {
+    gagalGenerateTerminKlien(
+      "Nilai Final wajib tersedia dan lebih dari 0."
+    );
+  }
+
+  const jumlah = Number(body.jumlah);
+
+  if (
+    !Number.isInteger(jumlah) ||
+    jumlah < 1 ||
+    jumlah > 120
+  ) {
+    gagalGenerateTerminKlien(
+      "Jumlah termin atau bulan harus antara 1 sampai 120."
+    );
+  }
+
+
+  let bobot;
+  let nama;
+  let jatuhTempo;
+
+
+  function tanggalValid(value) {
+    const text = String(value ?? "").trim();
+
+    const date = new Date(`${text}T00:00:00Z`);
+
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(text) ||
+      Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== text
+    ) {
+      gagalGenerateTerminKlien(
+        "Tanggal jatuh tempo setiap termin wajib diisi dan valid."
+      );
+    }
+
+    return text;
+  }
+
+
+  // ====================================================
+  // MODEL TERMIN
+  // ====================================================
+
+  if (model === "termin") {
+    if (
+      !Array.isArray(body.persentase) ||
+      body.persentase.length !== jumlah
+    ) {
+      gagalGenerateTerminKlien(
+        "Isi persentase sesuai jumlah termin."
+      );
+    }
+
+    bobot = body.persentase.map(value => {
+      const text = String(value ?? "")
+        .trim()
+        .replace(",", ".");
+
+      if (!/^\d+(\.\d{1,2})?$/.test(text)) {
+        gagalGenerateTerminKlien(
+          "Persentase maksimal dua angka desimal."
+        );
+      }
+
+      const angka = Math.round(Number(text) * 100);
+
+      if (angka <= 0 || angka > 10000) {
+        gagalGenerateTerminKlien(
+          "Persentase harus lebih dari 0 dan maksimal 100%."
+        );
+      }
+
+      return angka;
+    });
+
+    if (
+      bobot.reduce((total, value) => total + value, 0) !==
+      10000
+    ) {
+      gagalGenerateTerminKlien(
+        "Total persentase harus tepat 100%."
+      );
+    }
+
+    nama = bobot.map(
+      (_, index) => `Termin ${index + 1}`
+    );
+
+    if (
+      !Array.isArray(body.tanggal_jatuh_tempo) ||
+      body.tanggal_jatuh_tempo.length !== jumlah
+    ) {
+      gagalGenerateTerminKlien(
+        "Isi tanggal jatuh tempo sesuai jumlah termin."
+      );
+    }
+
+    jatuhTempo =
+      body.tanggal_jatuh_tempo.map(tanggalValid);
+  }
+
+
+  // ====================================================
+  // MODEL BULANAN
+  // ====================================================
+
+  else {
+    const awal = String(klien.tanggal_mulai || "");
+
+    const tanggal = new Date(`${awal}T00:00:00Z`);
+
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(awal) ||
+      Number.isNaN(tanggal.getTime()) ||
+      tanggal.toISOString().slice(0, 10) !== awal
+    ) {
+      gagalGenerateTerminKlien(
+        "Tanggal Mulai Kontrak wajib diisi dan valid."
+      );
+    }
+
+    const bulan = [
+      "Jan", "Feb", "Mar", "Apr",
+      "Mei", "Jun", "Jul", "Agu",
+      "Sep", "Okt", "Nov", "Des"
+    ];
+
+    bobot = Array(jumlah).fill(
+      Math.floor(10000 / jumlah)
+    );
+
+    // Sisa pembulatan persentase di termin terakhir.
+
+    bobot[jumlah - 1] +=
+      10000 -
+      bobot.reduce((total, value) => total + value, 0);
+
+    nama = bobot.map((_, index) => {
+      const d = new Date(
+        Date.UTC(
+          tanggal.getUTCFullYear(),
+          tanggal.getUTCMonth() + index,
+          1
+        )
+      );
+
+      return `${
+        bulan[d.getUTCMonth()]
+      } ${d.getUTCFullYear()}`;
+    });
+// Jatuh tempo mengikuti tanggal mulai kontrak.
+// Jika tanggal tersebut tidak tersedia,
+// gunakan hari terakhir bulan tersebut.
+
+jatuhTempo = bobot.map((_, index) => {
+  const awalBulan = new Date(
+    Date.UTC(
+      tanggal.getUTCFullYear(),
+      tanggal.getUTCMonth() + index,
+      1
+    )
+  );
+
+  const tahun = awalBulan.getUTCFullYear();
+  const bulan = awalBulan.getUTCMonth();
+
+  const hariTerakhir = new Date(
+    Date.UTC(
+      tahun,
+      bulan + 1,
+      0
+    )
+  ).getUTCDate();
+
+  const hariJatuhTempo = Math.min(
+    tanggal.getUTCDate(),
+    hariTerakhir
+  );
+
+  const jatuhTempoBulanan = new Date(
+    Date.UTC(
+      tahun,
+      bulan,
+      hariJatuhTempo
+    )
+  );
+
+  return jatuhTempoBulanan
+    .toISOString()
+    .slice(0, 10);
+});
+  }
+
+
+  // ====================================================
+  // HITUNG NOMINAL
+  // ====================================================
+
+  let terpakai = 0;
+
+  const data = bobot.map((weight, index) => {
+    const nominal =
+      index === jumlah - 1
+        ? nilai - terpakai
+        : model === "bulanan"
+          ? Math.floor(nilai / jumlah)
+          : Number(
+              BigInt(nilai) * BigInt(weight) / 10000n
+            );
+
+    if (nominal <= 0) {
+      gagalGenerateTerminKlien(
+        "Nominal setiap termin harus lebih dari 0."
+      );
+    }
+
+    terpakai += nominal;
+
+    return {
+      nama_termin: nama[index],
+      persentase: weight / 100,
+      nominal,
+      tanggal_jatuh_tempo: jatuhTempo[index]
+    };
+  });
+
+  const hasil = {
+    model_pembayaran: model,
+    nilai_final: nilai,
+    tanggal_mulai: klien.tanggal_mulai || null,
+    data
+  };
+
+  return {
+    ...hasil,
+    preview_key: JSON.stringify(hasil)
+  };
+}
+
+
+// ======================================================
+// HANDLER PREVIEW / SIMPAN / HAPUS SELURUH TERMIN
+// ======================================================
+
+function handlerGenerateTerminKlien(mode) {
+  return async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
+    const id = Number(req.params.proyekKlienId);
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({
+        error: "ID proyek klien tidak valid"
+      });
+    }
+
+    let client;
+    let transaksi = false;
+
+    try {
+      client = await pool.connect();
+
+      await client.query("BEGIN");
+
+      transaksi = true;
+
+
+      const info = await client.query(
+        `
+          SELECT
+            pk.id,
+            pk.proyek_id,
+            pk.model_pembayaran,
+
+            pk.tanggal_mulai::date::text
+              AS tanggal_mulai,
+
+            p.nama_proyek
+
+          FROM public.proyek_klien pk
+
+          JOIN public.proyek p
+            ON p.id = pk.proyek_id
+
+          WHERE pk.id = $1
+
+          FOR UPDATE OF pk
+        `,
+        [id]
+      );
+
+      if (!info.rowCount) {
+        gagalGenerateTerminKlien(
+          "Data proyek klien tidak ditemukan.",
+          404
+        );
+      }
+
+      const klien = info.rows[0];
+
+
+      const existing = await client.query(
+        `
+          SELECT *
+          FROM public.proyek_klien_termin
+          WHERE proyek_klien_id = $1
+          ORDER BY id
+        `,
+        [id]
+      );
+
+
+      let hasil;
+      let status = 200;
+
+
+      // ================================================
+      // HAPUS SEMUA
+      // ================================================
+
+      if (mode === "hapus") {
+        if (req.body?.konfirmasi_hapus !== true) {
+          gagalGenerateTerminKlien(
+            "Konfirmasi penghapusan termin diperlukan."
+          );
+        }
+
+        const deleted = await client.query(
+          `
+            DELETE FROM public.proyek_klien_termin
+            WHERE proyek_klien_id = $1
+            RETURNING *
+          `,
+          [id]
+        );
+
+        if (deleted.rowCount) {
+          await simpanActivityLog(client, {
+            ...getActivityUser(req),
+
+            aktivitas: "DELETE",
+            modul: "PROYEK",
+
+            entity_id: klien.proyek_id,
+            entity_nama: klien.nama_proyek,
+
+            field_name: "TERMIN KLIEN",
+
+            nilai_lama: JSON.stringify(deleted.rows),
+            nilai_baru: null,
+
+            deskripsi:
+              "menghapus seluruh termin klien"
+          });
+        }
+
+        hasil = {
+          message:
+            "Seluruh termin klien berhasil dihapus",
+
+          jumlah_dihapus: deleted.rowCount,
+          total_nominal: 0,
+          total_persentase: 0
+        };
+      }
+
+
+      // ================================================
+      // PREVIEW / SIMPAN
+      // ================================================
+
+      else {
+        if (existing.rowCount) {
+          gagalGenerateTerminKlien(
+            "Termin sudah terbentuk. Hapus termin terlebih dahulu.",
+            409
+          );
+        }
+
+        const nilaiFinal =
+          await getNilaiFinalAsliKlien(client, id);
+
+        const rencana = susunGenerateTerminKlien(
+          klien,
+          nilaiFinal,
+          req.body || {}
+        );
+
+        if (mode === "preview") {
+          hasil = rencana;
+        }
+
+        else {
+          if (
+            req.body?.preview_key !==
+            rencana.preview_key
+          ) {
+            gagalGenerateTerminKlien(
+              "Data berubah atau preview belum dibuat. Klik Preview kembali.",
+              409
+            );
+          }
+
+
+          const inserted = await client.query(
+            `
+              INSERT INTO public.proyek_klien_termin
+              (
+                proyek_klien_id,
+                nama_termin,
+                persentase,
+                nominal,
+                status_pembayaran,
+                tanggal_jatuh_tempo,
+                tanggal_bayar,
+                syarat_pembayaran
+              )
+
+              SELECT
+                $1,
+                t.nama_termin,
+                t.persentase,
+                t.nominal,
+                'Belum Dibayar',
+                t.tanggal_jatuh_tempo,
+                NULL,
+                NULL
+
+              FROM jsonb_to_recordset(
+                $2::jsonb
+              ) AS t(
+                nama_termin text,
+                persentase numeric,
+                nominal numeric,
+                tanggal_jatuh_tempo date
+              )
+
+              RETURNING *
+            `,
+            [
+              id,
+              JSON.stringify(rencana.data)
+            ]
+          );
+
+
+          await simpanActivityLog(client, {
+            ...getActivityUser(req),
+
+            aktivitas: "CREATE",
+            modul: "PROYEK",
+
+            entity_id: klien.proyek_id,
+            entity_nama: klien.nama_proyek,
+
+            field_name: "TERMIN KLIEN",
+
+            nilai_lama: null,
+            nilai_baru: JSON.stringify(rencana.data),
+
+            deskripsi:
+              `generate ${inserted.rowCount} termin klien`
+          });
+
+
+          hasil = {
+            ...rencana,
+
+            data: inserted.rows,
+
+            message:
+              "Termin klien berhasil dibuat"
+          };
+
+          status = 201;
+        }
+      }
+
+
+      await client.query("COMMIT");
+
+      transaksi = false;
+
+      return res.status(status).json(hasil);
+
+    } catch (error) {
+      if (client && transaksi) {
+        await client.query("ROLLBACK").catch(
+          rollbackError => {
+            console.error(
+              "ROLLBACK GENERATE TERMIN:",
+              rollbackError
+            );
+          }
+        );
+      }
+
+      if (!error.status) {
+        console.error(
+          "GENERATE TERMIN KLIEN:",
+          error
+        );
+      }
+
+      return res.status(
+        error.status || 500
+      ).json({
+        error:
+          error.status
+            ? error.message
+            : "Gagal memproses termin klien."
+      });
+
+    } finally {
+      client?.release();
+    }
+  };
+}
+
+
+// ======================================================
+// ROUTES
+// ======================================================
+
+app.post(
+  "/api/proyek/klien/:proyekKlienId/termin/generate/preview",
+  handlerGenerateTerminKlien("preview")
+);
+
+app.post(
+  "/api/proyek/klien/:proyekKlienId/termin/generate",
+  handlerGenerateTerminKlien("simpan")
+);
+
+app.delete(
+  "/api/proyek/klien/:proyekKlienId/termin",
+  handlerGenerateTerminKlien("hapus")
+);
+
+
+// PREVIEW
+
+app.post(
+  "/api/proyek/klien/:proyekKlienId/termin/generate/preview",
+  handlerGenerateTerminKlien(
+    "preview"
+  )
+);
+
+
+// SIMPAN HASIL GENERATE
+
+app.post(
+  "/api/proyek/klien/:proyekKlienId/termin/generate",
+  handlerGenerateTerminKlien(
+    "simpan"
+  )
+);
+
+
+// HAPUS SELURUH TERMIN MILIK PROYEK KLIEN
+
+app.delete(
+  "/api/proyek/klien/:proyekKlienId/termin",
+  handlerGenerateTerminKlien(
+    "hapus"
+  )
+);
 
 // TAMBAH TERMIN KLIEN
 
@@ -11289,6 +11889,20 @@ app.post(
             "Nama termin wajib diisi"
         });
       }
+        await client.query(
+      `
+        SELECT id
+
+        FROM public.proyek_klien
+
+        WHERE id = $1
+
+        FOR UPDATE
+      `,
+      [
+        proyekKlienId
+      ]
+    );
 
 
       // ================================================
@@ -16042,6 +16656,408 @@ app.delete(
   }
 );
 
+// ======================================================
+// POST GENERATE TERMIN PARTNER
+// ======================================================
+
+app.post(
+  "/api/proyek/partner/:proyekPartnerId/termin/generate",
+  async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
+
+    const proyekPartnerId = Number(
+      req.params.proyekPartnerId
+    );
+
+    if (
+      !Number.isSafeInteger(proyekPartnerId) ||
+      proyekPartnerId <= 0
+    ) {
+      return res.status(400).json({
+        error: "ID proyek partner tidak valid"
+      });
+    }
+
+
+    let client;
+    let transactionStarted = false;
+
+    try {
+      client = await pool.connect();
+
+      await client.query("BEGIN");
+
+      transactionStarted = true;
+
+
+      // ================================================
+      // AMBIL DATA KONTRAK PARTNER
+      // ================================================
+
+      const partnerResult = await client.query(
+        `
+          SELECT
+            pp.id,
+            pp.proyek_id,
+            pp.model_pembayaran,
+
+            pp.tanggal_mulai::date::text
+              AS tanggal_mulai,
+
+            p.nama_proyek,
+
+            COALESCE(
+              NULLIF(pp.nilai_nego_3, 0),
+              NULLIF(pp.nilai_nego_2, 0),
+              NULLIF(pp.nilai_nego_1, 0),
+              NULLIF(pp.nilai_submit, 0),
+              0
+            )::numeric AS nilai_final_partner
+
+          FROM public.proyek_partner pp
+
+          JOIN public.proyek p
+            ON p.id = pp.proyek_id
+
+          WHERE pp.id = $1
+
+          FOR UPDATE OF pp
+        `,
+        [proyekPartnerId]
+      );
+
+
+      if (!partnerResult.rowCount) {
+        gagalGenerateTerminKlien(
+          "Data proyek partner tidak ditemukan.",
+          404
+        );
+      }
+
+      const partner = partnerResult.rows[0];
+
+
+      // ================================================
+      // CEK TERMIN SUDAH TERBENTUK
+      // ================================================
+
+      const existingResult = await client.query(
+        `
+          SELECT id
+
+          FROM public.proyek_partner_termin
+
+          WHERE proyek_partner_id = $1
+
+          LIMIT 1
+        `,
+        [proyekPartnerId]
+      );
+
+
+      if (existingResult.rowCount > 0) {
+        gagalGenerateTerminKlien(
+          "Termin partner sudah terbentuk. Hapus termin terlebih dahulu untuk generate ulang.",
+          409
+        );
+      }
+
+
+      // ================================================
+      // SUSUN TERMIN
+      //
+      // Helper yang sama dengan generator Klien.
+      // Sumber nilainya tetap kontrak Partner.
+      // ================================================
+
+      const rencana = susunGenerateTerminKlien(
+        partner,
+        partner.nilai_final_partner,
+        req.body || {}
+      );
+
+      delete rencana.preview_key;
+
+      rencana.proyek_partner_id =
+        proyekPartnerId;
+
+      rencana.preview_key =
+        JSON.stringify(rencana);
+
+
+      // ================================================
+      // COCOKKAN DENGAN PREVIEW
+      // ================================================
+
+      if (
+        req.body?.preview_key !==
+        rencana.preview_key
+      ) {
+        gagalGenerateTerminKlien(
+          "Data berubah atau preview belum dibuat. Klik Preview kembali sebelum Generate.",
+          409
+        );
+      }
+
+
+      // ================================================
+      // SIMPAN SELURUH TERMIN PARTNER
+      // ================================================
+
+      const insertResult = await client.query(
+        `
+          INSERT INTO public.proyek_partner_termin
+          (
+            proyek_partner_id,
+            nama_termin,
+            persentase,
+            nominal,
+            status_pembayaran,
+            tanggal_jatuh_tempo,
+            tanggal_bayar,
+            syarat_pembayaran,
+            created_at,
+            updated_at
+          )
+
+          SELECT
+            $1,
+            t.nama_termin,
+            t.persentase,
+            t.nominal,
+            'Belum Dibayar',
+            t.tanggal_jatuh_tempo,
+            NULL,
+            NULL,
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+
+          FROM jsonb_to_recordset(
+            $2::jsonb
+          ) AS t(
+            nama_termin text,
+            persentase numeric,
+            nominal numeric,
+            tanggal_jatuh_tempo date
+          )
+
+          RETURNING *
+        `,
+        [
+          proyekPartnerId,
+          JSON.stringify(rencana.data)
+        ]
+      );
+
+
+      // ================================================
+      // ACTIVITY LOG
+      // ================================================
+
+      await simpanActivityLog(
+        client,
+        {
+          ...getActivityUser(req),
+
+          aktivitas: "CREATE",
+
+          modul: "PROYEK",
+
+          entity_id:
+            partner.proyek_id,
+
+          entity_nama:
+            partner.nama_proyek,
+
+          field_name:
+            "TERMIN PARTNER",
+
+          nilai_lama: null,
+
+          nilai_baru:
+            JSON.stringify(rencana.data),
+
+          deskripsi:
+            `generate ${insertResult.rowCount} termin proyek partner ${proyekPartnerId}`
+        }
+      );
+
+
+      await client.query("COMMIT");
+
+      transactionStarted = false;
+
+
+      return res.status(201).json({
+        ...rencana,
+
+        message:
+          "Termin partner berhasil dibuat",
+
+        jumlah_termin:
+          insertResult.rowCount,
+
+        data:
+          insertResult.rows
+      });
+
+    } catch (error) {
+      if (
+        client &&
+        transactionStarted
+      ) {
+        await client.query("ROLLBACK").catch(
+          rollbackError => {
+            console.error(
+              "ROLLBACK GENERATE TERMIN PARTNER:",
+              rollbackError
+            );
+          }
+        );
+      }
+
+
+      if (!error.status) {
+        console.error(
+          "ERROR GENERATE TERMIN PARTNER:",
+          error
+        );
+      }
+
+
+      return res.status(
+        error.status || 500
+      ).json({
+        error:
+          error.status
+            ? error.message
+            : "Gagal membuat termin partner."
+      });
+
+    } finally {
+      client?.release();
+    }
+  }
+);
+// ======================================================
+// PREVIEW GENERATE TERMIN PARTNER
+// ======================================================
+
+app.post(
+  "/api/proyek/partner/:proyekPartnerId/termin/generate/preview",
+  async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
+    const proyekPartnerId = Number(
+      req.params.proyekPartnerId
+    );
+
+    if (
+      !Number.isSafeInteger(proyekPartnerId) ||
+      proyekPartnerId <= 0
+    ) {
+      return res.status(400).json({
+        error: "ID proyek partner tidak valid"
+      });
+    }
+
+
+    try {
+      const partnerResult = await pool.query(
+        `
+          SELECT
+            pp.id,
+            pp.proyek_id,
+            pp.model_pembayaran,
+
+            pp.tanggal_mulai::date::text
+              AS tanggal_mulai,
+
+            COALESCE(
+              NULLIF(pp.nilai_nego_3, 0),
+              NULLIF(pp.nilai_nego_2, 0),
+              NULLIF(pp.nilai_nego_1, 0),
+              NULLIF(pp.nilai_submit, 0),
+              0
+            )::numeric AS nilai_final_partner,
+
+            EXISTS (
+              SELECT 1
+              FROM public.proyek_partner_termin ppt
+              WHERE ppt.proyek_partner_id = pp.id
+            ) AS sudah_ada_termin
+
+          FROM public.proyek_partner pp
+
+          WHERE pp.id = $1
+        `,
+        [proyekPartnerId]
+      );
+
+
+      if (!partnerResult.rowCount) {
+        return res.status(404).json({
+          error:
+            "Data proyek partner tidak ditemukan."
+        });
+      }
+
+      const partner = partnerResult.rows[0];
+
+
+      if (partner.sudah_ada_termin) {
+        return res.status(409).json({
+          error:
+            "Termin partner sudah terbentuk. Hapus termin terlebih dahulu."
+        });
+      }
+
+
+      const rencana = susunGenerateTerminKlien(
+        partner,
+        partner.nilai_final_partner,
+        req.body || {}
+      );
+
+      delete rencana.preview_key;
+
+      rencana.proyek_partner_id =
+        proyekPartnerId;
+
+      rencana.preview_key =
+        JSON.stringify(rencana);
+
+
+      return res.json(rencana);
+
+    } catch (error) {
+      if (!error.status) {
+        console.error(
+          "ERROR PREVIEW TERMIN PARTNER:",
+          error
+        );
+      }
+
+      return res.status(
+        error.status || 500
+      ).json({
+        error:
+          error.status
+            ? error.message
+            : "Gagal membuat preview termin partner."
+      });
+    }
+  }
+);
 
 // ======================================================
 // TAMBAH TERMIN PARTNER
@@ -38901,6 +39917,8 @@ app.get("/api/total-pengeluaran", async (req, res) => {
     });
   }
 });
+
+
 // ======================================================
 // START SERVER
 // ======================================================

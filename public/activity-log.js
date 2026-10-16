@@ -43,64 +43,48 @@ function escapeHtml(value) {
 // =====================================================
 
 function formatTanggalWaktu(value) {
+  const kosong = {
+    tanggal: "-",
+    waktu: "-"
+  };
 
-  if (!value) {
+  if (!value) return kosong;
 
-    return {
-      tanggal: "-",
-      waktu: "-"
-    };
+  const date = new Date(value);
 
+  if (Number.isNaN(date.getTime())) {
+    return kosong;
   }
 
+  const tanggal = new Intl.DateTimeFormat(
+    "id-ID",
+    {
+      timeZone: "Asia/Jakarta",
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    }
+  ).format(date);
 
-  const date =
-    new Date(value);
-
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-
-    return {
-      tanggal: "-",
-      waktu: "-"
-    };
-
-  }
-
-
-  const tanggal =
-    new Intl.DateTimeFormat(
-      "id-ID",
-      {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-        year: "numeric"
-      }
-    ).format(date);
-
-
-  const waktu =
-    new Intl.DateTimeFormat(
-      "id-ID",
-      {
-        hour: "2-digit",
-        minute: "2-digit"
-      }
-    ).format(date);
-
+  const waktu = new Intl.DateTimeFormat(
+    "id-ID",
+    {
+      timeZone: "Asia/Jakarta",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23"
+    }
+  )
+    .format(date)
+    .replaceAll(".", ":");
 
   return {
     tanggal,
-    waktu
+    waktu: `${waktu} WIB`
   };
-
 }
-
 
 // =====================================================
 // FORMAT NILAI
@@ -479,213 +463,125 @@ function formatModul(value) {
 
 }
 
+function getTanggalJakarta(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const parts = new Intl.DateTimeFormat(
+    "en-US",
+    {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }
+  ).formatToParts(date);
+
+  const getPart = type =>
+    parts.find(part => part.type === type).value;
+
+  return [
+    getPart("year"),
+    getPart("month"),
+    getPart("day")
+  ].join("-");
+}
 
 // =====================================================
 // FILTER
 // =====================================================
 
 function applyFilter() {
+  const search = document
+    .getElementById("searchActivity")
+    .value
+    .trim()
+    .toLowerCase();
 
-  const search =
-    document
-      .getElementById(
-        "searchActivity"
-      )
-      .value
-      .trim()
-      .toLowerCase();
+  const pic = document
+    .getElementById("filterPic")
+    .value;
 
+  const modul = document
+    .getElementById("filterModul")
+    .value;
 
-  const pic =
-    document
-      .getElementById(
-        "filterPic"
-      )
-      .value;
+  const aktivitas = document
+    .getElementById("filterAktivitas")
+    .value;
 
+  const tanggal = document
+    .getElementById("filterTanggal")
+    .value;
 
-  const modul =
-    document
-      .getElementById(
-        "filterModul"
-      )
-      .value;
+  const filtered = activityData.filter(item => {
+    // SEARCH
+    if (search) {
+      const searchable = [
+        item.nama_pic,
+        item.deskripsi,
+        item.entity_nama,
+        item.modul,
+        item.aktivitas,
+        item.field_name,
+        item.nilai_lama,
+        item.nilai_baru
+      ]
+        .filter(
+          value =>
+            value !== null &&
+            value !== undefined
+        )
+        .join(" ")
+        .toLowerCase();
 
-
-  const aktivitas =
-    document
-      .getElementById(
-        "filterAktivitas"
-      )
-      .value;
-
-
-  const tanggal =
-    document
-      .getElementById(
-        "filterTanggal"
-      )
-      .value;
-
-
-  const filtered =
-    activityData.filter(
-      item => {
-
-        // =========================================
-        // SEARCH
-        // =========================================
-
-        if (search) {
-
-          const searchable =
-            [
-              item.nama_pic,
-              item.deskripsi,
-              item.entity_nama,
-              item.modul,
-              item.aktivitas,
-              item.field_name,
-              item.nilai_lama,
-              item.nilai_baru
-            ]
-              .filter(
-                value =>
-                  value !== null &&
-                  value !== undefined
-              )
-              .join(" ")
-              .toLowerCase();
-
-
-          if (
-            !searchable.includes(
-              search
-            )
-          ) {
-
-            return false;
-
-          }
-
-        }
-
-
-        // =========================================
-        // PIC
-        // =========================================
-
-        if (
-          pic &&
-          String(item.pic_id) !==
-            String(pic)
-        ) {
-
-          return false;
-
-        }
-
-
-        // =========================================
-        // MODUL
-        // =========================================
-
-        if (
-          modul &&
-          item.modul !== modul
-        ) {
-
-          return false;
-
-        }
-
-
-        // =========================================
-        // ACTIVITY
-        // =========================================
-
-        if (
-          aktivitas &&
-          item.aktivitas !==
-            aktivitas
-        ) {
-
-          return false;
-
-        }
-
-
-        // =========================================
-        // TANGGAL
-        // =========================================
-
-        if (tanggal) {
-
-          if (!item.created_at) {
-
-            return false;
-
-          }
-
-
-          const logDate =
-            new Date(
-              item.created_at
-            );
-
-
-          const year =
-            logDate.getFullYear();
-
-
-          const month =
-            String(
-              logDate.getMonth() + 1
-            ).padStart(
-              2,
-              "0"
-            );
-
-
-          const day =
-            String(
-              logDate.getDate()
-            ).padStart(
-              2,
-              "0"
-            );
-
-
-          const localDate =
-            `${year}-${month}-${day}`;
-
-
-          if (
-            localDate !== tanggal
-          ) {
-
-            return false;
-
-          }
-
-        }
-
-
-        return true;
-
+      if (!searchable.includes(search)) {
+        return false;
       }
-    );
+    }
 
+    // PIC
+    if (
+      pic &&
+      String(item.pic_id) !== String(pic)
+    ) {
+      return false;
+    }
 
-  renderActivity(
-    filtered
-  );
+    // MODUL
+    if (
+      modul &&
+      item.modul !== modul
+    ) {
+      return false;
+    }
 
+    // AKTIVITAS
+    if (
+      aktivitas &&
+      item.aktivitas !== aktivitas
+    ) {
+      return false;
+    }
 
-  updateSummary(
-    filtered
-  );
+    // TANGGAL JAKARTA
+    if (
+      tanggal &&
+      getTanggalJakarta(item.created_at) !== tanggal
+    ) {
+      return false;
+    }
 
+    return true;
+  });
+
+  renderActivity(filtered);
+  updateSummary(filtered);
 }
 
 
@@ -702,84 +598,19 @@ function updateSummary(data) {
 
 
   // ===================================================
-  // HARI INI
-  // ===================================================
+// HARI INI — JAKARTA
+// ===================================================
 
-  const today =
-    new Date();
+const todayString = getTanggalJakarta(new Date());
 
+const totalToday = data.filter(
+  item =>
+    getTanggalJakarta(item.created_at) === todayString
+).length;
 
-  const todayString =
-    [
-      today.getFullYear(),
-
-      String(
-        today.getMonth() + 1
-      ).padStart(
-        2,
-        "0"
-      ),
-
-      String(
-        today.getDate()
-      ).padStart(
-        2,
-        "0"
-      )
-
-    ].join("-");
-
-
-  const totalToday =
-    data.filter(
-      item => {
-
-        if (!item.created_at) {
-          return false;
-        }
-
-
-        const date =
-          new Date(
-            item.created_at
-          );
-
-
-        const dateString =
-          [
-            date.getFullYear(),
-
-            String(
-              date.getMonth() + 1
-            ).padStart(
-              2,
-              "0"
-            ),
-
-            String(
-              date.getDate()
-            ).padStart(
-              2,
-              "0"
-            )
-
-          ].join("-");
-
-
-        return (
-          dateString ===
-          todayString
-        );
-
-      }
-    ).length;
-
-
-  document.getElementById(
-    "activityToday"
-  ).textContent =
-    totalToday;
-
+document.getElementById(
+  "activityToday"
+).textContent = totalToday;
 
   // ===================================================
   // PIC

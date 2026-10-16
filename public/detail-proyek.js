@@ -2392,6 +2392,17 @@ function renderKlien(klien) {
 
   
  container.innerHTML = `
+   <div class="partner-detail-header">
+    <div>
+      <div class="partner-name">
+        ${escapeHtml(
+          klien.perusahaan_klien ||
+          klien.nama_klien ||
+          "-"
+        )}
+      </div>
+    </div>
+  </div>
 
   <div
     class="
@@ -9267,11 +9278,16 @@ if (editKlienButton) {
         // ==============================================
 
         if (editKlienId) {
-          editKlienId.value =
-            String(
-              klien.klien_id || ""
-            );
-        }
+        editKlienId.value = String(
+          klien.klien_id ?? ""
+        );
+
+        editKlienId.dispatchEvent(
+          new Event("change", {
+            bubbles: true
+          })
+        );
+      }
 
 
         // ==============================================
@@ -13312,6 +13328,1825 @@ async function mulaiDetailProyek() {
       });
     },
     true
+  );
+})();
+
+// ======================================================
+// GENERATE TERMIN KLIEN
+// ======================================================
+
+(() => {
+  const anchor = document.getElementById(
+    "tambahTerminButton"
+  );
+
+  if (
+    !anchor ||
+    document.getElementById(
+      "generateTerminKlienButton"
+    )
+  ) {
+    return;
+  }
+
+
+  // ====================================================
+  // TOMBOL
+  // ====================================================
+
+  const button = document.createElement("button");
+
+  button.id = "generateTerminKlienButton";
+  button.type = "button";
+  button.className = anchor.className;
+  button.textContent = "Generate Termin Klien";
+
+  // ====================================================
+// RAPIKAN TOMBOL TAMBAH DAN GENERATE TERMIN
+// ====================================================
+
+const terminToolbar = anchor.parentElement;
+
+terminToolbar.classList.add(
+  "termin-klien-toolbar"
+);
+
+const terminActions =
+  document.createElement("div");
+
+terminActions.className =
+  "termin-klien-actions";
+
+anchor.before(terminActions);
+
+terminActions.append(
+  anchor,
+  button
+);
+
+
+const terminActionStyle =
+  document.createElement("style");
+
+terminActionStyle.textContent = `
+  .termin-klien-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .termin-klien-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .termin-klien-actions #tambahTerminButton,
+  .termin-klien-actions #generateTerminKlienButton {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-height: 42px;
+    margin: 0;
+    padding: 10px 16px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color .2s,
+      border-color .2s,
+      box-shadow .2s;
+  }
+
+  .termin-klien-actions #tambahTerminButton {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #334155;
+  }
+
+  .termin-klien-actions #tambahTerminButton:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+
+  .termin-klien-actions #generateTerminKlienButton {
+    background: #5b43ef;
+    border-color: #5b43ef;
+    color: #ffffff;
+  }
+
+  .termin-klien-actions #generateTerminKlienButton:hover {
+    background: #4933d5;
+    border-color: #4933d5;
+  }
+
+  .termin-klien-actions button:focus-visible {
+    outline: 3px solid #c4b5fd;
+    outline-offset: 3px;
+  }
+
+  .termin-klien-actions button:disabled {
+    opacity: .6;
+    cursor: wait;
+  }
+
+  @media (max-width: 640px) {
+    .termin-klien-actions {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    .termin-klien-actions #tambahTerminButton,
+    .termin-klien-actions #generateTerminKlienButton {
+      flex: 1 1 180px;
+      white-space: normal;
+    }
+  }
+`;
+
+document.head.appendChild(
+  terminActionStyle
+);
+
+
+  // ====================================================
+  // STYLE
+  // ====================================================
+
+  const style = document.createElement("style");
+
+  style.textContent = `
+    #generateTerminKlienDialog {
+  position: fixed;
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  box-sizing: border-box;
+  width: min(850px, calc(100vw - 32px));
+  max-height: 85vh;
+  max-height: 85dvh;
+
+  margin: 0;
+  padding: 26px;
+  overflow: auto;
+
+  border: 0;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #172033;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .25);
+}
+
+    #gtkPersen {
+      display: grid;
+      grid-template-columns:
+        repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    #gtkPersen .gtk-item {
+      padding: 12px;
+      border: 1px solid #dbe1ea;
+      border-radius: 10px;
+    }
+
+    #gtkPesan {
+      color: #b91c1c;
+      white-space: pre-wrap;
+    }
+
+    #gtkPreview {
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+
+    #generateTerminKlienDialog [hidden] {
+      display: none !important;
+    }
+
+    #gtkSimpan {
+      background: #4f46e5;
+      color: white;
+    }
+
+    #gtkHapus {
+      background: #dc2626;
+      color: white;
+    }
+  `;
+
+  document.head.appendChild(style);
+
+
+  // ====================================================
+  // MODAL
+  // ====================================================
+
+  const modal = document.createElement("dialog");
+
+  modal.id = "generateTerminKlienDialog";
+
+  modal.innerHTML = `
+    <h3>Generate Termin Klien</h3>
+
+    <p id="gtkInfo"></p>
+
+    <p
+      id="gtkPesan"
+      role="alert"
+    ></p>
+
+    <div id="gtkSudahAda" hidden>
+      <p>
+        Termin sudah terbentuk.
+        Hapus seluruh termin terlebih dahulu
+        untuk generate ulang.
+      </p>
+
+      <button
+        type="button"
+        id="gtkHapus"
+      >
+        Hapus Seluruh Termin
+      </button>
+    </div>
+
+    <form id="gtkForm" hidden>
+      <label>
+        <span id="gtkJumlahLabel"></span>
+
+        <input
+          id="gtkJumlah"
+          type="number"
+          min="1"
+          max="120"
+          required
+        >
+      </label>
+
+      <p id="gtkPetunjuk"></p>
+
+      <div id="gtkPersen"></div>
+
+      <button type="submit">
+        Preview Termin
+      </button>
+
+      <div id="gtkPreview"></div>
+
+      <div class="gtk-actions">
+        <button
+          type="button"
+          id="gtkSimpan"
+          disabled
+        >
+          Generate Termin
+        </button>
+      </div>
+    </form>
+
+    <div class="gtk-actions">
+      <button
+        type="button"
+        id="gtkTutup"
+      >
+        Tutup
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // ====================================================
+// RAPIKAN TOMBOL MODAL GENERATE TERMIN
+// ====================================================
+
+const previewButton = modal.querySelector(
+  '#gtkForm button[type="submit"]'
+);
+
+const simpanButton = modal.querySelector(
+  "#gtkSimpan"
+);
+
+const tutupButton = modal.querySelector(
+  "#gtkTutup"
+);
+
+
+// Preview tetap terhubung dengan form
+// meskipun tombol dipindahkan ke footer.
+
+previewButton.setAttribute(
+  "form",
+  "gtkForm"
+);
+
+
+const footerButtons =
+  document.createElement("div");
+
+footerButtons.className =
+  "gtk-footer-buttons";
+
+footerButtons.append(
+  tutupButton,
+  previewButton,
+  simpanButton
+);
+
+modal.appendChild(footerButtons);
+
+
+// Hapus pembungkus tombol lama yang sudah kosong.
+
+modal.querySelectorAll(
+  ".gtk-actions"
+).forEach(wrapper => {
+  if (!wrapper.children.length) {
+    wrapper.remove();
+  }
+});
+
+
+const footerButtonsStyle =
+  document.createElement("style");
+
+footerButtonsStyle.textContent = `
+  #generateTerminKlienDialog .gtk-footer-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    margin-top: 24px;
+    padding-top: 18px;
+
+    border-top: 1px solid #e2e8f0;
+  }
+
+  #generateTerminKlienDialog .gtk-footer-buttons button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+    width: auto;
+    min-height: 42px;
+    margin: 0;
+    padding: 10px 18px;
+
+    border: 1px solid #dbe1ea;
+    border-radius: 10px;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+
+    white-space: nowrap;
+    cursor: pointer;
+
+    transition:
+      background-color .2s,
+      border-color .2s;
+  }
+
+  #generateTerminKlienDialog .gtk-footer-buttons #gtkTutup {
+    margin-right: auto;
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #475569;
+  }
+
+  #generateTerminKlienDialog .gtk-footer-buttons #gtkTutup:hover {
+    background: #f1f5f9;
+  }
+
+  #generateTerminKlienDialog .gtk-footer-buttons button[type="submit"] {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+  }
+
+  #generateTerminKlienDialog .gtk-footer-buttons button[type="submit"]:hover {
+    background: #e0e7ff;
+  }
+
+  #generateTerminKlienDialog .gtk-footer-buttons #gtkSimpan {
+    background: #5b43ef;
+    border-color: #5b43ef;
+    color: #ffffff;
+  }
+
+  #generateTerminKlienDialog .gtk-footer-buttons #gtkSimpan:hover {
+    background: #4933d5;
+    border-color: #4933d5;
+  }
+
+  #generateTerminKlienDialog .gtk-footer-buttons button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+  }
+
+  #generateTerminKlienDialog .gtk-footer-buttons button:focus-visible {
+    outline: 3px solid #c4b5fd;
+    outline-offset: 3px;
+  }
+
+  /* Saat termin sudah ada, hanya tampilkan Tutup. */
+
+  #generateTerminKlienDialog #gtkForm[hidden]
+    ~ .gtk-footer-buttons button[form="gtkForm"],
+  #generateTerminKlienDialog #gtkForm[hidden]
+    ~ .gtk-footer-buttons #gtkSimpan {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    #generateTerminKlienDialog .gtk-footer-buttons button {
+      flex: 1 1 150px;
+      white-space: normal;
+    }
+
+    #generateTerminKlienDialog .gtk-footer-buttons #gtkTutup {
+      margin-right: 0;
+    }
+  }
+`;
+
+document.head.appendChild(
+  footerButtonsStyle
+);
+
+
+  const el = id =>
+    modal.querySelector(`#${id}`);
+
+  const rupiah = value =>
+    `Rp ${Number(value).toLocaleString("id-ID")}`;
+
+  const tampilTanggal = value =>
+    String(value).split("-").reverse().join("/");
+
+
+  let preview = null;
+  let konfigurasi = null;
+  let klienId = null;
+  let model = "";
+  let busy = false;
+
+
+  // ====================================================
+  // RESET PREVIEW
+  // ====================================================
+
+  function resetPreview() {
+    preview = null;
+    konfigurasi = null;
+
+    el("gtkPreview").replaceChildren();
+
+    el("gtkSimpan").disabled = true;
+  }
+
+
+  // ====================================================
+  // INPUT TERMIN MANUAL
+  // ====================================================
+
+  function isiPersen() {
+    resetPreview();
+
+    el("gtkPersen").replaceChildren();
+
+    const jumlah = Number(
+      el("gtkJumlah").value
+    );
+
+    if (
+      model !== "termin" ||
+      !Number.isInteger(jumlah) ||
+      jumlah < 1 ||
+      jumlah > 120
+    ) {
+      return;
+    }
+
+
+    for (let i = 1; i <= jumlah; i++) {
+      const card = document.createElement("div");
+
+      card.className = "gtk-item";
+
+
+      const title = document.createElement("strong");
+
+      title.textContent = `Termin ${i}`;
+
+      card.appendChild(title);
+
+
+      // Persentase.
+
+      const label = document.createElement("label");
+
+      label.textContent = "Persentase (%)";
+
+      const input = document.createElement("input");
+
+      input.type = "text";
+      input.inputMode = "decimal";
+      input.required = true;
+      input.className = "gtk-persentase";
+      input.placeholder = "Contoh: 30 atau 33,33";
+
+      label.appendChild(input);
+
+      card.appendChild(label);
+
+
+      // Tanggal jatuh tempo.
+
+      const dateLabel =
+        document.createElement("label");
+
+      dateLabel.textContent =
+        "Tanggal Jatuh Tempo";
+
+      const dateInput =
+        document.createElement("input");
+
+      dateInput.type = "date";
+      dateInput.required = true;
+      dateInput.className = "gtk-jatuh-tempo";
+
+      dateLabel.appendChild(dateInput);
+
+      card.appendChild(dateLabel);
+
+
+      el("gtkPersen").appendChild(card);
+    }
+  }
+
+
+  // ====================================================
+  // SIAPKAN FORM
+  // ====================================================
+
+  function tampilkanForm() {
+    const klien = detailData?.klien;
+
+    klienId = Number(
+      klien?.proyek_klien_id
+    );
+
+    if (
+      !Number.isSafeInteger(klienId) ||
+      klienId <= 0
+    ) {
+      throw new Error(
+        "Proyek belum memiliki klien."
+      );
+    }
+
+    model = String(
+      klien.model_pembayaran || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const ada =
+      Array.isArray(klien.termin) &&
+      klien.termin.length > 0;
+
+
+    resetPreview();
+
+    el("gtkSudahAda").hidden = !ada;
+    el("gtkForm").hidden = ada;
+
+    el("gtkInfo").textContent =
+      `Model Pembayaran: ${
+        klien.model_pembayaran || "-"
+      }`;
+
+
+    if (ada) {
+      return;
+    }
+
+
+    if (!["termin", "bulanan"].includes(model)) {
+      throw new Error(
+        "Isi Model Pembayaran dengan Termin atau Bulanan terlebih dahulu."
+      );
+    }
+
+    el("gtkJumlahLabel").textContent =
+      model === "bulanan"
+        ? "Jumlah Bulan"
+        : "Jumlah Termin";
+
+    el("gtkJumlah").value =
+      model === "bulanan" ? "12" : "3";
+
+    el("gtkPetunjuk").textContent =
+      model === "bulanan"
+        ? "Jatuh tempo otomatis tanggal 1 setiap bulan, dimulai dari bulan Tanggal Mulai Kontrak."
+        : "Isi persentase dan tanggal jatuh tempo setiap termin. Total persentase harus 100%.";
+
+    isiPersen();
+  }
+
+
+  // ====================================================
+  // REQUEST API
+  // ====================================================
+
+  async function api(path, method, payload) {
+    const response = await fetch(
+      `/api/proyek/klien/${klienId}/termin${path}`,
+      {
+        method,
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Gagal memproses termin."
+      );
+    }
+
+    return data;
+  }
+
+
+  // ====================================================
+  // PROSES REQUEST
+  // ====================================================
+
+  async function jalankan(task) {
+    if (busy) return;
+
+    busy = true;
+    button.disabled = true;
+
+    el("gtkPesan").textContent = "";
+
+    modal.querySelectorAll(
+      "button,input"
+    ).forEach(node => {
+      node.disabled = true;
+    });
+
+    try {
+      await task();
+
+    } catch (error) {
+      if (modal.open) {
+        el("gtkPesan").textContent =
+          error.message;
+      } else {
+        alert(error.message);
+      }
+
+    } finally {
+      busy = false;
+      button.disabled = false;
+
+      modal.querySelectorAll(
+        "button,input"
+      ).forEach(node => {
+        node.disabled = false;
+      });
+
+      el("gtkSimpan").disabled = !preview;
+    }
+  }
+
+
+  // ====================================================
+  // BUKA / TUTUP MODAL
+  // ====================================================
+
+  button.addEventListener(
+    "click",
+    () => jalankan(async () => {
+      await loadDetail();
+
+      tampilkanForm();
+
+      modal.showModal();
+    })
+  );
+
+  el("gtkJumlah").addEventListener(
+    "input",
+    isiPersen
+  );
+
+  el("gtkPersen").addEventListener(
+    "input",
+    resetPreview
+  );
+
+  el("gtkTutup").addEventListener(
+    "click",
+    () => {
+      if (!busy) modal.close();
+    }
+  );
+
+  modal.addEventListener("cancel", event => {
+    if (busy) event.preventDefault();
+  });
+
+
+  // ====================================================
+  // PREVIEW
+  // ====================================================
+
+  el("gtkForm").addEventListener(
+    "submit",
+    event => {
+      event.preventDefault();
+
+      jalankan(async () => {
+        const payload = {
+          jumlah: Number(
+            el("gtkJumlah").value
+          ),
+
+          persentase: [
+            ...modal.querySelectorAll(
+              ".gtk-persentase"
+            )
+          ].map(input => input.value.trim()),
+
+          tanggal_jatuh_tempo: [
+            ...modal.querySelectorAll(
+              ".gtk-jatuh-tempo"
+            )
+          ].map(input => input.value)
+        };
+
+
+        resetPreview();
+
+
+        const data = await api(
+          "/generate/preview",
+          "POST",
+          payload
+        );
+
+        preview = data;
+        konfigurasi = payload;
+
+
+        el("gtkPreview").innerHTML = `
+          <p>
+            Nilai Final:
+            <strong>
+              ${rupiah(data.nilai_final)}
+            </strong>
+          </p>
+
+          <p>
+            Model:
+            ${escapeHtml(data.model_pembayaran)}
+
+            | Mulai:
+            ${escapeHtml(
+              data.tanggal_mulai || "-"
+            )}
+          </p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Nama Termin</th>
+                <th>Persentase</th>
+                <th>Nominal</th>
+                <th>Jatuh Tempo</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${data.data.map(item => `
+                <tr>
+                  <td>
+                    ${escapeHtml(
+                      item.nama_termin
+                    )}
+                  </td>
+
+                  <td>
+                    ${
+                      Number(
+                        item.persentase
+                      ).toLocaleString("id-ID")
+                    }%
+                  </td>
+
+                  <td>
+                    ${rupiah(item.nominal)}
+                  </td>
+
+                  <td>
+                    ${escapeHtml(
+                      tampilTanggal(
+                        item.tanggal_jatuh_tempo
+                      )
+                    )}
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+
+            <tfoot>
+              <tr>
+                <th>Total</th>
+                <th>100%</th>
+
+                <th>
+                  ${rupiah(data.nilai_final)}
+                </th>
+
+                <th></th>
+              </tr>
+            </tfoot>
+          </table>
+        `;
+      });
+    }
+  );
+
+
+  // ====================================================
+  // SIMPAN
+  // ====================================================
+
+  el("gtkSimpan").addEventListener(
+    "click",
+    () => jalankan(async () => {
+      if (!preview || !konfigurasi) {
+        throw new Error(
+          "Buat preview terlebih dahulu."
+        );
+      }
+
+      const result = await api(
+        "/generate",
+        "POST",
+        {
+          ...konfigurasi,
+          preview_key: preview.preview_key
+        }
+      );
+
+      resetPreview();
+
+      await loadDetail();
+
+      modal.close();
+
+      alert(result.message);
+    })
+  );
+
+
+  // ====================================================
+  // HAPUS SEMUA
+  // ====================================================
+
+  el("gtkHapus").addEventListener(
+    "click",
+    () => {
+      const setuju = confirm(
+        "Hapus SELURUH termin klien ini? " +
+        "Data termin, termasuk catatan pembayarannya, akan dihapus."
+      );
+
+      if (!setuju) return;
+
+      jalankan(async () => {
+        await api(
+          "",
+          "DELETE",
+          {
+            konfirmasi_hapus: true
+          }
+        );
+
+        await loadDetail();
+
+        tampilkanForm();
+      });
+    }
+  );
+})();
+
+// ======================================================
+// GENERATE TERMIN PARTNER
+// ======================================================
+
+(() => {
+  const container = document.getElementById(
+    "partnerContainer"
+  );
+
+  if (
+    !container ||
+    document.getElementById(
+      "generateTerminPartnerDialog"
+    )
+  ) {
+    return;
+  }
+
+
+  // ====================================================
+  // STYLE
+  // ====================================================
+
+  const style = document.createElement("style");
+
+  style.textContent = `
+    #partnerContainer .partner-termin-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    #partnerContainer .partner-termin-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    #partnerContainer .partner-termin-actions button {
+      width: auto;
+      min-height: 42px;
+      margin: 0;
+      padding: 10px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #partnerContainer .generate-termin-partner-button {
+      background: #5b43ef;
+      color: #ffffff;
+    }
+
+    #partnerContainer .generate-termin-partner-button:hover {
+      background: #4933d5;
+    }
+
+    #generateTerminPartnerDialog {
+      position: fixed;
+      inset: auto;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+
+      box-sizing: border-box;
+      width: min(850px, calc(100vw - 32px));
+      max-height: 85vh;
+      max-height: 85dvh;
+
+      margin: 0;
+      padding: 26px;
+      overflow: auto;
+
+      border: 0;
+      border-radius: 18px;
+      background: #ffffff;
+      color: #172033;
+      box-shadow: 0 24px 70px #0f172a40;
+    }
+
+    #generateTerminPartnerDialog::backdrop {
+      background: #17203399;
+    }
+
+    #generateTerminPartnerDialog label {
+      display: block;
+      margin: 14px 0;
+    }
+
+    #generateTerminPartnerDialog input {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #dbe1ea;
+      border-radius: 8px;
+      font: inherit;
+    }
+
+    #gtpInputs {
+      display: grid;
+      grid-template-columns:
+        repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    #gtpInputs .gtp-item {
+      border: 1px solid #dbe1ea;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    #gtpPreview {
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+
+    #generateTerminPartnerDialog table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #generateTerminPartnerDialog th,
+    #generateTerminPartnerDialog td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    #generateTerminPartnerDialog .gtp-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+
+      border-top: 1px solid #e2e8f0;
+      margin-top: 24px;
+      padding-top: 18px;
+    }
+
+    #generateTerminPartnerDialog button {
+      min-height: 42px;
+      padding: 10px 18px;
+      border: 1px solid #dbe1ea;
+      border-radius: 10px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #generateTerminPartnerDialog #gtpClose {
+      margin-right: auto;
+      background: #ffffff;
+      color: #475569;
+    }
+
+    #generateTerminPartnerDialog #gtpPreviewButton {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+      color: #4338ca;
+    }
+
+    #generateTerminPartnerDialog #gtpSave {
+      background: #5b43ef;
+      border-color: #5b43ef;
+      color: #ffffff;
+    }
+
+    #generateTerminPartnerDialog #gtpDelete {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #ffffff;
+    }
+
+    #generateTerminPartnerDialog button:disabled {
+      opacity: .5;
+      cursor: wait;
+    }
+
+    #generateTerminPartnerDialog button:focus-visible {
+      outline: 3px solid #c4b5fd;
+      outline-offset: 3px;
+    }
+
+    #gtpError {
+      color: #b91c1c;
+      white-space: pre-wrap;
+    }
+
+    #generateTerminPartnerDialog [hidden] {
+      display: none !important;
+    }
+
+    #generateTerminPartnerDialog #gtpForm[hidden]
+      ~ .gtp-actions #gtpPreviewButton,
+    #generateTerminPartnerDialog #gtpForm[hidden]
+      ~ .gtp-actions #gtpSave {
+      display: none;
+    }
+
+    @media (max-width: 640px) {
+      #partnerContainer .partner-termin-actions {
+        width: 100%;
+      }
+
+      #partnerContainer .partner-termin-actions button {
+        flex: 1 1 160px;
+      }
+
+      #generateTerminPartnerDialog .gtp-actions button {
+        flex: 1 1 150px;
+      }
+
+      #generateTerminPartnerDialog #gtpClose {
+        margin-right: 0;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
+
+
+  // ====================================================
+  // MODAL
+  // ====================================================
+
+  const modal = document.createElement("dialog");
+
+  modal.id = "generateTerminPartnerDialog";
+
+  modal.innerHTML = `
+    <h3>Generate Termin Partner</h3>
+
+    <p id="gtpInfo"></p>
+
+    <p
+      id="gtpError"
+      role="alert"
+    ></p>
+
+    <div id="gtpExisting" hidden>
+      <p>
+        Termin partner sudah terbentuk.
+        Hapus seluruh termin partner ini
+        untuk generate ulang.
+      </p>
+
+      <button
+        type="button"
+        id="gtpDelete"
+      >
+        Hapus Seluruh Termin Partner
+      </button>
+    </div>
+
+    <form id="gtpForm" hidden>
+      <label>
+        <span id="gtpCountLabel"></span>
+
+        <input
+          id="gtpCount"
+          type="number"
+          min="1"
+          max="120"
+          required
+        >
+      </label>
+
+      <p id="gtpHint"></p>
+
+      <div id="gtpInputs"></div>
+    </form>
+
+    <div id="gtpPreview"></div>
+
+    <div class="gtp-actions">
+      <button
+        type="button"
+        id="gtpClose"
+      >
+        Tutup
+      </button>
+
+      <button
+        type="submit"
+        form="gtpForm"
+        id="gtpPreviewButton"
+      >
+        Preview Termin
+      </button>
+
+      <button
+        type="button"
+        id="gtpSave"
+        disabled
+      >
+        Generate Termin
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+
+  const el = id =>
+    modal.querySelector(`#${id}`);
+
+  const rupiah = value =>
+    `Rp ${Number(value).toLocaleString("id-ID")}`;
+
+
+  let partnerId = null;
+  let model = "";
+  let preview = null;
+  let payloadPreview = null;
+  let busy = false;
+
+
+  // ====================================================
+  // RESET PREVIEW
+  // ====================================================
+
+  function resetPreview() {
+    preview = null;
+    payloadPreview = null;
+
+    el("gtpPreview").replaceChildren();
+
+    el("gtpSave").disabled = true;
+  }
+
+
+  // ====================================================
+  // INPUT TERMIN
+  // ====================================================
+
+  function inputs() {
+    resetPreview();
+
+    el("gtpInputs").replaceChildren();
+
+    const jumlah = Number(
+      el("gtpCount").value
+    );
+
+    if (
+      model !== "termin" ||
+      !Number.isInteger(jumlah) ||
+      jumlah < 1 ||
+      jumlah > 120
+    ) {
+      return;
+    }
+
+    for (let i = 1; i <= jumlah; i++) {
+      const card = document.createElement("div");
+
+      card.className = "gtp-item";
+
+      card.innerHTML = `
+        <strong>Termin ${i}</strong>
+
+        <label>
+          Persentase (%)
+
+          <input
+            class="gtp-percent"
+            type="text"
+            inputmode="decimal"
+            placeholder="Contoh: 30 atau 33,33"
+            required
+          >
+        </label>
+
+        <label>
+          Tanggal Jatuh Tempo
+
+          <input
+            class="gtp-date"
+            type="date"
+            required
+          >
+        </label>
+      `;
+
+      el("gtpInputs").appendChild(card);
+    }
+  }
+
+
+  // ====================================================
+  // DATA PARTNER YANG DIPILIH
+  // ====================================================
+
+  function prepare() {
+    const partner = (
+      detailData?.partners || []
+    ).find(
+      item =>
+        Number(item.proyek_partner_id) ===
+        partnerId
+    );
+
+    if (!partner) {
+      throw new Error(
+        "Data proyek partner tidak ditemukan."
+      );
+    }
+
+
+    model = String(
+      partner.model_pembayaran ||
+      partner.metode_pembayaran ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+
+    const exists =
+      Array.isArray(partner.termin) &&
+      partner.termin.length > 0;
+
+
+    resetPreview();
+
+
+    el("gtpInfo").textContent =
+      `${
+        partner.nama_partner ||
+        partner.inisial ||
+        "Partner"
+      } | Model Pembayaran: ${model || "-"}`;
+
+    el("gtpExisting").hidden = !exists;
+
+    el("gtpForm").hidden = exists;
+
+
+    if (exists) {
+      return;
+    }
+
+
+    if (!["termin", "bulanan"].includes(model)) {
+      throw new Error(
+        "Isi Model Pembayaran partner dengan Termin atau Bulanan terlebih dahulu."
+      );
+    }
+
+
+    el("gtpCountLabel").textContent =
+      model === "bulanan"
+        ? "Jumlah Bulan"
+        : "Jumlah Termin";
+
+    el("gtpCount").value =
+      model === "bulanan" ? "12" : "3";
+
+    el("gtpHint").textContent =
+      model === "bulanan"
+        ? "Jatuh tempo mengikuti tanggal mulai kontrak partner. Jika tanggal tidak tersedia, digunakan hari terakhir bulan tersebut."
+        : "Isi persentase dan tanggal jatuh tempo setiap termin. Total persentase harus 100%.";
+
+    inputs();
+  }
+
+
+  // ====================================================
+  // REQUEST API
+  // ====================================================
+
+  async function api(path, method, body) {
+    const response = await fetch(
+      `/api/proyek/partner/${partnerId}/termin${path}`,
+      {
+        method,
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify(body)
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+        "Gagal memproses termin partner."
+      );
+    }
+
+    return data;
+  }
+
+
+  // ====================================================
+  // PROSES REQUEST
+  // ====================================================
+
+  async function run(task) {
+    if (busy) return;
+
+    busy = true;
+
+    el("gtpError").textContent = "";
+
+
+    modal.querySelectorAll(
+      "button,input"
+    ).forEach(node => {
+      node.disabled = true;
+    });
+
+    container.querySelectorAll(
+      ".generate-termin-partner-button"
+    ).forEach(node => {
+      node.disabled = true;
+    });
+
+
+    try {
+      await task();
+
+    } catch (error) {
+      if (modal.open) {
+        el("gtpError").textContent =
+          error.message;
+      } else {
+        alert(error.message);
+      }
+
+    } finally {
+      busy = false;
+
+      modal.querySelectorAll(
+        "button,input"
+      ).forEach(node => {
+        node.disabled = false;
+      });
+
+      container.querySelectorAll(
+        ".generate-termin-partner-button"
+      ).forEach(node => {
+        node.disabled = false;
+      });
+
+      el("gtpSave").disabled = !preview;
+    }
+  }
+
+
+  // ====================================================
+  // PASANG TOMBOL PADA SETIAP KARTU PARTNER
+  // ====================================================
+
+  function installButtons() {
+    container.querySelectorAll(
+      'button[onclick*="tambahTerminPartner"]'
+    ).forEach(addButton => {
+      if (
+        addButton.closest(
+          ".partner-termin-actions"
+        )
+      ) {
+        return;
+      }
+
+
+      const match = String(
+        addButton.getAttribute("onclick")
+      ).match(
+        /tambahTerminPartner\s*\(\s*(\d+)\s*\)/
+      );
+
+      if (!match) return;
+
+
+      const header = addButton.parentElement;
+
+      header.classList.add(
+        "partner-termin-toolbar"
+      );
+
+
+      const actions =
+        document.createElement("div");
+
+      actions.className =
+        "partner-termin-actions";
+
+
+      const generateButton =
+        document.createElement("button");
+
+      generateButton.type = "button";
+
+      generateButton.className =
+        "generate-termin-partner-button";
+
+      generateButton.textContent =
+        "Generate Termin Partner";
+
+      generateButton.dataset.proyekPartnerId =
+        match[1];
+
+      generateButton.disabled = busy;
+
+
+      addButton.before(actions);
+
+      actions.append(
+        addButton,
+        generateButton
+      );
+    });
+  }
+
+
+  installButtons();
+
+  new MutationObserver(
+    installButtons
+  ).observe(container, {
+    childList: true,
+    subtree: true
+  });
+
+
+  // ====================================================
+  // BUKA MODAL
+  // ====================================================
+
+  container.addEventListener(
+    "click",
+    event => {
+      const clickedButton = event.target.closest(
+        ".generate-termin-partner-button"
+      );
+
+      if (!clickedButton || busy) {
+        return;
+      }
+
+      run(async () => {
+        partnerId = Number(
+          clickedButton.dataset.proyekPartnerId
+        );
+
+        await loadDetail();
+
+        prepare();
+
+        modal.showModal();
+      });
+    }
+  );
+
+
+  el("gtpCount").addEventListener(
+    "input",
+    inputs
+  );
+
+  el("gtpInputs").addEventListener(
+    "input",
+    resetPreview
+  );
+
+  el("gtpClose").addEventListener(
+    "click",
+    () => {
+      if (!busy) modal.close();
+    }
+  );
+
+  modal.addEventListener(
+    "cancel",
+    event => {
+      if (busy) event.preventDefault();
+    }
+  );
+
+
+  // ====================================================
+  // PREVIEW
+  // ====================================================
+
+  el("gtpForm").addEventListener(
+    "submit",
+    event => {
+      event.preventDefault();
+
+      run(async () => {
+        const body = {
+          jumlah: Number(
+            el("gtpCount").value
+          ),
+
+          persentase: [
+            ...modal.querySelectorAll(
+              ".gtp-percent"
+            )
+          ].map(input => input.value.trim()),
+
+          tanggal_jatuh_tempo: [
+            ...modal.querySelectorAll(
+              ".gtp-date"
+            )
+          ].map(input => input.value)
+        };
+
+
+        resetPreview();
+
+
+        const result = await api(
+          "/generate/preview",
+          "POST",
+          body
+        );
+
+        preview = result;
+        payloadPreview = body;
+
+
+        el("gtpPreview").innerHTML = `
+          <p>
+            Nilai Final Partner:
+            <strong>
+              ${rupiah(result.nilai_final)}
+            </strong>
+          </p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Nama Termin</th>
+                <th>Persentase</th>
+                <th>Nominal</th>
+                <th>Jatuh Tempo</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${result.data.map(item => `
+                <tr>
+                  <td>
+                    ${escapeHtml(
+                      item.nama_termin
+                    )}
+                  </td>
+
+                  <td>
+                    ${
+                      Number(
+                        item.persentase
+                      ).toLocaleString("id-ID")
+                    }%
+                  </td>
+
+                  <td>
+                    ${rupiah(item.nominal)}
+                  </td>
+
+                  <td>
+                    ${escapeHtml(
+                      item.tanggal_jatuh_tempo
+                        .split("-")
+                        .reverse()
+                        .join("/")
+                    )}
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+
+            <tfoot>
+              <tr>
+                <th>Total</th>
+                <th>100%</th>
+
+                <th>
+                  ${rupiah(result.nilai_final)}
+                </th>
+
+                <th></th>
+              </tr>
+            </tfoot>
+          </table>
+        `;
+      });
+    }
+  );
+
+
+  // ====================================================
+  // SIMPAN
+  // ====================================================
+
+  el("gtpSave").addEventListener(
+    "click",
+    () => run(async () => {
+      if (!preview || !payloadPreview) {
+        throw new Error(
+          "Buat preview terlebih dahulu."
+        );
+      }
+
+
+      const result = await api(
+        "/generate",
+        "POST",
+        {
+          ...payloadPreview,
+
+          preview_key:
+            preview.preview_key
+        }
+      );
+
+
+      resetPreview();
+
+      await loadDetail();
+
+      modal.close();
+
+      alert(result.message);
+    })
+  );
+
+
+  // ====================================================
+  // HAPUS SELURUH TERMIN PARTNER TERPILIH
+  // ====================================================
+
+  el("gtpDelete").addEventListener(
+    "click",
+    () => {
+      const setuju = confirm(
+        "Hapus SELURUH termin partner ini? " +
+        "Data termin, termasuk catatan pembayarannya, akan dihapus."
+      );
+
+      if (!setuju) return;
+
+
+      run(async () => {
+        await api(
+          "",
+          "DELETE",
+          {
+            konfirmasi_hapus: true
+          }
+        );
+
+        await loadDetail();
+
+        prepare();
+      });
+    }
   );
 })();
 
