@@ -25,6 +25,7 @@ const proyekFilterHelpers = (function () {
     "search",
     "kategori",
     "jenis_proyek",
+    "klasifikasi_proyek",
     "klien",
     "partner",
     "status_final",
@@ -53,6 +54,9 @@ const proyekFilterHelpers = (function () {
       kategori: text(filters.kategori),
 
       jenis_proyek: text(filters.jenis_proyek),
+
+            klasifikasi_proyek:
+        normalisasiFilter(filters.klasifikasi_proyek),
 
       klien: text(filters.klien),
 
@@ -625,6 +629,15 @@ const proyekFilterHelpers = (function () {
         "Proyek Terlambat"
       );
     }
+    if (f.klasifikasi_proyek) {
+      labels.push(
+        `Klasifikasi: ${
+          f.klasifikasi_proyek === "baru"
+            ? "Baru"
+            : "Perpanjangan"
+        }`
+      );
+    }
 
     return labels;
   }
@@ -664,6 +677,14 @@ const proyekFilterHelpers = (function () {
     const data = rows.filter(item => {
       const categories =
         getCategories(item);
+    
+          if (
+        f.klasifikasi_proyek &&
+        normalisasiFilter(item?.klasifikasi_proyek) !==
+          f.klasifikasi_proyek
+      ) {
+        return false;
+      }
 
       const partners = listValue(
         item,
@@ -980,6 +1001,9 @@ const statusFilter =
 
 const picFilter =
   document.getElementById("picFilter");
+
+const klasifikasiFilter =
+  document.getElementById("klasifikasiFilter");
 
 const paginationContainer =
   document.getElementById("pagination");
@@ -1373,6 +1397,10 @@ function terapkanFilterUrlKeForm() {
 
   const mapping = [
     [
+      klasifikasiFilter,
+      dashboardFilters.klasifikasi_proyek
+    ],
+    [
       kategoriFilter,
       dashboardFilters.kategori
     ],
@@ -1435,6 +1463,10 @@ function getActiveProyekFilters() {
   return proyekFilterHelpers.normalize({
     ...dashboardFilters,
 
+    klasifikasi_proyek:
+      klasifikasiFilter?.value ??
+      dashboardFilters.klasifikasi_proyek,
+
     search:
       searchInput?.value ??
       dashboardFilters.search,
@@ -1474,6 +1506,7 @@ function resetProyekFilters() {
     proyekFilterHelpers.normalize({});
 
   [
+    klasifikasiFilter,
     searchInput,
     kategoriFilter,
     jenisFilter,
@@ -1575,6 +1608,29 @@ function showActiveDashboardFilter(result) {
     );
 }
 
+function renderKlasifikasiProyek(item) {
+  const klasifikasi =
+    normalisasiFilter(item?.klasifikasi_proyek);
+
+  if (
+    !["baru", "perpanjangan"].includes(klasifikasi)
+  ) {
+    return "";
+  }
+
+  const label =
+    klasifikasi === "baru"
+      ? "Baru"
+      : "Perpanjangan";
+
+  return `
+    <span
+      class="proyek-klasifikasi proyek-klasifikasi-${klasifikasi}"
+    >
+      ${label}
+    </span>
+  `;
+}
 // ======================================================
 // RENDER TABEL
 // ======================================================
@@ -1680,7 +1736,8 @@ function renderTable(data) {
           <tr>
             <td class="proyek-info-cell">
               <div class="proyek-main-name">
-                ${escapeHTML(
+              ${renderKlasifikasiProyek(item)}  
+              ${escapeHTML(
                   item?.nama_proyek || "-"
                 )}
               </div>
@@ -1928,6 +1985,7 @@ async function loadProyek() {
 // ======================================================
 
 [
+  klasifikasiFilter,
   searchInput,
   kategoriFilter,
   jenisFilter,

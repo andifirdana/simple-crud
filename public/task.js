@@ -8,7 +8,7 @@ let daftarProyek = [];
 let daftarTask = [];
 let currentPage = 1;
 
-const itemsPerPage = 15;
+let itemsPerPage = 25;
 
 // ======================================================
 // ELEMENT FORM
@@ -283,23 +283,24 @@ function sanitasiCatatan(html) {
   ]);
 
   function bersihkan(node) {
-    [...node.childNodes].forEach(child => {
-      if (child.nodeType !== Node.ELEMENT_NODE) {
-        return;
-      }
+  [...node.childNodes].forEach(child => {
+    if (child.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
 
-      if (!allowedTags.has(child.tagName)) {
-        child.replaceWith(...child.childNodes);
-        return;
-      }
+    // Bersihkan isi elemen sebelum melepas pembungkusnya.
+    bersihkan(child);
 
-      [...child.attributes].forEach(attribute => {
-        child.removeAttribute(attribute.name);
-      });
+    if (!allowedTags.has(child.tagName)) {
+      child.replaceWith(...child.childNodes);
+      return;
+    }
 
-      bersihkan(child);
+    [...child.attributes].forEach(attribute => {
+      child.removeAttribute(attribute.name);
     });
-  }
+  });
+}
 
   bersihkan(template.content);
 
@@ -337,26 +338,26 @@ function potongCatatan(html, maksimal = 200) {
 // ======================================================
 // RENDER CATATAN
 // ======================================================
-
 function renderCatatanTask(value) {
-  const catatan = String(value ?? "")
-    .replace(/\r\n?/g, "\n")
-    .trim();
+  const catatanHTML = sanitasiCatatan(
+    String(value ?? "").trim()
+  );
 
-  if (!catatan) {
+  const catatanTeks = teksCatatan(catatanHTML);
+
+  if (!catatanTeks) {
     return `
       <span class="task-list-note-empty">-</span>
     `;
   }
 
-  const karakter = Array.from(catatan);
+  const karakter = Array.from(catatanTeks);
   const batasKarakter = 200;
-  const catatanAman = escapeHTML(catatan);
 
   if (karakter.length <= batasKarakter) {
     return `
       <div class="task-list-note-text">
-        ${catatanAman}
+        ${catatanHTML}
       </div>
     `;
   }
@@ -380,7 +381,7 @@ function renderCatatanTask(value) {
         class="task-list-note-text"
         data-task-list-note-full
         hidden
-      >${catatanAman}</div>
+      >${catatanHTML}</div>
 
       <button
         type="button"
@@ -909,63 +910,186 @@ taskTableBody.addEventListener("click", event => {
 // PAGINATION
 // ======================================================
 
-function renderPagination(totalPages) {
-  if (totalPages <= 1) {
-    pagination.innerHTML = "";
+function renderPagination() {
+  if (!pagination) {
     return;
   }
 
-  let html = `
-    <button
-      type="button"
-      class="page-button"
-      data-page="${currentPage - 1}"
-      ${currentPage === 1 ? "disabled" : ""}
-    >
-      ‹
-    </button>
-  `;
+  const totalData = dataTaskTerfilter().length;
 
-  for (let page = 1; page <= totalPages; page++) {
-    html += `
+  const totalPages = Math.max(
+    Math.ceil(totalData / itemsPerPage),
+    1
+  );
+
+  const awal = totalData === 0
+    ? 0
+    : (currentPage - 1) * itemsPerPage + 1;
+
+  const akhir = Math.min(
+    currentPage * itemsPerPage,
+    totalData
+  );
+
+  // Halaman pertama, terakhir, dan sekitar halaman aktif.
+  const halamanTampil = new Set([1, totalPages]);
+
+  for (
+    let page = currentPage - 1;
+    page <= currentPage + 1;
+    page++
+  ) {
+    if (page >= 1 && page <= totalPages) {
+      halamanTampil.add(page);
+    }
+  }
+
+  const daftarHalaman = [...halamanTampil]
+    .sort((a, b) => a - b);
+
+  function tombol(page, label, disabled = false) {
+    const aktif = page === currentPage &&
+      typeof label === "number";
+
+    const keterangan = typeof label === "number"
+      ? `Halaman ${page}`
+      : label === "‹"
+        ? "Halaman sebelumnya"
+        : "Halaman berikutnya";
+
+    return `
       <button
         type="button"
-        class="page-button ${
-          page === currentPage ? "active" : ""
-        }"
+        class="task-page-button ${aktif ? "active" : ""}"
         data-page="${page}"
-      >
-        ${page}
-      </button>
+        aria-label="${keterangan}"
+        ${aktif ? 'aria-current="page"' : ""}
+        ${disabled ? "disabled" : ""}
+      >${label}</button>
     `;
   }
 
-  html += `
-    <button
-      type="button"
-      class="page-button"
-      data-page="${currentPage + 1}"
-      ${currentPage === totalPages ? "disabled" : ""}
-    >
-      ›
-    </button>
-  `;
+  let nomorHalaman = "";
+  let sebelumnya = 0;
 
-  pagination.innerHTML = html;
+  daftarHalaman.forEach(page => {
+    if (page - sebelumnya > 1) {
+      nomorHalaman += `
+        <span class="task-page-dots" aria-hidden="true">
+          …
+        </span>
+      `;
+    }
+
+    nomorHalaman += tombol(page, page);
+    sebelumnya = page;
+  });
+
+  pagination.innerHTML = `
+    <div class="task-pagination-info" role="status">
+      Menampilkan ${awal}–${akhir} dari ${totalData} task
+    </div>
+
+    <div class="task-pagination-controls">
+
+      <label
+        for="taskPageSize"
+        class="task-pagination-label"
+      >Task per halaman</label>
+
+      <select
+        id="taskPageSize"
+        class="task-pagination-select"
+      >
+        ${[15, 25, 50, 100].map(jumlah => `
+          <option
+            value="${jumlah}"
+            ${jumlah === itemsPerPage ? "selected" : ""}
+          >${jumlah}</option>
+        `).join("")}
+      </select>
+
+      <nav
+        class="task-pagination-pages"
+        aria-label="Halaman daftar task"
+      >
+        ${tombol(
+          currentPage - 1,
+          "‹",
+          currentPage === 1
+        )}
+
+        ${nomorHalaman}
+
+        ${tombol(
+          currentPage + 1,
+          "›",
+          currentPage === totalPages
+        )}
+      </nav>
+
+    </div>
+  `;
 }
 
-pagination.addEventListener("click", event => {
-  const button = event.target.closest("[data-page]");
+// Pindah halaman.
+pagination?.addEventListener("click", event => {
+  const button = event.target.closest("button[data-page]");
 
-  if (!button || button.disabled) {
+  if (
+    !button ||
+    !pagination.contains(button) ||
+    button.disabled
+  ) {
     return;
   }
 
-  currentPage = Number(button.dataset.page);
+  const halaman = Number(button.dataset.page);
+
+  const totalPages = Math.max(
+    Math.ceil(dataTaskTerfilter().length / itemsPerPage),
+    1
+  );
+
+  if (
+    !Number.isInteger(halaman) ||
+    halaman < 1 ||
+    halaman > totalPages ||
+    halaman === currentPage
+  ) {
+    return;
+  }
+
+  currentPage = halaman;
 
   renderTask();
+
+  pagination
+    .querySelector('[aria-current="page"]')
+    ?.focus({ preventScroll: true });
 });
 
+// Ubah jumlah task per halaman.
+pagination?.addEventListener("change", event => {
+  if (event.target.id !== "taskPageSize") {
+    return;
+  }
+
+  const jumlah = Number(event.target.value);
+
+  if (![15, 25, 50, 100].includes(jumlah)) {
+    return;
+  }
+
+  itemsPerPage = jumlah;
+  currentPage = 1;
+
+  renderTask();
+
+  pagination
+    .querySelector("#taskPageSize")
+    ?.focus({ preventScroll: true });
+});
 // ======================================================
 // SEARCH TASK
 // ======================================================
@@ -1426,6 +1550,7 @@ const notificationRefresh = document.getElementById(
 );
 
 let daftarNotifikasiTask = [];
+let jumlahNotifikasiBelumDibaca = 0;
 
 // ======================================================
 // FORMAT TANGGAL NOTIFIKASI
@@ -1464,22 +1589,29 @@ function formatTanggalNotifikasi(value) {
 // RENDER NOTIFIKASI
 // ======================================================
 
+
 function renderNotifikasiTask() {
-  const jumlahBelumDibaca = daftarNotifikasiTask.filter(
-    item => !item.dibaca && !item.is_read
-  ).length;
+  const jumlahBelumDibaca =
+    jumlahNotifikasiBelumDibaca;
 
-  notificationBadge.textContent =
-    jumlahBelumDibaca > 99
-      ? "99+"
-      : String(jumlahBelumDibaca);
+  if (notificationBadge) {
+    notificationBadge.textContent =
+      jumlahBelumDibaca > 99
+        ? "99+"
+        : String(jumlahBelumDibaca);
 
-  notificationBadge.hidden = jumlahBelumDibaca === 0;
+    notificationBadge.hidden =
+      jumlahBelumDibaca === 0;
+  }
 
-  notificationSummary.textContent =
-    jumlahBelumDibaca > 0
-      ? `${jumlahBelumDibaca} notifikasi belum dibaca`
-      : "Tidak ada notifikasi baru";
+  if (notificationSummary) {
+    notificationSummary.textContent =
+      jumlahBelumDibaca > 0
+        ? `${jumlahBelumDibaca} notifikasi belum dibaca`
+        : "Tidak ada notifikasi baru";
+  }
+
+  if (!notificationList) return;
 
   if (daftarNotifikasiTask.length === 0) {
     notificationList.innerHTML = `
@@ -1487,26 +1619,24 @@ function renderNotifikasiTask() {
         Belum ada task yang perlu ditindaklanjuti.
       </div>
     `;
-
     return;
   }
 
-  notificationList.innerHTML = daftarNotifikasiTask
-    .map(item => {
+  notificationList.innerHTML =
+    daftarNotifikasiTask.map(item => {
       const taskId = Number(
-        item.task_id ||
-        item.id
+        item.task_id || item.id
       );
 
-      const notificationId = Number(
-        item.notification_id ||
-        item.notifikasi_id ||
-        item.id
+      const belumDibaca = !(
+        item.sudah_dibaca === true ||
+        item.sudah_dibaca === 1 ||
+        item.sudah_dibaca === "1" ||
+        item.dibaca === true ||
+        item.dibaca === 1 ||
+        item.is_read === true ||
+        item.is_read === 1
       );
-
-      const belumDibaca =
-        !item.dibaca &&
-        !item.is_read;
 
       return `
         <button
@@ -1514,14 +1644,10 @@ function renderNotifikasiTask() {
           class="notification-item ${
             belumDibaca ? "unread" : ""
           }"
-          data-notification-id="${notificationId}"
           data-notification-task-id="${taskId}"
         >
-
           <span class="notification-dot"></span>
-
           <span>
-
             <span class="notification-project">
               ${escapeHTML(item.nama_proyek || "Proyek")}
             </span>
@@ -1547,23 +1673,20 @@ function renderNotifikasiTask() {
                 )
               )}
             </span>
-
           </span>
-
         </button>
       `;
-    })
-    .join("");
+    }).join("");
 }
+
 
 // ======================================================
 // LOAD NOTIFIKASI
 // ======================================================
 
+
 async function loadNotifikasiTask() {
-  if (!notificationList) {
-    return;
-  }
+  if (!notificationList) return;
 
   notificationList.innerHTML = `
     <div class="notification-empty">
@@ -1573,25 +1696,31 @@ async function loadNotifikasiTask() {
 
   try {
     const result = await fetchJSON(
-      "/api/notifikasi/task"
+      "/api/notifikasi/task",
+      {
+        cache: "no-store"
+      }
     );
 
-    daftarNotifikasiTask = Array.isArray(result)
-      ? result
-      : (
-          Array.isArray(result.data)
-            ? result.data
-            : (
-                Array.isArray(result.notifikasi)
-                  ? result.notifikasi
-                  : []
-              )
-        );
+    daftarNotifikasiTask =
+      Array.isArray(result.data)
+        ? result.data
+        : Array.isArray(result.notifikasi)
+          ? result.notifikasi
+          : Array.isArray(result)
+            ? result
+            : [];
+
+    jumlahNotifikasiBelumDibaca =
+      Number(result.jumlah_belum_dibaca) || 0;
 
     renderNotifikasiTask();
 
   } catch (error) {
-    console.error("ERROR LOAD NOTIFIKASI:", error);
+    console.error(
+      "ERROR LOAD NOTIFIKASI:",
+      error
+    );
 
     notificationList.innerHTML = `
       <div class="notification-empty">
@@ -1599,10 +1728,13 @@ async function loadNotifikasiTask() {
       </div>
     `;
 
-    notificationSummary.textContent =
-      "Notifikasi gagal dimuat";
+    if (notificationSummary) {
+      notificationSummary.textContent =
+        "Notifikasi gagal dimuat";
+    }
   }
 }
+
 
 // ======================================================
 // BUKA / TUTUP NOTIFIKASI
@@ -1644,62 +1776,79 @@ notificationRefresh?.addEventListener("click", event => {
 // KLIK NOTIFIKASI
 // ======================================================
 
-notificationList?.addEventListener("click", async event => {
-  const item = event.target.closest(
-    "[data-notification-task-id]"
-  );
 
-  if (!item) {
-    return;
-  }
+notificationList?.addEventListener(
+  "click",
+  async event => {
+    const item = event.target.closest(
+      "[data-notification-task-id]"
+    );
 
-  const taskId = Number(
-    item.dataset.notificationTaskId
-  );
+    if (!item || item.disabled) return;
 
-  const notificationId = Number(
-    item.dataset.notificationId
-  );
+    const taskId = Number(
+      item.dataset.notificationTaskId
+    );
 
-  if (
-    Number.isInteger(notificationId) &&
-    notificationId > 0
-  ) {
+    if (!Number.isSafeInteger(taskId) || taskId <= 0) {
+      return;
+    }
+
+    item.disabled = true;
+
     try {
-      await fetchJSON(
-        `/api/notifikasi/task/${notificationId}/baca`,
+      const result = await fetchJSON(
+        `/api/notifikasi/task/${taskId}/baca`,
         {
           method: "PUT"
         }
       );
 
+      if (result.success === false) {
+        throw new Error(
+          result.error ||
+          "Gagal menandai notifikasi."
+        );
+      }
+
+      await loadNotifikasiTask();
+
+      notificationDropdown.hidden = true;
+
+      notificationButton?.classList.remove(
+        "active"
+      );
+
+      notificationButton?.setAttribute(
+        "aria-expanded",
+        "false"
+      );
+
+      const taskDitemukan = daftarTask.some(
+        task => Number(task.id) === taskId
+      );
+
+      if (taskDitemukan) {
+        window.editTask(taskId);
+      } else {
+        window.location.href =
+          `/task.html?task_id=${encodeURIComponent(taskId)}`;
+      }
+
     } catch (error) {
-      console.warn(
-        "Gagal menandai notifikasi:",
+      console.error(
+        "ERROR BACA NOTIFIKASI:",
         error
       );
+
+      alert(
+        "Gagal menandai notifikasi sebagai dibaca."
+      );
+
+      item.disabled = false;
     }
   }
-
-  notificationDropdown.hidden = true;
-  notificationButton.classList.remove("active");
-
-  if (
-    Number.isInteger(taskId) &&
-    taskId > 0
-  ) {
-    const taskDitemukan = daftarTask.some(
-      task => Number(task.id) === taskId
-    );
-
-    if (taskDitemukan) {
-      window.editTask(taskId);
-    } else {
-      window.location.href =
-        `/task.html?task_id=${encodeURIComponent(taskId)}`;
-    }
-  }
-});
+);
 
 // ======================================================
 // TUTUP NOTIFIKASI SAAT KLIK DI LUAR

@@ -926,6 +926,36 @@ body.activity-modal-open {
   box-sizing: border-box;
 }
 
+.project-page .filter-card {
+  grid-template-columns:
+    minmax(180px, 1.5fr)
+    repeat(7, minmax(140px, 1fr)) !important;
+}
+
+.proyek-klasifikasi {
+  display: table;
+  margin-bottom: 6px;
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.proyek-klasifikasi-baru {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
+.proyek-klasifikasi-perpanjangan {
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-color: #bfdbfe;
+}
+
   </style>
 
 </head>
@@ -1009,6 +1039,15 @@ body.activity-modal-open {
               Semua Jenis Proyek
             </option>
 
+          </select>
+
+          <select
+            id="klasifikasiFilter"
+            aria-label="Klasifikasi proyek"
+          >
+            <option value="">Semua Klasifikasi</option>
+            <option value="baru">Baru</option>
+            <option value="perpanjangan">Perpanjangan</option>
           </select>
 
 

@@ -8809,6 +8809,17 @@ app.get(
             p.created_at,
             p.updated_at,
 
+                      CASE
+              WHEN COALESCE(p.nama_proyek, '') ~*
+                '(renewal|enhancement|perpanjangan|change[[:space:]]+request)'
+              THEN 'perpanjangan'
+
+              WHEN COALESCE(p.nama_proyek, '') ~*
+                '(pengadaan|pengembangan|pelaksanaan|peremajaan)'
+              THEN 'baru'
+
+              ELSE NULL
+            END AS klasifikasi_proyek,
 
             /* =========================================
                INFORMASI PIC PROYEK
@@ -24826,14 +24837,120 @@ app.get(
         ]
       );
 
-      const belumDibaca = result.rows.filter(
-        item => !item.sudah_dibaca
-      ).length;
+      // ID akun login dan ID master PIC bisa berbeda.
+const picIdDariSession =
+  user.pic_id ?? user.picId ?? user.pic?.id ?? null;
 
-      return res.json({
-        jumlah_belum_dibaca: belumDibaca,
-        data: result.rows
-      });
+const namaLogin = String(
+  user.nama ?? user.nama_lengkap ?? user.name ?? ""
+).trim();
+
+const picResult = await pool.query(
+  `
+  SELECT id
+  FROM public.pic
+  WHERE
+    ($1::bigint IS NOT NULL AND id = $1::bigint)
+    OR (
+      $1::bigint IS NULL
+      AND LOWER(TRIM(nama)) = LOWER(TRIM($2))
+    )
+  ORDER BY
+    CASE WHEN id = $1::bigint THEN 0 ELSE 1 END,
+    id
+  LIMIT 2
+  `,
+  [
+    picIdDariSession || null,
+    namaLogin
+  ]
+);
+
+// Nama yang sama pada dua PIC dianggap ambigu.
+const picId =
+  picResult.rows.length === 1
+    ? picResult.rows[0].id
+    : null;
+
+let notifikasiKalender = [];
+
+if (picId !== null) {
+  const agendaResult = await pool.query(
+    `
+    SELECT
+      a.id AS calendar_id,
+      a.agenda AS task,
+      COALESCE(
+        p.nama_proyek,
+        a.nama_proyek,
+        'Belum ada proyek'
+      ) AS nama_proyek,
+      TO_CHAR(a.tanggal, 'YYYY-MM-DD') AS tanggal_agenda,
+      TO_CHAR(a.jam_mulai, 'HH24:MI') AS jam_mulai,
+      a.link_lokasi AS link,
+
+      a.tanggal + a.jam_mulai
+        AS tanggal_notifikasi,
+
+      (baca.agenda_id IS NOT NULL)
+        AS sudah_dibaca
+
+    FROM public.calendar_agenda a
+
+    JOIN public.calendar_agenda_pic ap
+      ON ap.agenda_id = a.id
+     AND ap.pic_id = $1
+
+    LEFT JOIN public.proyek p
+      ON p.id = a.proyek_id
+
+    LEFT JOIN public.calendar_notification_read baca
+      ON baca.agenda_id = a.id
+     AND baca.user_id = $2
+
+    WHERE
+      a.tanggal + a.jam_mulai
+        > (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
+
+      AND
+      a.tanggal + a.jam_mulai
+        <= (
+          CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta'
+          + INTERVAL '30 minutes'
+        )
+
+    ORDER BY a.tanggal, a.jam_mulai, a.id
+    `,
+    [picId, userId]
+  );
+
+  notifikasiKalender = agendaResult.rows.map(item => ({
+    ...item,
+    jenis_notifikasi: "calendar",
+    notification_id: `calendar-${item.calendar_id}`,
+    pesan: `Agenda dimulai pukul ${item.jam_mulai} WIB`
+  }));
+}
+
+const notifikasiTask = result.rows.map(item => ({
+  ...item,
+  jenis_notifikasi: "task",
+  notification_id: `task-${item.task_id}`
+}));
+
+const data = [
+  ...notifikasiKalender,
+  ...notifikasiTask
+];
+
+const jumlahBelumDibaca = data.filter(
+  item => !item.sudah_dibaca
+).length;
+
+return res.json({
+  jumlah_belum_dibaca: jumlahBelumDibaca,
+  data
+});
 
     } catch (error) {
       console.error(
@@ -24909,6 +25026,104 @@ app.put(
 
       return res.status(500).json({
         error: error.message
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/notifikasi/calendar/:agendaId/baca",
+  async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login"
+      });
+    }
+
+    const agendaId = Number(req.params.agendaId);
+    const userId = Number(req.session.user.id);
+    const picIdDariSession =
+      req.session.user.pic_id ??
+      req.session.user.picId ??
+      req.session.user.pic?.id ??
+      null;
+
+    const namaLogin = String(
+      req.session.user.nama ??
+      req.session.user.nama_lengkap ??
+      req.session.user.name ??
+      ""
+    ).trim();
+
+    if (!Number.isSafeInteger(agendaId) || agendaId <= 0) {
+      return res.status(400).json({
+        error: "ID agenda tidak valid"
+      });
+    }
+
+    try {
+      const result = await pool.query(
+        `
+        INSERT INTO public.calendar_notification_read (
+          agenda_id,
+          user_id
+        )
+        SELECT
+          a.id,
+          $2::bigint
+        FROM public.calendar_agenda a
+        JOIN public.calendar_agenda_pic ap
+          ON ap.agenda_id = a.id
+        JOIN public.pic pic
+          ON pic.id = ap.pic_id
+        WHERE a.id = $1
+          AND (
+            (
+              $3::bigint IS NOT NULL
+              AND pic.id = $3::bigint
+            )
+            OR (
+              $3::bigint IS NULL
+              AND LOWER(TRIM(pic.nama)) =
+                  LOWER(TRIM($4))
+              AND (
+                SELECT COUNT(*)
+                FROM public.pic cocok
+                WHERE LOWER(TRIM(cocok.nama)) =
+                      LOWER(TRIM($4))
+              ) = 1
+            )
+          )
+        ON CONFLICT (agenda_id, user_id)
+        DO UPDATE SET
+          dibaca_at = CURRENT_TIMESTAMP
+        RETURNING agenda_id
+        `,
+        [
+          agendaId,
+          userId,
+          picIdDariSession || null,
+          namaLogin
+        ]
+      );
+
+      if (!result.rows.length) {
+        return res.status(404).json({
+          error: "Agenda tidak ditemukan untuk PIC login"
+        });
+      }
+
+      return res.json({
+        message: "Notifikasi kalender sudah dibaca"
+      });
+    } catch (error) {
+      console.error(
+        "ERROR BACA NOTIFIKASI KALENDER:",
+        error
+      );
+
+      return res.status(500).json({
+        error: "Gagal menandai notifikasi kalender"
       });
     }
   }

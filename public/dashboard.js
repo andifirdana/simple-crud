@@ -194,112 +194,104 @@ function formatTanggalNotifikasi(
 }
 
 async function loadNotifikasiTask() {
-  try {
-    const response =
-      await fetch(
-        "/api/notifikasi/task",
-        {
-          credentials: "include",
-          cache: "no-store"
-        }
-      );
+  if (!notificationList || !notificationBadge) return;
 
-    const result =
-      await response.json();
+  try {
+    const response = await fetch("/api/notifikasi/task", {
+      credentials: "include",
+      cache: "no-store"
+    });
+
+    const result = await response.json();
 
     if (!response.ok) {
       throw new Error(
-        result.error ||
-        "Gagal mengambil notifikasi"
+        result.error || "Gagal mengambil notifikasi"
       );
     }
 
-    const jumlah =
-      Number(
-        result.jumlah_belum_dibaca
-      ) || 0;
+    const data = Array.isArray(result.data)
+      ? result.data
+      : [];
+
+    const jumlah = Number(
+      result.jumlah_belum_dibaca
+    ) || 0;
 
     notificationBadge.textContent =
-      jumlah > 99
-        ? "99+"
-        : String(jumlah);
+      jumlah > 99 ? "99+" : String(jumlah);
 
-    notificationBadge.hidden =
-      jumlah === 0;
+    notificationBadge.hidden = jumlah === 0;
 
-    const data =
-      Array.isArray(result.data)
-        ? result.data
-        : [];
-
-    if (data.length === 0) {
+    if (!data.length) {
       notificationList.innerHTML = `
         <div class="notification-empty">
-          Tidak ada task yang perlu
-          ditindaklanjuti.
+          Tidak ada notifikasi.
         </div>
       `;
-
       return;
     }
 
-    notificationList.innerHTML =
-      data.map(item => `
+    notificationList.innerHTML = data.map(item => {
+      const kalender =
+        item.jenis_notifikasi === "calendar";
+
+      const id = kalender
+        ? item.calendar_id
+        : item.task_id;
+
+      return `
         <button
           type="button"
           class="notification-item ${
-            item.sudah_dibaca
-              ? ""
-              : "is-unread"
+            item.sudah_dibaca ? "" : "is-unread"
           }"
-          data-task-id="${Number(
-            item.task_id
-          )}"
+          data-notification-type="${
+            kalender ? "calendar" : "task"
+          }"
+          data-notification-id="${escapeNotificationHtml(id)}"
         >
           <span class="notification-title">
-            Ada Task yang perlu dilakukan Update
+            ${kalender
+              ? "Agenda dimulai dalam 30 menit"
+              : "Ada Task yang perlu dilakukan Update"}
           </span>
 
           <span class="notification-task">
-            ${escapeNotificationHtml(
-              item.task
-            )} — Tindak lanjut
+            ${escapeNotificationHtml(item.task)}
           </span>
 
           <span class="notification-project">
             ${escapeNotificationHtml(
-              item.nama_proyek
-            )}
-            ·
-            ${escapeNotificationHtml(
-              item.kategori
+              item.nama_proyek || "Belum ada proyek"
             )}
           </span>
 
           <span class="notification-date">
-            ${formatTanggalNotifikasi(
-              item.tanggal_tindak_lanjut
-            )}
+            ${kalender
+              ? `${escapeNotificationHtml(
+                  item.tanggal_agenda
+                )} · ${escapeNotificationHtml(
+                  item.jam_mulai
+                )} WIB`
+              : formatTanggalNotifikasi(
+                  item.tanggal_notifikasi
+                )}
           </span>
         </button>
-      `).join("");
+      `;
+    }).join("");
 
   } catch (error) {
-    console.error(
-      "ERROR LOAD NOTIFIKASI:",
-      error
-    );
+    console.error("ERROR LOAD NOTIFIKASI:", error);
 
     notificationList.innerHTML = `
       <div class="notification-empty">
-        ${escapeNotificationHtml(
-          error.message
-        )}
+        ${escapeNotificationHtml(error.message)}
       </div>
     `;
   }
 }
-
 
 notificationButton?.addEventListener(
   "click",
@@ -315,59 +307,72 @@ notificationButton?.addEventListener(
   }
 );
 
-
 notificationList?.addEventListener(
   "click",
   async event => {
-    const item =
-      event.target.closest(
-        "[data-task-id]"
-      );
+    const item = event.target.closest(
+      "[data-notification-type][data-notification-id]"
+    );
 
-    if (!item) {
+    if (!item || item.disabled) return;
+
+    const id = Number(item.dataset.notificationId);
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
       return;
     }
 
-    const taskId =
-      Number(item.dataset.taskId);
+    const kalender =
+      item.dataset.notificationType === "calendar";
+
+    item.disabled = true;
 
     try {
-      await fetch(
-        `/api/notifikasi/task/${taskId}/baca`,
-        {
-          method: "PUT",
-          credentials: "include"
+      const endpoint = kalender
+        ? `/api/notifikasi/calendar/${id}/baca`
+        : `/api/notifikasi/task/${id}/baca`;
+
+      const response = await fetch(endpoint, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          Accept: "application/json"
         }
-      );
-    } finally {
-      window.location.href =
-  `/task.html?task_id=${taskId}`;
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Gagal menandai notifikasi: ${response.status}`
+        );
+      }
+
+      window.location.href = kalender
+        ? `/calendar.html?agenda_id=${encodeURIComponent(id)}`
+        : `/task.html?task_id=${encodeURIComponent(id)}`;
+
+    } catch (error) {
+      console.error("ERROR BACA NOTIFIKASI:", error);
+      item.disabled = false;
+      alert(error.message);
     }
   }
 );
-
 
 document.addEventListener(
   "click",
   event => {
     if (
-      !event.target.closest(
-        ".notification-wrapper"
-      )
+      notificationDropdown &&
+      !event.target.closest(".notification-wrapper")
     ) {
-      notificationDropdown.hidden =
-        true;
+      notificationDropdown.hidden = true;
     }
   }
 );
 
-
 loadNotifikasiTask();
 
-setInterval(
-  loadNotifikasiTask,
-  60000
-);
+setInterval(loadNotifikasiTask, 60000);
 
 const bulanSingkat = [
   "Jan",

@@ -850,6 +850,67 @@ module.exports = function registerCalendarApi(
     }
   );
 
+  function calendarRepeatDates(repeat, startDate, isUpdate) {
+  if (repeat == null) {
+    return [startDate];
+  }
+
+  if (isUpdate) {
+    throw calendarError(
+      400,
+      'Perulangan hanya tersedia saat menambah agenda'
+    );
+  }
+
+  if (
+    !repeat ||
+    typeof repeat !== 'object' ||
+    Array.isArray(repeat) ||
+    repeat.start_date !== startDate ||
+    !calendarValidDate(repeat.end_date) ||
+    repeat.end_date < startDate ||
+    !Array.isArray(repeat.weekdays) ||
+    !repeat.weekdays.length ||
+    !repeat.weekdays.every(
+      day => Number.isInteger(day) && day >= 0 && day <= 6
+    )
+  ) {
+    throw calendarError(
+      400,
+      'Tanggal atau hari perulangan tidak valid'
+    );
+  }
+
+  const first = Date.parse(`${startDate}T00:00:00Z`);
+  const last = Date.parse(`${repeat.end_date}T00:00:00Z`);
+
+  if ((last - first) / 86400000 > 366) {
+    throw calendarError(
+      400,
+      'Rentang perulangan maksimal 366 hari'
+    );
+  }
+
+  const weekdays = new Set(repeat.weekdays);
+  const dates = [];
+
+  for (let stamp = first; stamp <= last; stamp += 86400000) {
+    const date = new Date(stamp);
+
+    if (weekdays.has(date.getUTCDay())) {
+      dates.push(date.toISOString().slice(0, 10));
+    }
+  }
+
+  if (!dates.length) {
+    throw calendarError(
+      400,
+      'Tidak ada tanggal sesuai hari yang dipilih'
+    );
+  }
+
+  return dates;
+}
   async function calendarSave(
     req,
     res,
@@ -875,6 +936,12 @@ module.exports = function registerCalendarApi(
         calendarValidateBody(
           req.body
         );
+
+      const dates = calendarRepeatDates(
+      req.body?.repeat,
+      data.date,
+      isUpdate
+    );
 
       client =
         await pool.connect();
@@ -1000,152 +1067,150 @@ module.exports = function registerCalendarApi(
           .join(', ');
 
       const values = [
-        data.agenda,
-        data.date,
-        data.time,
-        data.end_time,
-        data.pic_ids[0],
-        data.project_id,
-        names,
-        projectName,
-        data.type,
-        data.meeting,
-        data.notes
-      ];
+  data.agenda,
+  data.date,
+  data.time,
+  data.end_time,
+  data.pic_ids[0],
+  data.project_id,
+  names,
+  projectName,
+  data.type,
+  data.meeting,
+  data.notes
+];
 
-      let result;
+let eventId;
 
-      if (
-        isUpdate
-      ) {
-        result =
-          await client.query(
-            `
-              UPDATE public.calendar_agenda
-              SET
-                agenda = $1,
-                tanggal = $2::date,
-                jam_mulai = $3::time,
-                jam_selesai = $4::time,
-                pic_id = $5,
-                proyek_id = $6,
-                nama_pic = $7,
-                nama_proyek = $8,
-                jenis_meeting = $9,
-                link_lokasi = $10,
-                catatan = $11,
-                updated_at = NOW()
-              WHERE id = $12
-              RETURNING id::text AS id
-            `,
-            [
-              ...values,
-              id
-            ]
-          );
-      } else {
-        const user =
-          req.session.user;
+if (isUpdate) {
+  const result = await client.query(
+    `
+      UPDATE public.calendar_agenda
+      SET
+        agenda = $1,
+        tanggal = $2::date,
+        jam_mulai = $3::time,
+        jam_selesai = $4::time,
+        pic_id = $5,
+        proyek_id = $6,
+        nama_pic = $7,
+        nama_proyek = $8,
+        jenis_meeting = $9,
+        link_lokasi = $10,
+        catatan = $11,
+        updated_at = NOW()
+      WHERE id = $12
+      RETURNING id::text AS id
+    `,
+    [...values, id]
+  );
 
-        const identity =
-          user.id ??
-          user.username ??
-          user.nama ??
-          user.name ??
-          null;
+  eventId = result.rows[0].id;
 
-        result =
-          await client.query(
-            `
-              INSERT INTO public.calendar_agenda
-              (
-                agenda,
-                tanggal,
-                jam_mulai,
-                jam_selesai,
-                pic_id,
-                proyek_id,
-                nama_pic,
-                nama_proyek,
-                jenis_meeting,
-                link_lokasi,
-                catatan,
-                created_by
-              )
-              VALUES
-              (
-                $1,
-                $2::date,
-                $3::time,
-                $4::time,
-                $5,
-                $6,
-                $7,
-                $8,
-                $9,
-                $10,
-                $11,
-                $12
-              )
-              RETURNING id::text AS id
-            `,
-            [
-              ...values,
-              identity === null
-                ? null
-                : String(identity)
-            ]
-          );
-      }
+  await client.query(
+    `
+      DELETE FROM public.calendar_agenda_pic
+      WHERE agenda_id = $1
+    `,
+    [eventId]
+  );
 
-      const eventId =
-        result.rows[0].id;
+  await client.query(
+    `
+      INSERT INTO public.calendar_agenda_pic (
+        agenda_id,
+        pic_id
+      )
+      SELECT $1, pic
+      FROM UNNEST($2::bigint[]) AS selected(pic)
+    `,
+    [eventId, data.pic_ids]
+  );
+} else {
+  const user = req.session.user;
 
-      await client.query(
-        `
-          DELETE FROM public.calendar_agenda_pic
-          WHERE agenda_id = $1
-        `,
-        [eventId]
-      );
+  const identity =
+    user.id ??
+    user.username ??
+    user.nama ??
+    user.name ??
+    null;
 
-      await client.query(
-        `
-          INSERT INTO public.calendar_agenda_pic
-          (
-            agenda_id,
-            pic_id
-          )
-          SELECT
-            $1,
-            pic
-          FROM UNNEST(
-            $2::bigint[]
-          ) AS selected(pic)
-        `,
-        [
-          eventId,
-          data.pic_ids
-        ]
-      );
+  for (const date of dates) {
+    const insertValues = [
+      ...values
+    ];
 
-      const event =
-        await calendarGetEvent(
-          client,
-          eventId
-        );
+    // Kolom tanggal berada di parameter kedua.
+    insertValues[1] = date;
 
-      await client.query(
-        'COMMIT'
-      );
-
-      res
-        .status(
-          isUpdate
-            ? 200
-            : 201
+    const result = await client.query(
+      `
+        INSERT INTO public.calendar_agenda (
+          agenda,
+          tanggal,
+          jam_mulai,
+          jam_selesai,
+          pic_id,
+          proyek_id,
+          nama_pic,
+          nama_proyek,
+          jenis_meeting,
+          link_lokasi,
+          catatan,
+          created_by
         )
-        .json(event);
+        VALUES (
+          $1,
+          $2::date,
+          $3::time,
+          $4::time,
+          $5,
+          $6,
+          $7,
+          $8,
+          $9,
+          $10,
+          $11,
+          $12
+        )
+        RETURNING id::text AS id
+      `,
+      [
+        ...insertValues,
+        identity === null ? null : String(identity)
+      ]
+    );
+
+    eventId = result.rows[0].id;
+
+    await client.query(
+      `
+        INSERT INTO public.calendar_agenda_pic (
+          agenda_id,
+          pic_id
+        )
+        SELECT $1, pic
+        FROM UNNEST($2::bigint[]) AS selected(pic)
+      `,
+      [eventId, data.pic_ids]
+    );
+  }
+}
+
+const event = await calendarGetEvent(
+  client,
+  eventId
+);
+
+await client.query('COMMIT');
+
+res
+  .status(isUpdate ? 200 : 201)
+  .json({
+    ...event,
+    created_count: dates.length
+  });
     } catch (error) {
       if (client) {
         await client

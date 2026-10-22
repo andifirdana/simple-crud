@@ -1795,6 +1795,320 @@
 #taskTableBody .task-list-note-button::after {
   content: none !important;
 }
+#pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 0;
+  padding: 24px 30px;
+
+  background: #fff;
+  border-top: 1px solid #e5eaf3;
+  border-radius: 0 0 20px 20px;
+}
+
+#pagination .task-pagination-info {
+  color: #71819a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#pagination .task-pagination-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-left: auto;
+}
+
+#pagination .task-pagination-label {
+  margin: 0;
+  color: #4b5870;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#pagination .task-pagination-select {
+  box-sizing: border-box;
+  width: 88px;
+  height: 48px;
+  padding: 0 12px;
+
+  border: 1px solid #d4ddec;
+  border-radius: 12px;
+  background: #fff;
+  color: #263248;
+
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#pagination .task-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#pagination .task-page-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  box-sizing: border-box;
+  min-width: 44px;
+  height: 46px;
+  padding: 0 12px;
+  margin: 0;
+
+  border: 1px solid #e1e8f2;
+  border-radius: 11px;
+  background: #edf2f7;
+  color: #344258;
+
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+#pagination .task-page-button.active {
+  border-color: #a5b0ff;
+  background: #a5b0ff;
+  color: #fff;
+}
+
+#pagination .task-page-button:hover:not(:disabled):not(.active) {
+  background: #dfe6f2;
+}
+
+#pagination .task-page-button:disabled {
+  border-color: #f8fafc;
+  background: #fafbfd;
+  color: #dce2eb;
+  cursor: not-allowed;
+}
+
+#pagination .task-page-dots {
+  padding: 0 3px;
+  color: #98a8c0;
+  font-weight: 700;
+}
+
+#pagination .task-page-button:focus-visible,
+#pagination .task-pagination-select:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  #pagination {
+    justify-content: center;
+    padding: 20px 14px;
+  }
+
+  #pagination .task-pagination-controls {
+    justify-content: center;
+    margin-left: 0;
+  }
+
+  #pagination .task-pagination-pages {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+/* ======================================================
+   RAPIHKAN PAGINATION
+   ====================================================== */
+
+#pagination {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 16px 24px;
+
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 20px 24px;
+
+  background: #fff;
+  border-top: 1px solid #e5eaf3;
+  border-radius: 0 0 16px 16px;
+}
+
+#pagination .task-pagination-info {
+  flex: 0 1 auto;
+  margin: 0;
+  padding: 0;
+
+  color: #71819a;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+#pagination .task-pagination-controls {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  justify-content: flex-end;
+
+  flex: 0 0 auto;
+  width: auto !important;
+  gap: 12px;
+  margin: 0 0 0 auto !important;
+  padding: 0;
+}
+
+#pagination .task-pagination-label {
+  display: inline-flex !important;
+  align-items: center;
+  flex: 0 0 auto;
+
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0;
+
+  color: #4b5870;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+#pagination select.task-pagination-select {
+  display: inline-block !important;
+  flex: 0 0 78px !important;
+
+  box-sizing: border-box;
+  width: 78px !important;
+  min-width: 78px !important;
+  max-width: 78px !important;
+  height: 42px !important;
+  min-height: 42px;
+  margin: 0 !important;
+  padding: 0 10px !important;
+
+  border: 1px solid #d4ddec;
+  border-radius: 10px;
+  background-color: #fff;
+  color: #263248;
+  box-shadow: none;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+#pagination .task-pagination-pages {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  flex: 0 0 auto;
+
+  width: auto !important;
+  gap: 7px;
+  margin: 0 !important;
+  padding: 0;
+}
+
+#pagination .task-page-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+
+  box-sizing: border-box;
+  width: auto !important;
+  min-width: 40px;
+  height: 42px !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+
+  border: 1px solid #e1e8f2;
+  border-radius: 10px;
+  background: #edf2f7;
+  color: #344258;
+  box-shadow: none;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#pagination .task-page-button.active {
+  background: #a5b0ff;
+  border-color: #a5b0ff;
+  color: #fff;
+}
+
+#pagination .task-page-button:hover:not(:disabled):not(.active) {
+  background: #dfe6f2;
+}
+
+#pagination .task-page-button:disabled {
+  background: #fafbfd;
+  border-color: #f1f5f9;
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+#pagination .task-page-dots {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0 2px;
+  color: #98a8c0;
+  line-height: 1;
+}
+
+#pagination .task-page-button:focus-visible,
+#pagination select.task-pagination-select:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+/* Layar kecil */
+@media (max-width: 700px) {
+  #pagination {
+    justify-content: center !important;
+    padding: 16px;
+  }
+
+  #pagination .task-pagination-info {
+    width: 100%;
+    text-align: center;
+  }
+
+  #pagination .task-pagination-controls {
+    justify-content: center;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  #pagination .task-pagination-pages {
+    justify-content: center;
+    flex-wrap: wrap !important;
+  }
+}
   </style>
 
 </head>
