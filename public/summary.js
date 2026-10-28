@@ -4,6 +4,8 @@
    - Kolom klien dan partner terpisah.
    - Setiap partner tambahan memiliki 10 kolom sendiri.
    - Dokumen mencakup klien dan seluruh partner.
+   - Ringkasan Final menampilkan kelengkapan data.
+   - Ringkasan Final ikut diekspor ke Excel.
    - Tasklist selalu di kolom terakhir.
    - Nama proyek dapat diklik.
    - Excel tanpa Rp.
@@ -13,8 +15,7 @@
 (() => {
   "use strict";
 
-  const $ = id =>
-    document.getElementById(id);
+  const $ = id => document.getElementById(id);
 
   const state = {
     rows: [],
@@ -65,10 +66,9 @@
   // UTILITAS
   // ======================================================
 
-  const fmt =
-    new Intl.NumberFormat("id-ID", {
-      maximumFractionDigits: 2
-    });
+  const fmt = new Intl.NumberFormat("id-ID", {
+    maximumFractionDigits: 2
+  });
 
   const norm = value =>
     String(value ?? "")
@@ -77,16 +77,12 @@
       .replace(/\s+/g, " ");
 
   const arr = value =>
-    Array.isArray(value)
-      ? value
-      : [];
+    Array.isArray(value) ? value : [];
 
   const unique = values => [
     ...new Set(
       values
-        .map(value =>
-          String(value ?? "").trim()
-        )
+        .map(value => String(value ?? "").trim())
         .filter(Boolean)
     )
   ];
@@ -94,10 +90,7 @@
   const sum = values =>
     values.reduce(
       (total, value) =>
-        total +
-        Math.round(
-          (value ?? 0) * 100
-        ),
+        total + Math.round((value ?? 0) * 100),
       0
     ) / 100;
 
@@ -118,12 +111,9 @@
       return 0;
     }
 
-    const result =
-      Number(value);
+    const result = Number(value);
 
-    if (
-      !Number.isFinite(result)
-    ) {
+    if (!Number.isFinite(result)) {
       throw new Error(
         `Nominal API tidak valid: ${
           String(value).slice(0, 40)
@@ -135,9 +125,7 @@
   }
 
   function collection(payload) {
-    if (
-      Array.isArray(payload)
-    ) {
+    if (Array.isArray(payload)) {
       return payload;
     }
 
@@ -150,11 +138,7 @@
     ];
 
     for (const key of keys) {
-      if (
-        Array.isArray(
-          payload?.[key]
-        )
-      ) {
+      if (Array.isArray(payload?.[key])) {
         return payload[key];
       }
     }
@@ -165,53 +149,194 @@
   }
 
   // ======================================================
+  // RINGKASAN FINAL
+  // ======================================================
+
+  function isUnfilled(value) {
+    const text = norm(value);
+
+    return (
+      !text ||
+      /^[-–—]+$/.test(text) ||
+      [
+        "belum diisi",
+        "belum ditentukan",
+        "belum ada termin"
+      ].includes(text)
+    );
+  }
+
+  function finalSummary(row) {
+    if (row.error) {
+      return "Data gagal dimuat: " + row.error;
+    }
+
+    const missing = [];
+
+    // Periksa data utama dan dokumen proyek.
+    BASE_COLUMNS.forEach(
+      ([key, label, type]) => {
+        const empty =
+          isUnfilled(row[key]) ||
+          (
+            key === "nama" &&
+            row.summaryNameMissing
+          );
+
+        if (empty) {
+          missing.push(
+            `${label}: ${
+              type === "date"
+                ? "-"
+                : "Belum diisi"
+            }`
+          );
+        }
+      }
+    );
+
+    // Periksa data klien dan setiap partner.
+    function checkParty(party, label) {
+      if (!party) {
+        missing.push(
+          `Data ${label}: Belum diisi`
+        );
+
+        return;
+      }
+
+      const hasTerms =
+        arr(party.terms).length > 0;
+
+      PARTY_COLUMNS.forEach(
+        ([field, title]) => {
+          // Jika belum ada termin, laporkan satu kali.
+          // Angka hasil perhitungan tetap bernilai 0.
+          if (
+            !hasTerms &&
+            [
+              "pembayaran",
+              "terminTotal",
+              "sisa",
+              "dibayar",
+              "jumlahTermin"
+            ].includes(field)
+          ) {
+            return;
+          }
+
+          const empty =
+            isUnfilled(party[field]) ||
+            (
+              field === "kontrak" &&
+              party.summaryContractMissing
+            );
+
+          if (empty) {
+            missing.push(
+              `${title} ${label}: Belum diisi`
+            );
+          }
+        }
+      );
+
+      if (!hasTerms) {
+        missing.push(
+          `Termin ${label}: Belum ada termin`
+        );
+      }
+    }
+
+    checkParty(
+      row.client,
+      "Klien"
+    );
+
+    const partners = arr(row.partners);
+
+    if (!partners.length) {
+      missing.push(
+        "Data Partner: Belum diisi"
+      );
+    } else {
+      partners.forEach(
+        (partner, index) => {
+          checkParty(
+            partner,
+            index === 0
+              ? "Partner"
+              : `Partner ${index + 1}`
+          );
+        }
+      );
+    }
+
+    // Periksa Tasklist.
+    if (isUnfilled(row.tasksText)) {
+      missing.push(
+        "Tasklist: Belum diisi"
+      );
+    } else {
+      arr(row.tasks).forEach(
+        (task, index) => {
+          if (isUnfilled(task.task)) {
+            missing.push(
+              `Nama Task ${index + 1}: Belum diisi`
+            );
+          }
+
+          if (isUnfilled(task.status)) {
+            missing.push(
+              `Status Task ${index + 1}: Belum diisi`
+            );
+          }
+        }
+      );
+    }
+
+    return missing.length
+      ? (
+          "Belum lengkap\n" +
+          missing.join("\n")
+        )
+      : "Lengkap";
+  }
+
+  // ======================================================
   // TANGGAL
   // ======================================================
 
   function dateOnly(value) {
     const text =
       String(value ?? "")
-        .match(
-          /^\d{4}-\d{2}-\d{2}/
-        )?.[0];
+        .match(/^\d{4}-\d{2}-\d{2}/)?.[0];
 
     if (!text) {
       return "";
     }
 
     const date =
-      new Date(
-        `${text}T00:00:00Z`
-      );
+      new Date(`${text}T00:00:00Z`);
 
-    if (
-      !Number.isFinite(
-        date.getTime()
-      )
-    ) {
+    if (!Number.isFinite(date.getTime())) {
       return "";
     }
 
-    return date
-      .toISOString()
-      .slice(0, 10) === text
-        ? text
-        : "";
+    return date.toISOString().slice(0, 10) === text
+      ? text
+      : "";
   }
 
   function todayJakarta() {
-    const parts =
-      new Intl.DateTimeFormat(
-        "en-CA",
-        {
-          timeZone: "Asia/Jakarta",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit"
-        }
-      ).formatToParts(
-        new Date()
-      );
+    const parts = new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone: "Asia/Jakarta",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }
+    ).formatToParts(new Date());
 
     return [
       "year",
@@ -220,8 +345,7 @@
     ].map(
       key =>
         parts.find(
-          part =>
-            part.type === key
+          part => part.type === key
         ).value
     ).join("-");
   }
@@ -240,9 +364,7 @@
         timeZone: "UTC"
       }
     ).format(
-      new Date(
-        `${value}T00:00:00Z`
-      )
+      new Date(`${value}T00:00:00Z`)
     );
   }
 
@@ -253,10 +375,7 @@
     today = todayJakarta()
   ) {
     if (
-      [
-        "done",
-        "selesai"
-      ].includes(
+      ["done", "selesai"].includes(
         norm(final)
       )
     ) {
@@ -284,56 +403,40 @@
   // ======================================================
 
   async function fetchJSON(url) {
-    const controller =
-      new AbortController();
+    const controller = new AbortController();
 
-    const timer =
-      setTimeout(
-        () =>
-          controller.abort(),
-        30000
-      );
+    const timer = setTimeout(
+      () => controller.abort(),
+      30000
+    );
 
     try {
-      const response =
-        await fetch(
-          url,
-          {
-            credentials:
-              "same-origin",
-
-            cache:
-              "no-store",
-
-            signal:
-              controller.signal,
-
-            headers: {
-              Accept:
-                "application/json"
-            }
+      const response = await fetch(
+        url,
+        {
+          credentials: "same-origin",
+          cache: "no-store",
+          signal: controller.signal,
+          headers: {
+            Accept: "application/json"
           }
-        );
+        }
+      );
 
-      if (
-        response.status === 401
-      ) {
+      if (response.status === 401) {
         throw new Error(
           "Sesi berakhir. Silakan login kembali."
         );
       }
 
-      if (
-        !response.ok
-      ) {
+      if (!response.ok) {
         throw new Error(
           `Gagal memuat ${url} ` +
           `(HTTP ${response.status}).`
         );
       }
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (
         data?.success === false ||
@@ -347,11 +450,8 @@
       }
 
       return data;
-
     } catch (error) {
-      if (
-        error.name === "AbortError"
-      ) {
+      if (error.name === "AbortError") {
         throw new Error(
           `Waktu pemuatan ${url} habis. ` +
           "Klik Muat ulang."
@@ -359,7 +459,6 @@
       }
 
       throw error;
-
     } finally {
       clearTimeout(timer);
     }
@@ -378,14 +477,9 @@
     ];
 
     for (const key of keys) {
-      const value =
-        number(
-          entity?.[key]
-        );
+      const value = number(entity?.[key]);
 
-      if (
-        value !== 0
-      ) {
+      if (value !== 0) {
         return value;
       }
     }
@@ -402,52 +496,43 @@
     base,
     source
   ) {
-    return terms.map(
-      term => {
-        const explicit =
-          term.nominal ??
-          term.nilai_pendapatan ??
-          term.nilai_termin;
+    return terms.map(term => {
+      const explicit =
+        term.nominal ??
+        term.nilai_pendapatan ??
+        term.nilai_termin;
 
-        const hasNominal =
-          explicit !== null &&
-          explicit !== undefined &&
-          explicit !== "";
+      const hasNominal =
+        explicit !== null &&
+        explicit !== undefined &&
+        explicit !== "";
 
-        const nominal =
-          hasNominal
-            ? number(explicit)
-            : round(
-                base *
-                number(
-                  term.persentase
-                ) /
-                100
-              );
+      const nominal = hasNominal
+        ? number(explicit)
+        : round(
+            base *
+            number(term.persentase) /
+            100
+          );
 
-        return {
-          ...term,
+      return {
+        ...term,
 
-          nominal,
+        nominal,
 
-          sumber:
-            source,
+        sumber: source,
 
-          status_pembayaran:
-            String(
-              term.status_pembayaran ||
-              ""
-            ).trim() ||
-            "Belum Dibayar"
-        };
-      }
-    );
+        status_pembayaran:
+          String(
+            term.status_pembayaran || ""
+          ).trim() ||
+          "Belum Dibayar"
+      };
+    });
   }
 
   function paymentStatus(terms) {
-    if (
-      !terms.length
-    ) {
+    if (!terms.length) {
       return "Belum Ada Termin";
     }
 
@@ -455,15 +540,11 @@
       (term, index) => {
         const name =
           String(
-            term.nama_termin ||
-            ""
+            term.nama_termin || ""
           ).trim() ||
-
           String(
-            term.deskripsi ||
-            ""
+            term.deskripsi || ""
           ).trim() ||
-
           `Termin ${index + 1}`;
 
         return (
@@ -485,50 +566,56 @@
     source,
     override = null
   ) {
-    const raw =
-      rawContract(entity);
+    const raw = rawContract(entity);
 
-    const terms =
-      override
-        ? override.terms
-        : normalizeTerms(
-            arr(
-              entity?.termin
-            ),
-            raw,
-            source
-          );
+    const terms = override
+      ? override.terms
+      : normalizeTerms(
+          arr(entity?.termin),
+          raw,
+          source
+        );
 
-    const contract =
-      override
-        ? override.contract
-        : raw ||
+    const contract = override
+      ? override.contract
+      : (
+          raw ||
           sum(
             terms.map(
-              term =>
-                term.nominal
+              term => term.nominal
             )
-          );
+          )
+        );
 
-    const total =
-      sum(
-        terms.map(
-          term =>
-            term.nominal
-        )
-      );
+    const total = sum(
+      terms.map(
+        term => term.nominal
+      )
+    );
 
     const start =
-      dateOnly(
-        entity?.tanggal_mulai
-      );
+      dateOnly(entity?.tanggal_mulai);
 
     const end =
-      dateOnly(
-        entity?.tanggal_akhir
-      );
+      dateOnly(entity?.tanggal_akhir);
 
     return {
+      // Membedakan nominal kosong dengan angka 0.
+      summaryContractMissing:
+        !override &&
+        ![
+          "nilai_nego_3",
+          "nilai_nego_2",
+          "nilai_nego_1",
+          "nilai_submit"
+        ].some(
+          key =>
+            !isUnfilled(
+              entity?.[key]
+            )
+        ) &&
+        !terms.length,
+
       nama:
         name || "",
 
@@ -545,8 +632,7 @@
 
       statusKontrak:
         contractStatus(
-          entity?.status_final ||
-          final,
+          entity?.status_final || final,
           start,
           end
         ),
@@ -572,12 +658,10 @@
               term =>
                 norm(
                   term.status_pembayaran
-                ) ===
-                "sudah dibayar"
+                ) === "sudah dibayar"
             )
             .map(
-              term =>
-                term.nominal
+              term => term.nominal
             )
         ),
 
@@ -600,10 +684,7 @@
   // DOKUMEN KLIEN DAN PARTNER
   // ======================================================
 
-  function documentText(
-    docs,
-    type
-  ) {
+  function documentText(docs, type) {
     const regex = {
       rfqTor:
         /\brfq\b|\btor\b|request\s+for\s+quotation|terms?\s+of\s+reference|kerangka\s+acuan\s+kerja/,
@@ -623,9 +704,7 @@
         .filter(
           doc =>
             regex.test(
-              norm(
-                doc.nama_dokumen
-              )
+              norm(doc.nama_dokumen)
             )
         )
         .map(
@@ -652,12 +731,8 @@
   ) {
     if (
       !detail?.proyek ||
-      !Array.isArray(
-        detail.pic
-      ) ||
-      !Array.isArray(
-        detail.partners
-      )
+      !Array.isArray(detail.pic) ||
+      !Array.isArray(detail.partners)
     ) {
       throw new Error(
         "Response detail proyek tidak lengkap."
@@ -669,18 +744,13 @@
       ...detail.proyek
     };
 
-    const client =
-      detail.klien;
+    const client = detail.klien;
 
     if (
       client &&
       (
-        !Array.isArray(
-          client.termin
-        ) ||
-        !Array.isArray(
-          client.dokumen
-        )
+        !Array.isArray(client.termin) ||
+        !Array.isArray(client.dokumen)
       )
     ) {
       throw new Error(
@@ -691,113 +761,86 @@
     const invalidPartner =
       detail.partners.some(
         partner =>
-          !Array.isArray(
-            partner.termin
-          ) ||
-          !Array.isArray(
-            partner.dokumen
-          )
+          !Array.isArray(partner.termin) ||
+          !Array.isArray(partner.dokumen)
       );
 
-    if (
-      invalidPartner
-    ) {
+    if (invalidPartner) {
       throw new Error(
         "Response termin/dokumen partner tidak lengkap."
       );
     }
 
     // Urutan partner mengikuti API detail proyek.
-    const partners =
-      detail.partners.map(
-        (partner, index) =>
-          normalizeParty(
-            partner,
-            partner.nama_partner,
-            proyek.status_final,
-            `PARTNER ${index + 1}`
-          )
-      );
+    const partners = detail.partners.map(
+      (partner, index) =>
+        normalizeParty(
+          partner,
+          partner.nama_partner,
+          proyek.status_final,
+          `PARTNER ${index + 1}`
+        )
+    );
 
-    // ================================================
+    // ====================================================
     // DATA SEWA UNTUK SISI KLIEN
-    // ================================================
+    // ====================================================
 
-    const rental =
-      rentals.filter(
-        item =>
-          String(
-            item.proyek_id
-          ) ===
-          String(
-            proyek.id
-          )
-      );
+    const rental = rentals.filter(
+      item =>
+        String(item.proyek_id) ===
+        String(proyek.id)
+    );
 
     let override = null;
 
-    if (
-      rental.length
-    ) {
-      const ids =
-        new Set(
-          rental.map(
-            item =>
-              String(item.id)
-          )
-        );
+    if (rental.length) {
+      const ids = new Set(
+        rental.map(
+          item => String(item.id)
+        )
+      );
 
-      const seen =
-        new Set();
+      const seen = new Set();
 
-      const selected =
-        rentalTerms.filter(
-          term => {
-            if (
-              !ids.has(
-                String(
-                  term.proyek_sewa_id
-                )
-              )
-            ) {
-              return false;
-            }
-
-            if (
-              term.termin_id === null ||
-              term.termin_id === undefined
-            ) {
-              throw new Error(
-                "ID termin sewa tidak tersedia."
-              );
-            }
-
-            const key =
-              String(
-                term.termin_id
-              );
-
-            if (
-              seen.has(key)
-            ) {
-              return false;
-            }
-
-            seen.add(key);
-
-            return true;
+      const selected = rentalTerms.filter(
+        term => {
+          if (
+            !ids.has(
+              String(term.proyek_sewa_id)
+            )
+          ) {
+            return false;
           }
-        );
 
-      const contract =
-        sum(
-          rental.map(
-            item =>
-              number(
-                item.total_nilai
-              )
-          )
-        );
+          if (
+            term.termin_id === null ||
+            term.termin_id === undefined
+          ) {
+            throw new Error(
+              "ID termin sewa tidak tersedia."
+            );
+          }
+
+          const key =
+            String(term.termin_id);
+
+          if (seen.has(key)) {
+            return false;
+          }
+
+          seen.add(key);
+
+          return true;
+        }
+      );
+
+      const contract = sum(
+        rental.map(
+          item =>
+            number(item.total_nilai)
+        )
+      );
 
       override = {
         contract,
@@ -811,35 +854,33 @@
       };
     }
 
-    // ================================================
+    // ====================================================
     // KLIEN
-    // ================================================
+    // ====================================================
 
     const clientName =
       client?.perusahaan_klien ||
       list.nama_klien ||
       unique(
         rental.map(
-          item =>
-            item.nama_klien
+          item => item.nama_klien
         )
       ).join("; ");
 
-    const clientEntity =
-      client
-        ? {
-            ...client,
+    const clientEntity = client
+      ? {
+          ...client,
 
-            media_pengadaan:
-              client.media_pengadaan ||
-              proyek.media_pengadaan ||
-              list.media_pengadaan
-          }
-        : {
-            ...list,
-            termin: [],
-            dokumen: []
-          };
+          media_pengadaan:
+            client.media_pengadaan ||
+            proyek.media_pengadaan ||
+            list.media_pengadaan
+        }
+      : {
+          ...list,
+          termin: [],
+          dokumen: []
+        };
 
     const hasClient =
       client ||
@@ -847,20 +888,19 @@
       list.proyek_klien_id ||
       list.klien_id;
 
-    const clientParty =
-      hasClient
-        ? normalizeParty(
-            clientEntity,
-            clientName,
-            proyek.status_final,
-            "KLIEN",
-            override
-          )
-        : null;
+    const clientParty = hasClient
+      ? normalizeParty(
+          clientEntity,
+          clientName,
+          proyek.status_final,
+          "KLIEN",
+          override
+        )
+      : null;
 
-    // ================================================
+    // ====================================================
     // GABUNG DOKUMEN KLIEN DAN SELURUH PARTNER
-    // ================================================
+    // ====================================================
 
     const docs = [
       ...arr(
@@ -896,31 +936,31 @@
           )
       )
     ];
-    const kategoriList =
-  unique([
-    ...arr(
-      proyek.nama_kategori_produk_list
-    ),
 
-    ...arr(
-      proyek.kategori_produk_list
-    ),
+    const kategoriList = unique([
+      ...arr(
+        proyek.nama_kategori_produk_list
+      ),
 
-    ...arr(
-      list.kategori_produk_list
-    )
-  ]);
+      ...arr(
+        proyek.kategori_produk_list
+      ),
 
+      ...arr(
+        list.kategori_produk_list
+      )
+    ]);
 
-    const pics =
-      unique(
-        detail.pic.map(
-          person =>
-            person.nama
-        )
-      );
+    const pics = unique(
+      detail.pic.map(
+        person => person.nama
+      )
+    );
 
     return {
+      summaryNameMissing:
+        isUnfilled(proyek.nama_proyek),
+
       id:
         proyek.id,
 
@@ -928,29 +968,29 @@
         proyek.nama_proyek ||
         `Proyek #${proyek.id}`,
 
-     pic:
-  pics.join("\n"),
+      pic:
+        pics.join("\n"),
 
-pics,
+      pics,
 
-    jenisProyek:
-      proyek.jenis_proyek ||
-      list.jenis_proyek ||
-      "",
+      jenisProyek:
+        proyek.jenis_proyek ||
+        list.jenis_proyek ||
+        "",
 
-    subProyek:
-      proyek.sub_jenis_proyek ||
-      list.sub_jenis_proyek ||
-      "",
+      subProyek:
+        proyek.sub_jenis_proyek ||
+        list.sub_jenis_proyek ||
+        "",
 
-    kategori:
-      kategoriList.length
-        ? kategoriList.join("\n")
-        : (
-            proyek.nama_kategori_produk ||
-            list.nama_kategori_produk ||
-            ""
-          ),
+      kategori:
+        kategoriList.length
+          ? kategoriList.join("\n")
+          : (
+              proyek.nama_kategori_produk ||
+              list.nama_kategori_produk ||
+              ""
+            ),
 
       mulai:
         dateOnly(
@@ -1029,8 +1069,7 @@ pics,
         ]
           .filter(Boolean)
           .map(
-            party =>
-              party.warning
+            party => party.warning
           )
           .filter(Boolean)
     };
@@ -1039,26 +1078,22 @@ pics,
   // ======================================================
   // KOLOM DINAMIS
   //
-  // 9 proyek + 10 klien + 10 per partner + 1 Tasklist
+  // 12 proyek + 10 klien + 10 per partner
+  // + 1 Ringkasan Final + 1 Tasklist
   //
-  // 1 partner  = 30 kolom
-  // 2 partner  = 40 kolom
-  // 3 partner  = 50 kolom
+  // 1 partner = 34 kolom
+  // 2 partner = 44 kolom
+  // 3 partner = 54 kolom
   // ======================================================
 
   function buildColumns() {
-    const columns =
-      BASE_COLUMNS.map(
-        ([
-          key,
-          label,
-          type
-        ]) => ({
-          key,
-          label,
-          type
-        })
-      );
+    const columns = BASE_COLUMNS.map(
+      ([key, label, type]) => ({
+        key,
+        label,
+        type
+      })
+    );
 
     function addParty(
       owner,
@@ -1066,12 +1101,7 @@ pics,
       suffix
     ) {
       PARTY_COLUMNS.forEach(
-        ([
-          field,
-          title,
-          type
-        ]) => {
-
+        ([field, title, type]) => {
           columns.push({
             key:
               `${owner}_${index}_${field}`,
@@ -1080,14 +1110,10 @@ pics,
               `${title} ${suffix}`,
 
             type,
-
             owner,
-
             index,
-
             field
           });
-
         }
       );
     }
@@ -1099,16 +1125,13 @@ pics,
       "Klien"
     );
 
-    // Minimal tampil satu kelompok partner.
-    // Jumlahnya mengikuti partner terbanyak
-    // dari seluruh proyek yang dimuat.
+    // Minimal satu kelompok partner.
     const maxPartners =
       state.rows.reduce(
         (max, row) =>
           Math.max(
             max,
-            row.partners?.length ||
-            0
+            row.partners?.length || 0
           ),
         1
       );
@@ -1121,12 +1144,20 @@ pics,
       addParty(
         "partner",
         index,
-
         index === 0
           ? "Partner"
           : `Partner ${index + 1}`
       );
     }
+
+    // Ringkasan Final sebelum Tasklist.
+    columns.push({
+      key:
+        "ringkasanFinal",
+
+      label:
+        "Ringkasan Final"
+    });
 
     // Tasklist selalu paling akhir.
     columns.push({
@@ -1137,82 +1168,60 @@ pics,
         "Tasklist"
     });
 
-    if (
-      columns.length > 16384
-    ) {
+    if (columns.length > 16384) {
       throw new Error(
         "Jumlah kolom melebihi batas Excel."
       );
     }
 
-    state.columns =
-      columns;
+    state.columns = columns;
 
-    const heads =
-      columns.map(
-        column => {
-          const th =
-            document.createElement(
-              "th"
-            );
+    const heads = columns.map(
+      column => {
+        const th =
+          document.createElement("th");
 
-          th.scope =
-            "col";
+        th.scope = "col";
+        th.textContent = column.label;
 
-          th.textContent =
-            column.label;
-
-          if (
-            [
-              "money",
-              "number"
-            ].includes(
-              column.type
-            )
-          ) {
-            th.className =
-              "sm-num";
-          }
-
-          return th;
+        if (
+          ["money", "number"].includes(
+            column.type
+          )
+        ) {
+          th.className = "sm-num";
         }
-      );
 
-    $("smHead")
-      .replaceChildren(
-        ...heads
-      );
+        return th;
+      }
+    );
+
+    $("smHead").replaceChildren(
+      ...heads
+    );
   }
 
-  function partyFor(
-    row,
-    column
-  ) {
+  function partyFor(row, column) {
     return column.owner === "client"
       ? row.client
-      : row.partners?.[
-          column.index
-        ];
+      : row.partners?.[column.index];
   }
 
-  function cellValue(
-    row,
-    column
-  ) {
+  function cellValue(row, column) {
     if (
-      column.owner
+      column.key === "ringkasanFinal"
     ) {
+      return finalSummary(row);
+    }
+
+    if (column.owner) {
       return partyFor(
         row,
         column
-      )?.[
-        column.field
-      ] ?? "";
+      )?.[column.field] ?? "";
     }
 
-    return row[
-      column.key
-    ] ?? "";
+    return row[column.key] ?? "";
   }
 
   // ======================================================
@@ -1223,11 +1232,8 @@ pics,
     text,
     error = false
   ) {
-    $("smMessage").textContent =
-      text;
-
-    $("smMessage").hidden =
-      !text;
+    $("smMessage").textContent = text;
+    $("smMessage").hidden = !text;
 
     $("smMessage").dataset.error =
       String(error);
@@ -1238,9 +1244,7 @@ pics,
   // ======================================================
 
   async function load() {
-    if (
-      state.loading
-    ) {
+    if (state.loading) {
       return;
     }
 
@@ -1250,14 +1254,10 @@ pics,
     state.filtered = [];
     state.page = 1;
 
-    $("smReload").disabled =
-      true;
-
-    $("smExport").disabled =
-      true;
+    $("smReload").disabled = true;
+    $("smExport").disabled = true;
 
     buildColumns();
-
     render();
 
     message(
@@ -1265,23 +1265,19 @@ pics,
     );
 
     try {
-      const list =
-        collection(
-          await fetchJSON(
-            "/api/proyek"
-          )
-        );
+      const list = collection(
+        await fetchJSON(
+          "/api/proyek"
+        )
+      );
 
-      const invalidId =
-        list.some(
-          item =>
-            item.id === null ||
-            item.id === undefined
-        );
+      const invalidId = list.some(
+        item =>
+          item.id === null ||
+          item.id === undefined
+      );
 
-      if (
-        invalidId
-      ) {
+      if (invalidId) {
         throw new Error(
           "ID proyek tidak tersedia."
         );
@@ -1290,9 +1286,7 @@ pics,
       let rentals = [];
       let rentalTerms = [];
 
-      if (
-        list.length
-      ) {
+      if (list.length) {
         const result =
           await Promise.allSettled([
             fetchJSON(
@@ -1304,48 +1298,37 @@ pics,
             )
           ]);
 
-        for (
-          const item of result
-        ) {
+        for (const item of result) {
           if (
-            item.status ===
-            "rejected"
+            item.status === "rejected"
           ) {
             throw item.reason;
           }
         }
 
-        const allowed =
-          new Set(
-            list.map(
-              item =>
-                String(item.id)
+        const allowed = new Set(
+          list.map(
+            item => String(item.id)
+          )
+        );
+
+        rentals = collection(
+          result[0].value
+        ).filter(
+          item =>
+            allowed.has(
+              String(item.proyek_id)
             )
-          );
+        );
 
-        rentals =
-          collection(
-            result[0].value
-          ).filter(
-            item =>
-              allowed.has(
-                String(
-                  item.proyek_id
-                )
-              )
-          );
-
-        rentalTerms =
-          collection(
-            result[1].value
-          ).filter(
-            item =>
-              allowed.has(
-                String(
-                  item.proyek_id
-                )
-              )
-          );
+        rentalTerms = collection(
+          result[1].value
+        ).filter(
+          item =>
+            allowed.has(
+              String(item.proyek_id)
+            )
+        );
       }
 
       let cursor = 0;
@@ -1354,9 +1337,7 @@ pics,
       const errors = [];
 
       async function worker() {
-        while (
-          cursor < list.length
-        ) {
+        while (cursor < list.length) {
           const proyek =
             list[cursor++];
 
@@ -1377,12 +1358,9 @@ pics,
                 )
               ]);
 
-            for (
-              const item of result
-            ) {
+            for (const item of result) {
               if (
-                item.status ===
-                "rejected"
+                item.status === "rejected"
               ) {
                 throw item.reason;
               }
@@ -1392,16 +1370,13 @@ pics,
               normalizeProject(
                 proyek,
                 result[0].value,
-
                 collection(
                   result[1].value
                 ),
-
                 rentals,
                 rentalTerms
               )
             );
-
           } catch (error) {
             const text =
               `${
@@ -1409,9 +1384,7 @@ pics,
                 proyek.id
               }: ${error.message}`;
 
-            errors.push(
-              text
-            );
+            errors.push(text);
 
             state.rows.push({
               id:
@@ -1462,19 +1435,17 @@ pics,
           )
       );
 
-      state.error =
-        errors.length
-          ? (
-              `${errors.length} proyek belum lengkap. ` +
-              "Klik Muat ulang sebelum ekspor.\n" +
-              errors
-                .slice(0, 5)
-                .join("\n")
-            )
-          : "";
+      state.error = errors.length
+        ? (
+            `${errors.length} proyek belum lengkap. ` +
+            "Klik Muat ulang sebelum ekspor.\n" +
+            errors
+              .slice(0, 5)
+              .join("\n")
+          )
+        : "";
 
       buildColumns();
-
       populateFilters();
 
       const warnings =
@@ -1492,26 +1463,20 @@ pics,
                 .join("\n")
             : ""
         ),
-
         !!state.error ||
         !!warnings.length
       );
-
     } catch (error) {
-      state.error =
-        error.message;
+      state.error = error.message;
 
       message(
         state.error,
         true
       );
-
     } finally {
-      state.loading =
-        false;
+      state.loading = false;
 
-      $("smReload").disabled =
-        false;
+      $("smReload").disabled = false;
 
       applyFilters();
     }
@@ -1531,15 +1496,13 @@ pics,
 
       [
         "smPengadaan",
-        row =>
-          row.client?.pengadaan,
+        row => row.client?.pengadaan,
         "Semua pengadaan klien"
       ],
 
       [
         "smKontrak",
-        row =>
-          row.client?.statusKontrak,
+        row => row.client?.statusKontrak,
         "Semua kontrak klien"
       ],
 
@@ -1551,42 +1514,32 @@ pics,
 
       [
         "smKlien",
-        row =>
-          row.client?.nama,
+        row => row.client?.nama,
         "Semua klien"
       ]
     ];
 
     filters.forEach(
-      ([
-        id,
-        get,
-        placeholder
-      ]) => {
-        const element =
-          $(id);
+      ([id, get, placeholder]) => {
+        const element = $(id);
+        const previous = element.value;
 
-        const previous =
-          element.value;
-
-        const values =
-          unique(
-            state.rows
-              .filter(
-                row =>
-                  !row.error
-              )
-              .flatMap(
-                row =>
-                  get(row) || []
-              )
-          ).sort(
-            (first, second) =>
-              first.localeCompare(
-                second,
-                "id"
-              )
-          );
+        const values = unique(
+          state.rows
+            .filter(
+              row => !row.error
+            )
+            .flatMap(
+              row =>
+                get(row) || []
+            )
+        ).sort(
+          (first, second) =>
+            first.localeCompare(
+              second,
+              "id"
+            )
+        );
 
         element.replaceChildren(
           new Option(
@@ -1604,9 +1557,7 @@ pics,
         );
 
         element.value =
-          values.includes(
-            previous
-          )
+          values.includes(previous)
             ? previous
             : "";
       }
@@ -1634,9 +1585,7 @@ pics,
           return (
             (
               !query ||
-              norm(text).includes(
-                query
-              )
+              norm(text).includes(query)
             ) &&
 
             (
@@ -1682,15 +1631,11 @@ pics,
 
   function projectLink(row) {
     const link =
-      document.createElement(
-        "a"
-      );
+      document.createElement("a");
 
     link.href =
       "/detail-proyek.html?id=" +
-      encodeURIComponent(
-        row.id
-      );
+      encodeURIComponent(row.id);
 
     link.textContent =
       row.nama;
@@ -1709,7 +1654,7 @@ pics,
   }
 
   // ======================================================
-  // RENDER TABEL TANPA CARD
+  // RENDER TABEL
   // ======================================================
 
   function render() {
@@ -1718,8 +1663,7 @@ pics,
 
     const valid =
       rows.filter(
-        row =>
-          !row.error
+        row => !row.error
       );
 
     const size =
@@ -1727,19 +1671,17 @@ pics,
         $("smPageSize").value
       );
 
-    const pages =
-      Math.max(
-        1,
-        Math.ceil(
-          rows.length / size
-        )
-      );
+    const pages = Math.max(
+      1,
+      Math.ceil(
+        rows.length / size
+      )
+    );
 
-    state.page =
-      Math.min(
-        state.page,
-        pages
-      );
+    state.page = Math.min(
+      state.page,
+      pages
+    );
 
     const body =
       $("smBody");
@@ -1755,22 +1697,14 @@ pics,
     visibleRows.forEach(
       row => {
         const tr =
-          document.createElement(
-            "tr"
-          );
+          document.createElement("tr");
 
-        if (
-          row.error
-        ) {
+        if (row.error) {
           const name =
-            document.createElement(
-              "td"
-            );
+            document.createElement("td");
 
           const error =
-            document.createElement(
-              "td"
-            );
+            document.createElement("td");
 
           name.append(
             projectLink(row)
@@ -1789,14 +1723,11 @@ pics,
             name,
             error
           );
-
         } else {
           state.columns.forEach(
             column => {
               const td =
-                document.createElement(
-                  "td"
-                );
+                document.createElement("td");
 
               const value =
                 cellValue(
@@ -1810,12 +1741,8 @@ pics,
                 td.append(
                   projectLink(row)
                 );
-
               } else if (
-                [
-                  "money",
-                  "number"
-                ].includes(
+                ["money", "number"].includes(
                   column.type
                 )
               ) {
@@ -1830,9 +1757,11 @@ pics,
                 td.textContent =
                   value === ""
                     ? "—"
-                    : column.type === "money"
-                      ? rupiah(value)
-                      : fmt.format(value);
+                    : (
+                        column.type === "money"
+                          ? rupiah(value)
+                          : fmt.format(value)
+                      );
 
                 const party =
                   partyFor(
@@ -1851,7 +1780,6 @@ pics,
                     "sm-bad"
                   );
                 }
-
               } else if (
                 column.type === "date"
               ) {
@@ -1860,33 +1788,48 @@ pics,
 
                 td.textContent =
                   formatDate(value);
+              } else if (
+                column.key === "ringkasanFinal"
+              ) {
+                td.textContent =
+                  value;
 
+                td.style.whiteSpace =
+                  "pre-line";
+
+                td.style.minWidth =
+                  "280px";
+
+                td.style.maxWidth =
+                  "420px";
+
+                td.style.overflowWrap =
+                  "anywhere";
+
+                td.style.verticalAlign =
+                  "top";
+
+                td.style.color =
+                  value === "Lengkap"
+                    ? "#15803d"
+                    : "#b45309";
               } else if (
                 column.key === "tasksText" &&
                 row.tasks.length
               ) {
                 const details =
-                  document.createElement(
-                    "details"
-                  );
+                  document.createElement("details");
 
                 const summary =
-                  document.createElement(
-                    "summary"
-                  );
+                  document.createElement("summary");
 
                 const content =
-                  document.createElement(
-                    "div"
-                  );
+                  document.createElement("div");
 
                 const completed =
                   row.tasks.filter(
                     task =>
-                      [
-                        "done",
-                        "selesai"
-                      ].includes(
+                      ["done", "selesai"].includes(
                         norm(task.status)
                       )
                   ).length;
@@ -1904,10 +1847,7 @@ pics,
                   content
                 );
 
-                td.append(
-                  details
-                );
-
+                td.append(details);
               } else {
                 td.textContent =
                   value || "—";
@@ -1922,22 +1862,16 @@ pics,
       }
     );
 
-    // ================================================
+    // ====================================================
     // TABEL KOSONG
-    // ================================================
+    // ====================================================
 
-    if (
-      !rows.length
-    ) {
+    if (!rows.length) {
       const tr =
-        document.createElement(
-          "tr"
-        );
+        document.createElement("tr");
 
       const td =
-        document.createElement(
-          "td"
-        );
+        document.createElement("td");
 
       td.colSpan =
         state.columns.length;
@@ -1948,44 +1882,35 @@ pics,
       td.textContent =
         state.loading
           ? "Memuat data proyek…"
-          : state.error
-            ? "Data belum lengkap. Lihat pesan di atas."
-            : "Tidak ada proyek sesuai filter.";
+          : (
+              state.error
+                ? "Data belum lengkap. Lihat pesan di atas."
+                : "Tidak ada proyek sesuai filter."
+            );
 
       tr.append(td);
-
       body.append(tr);
     }
 
-    // ================================================
+    // ====================================================
     // TOTAL SETIAP KOLOM NOMINAL
-    // ================================================
+    // ====================================================
 
     const foot =
-      document.createElement(
-        "tr"
-      );
+      document.createElement("tr");
 
     state.columns.forEach(
       (column, index) => {
         const td =
-          document.createElement(
-            "td"
-          );
+          document.createElement("td");
 
-        if (
-          index === 0
-        ) {
+        if (index === 0) {
           td.textContent =
             state.error
               ? "TOTAL BELUM LENGKAP"
               : "TOTAL HASIL FILTER";
-
         } else if (
-          [
-            "money",
-            "number"
-          ].includes(
+          ["money", "number"].includes(
             column.type
           )
         ) {
@@ -2009,26 +1934,26 @@ pics,
             "sm-num";
 
           td.textContent =
-            state.error ||
-            state.loading
+            state.error || state.loading
               ? "—"
-              : column.type === "money"
-                ? rupiah(total)
-                : fmt.format(total);
+              : (
+                  column.type === "money"
+                    ? rupiah(total)
+                    : fmt.format(total)
+                );
         }
 
         foot.append(td);
       }
     );
 
-    $("smFoot")
-      .replaceChildren(
-        foot
-      );
+    $("smFoot").replaceChildren(
+      foot
+    );
 
-    // ================================================
+    // ====================================================
     // PAGINATION DAN INFORMASI
-    // ================================================
+    // ====================================================
 
     $("smResult").textContent =
       `${rows.length} dari ` +
@@ -2075,14 +2000,11 @@ pics,
     for (
       let n = index + 1;
       n;
-      n = Math.floor(
-        (n - 1) / 26
-      )
+      n = Math.floor((n - 1) / 26)
     ) {
       name =
         String.fromCharCode(
-          65 +
-          (n - 1) % 26
+          65 + (n - 1) % 26
         ) +
         name;
     }
@@ -2096,8 +2018,7 @@ pics,
 
   function sheetXML(sheet) {
     if (
-      sheet.rows.length + 1 >
-      1048576
+      sheet.rows.length + 1 > 1048576
     ) {
       throw new Error(
         "Jumlah baris melebihi batas Excel."
@@ -2110,100 +2031,85 @@ pics,
       ) +
       (sheet.rows.length + 1);
 
-    function rowXML(
-      row,
-      index
-    ) {
-      const cells =
-        row.map(
-          (value, column) => {
-            const ref =
-              colName(column) +
-              (index + 1);
+    function rowXML(row, index) {
+      const cells = row.map(
+        (value, column) => {
+          const ref =
+            colName(column) +
+            (index + 1);
 
-            // Nominal disimpan sebagai angka.
-            if (
-              index > 0 &&
-              typeof value === "number" &&
-              Number.isFinite(value)
-            ) {
-              const style =
-                sheet.money?.includes(
-                  column
-                )
-                  ? 2
-                  : 3;
-
-              return (
-                `<c r="${ref}" s="${style}">` +
-                `<v>${value}</v>` +
-                "</c>"
-              );
-            }
-
-            // Tanggal disimpan sebagai tanggal Excel.
-            if (
-              index > 0 &&
-              value &&
-              sheet.dates?.includes(
-                column
-              ) &&
-              dateOnly(value)
-            ) {
-              const serial =
-                Math.round(
-                  (
-                    Date.parse(
-                      `${value}T00:00:00Z`
-                    ) -
-                    Date.UTC(
-                      1899,
-                      11,
-                      30
-                    )
-                  ) /
-                  86400000
-                );
-
-              return (
-                `<c r="${ref}" s="4">` +
-                `<v>${serial}</v>` +
-                "</c>"
-              );
-            }
-
-            const text =
-              String(
-                value ?? ""
-              );
-
-            if (
-              text.length > 32767
-            ) {
-              throw new Error(
-                `Isi sel ${sheet.name}!${ref} ` +
-                "melebihi 32.767 karakter. " +
-                "Kurangi filter sebelum ekspor."
-              );
-            }
-
+          // Nominal disimpan sebagai angka.
+          if (
+            index > 0 &&
+            typeof value === "number" &&
+            Number.isFinite(value)
+          ) {
             const style =
-              index === 0
-                ? 1
-                : 0;
+              sheet.money?.includes(column)
+                ? 2
+                : 3;
 
             return (
-              `<c r="${ref}" ` +
-              `t="inlineStr" s="${style}">` +
-              "<is>" +
-              '<t xml:space="preserve">' +
-              xml(text) +
-              "</t>" +
-              "</is>" +
+              `<c r="${ref}" s="${style}">` +
+              `<v>${value}</v>` +
               "</c>"
             );
           }
-        ).join("");
+
+          // Tanggal disimpan sebagai tanggal Excel.
+          if (
+            index > 0 &&
+            value &&
+            sheet.dates?.includes(column) &&
+            dateOnly(value)
+          ) {
+            const serial = Math.round(
+              (
+                Date.parse(
+                  `${value}T00:00:00Z`
+                ) -
+                Date.UTC(
+                  1899,
+                  11,
+                  30
+                )
+              ) /
+              86400000
+            );
+
+            return (
+              `<c r="${ref}" s="4">` +
+              `<v>${serial}</v>` +
+              "</c>"
+            );
+          }
+
+          const text =
+            String(value ?? "");
+
+          if (text.length > 32767) {
+            throw new Error(
+              `Isi sel ${sheet.name}!${ref} ` +
+              "melebihi 32.767 karakter. " +
+              "Kurangi filter sebelum ekspor."
+            );
+          }
+
+          const style =
+            index === 0 ? 1 : 0;
+
+          return (
+            `<c r="${ref}" ` +
+            `t="inlineStr" s="${style}">` +
+            "<is>" +
+            '<t xml:space="preserve">' +
+            xml(text) +
+            "</t>" +
+            "</is>" +
+            "</c>"
+          );
+        }
+      ).join("");
 
       return (
         `<row r="${index + 1}"` +
@@ -2224,11 +2130,11 @@ pics,
           const width =
             index === 0
               ? 48
-              : sheet.money?.includes(
-                  index
-                )
-                ? 24
-                : 28;
+              : (
+                  sheet.money?.includes(index)
+                    ? 24
+                    : 28
+                );
 
           return (
             `<col min="${index + 1}" ` +
@@ -2242,9 +2148,7 @@ pics,
     const rows = [
       sheet.headers,
       ...sheet.rows
-    ].map(
-      rowXML
-    ).join("");
+    ].map(rowXML).join("");
 
     return (
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -2276,40 +2180,36 @@ pics,
   // CRC32
   // ======================================================
 
-  const CRC_TABLE =
-    Array.from(
-      {
-        length: 256
-      },
-      (_, value) => {
-        let result =
-          value;
+  const CRC_TABLE = Array.from(
+    {
+      length: 256
+    },
+    (_, value) => {
+      let result = value;
 
-        for (
-          let index = 0;
-          index < 8;
-          index++
-        ) {
-          result =
-            result & 1
-              ? (
-                  0xedb88320 ^
-                  (result >>> 1)
-                )
-              : result >>> 1;
-        }
-
-        return result >>> 0;
+      for (
+        let index = 0;
+        index < 8;
+        index++
+      ) {
+        result =
+          result & 1
+            ? (
+                0xedb88320 ^
+                (result >>> 1)
+              )
+            : result >>> 1;
       }
-    );
+
+      return result >>> 0;
+    }
+  );
 
   function crc32(bytes) {
     let crc =
       0xffffffff;
 
-    for (
-      const byte of bytes
-    ) {
+    for (const byte of bytes) {
       crc =
         CRC_TABLE[
           (crc ^ byte) & 255
@@ -2336,10 +2236,7 @@ pics,
     let offset = 0;
 
     for (
-      const [
-        name,
-        content
-      ] of files
+      const [name, content] of files
     ) {
       const filename =
         encoder.encode(name);
@@ -2513,8 +2410,7 @@ pics,
     const directorySize =
       directories.reduce(
         (total, directory) =>
-          total +
-          directory.length,
+          total + directory.length,
         0
       );
 
@@ -2801,17 +2697,12 @@ pics,
       summary.push(
         columns.map(
           (column, index) => {
-            if (
-              index === 0
-            ) {
+            if (index === 0) {
               return "TOTAL HASIL FILTER";
             }
 
             if (
-              [
-                "money",
-                "number"
-              ].includes(
+              ["money", "number"].includes(
                 column.type
               )
             ) {
@@ -2845,9 +2736,9 @@ pics,
               : []
         );
 
-      // ================================================
+      // ==================================================
       // TERMIN KLIEN DAN SELURUH PARTNER
-      // ================================================
+      // ==================================================
 
       const terminRows =
         rows.flatMap(
@@ -2878,10 +2769,7 @@ pics,
             ];
 
             return parties.flatMap(
-              ({
-                party,
-                label
-              }) =>
+              ({ party, label }) =>
                 party.terms.map(
                   (term, index) => [
                     row.nama,
@@ -2920,9 +2808,9 @@ pics,
           }
         );
 
-      // ================================================
+      // ==================================================
       // KETENTUAN LAPORAN
-      // ================================================
+      // ==================================================
 
       const notes = [
         [
@@ -2971,7 +2859,8 @@ pics,
           "Urutan",
 
           "Nama Proyek, PIC, tanggal, Status Final, dokumen, " +
-          "klien, kelompok partner, Tasklist. Tidak ada kolom Margin."
+          "klien, kelompok partner, Ringkasan Final, Tasklist. " +
+          "Tidak ada kolom Margin."
         ],
 
         [
@@ -3042,6 +2931,16 @@ pics,
         ],
 
         [
+          "Ringkasan Final",
+
+          "Lengkap jika seluruh kolom proyek, dokumen, klien, partner, " +
+          "dan Tasklist terisi. Jika belum, tampil daftar data yang kosong, " +
+          "bertanda -, Belum diisi, Belum Ditentukan, atau Belum ada termin. " +
+          "Angka 0 tetap dianggap terisi. Hanya partner pada proyek tersebut " +
+          "yang diperiksa; kolom tambahan untuk partner proyek lain diabaikan."
+        ],
+
+        [
           "Format nominal",
 
           "Angka Excel tanpa Rp. " +
@@ -3059,160 +2958,155 @@ pics,
         )
       ];
 
-      // ================================================
+      // ==================================================
       // BUAT FILE EXCEL
-      // ================================================
+      // ==================================================
 
-      const blob =
-        workbook([
-          {
-            name:
-              "Summary",
+      const blob = workbook([
+        {
+          name:
+            "Summary",
 
-            headers:
-              columns.map(
-                column =>
-                  column.label
-              ),
+          headers:
+            columns.map(
+              column =>
+                column.label
+            ),
 
-            rows:
-              summary,
+          rows:
+            summary,
 
-            money:
-              indices("money"),
+          money:
+            indices("money"),
 
-            dates:
-              indices("date")
-          },
+          dates:
+            indices("date")
+        },
 
-          {
-            name:
-              "Termin",
+        {
+          name:
+            "Termin",
 
-            headers: [
-              "Nama Proyek",
-              "Pihak",
-              "Nama Klien / Partner",
-              "Sumber",
-              "Nama Termin",
-              "Nominal",
-              "Status Pembayaran",
-              "Tanggal Tagihan",
-              "Jatuh Tempo",
-              "Tanggal Bayar",
-              "Syarat Pembayaran"
-            ],
+          headers: [
+            "Nama Proyek",
+            "Pihak",
+            "Nama Klien / Partner",
+            "Sumber",
+            "Nama Termin",
+            "Nominal",
+            "Status Pembayaran",
+            "Tanggal Tagihan",
+            "Jatuh Tempo",
+            "Tanggal Bayar",
+            "Syarat Pembayaran"
+          ],
 
-            rows:
-              terminRows,
+          rows:
+            terminRows,
 
-            money: [
-              5
-            ],
+          money: [
+            5
+          ],
 
-            dates: [
-              7,
-              8,
-              9
-            ]
-          },
+          dates: [
+            7,
+            8,
+            9
+          ]
+        },
 
-          {
-            name:
-              "Tasklist",
+        {
+          name:
+            "Tasklist",
 
-            headers: [
-              "Nama Proyek",
-              "ID Task",
-              "ID Parent Task",
-              "Task",
-              "PIC",
-              "Status",
-              "Tanggal Mulai",
-              "Target Date",
-              "Tanggal Selesai",
-              "Tindak Lanjut",
-              "Catatan",
-              "Link"
-            ],
+          headers: [
+            "Nama Proyek",
+            "ID Task",
+            "ID Parent Task",
+            "Task",
+            "PIC",
+            "Status",
+            "Tanggal Mulai",
+            "Target Date",
+            "Tanggal Selesai",
+            "Tindak Lanjut",
+            "Catatan",
+            "Link"
+          ],
 
-            dates: [
-              6,
-              7,
-              8,
-              9
-            ],
+          dates: [
+            6,
+            7,
+            8,
+            9
+          ],
 
-            rows:
-              rows.flatMap(
-                row =>
-                  row.tasks.map(
-                    task => [
-                      row.nama,
+          rows:
+            rows.flatMap(
+              row =>
+                row.tasks.map(
+                  task => [
+                    row.nama,
 
-                      task.id,
+                    task.id,
 
-                      task.parent_task_id ||
-                      "",
+                    task.parent_task_id ||
+                    "",
 
-                      task.task ||
-                      "",
+                    task.task ||
+                    "",
 
-                      task.nama_pic ||
-                      "",
+                    task.nama_pic ||
+                    "",
 
-                      task.status ||
-                      "",
+                    task.status ||
+                    "",
 
-                      dateOnly(
-                        task.tanggal_mulai
-                      ),
+                    dateOnly(
+                      task.tanggal_mulai
+                    ),
 
-                      dateOnly(
-                        task.target_date
-                      ),
+                    dateOnly(
+                      task.target_date
+                    ),
 
-                      dateOnly(
-                        task.tanggal_selesai
-                      ),
+                    dateOnly(
+                      task.tanggal_selesai
+                    ),
 
-                      dateOnly(
-                        task.tanggal_tindak_lanjut
-                      ),
+                    dateOnly(
+                      task.tanggal_tindak_lanjut
+                    ),
 
-                      task.catatan ||
-                      "",
+                    task.catatan ||
+                    "",
 
-                      task.link ||
-                      ""
-                    ]
-                  )
-              )
-          },
+                    task.link ||
+                    ""
+                  ]
+                )
+            )
+        },
 
-          {
-            name:
-              "Ketentuan",
+        {
+          name:
+            "Ketentuan",
 
-            headers: [
-              "Keterangan",
-              "Nilai / Ketentuan"
-            ],
+          headers: [
+            "Keterangan",
+            "Nilai / Ketentuan"
+          ],
 
-            rows:
-              notes
-          }
-        ]);
+          rows:
+            notes
+        }
+      ]);
 
       const url =
-        URL.createObjectURL(
-          blob
-        );
+        URL.createObjectURL(blob);
 
       const link =
-        document.createElement(
-          "a"
-        );
+        document.createElement("a");
 
       link.href =
         url;
@@ -3225,17 +3119,13 @@ pics,
       );
 
       link.click();
-
       link.remove();
 
       setTimeout(
         () =>
-          URL.revokeObjectURL(
-            url
-          ),
+          URL.revokeObjectURL(url),
         10000
       );
-
     } catch (error) {
       message(
         "Excel belum dapat diunduh: " +
@@ -3276,9 +3166,7 @@ pics,
       }
 
       const style =
-        getComputedStyle(
-          sidebar
-        );
+        getComputedStyle(sidebar);
 
       const hidden =
         style.display === "none" ||
@@ -3309,9 +3197,7 @@ pics,
     }
 
     function schedule() {
-      if (
-        frame === null
-      ) {
+      if (frame === null) {
         frame =
           requestAnimationFrame(
             update
@@ -3330,13 +3216,10 @@ pics,
           ".sidebar"
         );
 
-      if (
-        sidebar !== observed
-      ) {
+      if (sidebar !== observed) {
         resize.disconnect();
 
-        observed =
-          sidebar;
+        observed = sidebar;
 
         if (sidebar) {
           resize.observe(
@@ -3401,9 +3284,7 @@ pics,
   // ======================================================
 
   function init() {
-    if (
-      !$("summaryApp")
-    ) {
+    if (!$("summaryApp")) {
       return;
     }
 
@@ -3427,10 +3308,9 @@ pics,
     ).forEach(
       ([id, label]) => {
         const element =
-          $("smFilters")
-            .querySelector(
-              `label[for="${id}"]`
-            );
+          $("smFilters").querySelector(
+            `label[for="${id}"]`
+          );
 
         if (element) {
           element.textContent =
@@ -3439,91 +3319,90 @@ pics,
       }
     );
 
-    $("smFilters")
-      .addEventListener(
-        "submit",
-        event =>
-          event.preventDefault()
-      );
+    $("smFilters").addEventListener(
+      "submit",
+      event =>
+        event.preventDefault()
+    );
 
     [
       "input",
       "change"
     ].forEach(
       event =>
-        $("smFilters")
-          .addEventListener(
-            event,
-            () => {
-              state.page = 1;
-              applyFilters();
-            }
-          )
+        $("smFilters").addEventListener(
+          event,
+          () => {
+            state.page = 1;
+
+            applyFilters();
+          }
+        )
     );
 
-    $("smReset")
-      .addEventListener(
-        "click",
-        () => {
-          $("smFilters")
-            .reset();
+    $("smReset").addEventListener(
+      "click",
+      () => {
+        $("smFilters").reset();
 
-          state.page = 1;
+        state.page = 1;
 
-          applyFilters();
-        }
-      );
+        applyFilters();
+      }
+    );
 
-    $("smPageSize")
-      .addEventListener(
-        "change",
-        () => {
-          state.page = 1;
-          render();
-        }
-      );
+    $("smPageSize").addEventListener(
+      "change",
+      () => {
+        state.page = 1;
 
-    $("smPrev")
-      .addEventListener(
-        "click",
-        () => {
-          state.page =
-            Math.max(
-              1,
-              state.page - 1
-            );
+        render();
+      }
+    );
 
-          render();
-        }
-      );
+    $("smPrev").addEventListener(
+      "click",
+      () => {
+        state.page = Math.max(
+          1,
+          state.page - 1
+        );
 
-    $("smNext")
-      .addEventListener(
-        "click",
-        () => {
-          state.page++;
-          render();
-        }
-      );
+        render();
+      }
+    );
 
-    $("smReload")
-      .addEventListener(
-        "click",
-        load
-      );
+    $("smNext").addEventListener(
+      "click",
+      () => {
+        state.page++;
 
-    $("smExport")
-      .addEventListener(
-        "click",
-        exportExcel
-      );
+        render();
+      }
+    );
+
+    $("smReload").addEventListener(
+      "click",
+      load
+    );
+
+    $("smExport").addEventListener(
+      "click",
+      exportExcel
+    );
 
     load();
   }
 
+  // Fungsi bersama untuk modal Sum pada halaman proyek.
+window.PortoproSummaryFinal = Object.freeze({
+  normalizeProject,
+  finalSummary,
+  collection
+});
+
   if (
-    document.readyState ===
-    "loading"
+    document.readyState === "loading"
   ) {
     document.addEventListener(
       "DOMContentLoaded",
@@ -3532,9 +3411,7 @@ pics,
         once: true
       }
     );
-
   } else {
     init();
   }
-
 })();

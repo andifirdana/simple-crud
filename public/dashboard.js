@@ -4155,3 +4155,4 @@ async function ambilBulananPengeluaranDetail(filter) {
 
   return bulanan;
 }
+

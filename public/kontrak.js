@@ -377,11 +377,26 @@ filterStatus.value =
           return `
             <tr>
               <td>
-                <div class="project-name">
-                  ${escapeHTML(
-                    item.nama_proyek ||
-                    "-"
-                  )}
+               <div class="project-name">
+                  ${
+                    item.proyek_id
+                      ? `
+                        <a
+                          class="project-detail-link"
+                          href="/detail-proyek.html?id=${encodeURIComponent(
+                            item.proyek_id
+                          )}"
+                          title="Lihat detail proyek"
+                        >
+                          ${escapeHTML(
+                            item.nama_proyek || "-"
+                          )}
+                        </a>
+                      `
+                      : escapeHTML(
+                          item.nama_proyek || "-"
+                        )
+                  }
                 </div>
               </td>
 

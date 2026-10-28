@@ -57,7 +57,8 @@ let statusOptions = {
   pengadaan: [],
   teknis: [],
   administrasi: [],
-  final: []
+  final: [],
+  mpengadaan: []
 };
 
 
@@ -162,29 +163,25 @@ function fillSelect(
 // OPTION STATUS
 // =====================================================
 
-function statusHtml(flag) {
-
+function statusHtml(
+  flag,
+  placeholder = "Pilih Status"
+) {
   return `
     <option value="">
-      Pilih Status
+      ${escapeHtml(placeholder)}
     </option>
-  ` +
-
-  statusOptions[flag]
+  ` + statusOptions[flag]
     .map(row => `
-
       <option
         value="${escapeHtml(row.deskripsi)}"
-        data-id="${row.id}"
+        data-id="${escapeHtml(row.id)}"
       >
         ${escapeHtml(row.deskripsi)}
       </option>
-
     `)
     .join("");
-
 }
-
 
 // =====================================================
 // LOAD MASTER DATA
@@ -287,18 +284,21 @@ async function loadMaster() {
     // STATUS
     // ===============================================
 
-    Object
-      .keys(statusOptions)
-      .forEach(flag => {
-        statusOptions[flag] =
-          statuses.filter(
-            row =>
-              String(
-                row.flag || ""
-              ).toLowerCase() ===
-              flag
-          );
-      });
+       Object.keys(statusOptions)
+        .forEach(flag => {
+          statusOptions[flag] =
+            statuses.filter(row =>
+              String(row.flag || "")
+                .trim()
+                .toLowerCase() === flag
+            );
+        });
+
+        $("metode_pengadaan_klien").innerHTML =
+      statusHtml(
+        "mpengadaan",
+        "Pilih Metode Pengadaan"
+      );
 
     $("status_pengadaan_klien")
       .innerHTML =
@@ -2509,6 +2509,63 @@ form.addEventListener(
 
     event.preventDefault();
 
+    // =====================================================
+// JIKA INFORMASI KLIEN DIISI, KLIEN WAJIB DIPILIH
+// =====================================================
+
+const adaInformasiKlien = [
+  
+  "metode_pengadaan_klien",
+  "tanggal_mulai_klien",
+  "tanggal_akhir_klien",
+  "model_pembayaran_klien",
+  "status_pengadaan_klien",
+  "status_teknis_klien",
+  "status_administrasi_klien"
+].some(id =>
+  String(getInputValue(id)).trim() !== ""
+);
+
+const adaNilaiKlien = [
+  ["nilaiSubmitKlien", "nilai_submit_klien"],
+  ["nilaiNego1Klien", "nilai_nego_1_klien"],
+  ["nilaiNego2Klien", "nilai_nego_2_klien"],
+  ["nilaiNego3Klien", "nilai_nego_3_klien"]
+].some(ids => {
+  const nilai = nominalOrNull(
+    getInputValue(...ids)
+  );
+
+  return Number.isFinite(nilai) && nilai !== 0;
+});
+
+if (
+  !klienSelect.value &&
+  (adaInformasiKlien || adaNilaiKlien)
+) {
+  await tampilkanModalNamaKlien();
+
+  const inputPencarian =
+    klienSelect
+      .closest(".kp-search")
+      ?.querySelector(".kp-search-input");
+
+  const target =
+    inputPencarian || klienSelect;
+
+  target.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+
+  target.focus({
+    preventScroll: true
+  });
+
+  return;
+}
+
+
 
     // ===============================================
     // VALIDASI KATEGORI
@@ -2744,8 +2801,11 @@ form.addEventListener(
 
 
       nama_proyek:
-
         namaProyek,
+      
+      nama_pengadaan:
+      $("nama_pengadaan")
+        .value.trim() || null,
 
 
       deskripsi:
@@ -2792,6 +2852,11 @@ form.addEventListener(
         numberOrNull(
           klienSelect.value
         ),
+
+
+    metode_pengadaan_klien:
+      $("metode_pengadaan_klien")
+        .value || null,
 
 
 // =============================================
@@ -2938,7 +3003,15 @@ console.log(
       payload.nilai_nego_3_klien
   }
 );
+console.log(
+  "DATA PENGADAAN KLIEN:",
+  {
+    klien_id: payload.klien_id,
 
+    metode_pengadaan_klien:
+      payload.metode_pengadaan_klien
+  }
+);
       const response =
         await fetch(
 
@@ -2983,14 +3056,10 @@ console.log(
 
       }
 
+await tampilkanModalProyekBerhasil();
 
-      alert(
-        "Proyek berhasil disimpan."
-      );
-
-
-      window.location.href =
-        "/proyek.html";
+window.location.href =
+  "/proyek.html";
 
 
     } catch (error) {
@@ -3161,6 +3230,7 @@ const proyekMasterDataReady = loadMaster();
         button.addEventListener("mousedown", event => {
           event.preventDefault();
         });
+
 
         button.addEventListener("click", () => {
           if (unavailable(option)) return render();
@@ -4465,3 +4535,50 @@ if (
   );
 
 })();
+
+function tampilkanModalProyekBerhasil() {
+  const modal =
+    document.getElementById(
+      "proyekBerhasilModal"
+    );
+
+  if (!modal) {
+    alert("Proyek berhasil dibuat.");
+    return Promise.resolve();
+  }
+
+  return new Promise(resolve => {
+    modal.addEventListener(
+      "close",
+      () => resolve(),
+      { once: true }
+    );
+
+    modal.showModal();
+  });
+}
+
+function tampilkanModalNamaKlien() {
+  const modal =
+    document.getElementById(
+      "namaKlienModal"
+    );
+
+  if (!modal) {
+    alert(
+      "Silakan pilih Nama Klien terlebih dahulu."
+    );
+
+    return Promise.resolve();
+  }
+
+  return new Promise(resolve => {
+    modal.addEventListener(
+      "close",
+      () => resolve(),
+      { once: true }
+    );
+
+    modal.showModal();
+  });
+}

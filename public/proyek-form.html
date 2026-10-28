@@ -2,19 +2,18 @@
 <html lang="id">
 
 <head>
-
   <meta charset="UTF-8">
-
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0"
+    content="width=device-width, initial-scale=1.0" 
   >
 
   <title>Tambah Proyek - Portopro</title>
 
   <link
-    rel="stylesheet"
-    href="/style.css"
+    rel="stylesheet" href="/style.css"
+  >
+  <link rel="stylesheet" href="/proyek.css"
   >
 
   <style>
@@ -485,13 +484,221 @@
   line-height: 1;
   vertical-align: middle;
 }
+
+#proyekBerhasilModal {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: #fff;
+  color: #0f172a;
+  font-family: inherit;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.2);
+}
+
+#proyekBerhasilModal::backdrop {
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(5px);
+}
+
+#proyekBerhasilModal .proyek-success-content {
+  padding: 36px 28px 28px;
+  text-align: center;
+}
+
+#proyekBerhasilModal .proyek-success-icon {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  border: 8px solid #f0fdf4;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+#proyekBerhasilModal .proyek-success-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+#proyekBerhasilModal h3 {
+  margin: 16px 0 10px;
+  font-size: 24px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+#proyekBerhasilModal p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+#proyekBerhasilModal form {
+  margin: 26px 0 0;
+}
+
+#proyekBerhasilModal .proyek-success-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #4f46e5;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#proyekBerhasilModal .proyek-success-button:hover {
+  background: #4338ca;
+}
+
+#proyekBerhasilModal .proyek-success-button:focus-visible {
+  outline: 3px solid #a5b4fc;
+  outline-offset: 4px;
+}
+
+#namaKlienModal {
+  width: min(430px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: #fff;
+  color: #0f172a;
+  font-family: inherit;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+#namaKlienModal::backdrop {
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(5px);
+}
+
+#namaKlienModal .klien-warning-content {
+  padding: 32px 28px 28px;
+  text-align: center;
+}
+
+#namaKlienModal .klien-warning-icon {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 22px;
+  border-radius: 24px;
+  background: #fff7ed;
+  color: #ea580c;
+  box-shadow: 0 0 0 8px #fffbf5;
+}
+
+#namaKlienModal h3 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+#namaKlienModal p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+#namaKlienModal .klien-warning-note {
+  margin-top: 20px;
+  padding: 11px 14px;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#namaKlienModal form {
+  margin: 24px 0 0;
+}
+
+#namaKlienModal button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #4f46e5;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+#namaKlienModal button:hover {
+  background: #4338ca;
+}
+
+#namaKlienModal button:focus-visible {
+  outline: 3px solid #a5b4fc;
+  outline-offset: 4px;
+}
+
+/* Konten mengikuti ruang yang tersedia di samping sidebar */
+.main-content {
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+/* Form memenuhi lebar area konten */
+.project-form-page {
+  width: 100%;
+  max-width: none !important;
+  margin: 0;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .project-form-page {
+    padding: 20px 16px;
+  }
+}
   </style>
-<link rel="stylesheet" href="/proyek.css">
 </head>
 
 
 <body>
-
 
 <div class="app-layout">
 
@@ -502,16 +709,13 @@
 
   <div id="sidebarContainer"></div>
 
-
   <!-- =====================================================
        MAIN CONTENT
   ====================================================== -->
 
   <main class="main-content">
 
-
     <div class="project-form-page">
-
 
       <!-- =================================================
            PAGE HEADER
@@ -552,8 +756,6 @@
         ================================================== -->
 
         <div class="project-card">
-
-
           <div class="card-header">
 
             <h2>
@@ -568,7 +770,6 @@
 
 
           <div class="card-body">
-
 
             <div class="form-grid">
 
@@ -688,6 +889,22 @@
 
               </div>
 
+              <!-- =========================================
+                   Nama Pengadaan sesuai TOR
+              ========================================== -->
+
+              <div class="form-group full">
+                <label for="nama_pengadaan">
+                  Nama Pengadaan sesuai TOR
+                </label>
+
+                <input
+                  type="text"
+                  id="nama_pengadaan"
+                  placeholder="Masukkan nama pengadaan sesuai TOR"
+                >
+              </div>
+
 
               <!-- =========================================
                    DESKRIPSI
@@ -779,9 +996,7 @@
 
           <div class="card-body">
 
-
             <div class="form-grid">
-
 
               <!-- =========================================
                    KLIEN
@@ -875,6 +1090,22 @@
                 </select>
 
               </div>
+
+              <!-- =========================================
+                   METODE PENGADAAN
+              ========================================== -->
+
+              <div class="form-group">
+              <label for="metode_pengadaan_klien">
+                Metode Pengadaan
+              </label>
+
+              <select id="metode_pengadaan_klien">
+                <option value="">
+                  Pilih Metode Pengadaan
+                </option>
+              </select>
+            </div>
 
 
               <!-- =========================================
@@ -1190,6 +1421,120 @@
 
 </div>
 
+<dialog
+  id="proyekBerhasilModal"
+  aria-labelledby="proyekBerhasilTitle"
+  aria-describedby="proyekBerhasilDescription"
+>
+  <div class="proyek-success-content">
+
+    <div class="proyek-success-icon">
+      <svg
+        width="36"
+        height="36"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M5 12.5L9.5 17L19 7.5"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </div>
+
+    <span class="proyek-success-badge">
+      BERHASIL DISIMPAN
+    </span>
+
+    <h3 id="proyekBerhasilTitle">
+      Proyek berhasil dibuat!
+    </h3>
+
+    <p id="proyekBerhasilDescription">
+      Data proyek sudah tersimpan.
+      Kamu dapat melihat detail dan melanjutkan
+      pengelolaannya melalui daftar proyek.
+    </p>
+
+    <form method="dialog">
+      <button
+        type="submit"
+        id="lihatProyekBerhasilButton"
+        class="proyek-success-button"
+        autofocus
+      >
+        Lihat Daftar Proyek
+        <span aria-hidden="true">→</span>
+      </button>
+    </form>
+
+  </div>
+</dialog>
+
+<dialog
+  id="namaKlienModal"
+  aria-labelledby="namaKlienModalTitle"
+  aria-describedby="namaKlienModalDescription"
+>
+  <div class="klien-warning-content">
+
+    <div class="klien-warning-icon">
+      <svg
+        width="34"
+        height="34"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M12 8V13"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+        <circle
+          cx="12"
+          cy="16.5"
+          r="1"
+          fill="currentColor"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="9"
+          stroke="currentColor"
+          stroke-width="1.8"
+        />
+      </svg>
+    </div>
+
+    <h3 id="namaKlienModalTitle">
+      Nama Klien belum dipilih
+    </h3>
+
+    <p id="namaKlienModalDescription">
+      Informasi Klien sudah diisi.
+      Pilih Nama Klien terlebih dahulu
+      agar datanya dapat disimpan.
+    </p>
+
+    <div class="klien-warning-note">
+      Data yang sudah kamu isi tetap tersedia.
+    </div>
+
+    <form method="dialog">
+      <button type="submit" autofocus>
+        Pilih Nama Klien
+        <span aria-hidden="true">→</span>
+      </button>
+    </form>
+
+  </div>
+</dialog>
 
 <!-- =====================================================
      PROYEK FORM JS

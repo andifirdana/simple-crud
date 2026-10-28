@@ -18,8 +18,6 @@ let activePartnerDokumenUploadId = null;
 let activePartnerDokumenEditId = null;
 
 
-
-
 // ======================================================
 // FORMAT
 // ======================================================
@@ -135,10 +133,107 @@ function escapeTaskHtml(value) {
 
 }
 
-function formatTaskNote(value) {
+// ======================================================
+// NORMALISASI CATATAN TASK
+// ======================================================
 
-  const catatan = String(value ?? "")
+function normalisasiCatatanTaskDetail(value) {
+  let teks = String(value ?? "")
+    .replace(/\r\n?/g, "\n");
+
+  const entitas = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+    nbsp: " ",
+    bull: "•",
+    hellip: "…",
+    ndash: "–",
+    mdash: "—"
+  };
+
+  // Mendukung tag asli dan tag yang sudah ter-encode.
+
+  for (let i = 0; i < 3; i++) {
+    const hasil = teks.replace(
+      /&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp|bull|hellip|ndash|mdash);/gi,
+      (seluruh, kode) => {
+        const key = kode.toLowerCase();
+
+        if (key[0] !== "#") {
+          return entitas[key];
+        }
+
+        const nilai = key.startsWith("#x")
+          ? parseInt(key.slice(2), 16)
+          : parseInt(key.slice(1), 10);
+
+        return (
+          nilai > 0 &&
+          nilai <= 0x10ffff &&
+          !(nilai >= 0xd800 && nilai <= 0xdfff)
+        )
+          ? String.fromCodePoint(nilai)
+          : "�";
+      }
+    );
+
+    if (hasil === teks) break;
+
+    teks = hasil;
+  }
+
+  return teks
+    .replace(/<!--[\s\S]*?-->/g, "")
+
+    .replace(
+      /<(script|style|iframe|object|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,
+      ""
+    )
+
+    .replace(
+      /<\/(?:div|p|li|h[1-6]|section|article|blockquote|pre|tr)\s*>[ \t]*<(?:div|p|li|h[1-6]|section|article|blockquote|pre|tr)\b[^>]*>/gi,
+      "\n"
+    )
+
+    .replace(/<br\b[^>]*>/gi, "\n")
+
+    .replace(
+      /<\/(?:div|p|li|ul|ol|h[1-6]|section|article|blockquote|pre|tr)\s*>/gi,
+      "\n"
+    )
+
+    .replace(
+      /<(?:div|p|li|ul|ol|h[1-6]|section|article|blockquote|pre|tr)\b[^>]*>/gi,
+      "\n"
+    )
+
+    .replace(/<\/?[a-z][^>]*>/gi, "")
+    .replace(/\u00a0/g, " ")
     .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+
+// ======================================================
+// NILAI MEDIA PENGADAAN KLIEN
+// ======================================================
+
+function mediaPengadaanKlienTampil(klien) {
+  return String(
+    klien?.metode_pengadaan ??
+    klien?.media_pengadaan ??
+    klien?.model_pengadaan ??
+    ""
+  ).trim();
+}
+
+function formatTaskNote(value) {
+  const catatan = normalisasiCatatanTaskDetail(value)
     .split("\n")
     .map(baris => baris.trim())
     .join("\n")
@@ -148,16 +243,13 @@ function formatTaskNote(value) {
   return catatan
     ? escapeTaskHtml(catatan)
     : "-";
-
 }
 
 // ======================================================
 // CATATAN TASK - RINGKAS DAN SELENGKAPNYA
 // ======================================================
 function buatCatatanTaskDetail(value, taskId) {
-  const catatan = String(value ?? "")
-    .replace(/\r\n?/g, "\n")
-    .trim();
+const catatan = normalisasiCatatanTaskDetail(value);
 
   if (!catatan) {
     return `<span class="task-note-empty">-</span>`;
@@ -2081,6 +2173,21 @@ document.getElementById(
     proyek.deskripsi || "-";
 
 
+// ======================================================
+// NAMA PENGADAAN SESUAI TOR
+// ======================================================
+
+const namaPengadaanInfo = document.getElementById(
+  "namaPengadaanInfoProyek"
+);
+
+if (namaPengadaanInfo) {
+  namaPengadaanInfo.textContent =
+    String(
+      proyek.nama_pengadaan ?? ""
+    ).trim() || "-";
+}
+
   // PIC
 
   renderPIC(pic);
@@ -2468,6 +2575,19 @@ function renderKlien(klien) {
             "-"
           }
         </div>
+      </div>
+
+      <div class="info">
+        <div class="label">
+          Media Pengadaan
+        </div>
+
+        <div class="value">
+          ${escapeHtml(
+            mediaPengadaanKlienTampil(klien) || "-"
+          )}
+        </div>
+
       </div>
 
       <div class="info">
@@ -5837,18 +5957,22 @@ async function editDokumenPartner(id) {
       fileLama.innerHTML = `
         <strong>File saat ini:</strong>
 
-        <a
-          href="${escapeHtml(
-            dokumen.path_file
-          )}"
-          target="_blank"
-          rel="noopener noreferrer"
+         <strong>
+                ${escapeHtml(
+                  dokumen.nama_file_asli ||
+                  "Dokumen"
+                )}
+              </strong>
+
+              &nbsp;
+
+          <button
+          type="button"
+          class="btn-file btn-lihat-file"
+          onclick="bukaDokumenPartner(${Number(dokumen.id)}, false)"
         >
-          ${escapeHtml(
-            dokumen.nama_file_asli ||
-            "Lihat Dokumen"
-          )}
-        </a>
+          Lihat
+        </button>
 
         <div class="form-hint">
           Kosongkan upload jika tidak
@@ -7071,6 +7195,168 @@ if (batalDokumen) {
 
 }
 
+// ======================================================
+// MODAL INFORMASI DOKUMEN
+// ======================================================
+
+function tampilkanModalDokumen(
+  judul,
+  pesan
+) {
+  let modal =
+    document.getElementById(
+      "alertDokumenDialog"
+    );
+
+  if (!modal) {
+    const style =
+      document.createElement("style");
+
+    style.textContent = `
+      #alertDokumenDialog {
+        box-sizing: border-box;
+        width: min(420px, calc(100vw - 32px));
+        max-height: calc(100dvh - 32px);
+        margin: auto;
+        padding: 32px 28px 26px;
+        overflow: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 24px;
+        background: #ffffff;
+        color: #0f172a;
+        font-family: inherit;
+        text-align: center;
+        box-shadow: 0 24px 80px rgba(15, 23, 42, .24);
+      }
+
+      #alertDokumenDialog::backdrop {
+        background: rgba(15, 23, 42, .48);
+        backdrop-filter: blur(5px);
+      }
+
+      #alertDokumenDialog .ad-icon {
+        display: grid;
+        place-items: center;
+        width: 76px;
+        height: 76px;
+        margin: 0 auto 22px;
+        border: 8px solid #fffbeb;
+        border-radius: 24px;
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      #alertDokumenDialog h2 {
+        margin: 0 0 10px;
+        color: #0f172a;
+        font-size: 23px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      #alertDokumenDialog p {
+        margin: 0;
+        color: #64748b;
+        font-size: 14px;
+        line-height: 1.7;
+        overflow-wrap: anywhere;
+      }
+
+      #alertDokumenDialog .ad-button {
+        width: 100%;
+        margin-top: 26px;
+        padding: 13px 18px;
+        border: none;
+        border-radius: 12px;
+        background: #2563eb;
+        color: white;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s ease;
+      }
+
+      #alertDokumenDialog .ad-button:hover {
+        background: #1d4ed8;
+      }
+
+      #alertDokumenDialog .ad-button:focus-visible {
+        outline: 3px solid #93c5fd;
+        outline-offset: 3px;
+      }
+    `;
+
+    document.head.appendChild(style);
+
+    modal =
+      document.createElement("dialog");
+
+    modal.id = "alertDokumenDialog";
+
+    modal.setAttribute(
+      "role",
+      "alertdialog"
+    );
+
+    modal.setAttribute(
+      "aria-labelledby",
+      "alertDokumenJudul"
+    );
+
+    modal.setAttribute(
+      "aria-describedby",
+      "alertDokumenPesan"
+    );
+
+    modal.innerHTML = `
+      <div class="ad-icon" aria-hidden="true">
+        <svg
+          width="34"
+          height="34"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 2v6h6"/>
+          <path d="M12 12v4"/>
+          <path d="M12 19h.01"/>
+        </svg>
+      </div>
+
+      <h2 id="alertDokumenJudul"></h2>
+      <p id="alertDokumenPesan"></p>
+
+      <form method="dialog">
+        <button
+          type="submit"
+          class="ad-button"
+          autofocus
+        >
+          Mengerti
+        </button>
+      </form>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
+  modal.querySelector(
+    "#alertDokumenJudul"
+  ).textContent = judul;
+
+  modal.querySelector(
+    "#alertDokumenPesan"
+  ).textContent = pesan;
+
+  if (!modal.open) {
+    modal.showModal();
+  }
+}
 
 // ======================================================
 // SIMPAN DOKUMEN
@@ -7105,13 +7391,38 @@ if (dokumenForm) {
         // ============================================
 
         if (saveButton?.disabled) {
+          return;
+        }
+        // Maksimal 20 MB per file.
+        const batasUkuranDokumen =
+          20 * 1024 * 1024;
+
+        const fileInput =
+          document.getElementById(
+            "fileDokumen"
+          );
+
+        const fileTerlaluBesar =
+          Array.from(
+            fileInput?.files || []
+          ).some(
+            file =>
+              file.size > batasUkuranDokumen
+          );
+
+        if (fileTerlaluBesar) {
+          tampilkanModalDokumen(
+            "File Terlalu Besar",
+            "Pastikan dokumen tidak melebihi 20 MB."
+          );
 
           return;
-
         }
 
 
         if (saveButton) {
+        
+
 
           saveButton.disabled =
             true;
@@ -7121,6 +7432,36 @@ if (dokumenForm) {
 
         }
 
+          // Berlaku untuk dokumen KLIEN dan PARTNER.
+
+          const batasUkuran =
+            20 * 1024 * 1024;
+
+          const melebihiBatas =
+            Array.from(
+              fileInput?.files || []
+            ).some(file => file.size > batasUkuran);
+
+          if (melebihiBatas) {
+            // Tombol mungkin sudah dinonaktifkan
+            // oleh kode di atas bagian ini.
+            if (saveButton) {
+              saveButton.disabled = false;
+
+              saveButton.textContent =
+                activeDokumenEditId ||
+                activePartnerDokumenEditId
+                  ? "Simpan Perubahan"
+                  : "Simpan Dokumen";
+            }
+
+            tampilkanModalDokumen(
+              "File Terlalu Besar",
+              "Pastikan dokumen tidak melebihi 20 MB."
+            );
+
+            return;
+          }
 
         // ============================================
         // FORM DATA
@@ -7349,10 +7690,35 @@ else {
         );
 
 
-        alert(
-          error.message ||
-          "Gagal menyimpan dokumen."
+       const pesanError =
+      String(error.message || "");
+
+      const fileTerlaluBesar =
+        error.code === "LIMIT_FILE_SIZE" ||
+        /LIMIT_FILE_SIZE|File too large/i.test(
+          pesanError
         );
+
+      if (fileTerlaluBesar) {
+        tampilkanModalDokumen(
+          "File Terlalu Besar",
+          "Pastikan dokumen tidak melebihi 20 MB."
+        );
+      } else {
+        // Jangan tampilkan halaman HTML error server.
+        const responsHtml =
+          /<!doctype|<html|<head|<body|<pre/i.test(
+            pesanError
+          );
+
+        tampilkanModalDokumen(
+          "Gagal Menyimpan Dokumen",
+          responsHtml
+            ? "Dokumen belum berhasil disimpan. Silakan coba kembali."
+            : pesanError ||
+              "Terjadi kesalahan saat menyimpan dokumen."
+        );
+      }
 
 
         // ============================================
@@ -7614,15 +7980,13 @@ activePartnerDokumenUploadId =
 
               &nbsp;
 
-              <a
-                href="${escapeHtml(
-                  dokumen.path_file
-                )}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Lihat
-              </a>
+             <button
+              type="button"
+              class="btn-file btn-lihat-file"
+              onclick="bukaDokumenKlien(${Number(dokumen.id)}, false)"
+            >
+              Lihat
+            </button>
 
             </div>
 
@@ -8482,6 +8846,20 @@ editProyekButton.addEventListener(
         "editNamaProyek"
       ).value =
         proyek.nama_proyek || "";
+      
+     const inputNamaPengadaan =
+        document.querySelector(
+          "#editProyekForm #editNamaPengadaanKlien"
+        );
+
+      if (!inputNamaPengadaan) {
+        throw new Error(
+          "Input Nama Pengadaan tidak ditemukan di form Edit Proyek"
+        );
+      }
+
+      inputNamaPengadaan.value =
+        proyek.nama_pengadaan ?? "";
 
       document.getElementById(
         "editDeskripsi"
@@ -9145,6 +9523,58 @@ async function loadStatusEditKlien() {
     );
   });
 
+// ======================================================
+// MEDIA PENGADAAN DARI MASTER STATUS
+// FLAG: mpengadaan
+// ======================================================
+
+const mediaPengadaanSelect = document.getElementById(
+  "editMetodePengadaanKlien"
+);
+
+if (mediaPengadaanSelect) {
+  mediaPengadaanSelect.replaceChildren(
+    new Option(
+      "Pilih Media Pengadaan",
+      ""
+    )
+  );
+
+  const daftarMediaPengadaan = data.filter(item => {
+    const flag = String(
+      item.flag || ""
+    ).trim().toLowerCase();
+
+    const status = String(
+      item.status ?? "Aktif"
+    ).trim().toLowerCase();
+
+    return (
+      flag === "mpengadaan" &&
+      status === "aktif"
+    );
+  });
+
+  daftarMediaPengadaan.forEach(item => {
+    const nama = String(
+      item.deskripsi ||
+      item.nama ||
+      item.name ||
+      ""
+    ).trim();
+
+    if (!nama) return;
+
+    const option = new Option(
+      nama,
+      nama
+    );
+
+    option.dataset.id = item.id;
+
+    mediaPengadaanSelect.appendChild(option);
+  });
+}
 
   console.log(
     "MASTER STATUS EDIT KLIEN:",
@@ -9352,6 +9782,28 @@ if (editKlienButton) {
 
             klien.model_pembayaran ||
             klien.metode_pembayaran
+          );
+        }
+
+        // ======================================================
+        // ISI MEDIA PENGADAAN SAAT EDIT
+        // ======================================================
+
+        const mediaPengadaanSelect = document.getElementById(
+          "editMetodePengadaanKlien"
+        );
+
+        if (modeTambahKlien) {
+          mediaPengadaanSelect.value = "";
+        } else {
+          pilihStatusEdit(
+            mediaPengadaanSelect,
+
+            klien.metode_pengadaan_id ||
+            klien.media_pengadaan_id ||
+            null,
+
+            mediaPengadaanKlienTampil(klien)
           );
         }
 
@@ -10691,6 +11143,11 @@ if (editProyekForm) {
             "editNamaProyek"
           ).value.trim(),
 
+        nama_pengadaan:
+        document.querySelector(
+          "#editProyekForm #editNamaPengadaanKlien"
+        ).value.trim() || null,
+
         jenis_proyek_id:
           jenisSelect.value
             ? Number(
@@ -10979,6 +11436,11 @@ if (editKlienForm) {
     document.getElementById(
       "editModelPembayaranKlien"
     ).value || null,
+
+  metode_pengadaan:
+  document.getElementById(
+    "editMetodePengadaanKlien"
+  ).value.trim() || null,
 
   status_pengadaan:
     document.getElementById(
@@ -11872,10 +12334,11 @@ window.editTaskDetail =
       item.link || "";
 
 
-    document.getElementById(
+      document.getElementById(
       "taskDetailCatatan"
-    ).value =
-      item.catatan || "";
+    ).value = normalisasiCatatanTaskDetail(
+      item.catatan
+    );
 
 
     document.getElementById(
@@ -11927,10 +12390,6 @@ window.editTaskDetail =
 
   };
 
-
-// ======================================================
-// SIMPAN TASK
-// ======================================================
 // ======================================================
 // SIMPAN TASK
 // ======================================================
@@ -12036,9 +12495,9 @@ if (!taskDetailForm) {
           "taskDetailLink"
         ).value.trim();
 
-        const catatan = field(
-          "taskDetailCatatan"
-        ).value.trim();
+       const catatan = normalisasiCatatanTaskDetail(
+        field("taskDetailCatatan").value
+      );
 
         const status = field(
           "taskDetailStatus"
@@ -15117,6 +15576,23 @@ document.head.appendChild(
     })
   );
 
+
+// ======================================================
+// BATAL EDIT INFORMASI PROYEK
+// ======================================================
+
+document.addEventListener("click", event => {
+  const tombol =
+    event.target.closest("#batalEditProyek");
+
+  if (!tombol) return;
+
+  event.preventDefault();
+
+  document
+    .getElementById("editProyekModal")
+    ?.classList.remove("show");
+});
 
   // ====================================================
   // HAPUS SELURUH TERMIN PARTNER TERPILIH

@@ -956,6 +956,698 @@ body.activity-modal-open {
   border-color: #bfdbfe;
 }
 
+/* ======================================================
+   TOMBOL SUM
+====================================================== */
+
+.btn-project-sum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+  padding: 8px 12px;
+
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+
+  background: #f5f3ff;
+  color: #6d28d9;
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition:
+    background .2s,
+    border-color .2s,
+    color .2s;
+}
+
+.btn-project-sum:hover {
+  border-color: #7c3aed;
+
+  background: #7c3aed;
+  color: #fff;
+}
+
+.btn-project-sum:focus-visible {
+  outline: 3px solid #c4b5fd;
+  outline-offset: 3px;
+}
+
+/* ======================================================
+   MODAL RINGKASAN FINAL
+====================================================== */
+
+body.project-sum-open {
+  overflow: hidden;
+}
+
+.project-sum-modal {
+  width: min(700px, calc(100% - 32px));
+  max-height: 85vh;
+
+  margin: auto;
+  padding: 0;
+
+  overflow: hidden;
+
+  border: 1px solid #e7e5ef;
+  border-radius: 20px;
+
+  background: #fff;
+  color: #334155;
+
+  font-family: inherit;
+
+  box-shadow:
+    0 24px 80px rgba(15, 23, 42, .2);
+}
+
+.project-sum-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-sum-modal::backdrop {
+  background: rgba(15, 23, 42, .48);
+}
+
+.project-sum-modal,
+.project-sum-modal * {
+  box-sizing: border-box;
+}
+
+.project-sum-modal [hidden] {
+  display: none !important;
+}
+
+.project-sum-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+
+  padding: 23px 25px 20px;
+
+  border-bottom: 1px solid #edeaf5;
+
+  background: #faf9ff;
+}
+
+.project-sum-eyebrow {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #8b5cf6;
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.project-sum-header h2 {
+  margin: 0;
+
+  color: #29243e;
+
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -.4px;
+}
+
+.project-sum-header p {
+  margin: 8px 0 0;
+
+  color: #768094;
+
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.project-sum-close {
+  display: grid;
+  place-items: center;
+
+  flex: 0 0 auto;
+
+  width: 38px;
+  height: 38px;
+
+  padding: 0;
+
+  border: 1px solid #e7e3f2;
+  border-radius: 11px;
+
+  background: #fff;
+  color: #7c738e;
+
+  font-size: 24px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.project-sum-close:hover {
+  background: #f0ebfc;
+  color: #6d28d9;
+}
+
+.project-sum-body {
+  min-height: 160px;
+
+  padding: 22px 25px;
+
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.project-sum-status {
+  display: inline-flex;
+  align-items: center;
+
+  margin-bottom: 17px;
+  padding: 7px 11px;
+
+  border-radius: 8px;
+
+  background: #f1edff;
+  color: #7052aa;
+
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.project-sum-status[data-state="success"] {
+  background: #eaf8ef;
+  color: #218552;
+}
+
+.project-sum-status[data-state="warning"] {
+  background: #fff4e4;
+  color: #a56a18;
+}
+
+.project-sum-status[data-state="error"] {
+  background: #fff0f1;
+  color: #b34256;
+}
+
+.project-sum-list {
+  display: grid;
+  gap: 10px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.project-sum-list li {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr) auto;
+
+  align-items: start;
+  gap: 16px;
+
+  padding: 13px 15px;
+
+  border: 1px solid #edf0f5;
+  border-radius: 11px;
+
+  background: #fcfcfe;
+}
+
+.project-sum-list strong {
+  color: #475569;
+
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.project-sum-list li > span {
+  max-width: 160px;
+
+  color: #a56a18;
+
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.8;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.project-sum-success {
+  padding: 20px;
+
+  border: 1px solid #d5efdf;
+  border-radius: 12px;
+
+  background: #f2fbf5;
+  color: #237749;
+
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.project-sum-error {
+  margin: 0;
+
+  padding: 15px;
+
+  border: 1px solid #f3dce1;
+  border-radius: 11px;
+
+  background: #fff7f8;
+  color: #a3495b;
+
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.project-sum-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+
+  padding: 16px 25px;
+
+  border-top: 1px solid #edf0f5;
+
+  background: #fff;
+}
+
+.project-sum-button {
+  min-height: 38px;
+  padding: 9px 15px;
+
+  border: 1px solid #e2e5ef;
+  border-radius: 9px;
+
+  background: #fff;
+  color: #64748b;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+
+  cursor: pointer;
+}
+
+.project-sum-button-primary {
+  border-color: #7c3aed;
+
+  background: #7c3aed;
+  color: #fff;
+}
+
+.project-sum-button-primary:hover {
+  background: #6d28d9;
+}
+
+.project-sum-modal :focus-visible {
+  outline: 3px solid #c4b5fd;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .project-sum-modal {
+    max-height: 88vh;
+    border-radius: 16px;
+  }
+
+  .project-sum-header,
+  .project-sum-body,
+  .project-sum-footer {
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+
+  .project-sum-list li {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .project-sum-list li > span {
+    max-width: none;
+    text-align: left;
+  }
+}
+
+/* ======================================================
+   MODAL HAPUS PROYEK
+====================================================== */
+
+body.project-delete-open {
+  overflow: hidden;
+}
+
+.project-delete-modal {
+  width: min(540px, calc(100% - 32px));
+  max-height: 88vh;
+
+  margin: auto;
+  padding: 0;
+
+  overflow: hidden;
+
+  border: 1px solid #e8eaf0;
+  border-radius: 20px;
+
+  background: #fff;
+  color: #334155;
+
+  font-family: inherit;
+
+  box-shadow:
+    0 25px 90px rgba(15, 23, 42, .22);
+}
+
+.project-delete-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-delete-modal::backdrop {
+  background: rgba(15, 23, 42, .5);
+}
+
+.project-delete-modal,
+.project-delete-modal * {
+  box-sizing: border-box;
+}
+
+.project-delete-modal [hidden] {
+  display: none !important;
+}
+
+.project-delete-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  flex-shrink: 0;
+
+  padding: 24px;
+
+  border-bottom: 1px solid #eef0f5;
+}
+
+.project-delete-eyebrow {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #94a3b8;
+
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.5px;
+}
+
+.project-delete-header h2 {
+  margin: 0;
+
+  color: #273248;
+
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -.4px;
+}
+
+.project-delete-close {
+  display: grid;
+  place-items: center;
+
+  flex-shrink: 0;
+
+  width: 36px;
+  height: 36px;
+
+  padding: 0;
+
+  border: 1px solid #e7eaf0;
+  border-radius: 10px;
+
+  background: #fff;
+  color: #94a3b8;
+
+  font-size: 23px;
+
+  cursor: pointer;
+}
+
+.project-delete-close:hover:not(:disabled) {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #e11d48;
+}
+
+.project-delete-form {
+  display: flex;
+  flex-direction: column;
+
+  flex: 1;
+  min-height: 0;
+
+  margin: 0;
+
+  overflow: hidden;
+}
+
+.project-delete-body {
+  flex: 1;
+  min-height: 0;
+
+  padding: 22px 24px;
+
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.project-delete-box {
+  margin-bottom: 18px;
+  padding: 15px 17px;
+
+  border: 1px solid #e9ecf3;
+  border-radius: 12px;
+
+  background: #f8fafc;
+}
+
+.project-delete-box > span {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #94a3b8;
+
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .7px;
+}
+
+.project-delete-box strong {
+  display: block;
+
+  color: #475569;
+
+  font-size: 13px;
+  line-height: 1.8;
+
+  overflow-wrap: anywhere;
+}
+
+.project-delete-copy {
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+.project-delete-warning {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+
+  background: #fff7ed;
+  color: #a16207;
+
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.project-delete-label {
+  display: block;
+
+  margin: 17px 0 8px;
+
+  color: #475569;
+
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.project-delete-label strong {
+  color: #dc2626;
+}
+
+.project-delete-input {
+  width: 100%;
+  min-height: 45px;
+
+  padding: 11px 13px;
+
+  border: 1px solid #dce2eb;
+  border-radius: 10px;
+
+  background: #fff;
+  color: #334155;
+
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.project-delete-input:focus {
+  border-color: #f87171;
+  outline: 3px solid #fee2e2;
+}
+
+.project-delete-error,
+.project-delete-success {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+
+  border-radius: 11px;
+
+  font-size: 12px;
+  line-height: 1.85;
+
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.project-delete-error {
+  border: 1px solid #fecdd3;
+
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.project-delete-success {
+  margin-top: 0;
+
+  border: 1px solid #bbf7d0;
+
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.project-delete-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+
+  flex-shrink: 0;
+
+  padding: 17px 24px;
+
+  border-top: 1px solid #eef0f5;
+
+  background: #fcfcfe;
+}
+
+.project-delete-button {
+  min-height: 39px;
+  padding: 10px 15px;
+
+  border: 1px solid #e1e5ed;
+  border-radius: 9px;
+
+  background: #fff;
+  color: #64748b;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+
+  cursor: pointer;
+}
+
+.project-delete-button:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.project-delete-button-danger {
+  border-color: #dc2626;
+
+  background: #dc2626;
+  color: #fff;
+}
+
+.project-delete-button-danger:hover:not(:disabled) {
+  border-color: #b91c1c;
+  background: #b91c1c;
+}
+
+.project-delete-button-success {
+  border-color: #16a34a;
+
+  background: #16a34a;
+  color: #fff;
+}
+
+.project-delete-button-success:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.project-delete-modal button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.project-delete-modal button:focus-visible {
+  outline: 3px solid #cbd5e1;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .project-delete-header,
+  .project-delete-body,
+  .project-delete-footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .project-delete-footer {
+    gap: 8px;
+  }
+
+  .project-delete-button {
+    min-height: 43px;
+  }
+}
   </style>
 
 </head>
@@ -1091,15 +1783,11 @@ body.activity-modal-open {
 
           <div class="table-wrapper">
 
-
             <table>
-
 
               <thead>
 
-
                 <tr>
-
 
                   <th>
                     Nama Proyek
@@ -1285,13 +1973,245 @@ body.activity-modal-open {
 
 
   </div>
+<!-- ====================================================
+     MODAL SUM — RINGKASAN FINAL
+===================================================== -->
 
+<dialog
+  class="project-sum-modal"
+  id="projectSumModal"
+  aria-labelledby="projectSumTitle"
+  aria-describedby="projectSumName"
+>
+  <header class="project-sum-header">
+    <div>
+      <span class="project-sum-eyebrow">
+        PROJECT SUMMARY
+      </span>
+
+      <h2 id="projectSumTitle">
+        Ringkasan Final
+      </h2>
+
+      <p id="projectSumName">
+        -
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="project-sum-close"
+      data-close-project-sum
+      aria-label="Tutup Ringkasan Final"
+    >
+      &times;
+    </button>
+  </header>
+
+  <div class="project-sum-body">
+    <div
+      class="project-sum-status"
+      id="projectSumStatus"
+      data-state="loading"
+      role="status"
+      aria-live="polite"
+    >
+      Memeriksa kelengkapan data…
+    </div>
+
+    <div id="projectSumContent"></div>
+  </div>
+
+  <footer class="project-sum-footer">
+    <button
+      type="button"
+      class="project-sum-button project-sum-button-primary"
+      id="projectSumRetry"
+      hidden
+    >
+      Coba lagi
+    </button>
+
+    <button
+      type="button"
+      class="project-sum-button"
+      data-close-project-sum
+    >
+      Tutup
+    </button>
+  </footer>
+</dialog>
+
+<!-- ====================================================
+     MODAL HAPUS DAN KONFIRMASI HAPUS PROYEK
+===================================================== -->
+
+<dialog
+  class="project-delete-modal"
+  id="deleteProjectModal"
+  aria-labelledby="deleteProjectTitle"
+>
+  <header class="project-delete-header">
+    <div>
+      <span class="project-delete-eyebrow">
+        KELOLA PROYEK
+      </span>
+
+      <h2 id="deleteProjectTitle">
+        Hapus proyek?
+      </h2>
+    </div>
+
+    <button
+      type="button"
+      class="project-delete-close"
+      data-close-delete-project
+      aria-label="Tutup modal hapus"
+    >
+      &times;
+    </button>
+  </header>
+
+  <form
+    class="project-delete-form"
+    id="deleteProjectForm"
+  >
+    <div class="project-delete-body">
+
+      <!-- NAMA PROYEK -->
+
+      <div
+        class="project-delete-box"
+        id="deleteProjectBox"
+      >
+        <span>PROYEK YANG DIPILIH</span>
+
+        <strong id="deleteProjectName">
+          -
+        </strong>
+      </div>
+
+      <!-- KONFIRMASI AWAL -->
+
+      <div id="deleteProjectIntro">
+        <p class="project-delete-copy">
+          Apakah Anda yakin ingin menghapus
+          proyek ini?
+        </p>
+
+        <p class="project-delete-warning">
+          Data proyek dan data terkait
+          dapat ikut terhapus.
+        </p>
+      </div>
+
+      <!-- VERIFIKASI KETIK HAPUS -->
+
+      <div
+        id="deleteProjectVerification"
+        hidden
+      >
+        <p class="project-delete-copy">
+          Pastikan nama proyek sudah sesuai
+          sebelum melanjutkan penghapusan.
+        </p>
+
+        <label
+          class="project-delete-label"
+          for="deleteProjectInput"
+        >
+          Ketik <strong>HAPUS</strong>
+          untuk mengonfirmasi
+        </label>
+
+        <input
+          class="project-delete-input"
+          id="deleteProjectInput"
+          type="text"
+          placeholder="HAPUS"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+        >
+      </div>
+
+      <!-- PESAN ERROR -->
+
+      <div
+        class="project-delete-error"
+        id="deleteProjectError"
+        role="alert"
+        hidden
+      ></div>
+
+      <!-- PESAN BERHASIL -->
+
+      <div
+        class="project-delete-success"
+        id="deleteProjectSuccess"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
+    </div>
+
+    <footer class="project-delete-footer">
+      <button
+        type="button"
+        class="project-delete-button"
+        id="deleteProjectBack"
+        hidden
+      >
+        Kembali
+      </button>
+
+      <button
+        type="button"
+        class="project-delete-button"
+        id="deleteProjectCancel"
+        data-close-delete-project
+        autofocus
+      >
+        Batal
+      </button>
+
+      <button
+        type="button"
+        class="project-delete-button project-delete-button-danger"
+        id="deleteProjectNext"
+      >
+        Lanjutkan
+      </button>
+
+      <button
+        type="submit"
+        class="project-delete-button project-delete-button-danger"
+        id="deleteProjectSubmit"
+        disabled
+        hidden
+      >
+        Ya, hapus proyek
+      </button>
+
+      <button
+        type="button"
+        class="project-delete-button project-delete-button-success"
+        id="deleteProjectDone"
+        data-close-delete-project
+        hidden
+      >
+        Selesai
+      </button>
+    </footer>
+  </form>
+</dialog>
 
   <!-- =================================================
        SCRIPT
   ================================================== -->
   <script src="/layout.js"></script>
   <script src="/sidebar.js"></script>
+  <script src="/summary.js"></script>
   <script src="/proyek.js"></script>
   <script src="/pagination.js"></script>
 

@@ -5,15 +5,13 @@
   <meta charset="UTF-8">
 
   <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
+    name="viewport"  content="width=device-width, initial-scale=1.0"
   >
 
   <title>Detail Proyek - Portopro</title>
 
   <link
-    rel="stylesheet"
-    href="/style.css"
+    rel="stylesheet"  href="/style.css"
   >
 
   <style>
@@ -3055,7 +3053,6 @@ body.modal-open {
 </head>
 
 <body>
-
 <div class="app-layout">
 
   <div id="sidebarContainer"></div>
@@ -3218,131 +3215,156 @@ body.modal-open {
 </div>
 
 
-      <!-- INFORMASI PROYEK -->
+<!-- INFORMASI PROYEK -->
 
-      <section class="project-section">
+<section class="project-section">
 
-        <div class="section-header">
+  <div class="section-header">
 
-          <div class="section-heading">
+    <div class="section-heading">
 
-            <div class="section-icon">
-              📁
-            </div>
+      <div class="section-icon">
+        📁
+      </div>
 
-            <div>
-              <h2>Informasi Proyek</h2>
-              <p>Informasi utama dan status proyek</p>
-            </div>
+      <div>
+        <h2>Informasi Proyek</h2>
+        <p>Informasi utama dan status proyek</p>
+      </div>
 
-          </div>
+    </div>
 
-          <button
-            type="button"
-            class="btn-edit"
-            id="editProyekButton"
-          >
-            ✎ Edit
-          </button>
+    <button
+      type="button"
+      class="btn-edit"
+      id="editProyekButton"
+    >
+      ✎ Edit
+    </button>
 
+  </div>
+
+
+  <div class="section-body">
+
+    <!-- NAMA PENGADAAN SESUAI TOR -->
+
+    <div
+      class="info"
+      style="margin-bottom:18px;"
+    >
+
+      <div class="label">
+        Nama Pengadaan sesuai TOR
+      </div>
+
+      <div
+        class="value"
+        id="namaPengadaanInfoProyek"
+        style="
+          white-space:pre-wrap;
+          overflow-wrap:anywhere;
+        "
+      >
+        -
+      </div>
+
+    </div>
+
+
+    <div class="grid">
+
+      <div class="info">
+
+        <div class="label">
+          Kategori
         </div>
 
-
-        <div class="section-body">
-
-          <div class="grid">
-
-            <div class="info">
-
-              <div class="label">
-                Kategori
-              </div>
-
-              <div
-                class="value"
-                id="kategoriInfoProyek"
-              >
-                -
-              </div>
-
-            </div>
-
-
-            <div class="info">
-
-              <div class="label">
-                Jenis Proyek
-              </div>
-
-              <div
-                class="value"
-                id="jenisProyek"
-              >
-                -
-              </div>
-
-            </div>
-
-
-            <div class="info">
-
-              <div class="label">
-                Sub Jenis Proyek
-              </div>
-
-              <div
-                class="value"
-                id="subJenisProyek"
-              >
-                -
-              </div>
-
-            </div>
-
-
-            <div class="info">
-
-              <div class="label">
-                Status
-              </div>
-
-              <div
-                class="value"
-                id="statusFinal"
-              >
-                -
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div
-            class="info"
-            style="margin-top:14px;"
-          >
-
-            <div class="label">
-              Deskripsi
-            </div>
-
-            <div
-              class="value"
-              id="deskripsi"
-              style="
-                white-space:pre-wrap;
-                font-weight:500;
-              "
-            >
-              -
-            </div>
-
-          </div>
-
+        <div
+          class="value"
+          id="kategoriInfoProyek"
+        >
+          -
         </div>
 
-      </section>
+      </div>
+
+
+      <div class="info">
+
+        <div class="label">
+          Jenis Proyek
+        </div>
+
+        <div
+          class="value"
+          id="jenisProyek"
+        >
+          -
+        </div>
+
+      </div>
+
+
+      <div class="info">
+
+        <div class="label">
+          Sub Jenis Proyek
+        </div>
+
+        <div
+          class="value"
+          id="subJenisProyek"
+        >
+          -
+        </div>
+
+      </div>
+
+
+      <div class="info">
+
+        <div class="label">
+          Status
+        </div>
+
+        <div
+          class="value"
+          id="statusFinal"
+        >
+          -
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="info"
+      style="margin-top:14px;"
+    >
+
+      <div class="label">
+        Deskripsi
+      </div>
+
+      <div
+        class="value"
+        id="deskripsi"
+        style="
+          white-space:pre-wrap;
+          font-weight:500;
+        "
+      >
+        -
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
 
 
       <!-- PIC -->
@@ -4215,7 +4237,6 @@ body.modal-open {
 
         </div>
 
-
         <div class="form-group">
 
           <label for="taskDetailKategori">
@@ -4535,7 +4556,7 @@ body.modal-open {
         <small class="form-hint">
 
           PDF, Word, Excel, JPG, atau PNG.
-          Maksimal 10 MB.
+          Maksimal 20 MB.
 
           <br>
 
@@ -4610,6 +4631,21 @@ body.modal-open {
         >
 
       </div>
+
+      <div class="form-group klien-pengadaan-full">
+
+    <label for="editNamaPengadaanKlien">
+      Nama Pengadaan sesuai TOR
+    </label>
+
+    <input
+      type="text"
+      id="editNamaPengadaanKlien"
+      placeholder="Masukkan nama pengadaan sesuai TOR"
+    >
+
+  </div>
+
 
 
       <div class="form-group">
@@ -4937,40 +4973,57 @@ body.modal-open {
         </div>
 
       </div>
+      
 
+<div class="klien-pembayaran-row">
 
-      <div class="form-group">
+  <div class="form-grid">
 
-        <label for="editModelPembayaranKlien">
-          Model Pembayaran
-        </label>
+  <!-- KIRI: MODEL PEMBAYARAN -->
+  <div class="form-group">
+    <label for="editModelPembayaranKlien">
+      Model Pembayaran
+    </label>
 
-        <select id="editModelPembayaranKlien">
+    <select id="editModelPembayaranKlien">
+      <option value="">
+        Pilih Model Pembayaran
+      </option>
 
-          <option value="">
-            Pilih Model Pembayaran
-          </option>
+      <option value="Tahunan">
+        Tahunan
+      </option>
 
-          <option value="Tahunan">
-            Tahunan
-          </option>
+      <option value="Bulanan">
+        Bulanan
+      </option>
 
-          <option value="Bulanan">
-            Bulanan
-          </option>
+      <option value="Termin">
+        Termin
+      </option>
 
-          <option value="Termin">
-            Termin
-          </option>
+      <option value="One Time Charge">
+        One Time Charge
+      </option>
+    </select>
+  </div>
 
-          <option value="One Time Charge">
-            One Time Charge
-          </option>
+  <!-- KANAN: METODE PENGADAAN -->
+  <div class="form-group">
+    <label for="editMetodePengadaanKlien">
+      Metode Pengadaan
+    </label>
 
-        </select>
+    <select id="editMetodePengadaanKlien">
+      <option value="">
+        Pilih Metode Pengadaan
+      </option>
+    </select>
+  </div>
 
-      </div>
+</div>
 
+</div>
 
       <div class="form-grid">
 
@@ -5221,7 +5274,7 @@ body.modal-open {
         <div class="payment-stat-card paid">
 
           <div class="payment-stat-label">
-            Dibayar Partner
+            Dibayar Ke Partner
           </div>
 
           <div
@@ -5241,7 +5294,7 @@ body.modal-open {
         <div class="payment-stat-card unpaid">
 
           <div class="payment-stat-label">
-            Belum Dibayar Partner
+            Belum Dibayar Ke Partner
           </div>
 
           <div

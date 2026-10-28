@@ -424,6 +424,189 @@ body.sidebar-collapsed
 body.sidebar-collapsed .main-content {
   margin-left: 64px !important;
 }
+/* ==================================================
+   KELOMPOK SIDEBAR
+================================================== */
+
+.sidebar #sidebarMenu {
+  display: block;
+
+  min-width: 0;
+  margin-top: 16px;
+}
+
+/* Kelompok */
+
+.sidebar #sidebarMenu .sidebar-menu-group {
+  display: block;
+
+  margin: 0 0 6px;
+  padding: 0;
+
+  border: none;
+  border-radius: 10px;
+
+  background: transparent;
+}
+
+/* Judul kelompok yang dapat diklik */
+
+.sidebar #sidebarMenu .sidebar-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  box-sizing: border-box;
+
+  min-height: 42px;
+  margin: 0;
+  padding: 10px 12px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.05);
+  color: #e1edf8;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+
+  list-style: none;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.sidebar #sidebarMenu
+.sidebar-group-heading::-webkit-details-marker {
+  display: none;
+}
+
+.sidebar #sidebarMenu
+.sidebar-group-heading::marker {
+  content: "";
+}
+
+/* Panah */
+
+.sidebar #sidebarMenu .sidebar-group-heading::after {
+  content: "";
+
+  width: 7px;
+  height: 7px;
+
+  flex-shrink: 0;
+
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+
+  transform: rotate(-45deg);
+
+  transition: transform 0.2s ease;
+}
+
+.sidebar #sidebarMenu
+.sidebar-menu-group[open] > .sidebar-group-heading::after {
+  transform: rotate(45deg);
+}
+
+/* Hover dan kelompok terbuka */
+
+.sidebar #sidebarMenu .sidebar-group-heading:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.sidebar #sidebarMenu
+.sidebar-menu-group[open] > .sidebar-group-heading {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+
+/* Penanda kelompok yang memiliki halaman aktif */
+
+.sidebar #sidebarMenu
+.has-active-menu > .sidebar-group-heading {
+  color: #bfe9dc;
+}
+
+/* Isi kelompok */
+
+.sidebar #sidebarMenu .sidebar-group-links {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+
+  margin: 5px 0 8px 12px;
+  padding: 0 0 0 9px;
+
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+/* Link menu: lebih ringkas */
+
+.sidebar #sidebarMenu .sidebar-group-links > a {
+  display: block;
+
+  box-sizing: border-box;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+
+  margin: 0;
+  padding: 9px 11px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+  color: #cbddec;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+
+  text-decoration: none;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.sidebar #sidebarMenu .sidebar-group-links > a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* Halaman aktif */
+
+.sidebar #sidebarMenu .sidebar-group-links > a.active {
+  background: #e8f4ee;
+  color: #14543d;
+
+  font-weight: 700;
+}
+
+/* Navigasi keyboard */
+
+.sidebar #sidebarMenu .sidebar-group-heading:focus-visible,
+.sidebar #sidebarMenu .sidebar-group-links > a:focus-visible {
+  outline: 2px solid #a7dccc;
+  outline-offset: 2px;
+}
 </style>
 <aside
   id="sidebar"

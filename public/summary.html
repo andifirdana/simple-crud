@@ -2,65 +2,2160 @@
 <html lang="id">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
+
   <title>Summary Proyek | PORTOPRO</title>
-  <link rel="stylesheet" href="/style.css">
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
   <style>
-    :root{color-scheme:light;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#172239;background:#f3f5fa}
-    *{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button,a,input,select{outline-offset:3px}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
-    .sm-top{background:#101c37;color:#fff;padding:17px 28px;display:flex;align-items:center;justify-content:space-between}.sm-top strong{letter-spacing:2px}.sm-top a{color:#d8defd;font-size:13px;text-decoration:none}
-    .sm-main{padding:28px;max-width:1920px;margin:auto}.sm-hero{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:24px}.sm-eyebrow{color:#6256c7;font-size:11px;letter-spacing:1.8px;font-weight:800}.sm-hero h1{font-size:30px;letter-spacing:-1px;margin:6px 0 9px}.sm-hero p{margin:0;color:#69748c;font-size:13px;line-height:1.6}.sm-actions{display:flex;gap:10px;flex-wrap:wrap}.sm-button{border:1px solid #dce1ee;background:#fff;color:#34415f;border-radius:10px;padding:11px 16px;font-size:12px;font-weight:750;min-height:42px}.sm-button-primary{background:#4f46bb;border-color:#4f46bb;color:white}.sm-button:hover:not(:disabled){filter:brightness(.96)}
-    .sm-panel{background:white;border:1px solid #e0e5f0;border-radius:15px;overflow:hidden}.sm-filters{display:grid;grid-template-columns:2fr repeat(5,minmax(125px,1fr));gap:12px;padding:20px;border-bottom:1px solid #e8ebf2}.sm-field{min-width:0}.sm-field label{display:block;font-size:10px;font-weight:800;letter-spacing:.5px;color:#748098;margin-bottom:7px}.sm-field input,.sm-field select{width:100%;border:1px solid #dce2ef;border-radius:8px;background:#fafbfe;color:#33415b;padding:10px;font-size:12px;min-height:39px}.sm-info{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#788298;font-size:12px}.sm-info button{background:none;border:0;color:#6256c7;font-size:12px;font-weight:700;padding:5px}
-    .sm-message{font-size:12px;line-height:1.7;padding:12px 18px;margin:0 0 16px;background:#eef0ff;color:#423a9b;border:1px solid #dbddfa;border-radius:10px;white-space:pre-line}.sm-message[data-error="true"]{background:#fff5ed;color:#9b4e14;border-color:#f6dcc4}.sm-message[hidden]{display:none}
-    .sm-table-scroll{overflow:auto;max-height:65vh;border-top:1px solid #e7eaf2}.sm-table{border-collapse:separate;border-spacing:0;min-width:3070px;width:100%;font-size:12px}.sm-table th{position:sticky;top:0;z-index:2;text-align:left;padding:15px 13px;background:#eef0f8;color:#5a6580;font-size:10px;letter-spacing:.4px;font-weight:800;border-bottom:1px solid #dce1ef;white-space:nowrap}.sm-table td{padding:15px 13px;vertical-align:top;border-bottom:1px solid #edf0f6;line-height:1.65;background:white;white-space:pre-line;overflow-wrap:anywhere;max-width:290px}.sm-table th:first-child,.sm-table td:first-child{position:sticky;left:0;min-width:290px;width:290px;z-index:1;border-right:1px solid #e4e8f2;font-weight:700}.sm-table th:first-child{z-index:3}.sm-table tbody tr:hover td{background:#fafaff}.sm-table .sm-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:150px}.sm-table .sm-bad{color:#be4552}.sm-table .sm-date{white-space:nowrap;min-width:120px}.sm-table tfoot td{background:#f1f3fb;font-weight:800}.sm-table td:nth-child(2){min-width:155px}.sm-table td:last-child{min-width:290px}.sm-table details summary{cursor:pointer;color:#5148a6;font-weight:650}.sm-table details div{margin-top:8px;font-weight:400;max-height:220px;overflow:auto}.sm-tag{display:inline-block;border-radius:6px;padding:3px 8px;background:#f0effa;color:#6256a8;font-weight:650;white-space:nowrap}.sm-tag[data-state="baik"]{background:#eaf7f1;color:#138065}.sm-tag[data-state="buruk"]{background:#fbedee;color:#b04b57}.sm-tag[data-state="netral"]{background:#f1f3f8;color:#6c7790}
-    .sm-bottom{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#748098;font-size:12px}.sm-pager{display:flex;gap:8px;align-items:center}.sm-pager button{border:1px solid #dfe3ee;border-radius:7px;background:white;padding:7px 11px;color:#4b5771}.sm-bottom select{padding:6px;border:1px solid #dfe3ee;border-radius:6px;background:white;color:#4b5771}.sm-notes{font-size:11px;color:#7c879b;line-height:1.8;margin:18px 3px}.sm-notes summary{cursor:pointer;font-weight:700;color:#59677f}.sm-notes ul{padding-left:18px}.sm-empty{text-align:center!important;color:#8b94a8;padding:40px!important}
-    @media(max-width:1100px){.sm-filters{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:650px){.sm-main{padding:18px 12px}.sm-top{padding:15px}.sm-hero{display:block}.sm-actions{margin-top:16px}.sm-hero h1{font-size:26px}.sm-filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:14px}.sm-field:first-child{grid-column:1/-1}.sm-bottom{flex-wrap:wrap}.sm-info{padding:12px}}
-    /* Layout mengikuti lebar sidebar yang terukur. */
-    body.summary-page{--summary-sidebar-width:260px;overflow-x:hidden}
-    body.summary-page #summaryApp.main-content{margin-left:var(--summary-sidebar-width)!important;margin-right:0!important;width:calc(100% - var(--summary-sidebar-width))!important;max-width:calc(100% - var(--summary-sidebar-width))!important;min-width:0;box-sizing:border-box}
-    #summaryApp .sm-panel,#summaryApp .sm-table-scroll{width:100%;max-width:100%;min-width:0}
-    #summaryApp .sm-table-scroll{max-height:72vh}
-    #summaryApp .sm-table{width:max-content;min-width:100%}
-    #summaryApp .sm-table th{min-width:180px}
-    #summaryApp .sm-table th:first-child{min-width:290px}
-    #summaryApp .sm-table .sm-num{min-width:170px}
-    @media(max-width:768px){body.summary-page #summaryApp.main-content{margin-left:0!important;width:100%!important;max-width:100%!important;padding:18px 12px}}
+    /* ======================================================
+       TEMA
+    ====================================================== */
+
+    body.summary-page {
+      --summary-sidebar-width: 260px;
+
+      --sm-primary: #6554c0;
+      --sm-primary-soft: #f1edff;
+      --sm-text: #25304a;
+      --sm-muted: #68758a;
+      --sm-border: #e6e9f2;
+
+      margin: 0;
+      background: #f6f7fb;
+      overflow-x: hidden;
+      color: var(--sm-text);
+
+      font-family:
+        Inter,
+        "Segoe UI",
+        system-ui,
+        sans-serif;
+
+      color-scheme: light;
+    }
+
+    #summaryApp,
+    #summaryApp * {
+      box-sizing: border-box;
+    }
+
+    body.summary-page #summaryApp.main-content {
+      margin-left:
+        var(--summary-sidebar-width) !important;
+
+      margin-right: 0 !important;
+
+      width:
+        calc(
+          100% - var(--summary-sidebar-width)
+        ) !important;
+
+      max-width:
+        calc(
+          100% - var(--summary-sidebar-width)
+        ) !important;
+
+      min-width: 0;
+
+      padding:
+        30px
+        clamp(18px, 2.4vw, 38px)
+        28px;
+    }
+
+    #summaryApp button,
+    #summaryApp input,
+    #summaryApp select {
+      font: inherit;
+    }
+
+    #summaryApp button {
+      cursor: pointer;
+    }
+
+    #summaryApp button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    #summaryApp :focus-visible {
+      outline: 3px solid #b1a5f1;
+      outline-offset: 3px;
+    }
+
+    #summaryApp [hidden] {
+      display: none !important;
+    }
+
+    #summaryApp .sm-icon {
+      width: 18px;
+      height: 18px;
+
+      flex: 0 0 auto;
+
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ======================================================
+       BREADCRUMB DAN HEADER
+    ====================================================== */
+
+    #summaryApp .sm-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+
+      margin-bottom: 19px;
+
+      color: var(--sm-muted);
+      font-size: 12px;
+    }
+
+    #summaryApp .sm-breadcrumb span:last-child {
+      color: var(--sm-primary);
+      font-weight: 600;
+    }
+
+    #summaryApp .sm-hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+
+      margin-bottom: 25px;
+    }
+
+    #summaryApp .sm-title-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    #summaryApp .sm-title-icon {
+      display: grid;
+      place-items: center;
+
+      width: 49px;
+      height: 49px;
+
+      border: 1px solid #e4ddfb;
+      border-radius: 15px;
+
+      background: var(--sm-primary-soft);
+      color: var(--sm-primary);
+    }
+
+    #summaryApp .sm-title-icon .sm-icon {
+      width: 25px;
+      height: 25px;
+    }
+
+    #summaryApp .sm-eyebrow {
+      margin-bottom: 5px;
+
+      color: var(--sm-primary);
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: 1.8px;
+    }
+
+    #summaryApp h1 {
+      margin: 0;
+
+      color: #24283f;
+      font-size: clamp(25px, 2.3vw, 32px);
+      line-height: 1.2;
+      letter-spacing: -.9px;
+    }
+
+    #summaryApp .sm-hero p {
+      margin: 12px 0 0;
+
+      color: var(--sm-muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    #summaryApp .sm-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+
+      flex-shrink: 0;
+    }
+
+    #summaryApp .sm-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+
+      min-height: 43px;
+      padding: 10px 15px;
+
+      border: 1px solid #dfe3ee;
+      border-radius: 11px;
+
+      background: #fff;
+      color: #46516a;
+
+      font-size: 12px;
+      font-weight: 650;
+
+      transition:
+        background .15s,
+        border-color .15s;
+    }
+
+    #summaryApp .sm-button:hover:not(:disabled) {
+      background: #f6f4ff;
+      border-color: #c7bbed;
+    }
+
+    #summaryApp .sm-button-primary {
+      border-color: var(--sm-primary);
+
+      background: var(--sm-primary);
+      color: #fff;
+
+      box-shadow:
+        0 4px 10px #6554c01a;
+    }
+
+    #summaryApp .sm-button-primary:hover:not(:disabled) {
+      background: #5543ae;
+      border-color: #5543ae;
+    }
+
+    /* ======================================================
+       PESAN STATUS
+    ====================================================== */
+
+    #summaryApp .sm-message {
+      padding: 13px 16px;
+      margin: 0 0 18px;
+
+      border: 1px solid #e0daf8;
+      border-radius: 12px;
+
+      background: #f0edfc;
+      color: #59439c;
+
+      font-size: 12px;
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    #summaryApp .sm-message[data-error="true"] {
+      background: #fff6eb;
+      border-color: #f1dfc4;
+      color: #9a541b;
+    }
+
+    /* ======================================================
+       PANEL UTAMA
+    ====================================================== */
+
+    #summaryApp .sm-panel {
+      width: 100%;
+      min-width: 0;
+
+      overflow: hidden;
+
+      border: 1px solid var(--sm-border);
+      border-radius: 18px;
+
+      background: #fff;
+
+      box-shadow:
+        0 5px 24px #29344f04;
+    }
+
+    #summaryApp .sm-panel-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+
+      padding: 21px 22px 17px;
+    }
+
+    #summaryApp h2 {
+      margin: 0;
+
+      font-size: 15px;
+      letter-spacing: -.2px;
+    }
+
+    #summaryApp .sm-panel-heading p {
+      margin: 6px 0 0;
+
+      color: var(--sm-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* ======================================================
+       PILIHAN TAMPILAN
+    ====================================================== */
+
+    #summaryApp .sm-view-tabs {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+
+      padding: 4px;
+
+      border: 1px solid #eceef5;
+      border-radius: 11px;
+
+      background: #f4f5f9;
+    }
+
+    #summaryApp .sm-view-tabs button {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+
+      min-height: 36px;
+      padding: 9px 12px;
+
+      border: 0;
+      border-radius: 8px;
+
+      background: transparent;
+      color: var(--sm-muted);
+
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    #summaryApp .sm-view-tabs button[aria-pressed="true"] {
+      background: #fff;
+      color: var(--sm-primary);
+
+      box-shadow:
+        0 1px 4px #29344f12;
+    }
+
+    /* ======================================================
+       PENCARIAN DAN FILTER
+    ====================================================== */
+
+    #summaryApp .sm-filters {
+      margin: 0;
+      padding: 0 22px 20px;
+    }
+
+    #summaryApp .sm-search-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    #summaryApp .sm-search-wrap > .sm-icon {
+      position: absolute;
+      top: 50%;
+      left: 14px;
+
+      transform: translateY(-50%);
+
+      color: #8992a6;
+      pointer-events: none;
+    }
+
+    #summaryApp .sm-search-wrap input {
+      width: 100%;
+      height: 45px;
+
+      padding: 11px 15px 11px 43px;
+
+      border: 1px solid #e1e5ef;
+      border-radius: 11px;
+
+      background: #fafbfe;
+      color: var(--sm-text);
+
+      font-size: 13px;
+    }
+
+    #summaryApp input::placeholder {
+      color: #8c96a9;
+    }
+
+    #summaryApp .sm-filter-grid {
+      display: grid;
+
+      grid-template-columns:
+        repeat(5, minmax(0, 1fr));
+
+      gap: 12px;
+    }
+
+    #summaryApp .sm-field {
+      min-width: 0;
+    }
+
+    #summaryApp .sm-field label {
+      display: block;
+
+      margin-bottom: 8px;
+
+      color: #667187;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .35px;
+    }
+
+    #summaryApp .sm-field select {
+      width: 100%;
+      height: 41px;
+
+      padding: 8px 29px 8px 11px;
+
+      appearance: none;
+
+      border: 1px solid #e1e5ef;
+      border-radius: 9px;
+
+      color: #46516a;
+      background-color: #fff;
+
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23778296' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
+      background-position:
+        right 10px center;
+
+      background-repeat:
+        no-repeat;
+
+      font-size: 12px;
+      text-overflow: ellipsis;
+    }
+
+    #summaryApp .sm-field select:hover {
+      border-color: #bcb1dd;
+    }
+
+    /* ======================================================
+       INFORMASI HASIL FILTER
+    ====================================================== */
+
+    #summaryApp .sm-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 15px;
+
+      padding: 13px 22px;
+
+      border-top: 1px solid #eef0f6;
+      border-bottom: 1px solid var(--sm-border);
+
+      background: #fafbfe;
+      color: var(--sm-muted);
+
+      font-size: 12px;
+    }
+
+    #summaryApp #smResult {
+      line-height: 1.6;
+    }
+
+    #summaryApp .sm-reset {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+
+      padding: 7px 0;
+
+      border: 0;
+
+      background: transparent;
+      color: var(--sm-primary);
+
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    /* ======================================================
+       TOOLBAR TABEL
+    ====================================================== */
+
+    #summaryApp .sm-table-tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+
+      padding: 12px 22px;
+    }
+
+    #summaryApp .sm-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+
+      color: var(--sm-muted);
+      font-size: 11px;
+    }
+
+    #summaryApp .sm-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #summaryApp .sm-dot {
+      width: 7px;
+      height: 7px;
+
+      border-radius: 50%;
+
+      background: #b9a6e6;
+    }
+
+    #summaryApp .sm-dot-client {
+      background: #8dafdc;
+    }
+
+    #summaryApp .sm-dot-partner {
+      background: #82bdad;
+    }
+
+    #summaryApp .sm-scroll-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    #summaryApp .sm-scroll-buttons button {
+      display: grid;
+      place-items: center;
+
+      width: 31px;
+      height: 31px;
+
+      border: 1px solid var(--sm-border);
+      border-radius: 8px;
+
+      background: #fff;
+      color: #667187;
+    }
+
+    /* ======================================================
+       TABEL
+    ====================================================== */
+
+    #summaryApp .sm-table-scroll {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      max-height: 65vh;
+
+      overflow: auto;
+
+      border-top:
+        1px solid var(--sm-border);
+
+      scrollbar-color:
+        #cbc7df #f4f5fa;
+
+      scrollbar-width: thin;
+    }
+
+    #summaryApp .sm-table-scroll::-webkit-scrollbar {
+      width: 9px;
+      height: 9px;
+    }
+
+    #summaryApp .sm-table-scroll::-webkit-scrollbar-track {
+      background: #f4f5fa;
+    }
+
+    #summaryApp .sm-table-scroll::-webkit-scrollbar-thumb {
+      border: 2px solid #f4f5fa;
+      border-radius: 9px;
+
+      background: #cbc7df;
+    }
+
+    #summaryApp .sm-table {
+      width: max-content;
+      min-width: 100%;
+
+      border-collapse: separate;
+      border-spacing: 0;
+
+      font-size: 12px;
+    }
+
+    #summaryApp .sm-table th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+
+      min-width: 170px;
+      padding: 15px 16px;
+
+      border-top: 3px solid #c9b9ea;
+      border-bottom: 1px solid #e5e1f0;
+
+      background: #f5f3fb;
+      color: #655c82;
+
+      text-align: left;
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: .35px;
+      white-space: nowrap;
+    }
+
+    /* Kelompok kolom klien. */
+    #summaryApp .sm-table th:nth-child(n+13):nth-child(-n+22) {
+      border-top-color: #a6c0e3;
+
+      background: #f0f5fc;
+      color: #4e6b90;
+    }
+
+    /* Kelompok kolom partner. */
+    #summaryApp .sm-table th:nth-child(n+23) {
+      border-top-color: #9acdbd;
+
+      background: #eef7f4;
+      color: #4a756c;
+    }
+
+    /* Ringkasan Final dan Tasklist. */
+    #summaryApp .sm-table th:nth-last-child(2),
+    #summaryApp .sm-table th:last-child {
+      border-top-color: #c9b9ea;
+
+      background: #f5f3fb;
+      color: #655c82;
+    }
+
+    #summaryApp .sm-table td {
+      max-width: 300px;
+
+      padding: 17px 16px;
+
+      border-bottom:
+        1px solid #edf0f6;
+
+      background: #fff;
+      color: #47536b;
+
+      vertical-align: top;
+
+      line-height: 1.7;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+    }
+
+    #summaryApp .sm-table tbody tr:nth-child(even) td {
+      background: #fcfcfe;
+    }
+
+    #summaryApp .sm-table tbody tr:hover td {
+      background: #f6f4fe;
+    }
+
+    /* Nama proyek tetap terlihat saat tabel digeser. */
+    #summaryApp .sm-table th:first-child,
+    #summaryApp .sm-table td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+
+      width: 285px;
+      min-width: 285px;
+      max-width: 285px;
+
+      border-right:
+        1px solid #e7e5f0;
+
+      box-shadow:
+        4px 0 8px #38405c05;
+
+      font-weight: 650;
+    }
+
+    #summaryApp .sm-table th:first-child {
+      z-index: 4;
+    }
+
+    #summaryApp .sm-table td:first-child a {
+      color: #5543a6 !important;
+
+      font-weight: 650 !important;
+      line-height: 1.7;
+
+      text-decoration: none !important;
+    }
+
+    #summaryApp .sm-table td:first-child a:hover {
+      text-decoration: underline !important;
+    }
+
+    #summaryApp .sm-table td:nth-child(2) {
+      min-width: 170px;
+    }
+
+    #summaryApp .sm-table .sm-num {
+      min-width: 175px;
+
+      text-align: right;
+      white-space: nowrap;
+
+      font-variant-numeric:
+        tabular-nums;
+    }
+
+    #summaryApp .sm-table .sm-date {
+      min-width: 145px;
+      white-space: nowrap;
+    }
+
+    #summaryApp .sm-table .sm-bad {
+      color: #bc445d;
+    }
+
+    #summaryApp .sm-table td:nth-last-child(2) {
+      min-width: 320px !important;
+      max-width: 400px !important;
+    }
+
+    #summaryApp .sm-table td:last-child {
+      min-width: 260px;
+    }
+
+    #summaryApp .sm-table tfoot td {
+      border-top: 1px solid #e4dfef;
+      border-bottom: 0;
+
+      background: #f4f3fa;
+      color: #5d5478;
+
+      font-weight: 750;
+    }
+
+    #summaryApp .sm-table tfoot td:first-child {
+      font-size: 10px;
+      letter-spacing: .3px;
+    }
+
+    #summaryApp .sm-table details summary {
+      color: var(--sm-primary);
+      font-weight: 650;
+
+      cursor: pointer;
+    }
+
+    #summaryApp .sm-table details > div {
+      max-height: 260px;
+      margin-top: 10px;
+
+      overflow: auto;
+
+      font-weight: 400;
+    }
+
+    /* ======================================================
+       BADGE STATUS
+    ====================================================== */
+
+    #summaryApp .sm-status,
+    #summaryApp .sm-complete {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+
+      padding: 4px 9px;
+
+      border-radius: 7px;
+
+      background: #f0f1f6;
+      color: #68758a;
+
+      font-size: 11px;
+      font-weight: 650;
+      line-height: 1.5;
+      white-space: normal;
+    }
+
+    #summaryApp .sm-status[data-tone="success"],
+    #summaryApp .sm-complete {
+      background: #eaf7f0;
+      color: #22845b;
+    }
+
+    #summaryApp .sm-status[data-tone="progress"] {
+      background: #eef1ff;
+      color: #6055b0;
+    }
+
+    #summaryApp .sm-status[data-tone="warning"] {
+      background: #fff4e4;
+      color: #9f671d;
+    }
+
+    /* ======================================================
+       RINGKASAN FINAL
+    ====================================================== */
+
+    #summaryApp .sm-final-details {
+      white-space: normal;
+    }
+
+    #summaryApp .sm-final-details > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+
+      padding: 9px 11px;
+
+      border-radius: 9px;
+
+      background: #fff5e9;
+      color: #a3661b !important;
+
+      list-style: none;
+
+      font-size: 11px;
+    }
+
+    #summaryApp .sm-final-details > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    #summaryApp .sm-final-details > summary::after {
+      content: "+";
+
+      font-size: 17px;
+      font-weight: 400;
+    }
+
+    #summaryApp .sm-final-details[open] > summary::after {
+      content: "−";
+    }
+
+    #summaryApp .sm-missing-list {
+      max-height: 260px;
+
+      margin: 9px 0 0;
+      padding: 0 10px;
+
+      overflow: auto;
+      list-style: none;
+    }
+
+    #summaryApp .sm-missing-list li {
+      padding: 8px 0;
+
+      border-bottom:
+        1px dashed #e9e5dd;
+
+      color: #6b7283;
+
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    #summaryApp .sm-missing-list li:last-child {
+      border-bottom: 0;
+    }
+
+    #summaryApp .sm-missing-list strong {
+      display: block;
+
+      color: #495269;
+      font-weight: 600;
+    }
+
+    /* ======================================================
+       MODE RINGKASAN
+
+       Menampilkan:
+       1. Nama Proyek
+       2. PIC
+       3. Status Final
+       4. Ringkasan Final
+       5. Tasklist
+    ====================================================== */
+
+    #summaryApp [data-view="overview"]
+    .sm-table tr >
+    :not(:first-child)
+    :not(.sm-unused-selector) {
+      /* Aturan tampilan berada pada selector berikutnya. */
+    }
+
+    #summaryApp [data-view="overview"]
+    .sm-table tr >
+    :not(:first-child):not(:nth-child(2)):not(:nth-child(8)):not(:nth-last-child(2)):not(:last-child) {
+      display: none;
+    }
+
+    /* ======================================================
+       PAGINATION
+    ====================================================== */
+
+    #summaryApp .sm-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 15px;
+
+      padding: 17px 22px;
+
+      border-top:
+        1px solid var(--sm-border);
+
+      color: var(--sm-muted);
+      font-size: 11px;
+    }
+
+    #summaryApp .sm-page-size {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    #summaryApp .sm-page-size select {
+      min-height: 34px;
+      padding: 6px 9px;
+
+      border: 1px solid #e1e5ef;
+      border-radius: 8px;
+
+      background: #fff;
+      color: #46516a;
+
+      font-size: 12px;
+    }
+
+    #summaryApp .sm-pager {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    #summaryApp .sm-pager button {
+      width: 34px;
+      height: 34px;
+
+      border: 1px solid #e1e5ef;
+      border-radius: 9px;
+
+      background: #fff;
+      color: #5c5278;
+    }
+
+    #summaryApp #smPage {
+      min-width: 60px;
+
+      color: #4e5870;
+
+      text-align: center;
+      font-weight: 650;
+    }
+
+    #summaryApp .sm-export-note {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      color: #7b8699;
+    }
+
+    /* ======================================================
+       PETUNJUK
+    ====================================================== */
+
+    #summaryApp .sm-view-hint {
+      margin: 12px 3px 20px;
+
+      color: #7b8699;
+
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    #summaryApp .sm-notes {
+      border:
+        1px solid var(--sm-border);
+
+      border-radius: 13px;
+
+      background: #fff;
+      color: var(--sm-muted);
+
+      font-size: 12px;
+    }
+
+    #summaryApp .sm-notes > summary {
+      padding: 15px 18px;
+
+      color: #535e76;
+      font-weight: 650;
+
+      cursor: pointer;
+    }
+
+    #summaryApp .sm-notes ul {
+      margin: 0;
+      padding: 0 25px 18px 35px;
+
+      line-height: 1.9;
+    }
+
+    #summaryApp .sm-notes li + li {
+      margin-top: 7px;
+    }
+
+    #summaryApp .sm-empty {
+      padding: 50px 20px !important;
+
+      color: #8993a6 !important;
+      text-align: center !important;
+    }
+
+    #summaryApp .sm-sr-only {
+      position: absolute;
+
+      width: 1px;
+      height: 1px;
+
+      padding: 0;
+      margin: -1px;
+
+      overflow: hidden;
+
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+
+      border: 0;
+    }
+
+    /* ======================================================
+       RESPONSIVE
+    ====================================================== */
+
+    @media (max-width: 1150px) {
+      #summaryApp .sm-hero {
+        align-items: flex-start;
+      }
+
+      #summaryApp .sm-filter-grid {
+        grid-template-columns:
+          repeat(3, minmax(0, 1fr));
+      }
+
+      #summaryApp .sm-export-note {
+        display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      body.summary-page #summaryApp.main-content {
+        margin-left: 0 !important;
+
+        width: 100% !important;
+        max-width: 100% !important;
+
+        padding: 21px 14px;
+      }
+
+      #summaryApp .sm-hero {
+        flex-direction: column;
+        gap: 17px;
+      }
+
+      #summaryApp .sm-actions {
+        width: 100%;
+      }
+
+      #summaryApp .sm-actions .sm-button {
+        flex: 1;
+        min-height: 44px;
+      }
+
+      #summaryApp .sm-panel-heading {
+        padding: 18px 16px 15px;
+      }
+
+      #summaryApp .sm-filters {
+        padding: 0 16px 17px;
+      }
+
+      #summaryApp .sm-filter-grid {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+
+      #summaryApp .sm-field:last-child {
+        grid-column: 1 / -1;
+      }
+
+      #summaryApp .sm-field select {
+        min-height: 44px;
+      }
+
+      #summaryApp .sm-info,
+      #summaryApp .sm-table-tools,
+      #summaryApp .sm-bottom {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      #summaryApp .sm-table th:first-child,
+      #summaryApp .sm-table td:first-child {
+        width: 220px;
+        min-width: 220px;
+        max-width: 220px;
+      }
+
+      #summaryApp .sm-table-scroll {
+        max-height: 62vh;
+      }
+
+      #summaryApp .sm-pager button,
+      #summaryApp .sm-scroll-buttons button {
+        width: 40px;
+        height: 40px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      #summaryApp .sm-view-tabs {
+        width: 100%;
+      }
+
+      #summaryApp .sm-view-tabs button {
+        flex: 1;
+        justify-content: center;
+      }
+
+      #summaryApp .sm-legend {
+        gap: 9px;
+        font-size: 10px;
+      }
+
+      #summaryApp .sm-bottom {
+        justify-content: center;
+      }
+
+      #summaryApp .sm-breadcrumb {
+        font-size: 11px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #summaryApp * {
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
-  <script src="summary.js" defer></script>
+
+  <script
+    src="summary.js"
+    defer
+  ></script>
 </head>
+
 <body class="summary-page">
+
+  <!-- ====================================================
+       IKON
+  ===================================================== -->
+
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    style="position:absolute;width:0;height:0;overflow:hidden"
+    aria-hidden="true"
+  >
+    <symbol
+      id="sm-i-grid"
+      viewBox="0 0 24 24"
+    >
+      <rect
+        x="3"
+        y="3"
+        width="7"
+        height="7"
+        rx="1.5"
+      />
+
+      <rect
+        x="14"
+        y="3"
+        width="7"
+        height="7"
+        rx="1.5"
+      />
+
+      <rect
+        x="3"
+        y="14"
+        width="7"
+        height="7"
+        rx="1.5"
+      />
+
+      <rect
+        x="14"
+        y="14"
+        width="7"
+        height="7"
+        rx="1.5"
+      />
+    </symbol>
+
+    <symbol
+      id="sm-i-search"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        cx="10.5"
+        cy="10.5"
+        r="6.5"
+      />
+
+      <path d="m16 16 4 4"/>
+    </symbol>
+
+    <symbol
+      id="sm-i-download"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"
+      />
+    </symbol>
+
+    <symbol
+      id="sm-i-refresh"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M20 7v5h-5M4 17v-5h5"
+      />
+
+      <path
+        d="M6 7a7 7 0 0 1 11-2l3 3M4 16l3 3a7 7 0 0 0 11-2"
+      />
+    </symbol>
+
+    <symbol
+      id="sm-i-list"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M8 6h12M8 12h12M8 18h12M3 6h.01M3 12h.01M3 18h.01"
+      />
+    </symbol>
+
+    <symbol
+      id="sm-i-check"
+      viewBox="0 0 24 24"
+    >
+      <path d="m5 12 4 4L19 6"/>
+    </symbol>
+  </svg>
+
+  <!-- ====================================================
+       SIDEBAR
+  ===================================================== -->
+
   <div id="sidebarContainer"></div>
-  <main class="main-content sm-main" id="summaryApp">
-    <section class="sm-hero"><div><div class="sm-eyebrow">PROJECT PORTFOLIO</div><h1>Summary Proyek</h1><p>Kontrak, termin, dokumen, dan pekerjaan dalam satu ringkasan.</p></div><div class="sm-actions"><button class="sm-button" id="smReload" type="button">Muat ulang</button><button class="sm-button sm-button-primary" id="smExport" type="button" disabled>↓ Download Excel</button></div></section>
-    <div id="smMessage" class="sm-message" role="status" aria-live="polite">Menyiapkan data proyek…</div>
-    <section class="sm-panel" aria-label="Daftar summary proyek">
-      <form class="sm-filters" id="smFilters" autocomplete="off">
-        <div class="sm-field"><label for="smSearch">CARI PROYEK / PARTNER / DOKUMEN / TASK</label><input id="smSearch" type="search" placeholder="Ketik untuk mencari…"></div>
-        <div class="sm-field"><label for="smPIC">PIC</label><select id="smPIC"><option value="">Semua PIC</option></select></div>
-        <div class="sm-field"><label for="smPengadaan">STATUS PENGADAAN KLIEN</label><select id="smPengadaan"><option value="">Semua pengadaan</option></select></div>
-        <div class="sm-field"><label for="smKontrak">STATUS KONTRAK KLIEN</label><select id="smKontrak"><option value="">Semua kontrak</option></select></div>
-        <div class="sm-field"><label for="smFinal">STATUS FINAL</label><select id="smFinal"><option value="">Semua status</option></select></div>
-        <div class="sm-field"><label for="smKlien">NAMA KLIEN</label><select id="smKlien"><option value="">Semua klien</option></select></div>
-      </form>
-      <div class="sm-info"><span id="smResult" aria-live="polite">Memuat…</span><button type="button" id="smReset">Reset filter</button></div>
-      <div class="sm-table-scroll" tabindex="0" role="region" aria-label="Tabel proyek; geser ke kanan untuk kolom lainnya">
-        <table class="sm-table"><thead><tr id="smHead"></tr></thead><tbody id="smBody"></tbody><tfoot id="smFoot"></tfoot></table>
+
+  <!-- ====================================================
+       KONTEN
+  ===================================================== -->
+
+  <main
+    class="main-content sm-main"
+    id="summaryApp"
+  >
+
+    <nav
+      class="sm-breadcrumb"
+      aria-label="Breadcrumb"
+    >
+      <span>Portofolio</span>
+
+      <span aria-hidden="true">/</span>
+
+      <span aria-current="page">
+        Summary Proyek
+      </span>
+    </nav>
+
+    <!-- HEADER -->
+
+    <section
+      class="sm-hero"
+      aria-labelledby="smTitle"
+    >
+      <div>
+        <div class="sm-title-row">
+          <div class="sm-title-icon">
+            <svg
+              class="sm-icon"
+              aria-hidden="true"
+            >
+              <use href="#sm-i-grid"/>
+            </svg>
+          </div>
+
+          <div>
+            <div class="sm-eyebrow">
+              PROJECT OVERVIEW
+            </div>
+
+            <h1 id="smTitle">
+              Summary Proyek
+            </h1>
+          </div>
+        </div>
+
+        <p>
+          Pantau kontrak, pembayaran, dokumen, dan
+          kelengkapan proyek dalam satu tempat.
+        </p>
       </div>
-      <div class="sm-bottom"><label>Baris per halaman <select id="smPageSize"><option>10</option><option selected>25</option><option>50</option><option>100</option></select></label><div class="sm-pager"><button id="smPrev" type="button" aria-label="Halaman sebelumnya">←</button><span id="smPage">1 / 1</span><button id="smNext" type="button" aria-label="Halaman berikutnya">→</button></div><span>Excel memuat seluruh hasil filter.</span></div>
+
+      <div class="sm-actions">
+        <button
+          class="sm-button"
+          id="smReload"
+          type="button"
+        >
+          <svg
+            class="sm-icon"
+            aria-hidden="true"
+          >
+            <use href="#sm-i-refresh"/>
+          </svg>
+
+          Muat ulang
+        </button>
+
+        <button
+          class="sm-button sm-button-primary"
+          id="smExport"
+          type="button"
+          disabled
+        >
+          <svg
+            class="sm-icon"
+            aria-hidden="true"
+          >
+            <use href="#sm-i-download"/>
+          </svg>
+
+          Download Excel
+        </button>
+      </div>
     </section>
-    <details class="sm-notes"><summary>Ketentuan ringkasan</summary><ul>
-      <li>Satu baris per proyek sesuai hak akses pengguna. Kolom klien dan masing-masing partner dihitung terpisah.</li>
-      <li>Setiap partner mempunyai 10 kolom. Partner kedua mendapat akhiran 2, berikutnya 3, dan seterusnya. Jumlah kelompok mengikuti proyek dengan partner terbanyak pada data yang dimuat, tetap konsisten saat filter berubah.</li>
-      <li>Partner yang tidak ada pada suatu proyek ditampilkan kosong. Tasklist selalu berada paling akhir. Margin tidak ditampilkan.</li>
-      <li>Kontrak masing-masing pihak: nego terakhir bukan 0, lalu submit, lalu total nominal termin pihak tersebut. Data sewa digunakan untuk sisi klien tanpa menghitung termin reguler dua kali.</li>
-      <li>Belum ada Termin = maksimum (kontrak − total termin, 0). Dibayar hanya menjumlahkan termin berstatus Sudah Dibayar.</li>
-      <li>Status Pembayaran mencantumkan nama/deskripsi setiap termin dan statusnya. Status Kontrak partner memakai tanggal kontrak partner tersebut.</li>
-      <li>RFQ/TOR, SPH, SPK/PKS, dan BAST mencantumkan dokumen klien dan seluruh partner beserta label pemiliknya.</li>
-      <li>Media Pengadaan membaca media_pengadaan dari API masing-masing pihak; jika belum tersedia, tampil Belum Diisi.</li>
-      <li>Excel memuat seluruh hasil filter, dengan angka nominal tanpa Rp. Sheet Termin berisi rincian klien dan partner, dilengkapi Tasklist dan Ketentuan. Ekspor ditahan jika ada data yang gagal dimuat.</li>
-    </ul></details>
+
+    <!-- PESAN STATUS -->
+
+    <div
+      id="smMessage"
+      class="sm-message"
+      role="status"
+      aria-live="polite"
+    >
+      Menyiapkan data proyek…
+    </div>
+
+    <!-- PANEL TABEL -->
+
+    <section
+      class="sm-panel"
+      id="smPanel"
+      data-view="all"
+      aria-labelledby="smListTitle"
+    >
+      <div class="sm-panel-heading">
+        <div>
+          <h2 id="smListTitle">
+            Daftar proyek
+          </h2>
+
+          <p>
+            Temukan proyek dan lihat data yang
+            perlu dilengkapi.
+          </p>
+        </div>
+
+        <div
+          class="sm-view-tabs"
+          role="group"
+          aria-label="Pilihan tampilan tabel"
+        >
+          <button
+            type="button"
+            data-sm-view="all"
+            aria-pressed="true"
+            aria-controls="smTableRegion"
+          >
+            <svg
+              class="sm-icon"
+              aria-hidden="true"
+            >
+              <use href="#sm-i-grid"/>
+            </svg>
+
+            Semua kolom
+          </button>
+
+          <button
+            type="button"
+            data-sm-view="overview"
+            aria-pressed="false"
+            aria-controls="smTableRegion"
+          >
+            <svg
+              class="sm-icon"
+              aria-hidden="true"
+            >
+              <use href="#sm-i-list"/>
+            </svg>
+
+            Ringkasan
+          </button>
+        </div>
+      </div>
+
+      <!-- PENCARIAN DAN FILTER -->
+
+      <form
+        class="sm-filters"
+        id="smFilters"
+        autocomplete="off"
+      >
+        <div class="sm-search-wrap">
+          <label
+            class="sm-sr-only"
+            for="smSearch"
+          >
+            Cari proyek, partner, dokumen, atau task
+          </label>
+
+          <svg
+            class="sm-icon"
+            aria-hidden="true"
+          >
+            <use href="#sm-i-search"/>
+          </svg>
+
+          <input
+            id="smSearch"
+            type="search"
+            placeholder="Cari nama proyek, partner, dokumen, atau task…"
+          >
+        </div>
+
+        <div class="sm-filter-grid">
+          <div class="sm-field">
+            <label for="smPIC">
+              PIC
+            </label>
+
+            <select id="smPIC">
+              <option value="">
+                Semua PIC
+              </option>
+            </select>
+          </div>
+
+          <div class="sm-field">
+            <label for="smPengadaan">
+              STATUS PENGADAAN KLIEN
+            </label>
+
+            <select id="smPengadaan">
+              <option value="">
+                Semua pengadaan
+              </option>
+            </select>
+          </div>
+
+          <div class="sm-field">
+            <label for="smKontrak">
+              STATUS KONTRAK KLIEN
+            </label>
+
+            <select id="smKontrak">
+              <option value="">
+                Semua kontrak
+              </option>
+            </select>
+          </div>
+
+          <div class="sm-field">
+            <label for="smFinal">
+              STATUS FINAL
+            </label>
+
+            <select id="smFinal">
+              <option value="">
+                Semua status
+              </option>
+            </select>
+          </div>
+
+          <div class="sm-field">
+            <label for="smKlien">
+              NAMA KLIEN
+            </label>
+
+            <select id="smKlien">
+              <option value="">
+                Semua klien
+              </option>
+            </select>
+          </div>
+        </div>
+      </form>
+
+      <!-- INFORMASI HASIL FILTER -->
+
+      <div class="sm-info">
+        <span
+          id="smResult"
+          aria-live="polite"
+        >
+          Memuat data proyek…
+        </span>
+
+        <button
+          class="sm-reset"
+          type="button"
+          id="smReset"
+        >
+          <svg
+            class="sm-icon"
+            aria-hidden="true"
+          >
+            <use href="#sm-i-refresh"/>
+          </svg>
+
+          Reset filter
+        </button>
+      </div>
+
+      <!-- TOOLBAR TABEL -->
+
+      <div class="sm-table-tools">
+        <div
+          class="sm-legend"
+          aria-label="Kelompok kolom"
+        >
+          <span>
+            <i
+              class="sm-dot"
+              aria-hidden="true"
+            ></i>
+
+            Proyek
+          </span>
+
+          <span>
+            <i
+              class="sm-dot sm-dot-client"
+              aria-hidden="true"
+            ></i>
+
+            Klien
+          </span>
+
+          <span>
+            <i
+              class="sm-dot sm-dot-partner"
+              aria-hidden="true"
+            ></i>
+
+            Partner
+          </span>
+        </div>
+
+        <div
+          class="sm-scroll-buttons"
+          role="group"
+          aria-label="Geser tabel"
+        >
+          <button
+            type="button"
+            id="smScrollLeft"
+            aria-label="Geser tabel ke kiri"
+          >
+            ←
+          </button>
+
+          <button
+            type="button"
+            id="smScrollRight"
+            aria-label="Geser tabel ke kanan"
+          >
+            →
+          </button>
+        </div>
+      </div>
+
+      <!-- TABEL -->
+
+      <div
+        class="sm-table-scroll"
+        id="smTableRegion"
+        tabindex="0"
+        role="region"
+        aria-label="Tabel proyek"
+        aria-describedby="smViewHint"
+      >
+        <table class="sm-table">
+          <caption class="sm-sr-only">
+            Data proyek, klien, partner,
+            Ringkasan Final, dan Tasklist.
+          </caption>
+
+          <thead>
+            <tr id="smHead"></tr>
+          </thead>
+
+          <tbody id="smBody"></tbody>
+
+          <tfoot id="smFoot"></tfoot>
+        </table>
+      </div>
+
+      <!-- PAGINATION -->
+
+      <div class="sm-bottom">
+        <label
+          class="sm-page-size"
+          for="smPageSize"
+        >
+          Baris per halaman
+
+          <select id="smPageSize">
+            <option>10</option>
+            <option selected>25</option>
+            <option>50</option>
+            <option>100</option>
+          </select>
+        </label>
+
+        <div class="sm-pager">
+          <button
+            id="smPrev"
+            type="button"
+            aria-label="Halaman sebelumnya"
+          >
+            ←
+          </button>
+
+          <span
+            id="smPage"
+            aria-live="polite"
+          >
+            1 / 1
+          </span>
+
+          <button
+            id="smNext"
+            type="button"
+            aria-label="Halaman berikutnya"
+          >
+            →
+          </button>
+        </div>
+
+        <span class="sm-export-note">
+          <svg
+            class="sm-icon"
+            aria-hidden="true"
+          >
+            <use href="#sm-i-download"/>
+          </svg>
+
+          Excel memuat seluruh hasil filter.
+        </span>
+      </div>
+    </section>
+
+    <!-- PETUNJUK TAMPILAN -->
+
+    <p
+      class="sm-view-hint"
+      id="smViewHint"
+    >
+      Geser tabel ke kanan untuk melihat seluruh kolom.
+      Pilih Ringkasan untuk fokus pada kelengkapan data.
+    </p>
+
+    <!-- KETENTUAN -->
+
+    <details class="sm-notes">
+      <summary>
+        Panduan membaca ringkasan
+      </summary>
+
+      <ul>
+        <li>
+          <strong>Ringkasan Final:</strong>
+          label Lengkap muncul jika seluruh data terisi.
+          Jika belum, klik jumlah data yang belum lengkap
+          untuk melihat rinciannya.
+          Nilai 0 tetap dianggap terisi.
+        </li>
+
+        <li>
+          <strong>Pilihan tampilan:</strong>
+          Semua kolom menampilkan seluruh data.
+          Ringkasan menampilkan Nama Proyek, PIC,
+          Status Final, Ringkasan Final, dan Tasklist.
+          Pilihan tampilan tidak membatasi kolom
+          ekspor Excel.
+        </li>
+
+        <li>
+          Satu baris per proyek sesuai hak akses pengguna.
+          Data klien dan setiap partner dihitung terpisah.
+          Setiap partner mempunyai 10 kolom;
+          jumlah kelompok mengikuti partner terbanyak
+          pada data yang dimuat.
+        </li>
+
+        <li>
+          Partner yang tidak ada pada suatu proyek
+          ditampilkan kosong.
+          Tasklist selalu paling akhir.
+          Margin tidak ditampilkan.
+        </li>
+
+        <li>
+          Kontrak masing-masing pihak menggunakan
+          nego terakhir bukan 0, lalu submit,
+          lalu total nominal termin pihak tersebut.
+          Data sewa digunakan untuk sisi klien
+          tanpa menghitung termin reguler dua kali.
+        </li>
+
+        <li>
+          Nominal belum ada Termin =
+          maksimum (kontrak − total termin, 0).
+          Nominal Dibayar hanya menjumlahkan termin
+          berstatus Sudah Dibayar.
+        </li>
+
+        <li>
+          Status Pembayaran berisi nama/deskripsi
+          setiap termin beserta statusnya.
+          Status Kontrak partner menggunakan
+          tanggal kontrak partner tersebut.
+        </li>
+
+        <li>
+          RFQ/TOR, SPH, SPK/PKS, dan BAST berisi
+          dokumen klien dan seluruh partner
+          beserta label pemiliknya.
+          Media Pengadaan yang kosong
+          ditampilkan Belum Diisi.
+        </li>
+
+        <li>
+          Excel memuat seluruh hasil filter,
+          dengan nominal tanpa Rp.
+          Sheet Termin berisi rincian klien dan partner,
+          dilengkapi Tasklist dan Ketentuan.
+          Ekspor ditahan jika ada data yang gagal dimuat.
+        </li>
+      </ul>
+    </details>
   </main>
+
   <script src="/layout.js"></script>
   <script src="/sidebar.js"></script>
+
+  <!-- ====================================================
+       PENYESUAIAN TAMPILAN
+
+       Data tetap menggunakan summary.js.
+       Script ini mengatur:
+       - Pilihan tampilan.
+       - Tombol geser tabel.
+       - Badge status.
+       - Tampilan Ringkasan Final.
+  ===================================================== -->
+
+  <script>
+    (() => {
+      "use strict";
+
+      const panel =
+        document.getElementById("smPanel");
+
+      const region =
+        document.getElementById("smTableRegion");
+
+      const body =
+        document.getElementById("smBody");
+
+      const hint =
+        document.getElementById("smViewHint");
+
+      const viewButtons =
+        panel.querySelectorAll(
+          "[data-sm-view]"
+        );
+
+      // ==================================================
+      // PILIHAN TAMPILAN
+      // ==================================================
+
+      viewButtons.forEach(button => {
+        button.addEventListener(
+          "click",
+          () => {
+            const view =
+              button.dataset.smView;
+
+            panel.dataset.view =
+              view;
+
+            viewButtons.forEach(item => {
+              item.setAttribute(
+                "aria-pressed",
+                String(item === button)
+              );
+            });
+
+            region.scrollLeft = 0;
+
+            hint.textContent =
+              view === "overview"
+                ? (
+                    "Menampilkan Nama Proyek, PIC, " +
+                    "Status Final, Ringkasan Final, " +
+                    "dan Tasklist. Ekspor Excel tetap " +
+                    "memuat semua kolom."
+                  )
+                : (
+                    "Geser tabel ke kanan untuk " +
+                    "melihat seluruh kolom. " +
+                    "Pilih Ringkasan untuk fokus " +
+                    "pada kelengkapan data."
+                  );
+          }
+        );
+      });
+
+      // ==================================================
+      // GESER TABEL
+      // ==================================================
+
+      const reducedMotion =
+        window.matchMedia(
+          "(prefers-reduced-motion: reduce)"
+        );
+
+      function scrollTable(direction) {
+        region.scrollBy({
+          left:
+            direction *
+            region.clientWidth *
+            .75,
+
+          behavior:
+            reducedMotion.matches
+              ? "auto"
+              : "smooth"
+        });
+      }
+
+      document
+        .getElementById("smScrollLeft")
+        .addEventListener(
+          "click",
+          () => scrollTable(-1)
+        );
+
+      document
+        .getElementById("smScrollRight")
+        .addEventListener(
+          "click",
+          () => scrollTable(1)
+        );
+
+      // ==================================================
+      // BADGE STATUS DAN RINGKASAN FINAL
+      // ==================================================
+
+      function decorateRows() {
+        const headers = [
+          ...document.querySelectorAll(
+            "#smHead th"
+          )
+        ];
+
+        const finalIndex =
+          headers.findIndex(
+            th =>
+              th.textContent.trim() ===
+              "Ringkasan Final"
+          );
+
+        const statusIndices =
+          headers.flatMap(
+            (th, index) =>
+              /^Status\s/.test(
+                th.textContent.trim()
+              )
+                ? [index]
+                : []
+          );
+
+        [...body.rows].forEach(row => {
+          // Lewati baris kosong atau pesan error.
+          if (
+            row.cells.length !==
+            headers.length
+          ) {
+            return;
+          }
+
+          // ==============================================
+          // BADGE STATUS
+          // ==============================================
+
+          statusIndices.forEach(index => {
+            const cell =
+              row.cells[index];
+
+            if (
+              !cell ||
+              cell.dataset.smDecorated
+            ) {
+              return;
+            }
+
+            const text =
+              cell.textContent.trim();
+
+            if (
+              !text ||
+              text === "—" ||
+              text.includes("\n") ||
+              text.length > 70
+            ) {
+              return;
+            }
+
+            const badge =
+              document.createElement("span");
+
+            badge.className =
+              "sm-status";
+
+            badge.textContent =
+              text;
+
+            const normalized =
+              text.toLowerCase();
+
+            badge.dataset.tone =
+              /^(done|selesai|sudah dibayar|lunas)$/.test(
+                normalized
+              )
+                ? "success"
+                : (
+                    /^(berjalan|on progress|in progress|proses|ongoing)$/.test(
+                      normalized
+                    )
+                      ? "progress"
+                      : (
+                          /belum|menunggu|pending|berakhir/.test(
+                            normalized
+                          )
+                            ? "warning"
+                            : "neutral"
+                        )
+                  );
+
+            cell.dataset.smDecorated =
+              "true";
+
+            cell.replaceChildren(
+              badge
+            );
+          });
+
+          // ==============================================
+          // RINGKASAN FINAL
+          // ==============================================
+
+          const cell =
+            row.cells[finalIndex];
+
+          if (
+            !cell ||
+            cell.dataset.smDecorated
+          ) {
+            return;
+          }
+
+          const text =
+            cell.textContent.trim();
+
+          if (!text) {
+            return;
+          }
+
+          cell.dataset.smDecorated =
+            "true";
+
+          // Data lengkap.
+          if (text === "Lengkap") {
+            const badge =
+              document.createElement("span");
+
+            badge.className =
+              "sm-complete";
+
+            badge.textContent =
+              "✓ Lengkap";
+
+            cell.replaceChildren(
+              badge
+            );
+
+            return;
+          }
+
+          if (
+            !text.startsWith(
+              "Belum lengkap"
+            )
+          ) {
+            return;
+          }
+
+          // Ambil daftar data yang belum terisi.
+          const items =
+            text
+              .split("\n")
+              .slice(1)
+              .map(
+                value => value.trim()
+              )
+              .filter(Boolean);
+
+          const details =
+            document.createElement("details");
+
+          details.className =
+            "sm-final-details";
+
+          const summary =
+            document.createElement("summary");
+
+          summary.textContent =
+            `${items.length} data belum lengkap`;
+
+          const list =
+            document.createElement("ul");
+
+          list.className =
+            "sm-missing-list";
+
+          items.forEach(text => {
+            const li =
+              document.createElement("li");
+
+            const separator =
+              text.indexOf(":");
+
+            if (separator < 0) {
+              li.textContent =
+                text;
+            } else {
+              const label =
+                document.createElement("strong");
+
+              label.textContent =
+                text.slice(
+                  0,
+                  separator
+                );
+
+              const value =
+                document.createElement("span");
+
+              value.textContent =
+                text
+                  .slice(separator + 1)
+                  .trim();
+
+              li.append(
+                label,
+                value
+              );
+            }
+
+            list.append(li);
+          });
+
+          details.append(
+            summary,
+            list
+          );
+
+          cell.replaceChildren(
+            details
+          );
+        });
+      }
+
+      // Mengikuti render dari summary.js.
+      // Observer hanya memantau pergantian baris tabel.
+      // Perubahan badge di dalam sel tidak memicu ulang.
+      const observer =
+        new MutationObserver(
+          decorateRows
+        );
+
+      observer.observe(
+        body,
+        {
+          childList: true
+        }
+      );
+
+      decorateRows();
+    })();
+  </script>
 </body>
 </html>

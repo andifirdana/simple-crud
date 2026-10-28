@@ -706,6 +706,7 @@ const proyekFilterHelpers = (function () {
         normalisasiFilter(
           [
             item?.nama_proyek,
+            item?.nama_pengadaan,
             item?.perusahaan_klien,
             categories.join(" "),
             partners.join(" "),
@@ -1736,9 +1737,18 @@ function renderTable(data) {
           <tr>
             <td class="proyek-info-cell">
               <div class="proyek-main-name">
-              ${renderKlasifikasiProyek(item)}  
-              ${escapeHTML(
-                  item?.nama_proyek || "-"
+                ${renderKlasifikasiProyek(item)}
+
+                ${escapeHTML(
+                  [
+                    item?.nama_proyek || "-",
+
+                    String(
+                      item?.nama_pengadaan ?? ""
+                    ).trim()
+                  ]
+                    .filter(Boolean)
+                    .join(" / ")
                 )}
               </div>
 
@@ -1806,6 +1816,25 @@ function renderTable(data) {
 
                 <button
                   type="button"
+                  class="btn-project-sum"
+                  data-project-sum
+                  data-project-id="${
+                    Number(item?.id)
+                  }"
+                  data-project-name="${
+                    escapeHTML(
+                      item?.nama_proyek || "Proyek"
+                    )
+                  }"
+                  aria-haspopup="dialog"
+                  aria-controls="projectSumModal"
+                  title="Lihat Ringkasan Final"
+                >
+                  Sum
+                </button>
+
+                <button
+                  type="button"
                   class="btn-project-log"
                   data-project-log
                   data-project-id="${
@@ -1813,8 +1842,7 @@ function renderTable(data) {
                   }"
                   data-project-name="${
                     escapeHTML(
-                      item?.nama_proyek ||
-                      "Proyek"
+                      item?.nama_proyek || "Proyek"
                     )
                   }"
                 >
@@ -1830,8 +1858,7 @@ function renderTable(data) {
                   }"
                   data-project-name="${
                     escapeHTML(
-                      item?.nama_proyek ||
-                      "Proyek"
+                      item?.nama_proyek || "Proyek"
                     )
                   }"
                 >
@@ -2330,36 +2357,28 @@ async function loadActivityLogProyek(
 }
 
 // ======================================================
-// KLIK TOMBOL LOG
+// KLIK TOMBOL LOG PROYEK
 // ======================================================
 
-proyekTable?.addEventListener(
-  "click",
-  event => {
-    const logButton =
-      event.target.closest(
-        "[data-project-log]"
-      );
+proyekTable?.addEventListener("click", event => {
+  const tombol =
+    event.target.closest("[data-project-log]");
 
-    if (!logButton) {
-      return;
-    }
+  if (!tombol) return;
 
-    const proyekId =
-      Number(
-        logButton.dataset.projectId
-      );
+  event.preventDefault();
 
-    const namaProyek =
-      logButton.dataset.projectName ||
-      "Proyek";
+  const proyekId =
+    Number(tombol.dataset.projectId);
 
-    loadActivityLogProyek(
-      proyekId,
-      namaProyek
-    );
-  }
-);
+  const namaProyek =
+    tombol.dataset.projectName || "Proyek";
+
+  loadActivityLogProyek(
+    proyekId,
+    namaProyek
+  );
+});
 
 // ======================================================
 // TUTUP MODAL LOG
@@ -2394,153 +2413,1016 @@ document.addEventListener(
 // HAPUS PROYEK
 // ======================================================
 
-proyekTable?.addEventListener(
+
+
+// ======================================================
+// HAPUS PROYEK DENGAN MODAL
+// ======================================================
+
+(() => {
+  "use strict";
+
+  const modal =
+    document.getElementById(
+      "deleteProjectModal"
+    );
+
+  const table =
+    document.getElementById(
+      "proyekTable"
+    );
+
+  if (!modal || !table) {
+    return;
+  }
+
+  const $delete = id =>
+    document.getElementById(id);
+
+  const title =
+    $delete("deleteProjectTitle");
+
+  const projectBox =
+    $delete("deleteProjectBox");
+
+  const projectName =
+    $delete("deleteProjectName");
+
+  const intro =
+    $delete("deleteProjectIntro");
+
+  const verification =
+    $delete("deleteProjectVerification");
+
+  const input =
+    $delete("deleteProjectInput");
+
+  const errorBox =
+    $delete("deleteProjectError");
+
+  const successBox =
+    $delete("deleteProjectSuccess");
+
+  const next =
+    $delete("deleteProjectNext");
+
+  const back =
+    $delete("deleteProjectBack");
+
+  const cancel =
+    $delete("deleteProjectCancel");
+
+  const submit =
+    $delete("deleteProjectSubmit");
+
+  const done =
+    $delete("deleteProjectDone");
+
+  const form =
+    $delete("deleteProjectForm");
+
+  const closeButtons =
+    modal.querySelectorAll(
+      "[data-close-delete-project]"
+    );
+
+  let selected = null;
+  let busy = false;
+  let phase = "intro";
+
+  // ====================================================
+  // VALIDASI KONFIRMASI
+  // ====================================================
+
+  function validText() {
+    return (
+      input.value
+        .trim()
+        .toUpperCase() === "HAPUS"
+    );
+  }
+
+  // ====================================================
+  // PESAN ERROR
+  // ====================================================
+
+  function clearError() {
+    errorBox.hidden = true;
+    errorBox.textContent = "";
+  }
+
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.hidden = false;
+  }
+
+  // ====================================================
+  // STATUS PROSES
+  // ====================================================
+
+  function setBusy(value) {
+    busy = value;
+
+    modal.setAttribute(
+      "aria-busy",
+      String(value)
+    );
+
+    closeButtons.forEach(button => {
+      button.disabled = value;
+    });
+
+    next.disabled =
+      value || !selected;
+
+    back.disabled = value;
+    input.disabled = value;
+
+    submit.disabled =
+      value ||
+      !selected ||
+      !validText();
+
+    submit.textContent =
+      value
+        ? "Menghapus…"
+        : "Ya, hapus proyek";
+
+    if (
+      selected?.trigger?.isConnected
+    ) {
+      selected.trigger.disabled =
+        value;
+    }
+  }
+
+  // ====================================================
+  // TAHAP MODAL
+  // ====================================================
+
+  function showPhase(value) {
+    phase = value;
+
+    clearError();
+
+    title.textContent =
+      value === "success"
+        ? "Proyek berhasil dihapus"
+        : (
+            value === "confirm"
+              ? "Konfirmasi penghapusan"
+              : "Hapus proyek?"
+          );
+
+    projectBox.hidden =
+      value === "success";
+
+    intro.hidden =
+      value !== "intro";
+
+    verification.hidden =
+      value !== "confirm";
+
+    successBox.hidden =
+      value !== "success";
+
+    next.hidden =
+      value !== "intro";
+
+    back.hidden =
+      value !== "confirm";
+
+    submit.hidden =
+      value !== "confirm";
+
+    cancel.hidden =
+      value === "success";
+
+    done.hidden =
+      value !== "success";
+
+    setBusy(false);
+
+    if (value === "confirm") {
+      input.focus();
+    }
+
+    if (value === "success") {
+      done.focus();
+    }
+  }
+
+ // ====================================================
+// BUKA MODAL HAPUS
+// ====================================================
+
+table.addEventListener(
   "click",
-  async event => {
-    const deleteButton =
+  event => {
+    const trigger =
       event.target.closest(
         "[data-delete-project]"
       );
 
-    if (!deleteButton) {
+    if (!trigger) {
       return;
     }
 
-    const proyekId =
+    // Cegah submit form atau navigasi dari tombol.
+    event.preventDefault();
+
+    // Hentikan klik sebelum diterima handler hapus lain.
+    event.stopImmediatePropagation();
+
+    if (busy) {
+      return;
+    }
+
+    const id =
       Number(
-        deleteButton.dataset.projectId
+        trigger.dataset.projectId
       );
 
-    const namaProyek =
-      deleteButton.dataset.projectName ||
+    const validId =
+      Number.isInteger(id) &&
+      id > 0;
+
+    selected =
+      validId
+        ? {
+            id,
+
+            name:
+              trigger.dataset.projectName ||
+              "Proyek",
+
+            trigger
+          }
+        : null;
+
+    // Selalu mulai dari konfirmasi awal.
+    input.value = "";
+
+    projectName.textContent =
+      trigger.dataset.projectName ||
       "Proyek";
 
-    if (
-      !Number.isInteger(proyekId) ||
-      proyekId <= 0
-    ) {
-      window.alert(
-        "ID proyek tidak valid."
-      );
+    showPhase("intro");
 
-      return;
+    if (!modal.open) {
+      modal.showModal();
     }
 
-    const konfirmasi =
-      window.confirm(
-        `Apakah Anda yakin ingin menghapus proyek "${namaProyek}"?\n\n` +
-        "Data proyek dan seluruh data terkait dapat ikut terhapus."
-      );
+    document.body.classList.add(
+      "project-delete-open"
+    );
 
-    if (!konfirmasi) {
-      return;
+    if (!validId) {
+      showError(
+        "ID proyek tidak valid. " +
+        "Muat ulang daftar proyek."
+      );
     }
+  },
 
-    const verifikasi =
-      window.prompt(
-        `Ketik HAPUS untuk menghapus proyek "${namaProyek}".`
-      );
+  // Capture: dijalankan sebelum event klik biasa.
+  true
+);
 
-    if (
-      String(verifikasi || "")
-        .trim()
-        .toUpperCase() !== "HAPUS"
-    ) {
-      window.alert(
-        "Penghapusan proyek dibatalkan."
-      );
+  // ====================================================
+  // LANJUT KE KONFIRMASI
+  // ====================================================
 
-      return;
+  next.addEventListener(
+    "click",
+    () => {
+      if (!selected || busy) {
+        return;
+      }
+
+      showPhase("confirm");
     }
+  );
 
-    const textSebelumnya =
-      deleteButton.textContent;
+  // ====================================================
+  // KEMBALI KE TAHAP AWAL
+  // ====================================================
 
-    deleteButton.disabled = true;
+  back.addEventListener(
+    "click",
+    () => {
+      if (busy) {
+        return;
+      }
 
-    deleteButton.textContent =
-      "Menghapus...";
+      input.value = "";
 
-    try {
-      const response = await fetch(
-        `/api/proyek/${
-          encodeURIComponent(proyekId)
-        }`,
-        {
-          method: "DELETE",
+      showPhase("intro");
 
-          headers: {
-            Accept: "application/json"
-          },
+      next.focus();
+    }
+  );
 
-          credentials: "same-origin"
+  // ====================================================
+  // AKTIFKAN TOMBOL SETELAH MENGETIK HAPUS
+  // ====================================================
+
+  input.addEventListener(
+    "input",
+    () => {
+      submit.disabled =
+        busy ||
+        !selected ||
+        !validText();
+
+      clearError();
+    }
+  );
+
+  // ====================================================
+  // TUTUP MODAL
+  // ====================================================
+
+  closeButtons.forEach(button => {
+    button.addEventListener(
+      "click",
+      () => {
+        if (!busy) {
+          modal.close();
         }
+      }
+    );
+  });
+
+  // Tunggu proses selesai sebelum modal ditutup.
+  modal.addEventListener(
+    "cancel",
+    event => {
+      if (busy) {
+        event.preventDefault();
+      }
+    }
+  );
+
+  modal.addEventListener(
+    "close",
+    () => {
+      document.body.classList.remove(
+        "project-delete-open"
       );
 
-      const contentType =
-        response.headers.get("content-type") ||
-        "";
+      input.value = "";
+      selected = null;
+    }
+  );
+
+  // ====================================================
+  // SUBMIT PENGHAPUSAN
+  // ====================================================
+
+  form.addEventListener(
+    "submit",
+    async event => {
+      event.preventDefault();
 
       if (
-        !contentType.includes("application/json")
+        busy ||
+        !selected ||
+        phase !== "confirm"
       ) {
-        const responseText =
-          await response.text();
+        return;
+      }
 
+      if (!validText()) {
+        showError(
+          "Ketik HAPUS untuk melanjutkan penghapusan."
+        );
+
+        input.focus();
+
+        return;
+      }
+
+      const project = selected;
+
+      clearError();
+      setBusy(true);
+
+      let deleted = false;
+
+      try {
+        const response =
+          await fetch(
+            `/api/proyek/${
+              encodeURIComponent(project.id)
+            }`,
+            {
+              method: "DELETE",
+
+              headers: {
+                Accept:
+                  "application/json"
+              },
+
+              credentials:
+                "same-origin"
+            }
+          );
+
+        if (response.status === 401) {
+          throw new Error(
+            "Sesi berakhir. " +
+            "Silakan login kembali."
+          );
+        }
+
+        let result = {};
+
+        // HTTP 204 tidak mempunyai response body.
+        if (response.status !== 204) {
+          const type =
+            response.headers.get(
+              "content-type"
+            ) || "";
+
+          if (
+            !type.includes(
+              "application/json"
+            )
+          ) {
+            throw new Error(
+              "Server tidak mengembalikan JSON " +
+              `(HTTP ${response.status}).`
+            );
+          }
+
+          result =
+            await response.json();
+        }
+
+        if (
+          !response.ok ||
+          result?.success === false ||
+          result?.error
+        ) {
+          throw new Error(
+            result?.error ||
+            result?.message ||
+            "Gagal menghapus proyek."
+          );
+        }
+
+        deleted = true;
+
+        successBox.textContent =
+          `Proyek “${project.name}” berhasil dihapus.`;
+
+        showPhase("success");
+
+      } catch (error) {
+        showError(
+          error.message ||
+          (
+            "Gagal menghapus proyek. " +
+            "Silakan coba lagi."
+          )
+        );
+
+      } finally {
+        setBusy(false);
+      }
+
+      // Perbarui daftar setelah penghapusan berhasil.
+      if (deleted) {
+        currentPage = 1;
+
+        try {
+          await loadProyek();
+
+        } catch {
+          if (
+            selected === project &&
+            phase === "success"
+          ) {
+            successBox.textContent =
+              `Proyek “${project.name}” berhasil dihapus. ` +
+              "Muat ulang halaman untuk memperbarui daftar.";
+          }
+        }
+      }
+    }
+  );
+})();
+
+
+
+// ======================================================
+// MODAL SUM — RINGKASAN FINAL PROYEK
+// ======================================================
+
+(() => {
+  "use strict";
+
+  const table =
+    document.getElementById(
+      "proyekTable"
+    );
+
+  const modal =
+    document.getElementById(
+      "projectSumModal"
+    );
+
+  if (!table || !modal) {
+    return;
+  }
+
+  const projectName =
+    document.getElementById(
+      "projectSumName"
+    );
+
+  const status =
+    document.getElementById(
+      "projectSumStatus"
+    );
+
+  const content =
+    document.getElementById(
+      "projectSumContent"
+    );
+
+  const retry =
+    document.getElementById(
+      "projectSumRetry"
+    );
+
+  let requestId = 0;
+  let controller = null;
+
+  let selectedId = null;
+  let selectedName = "Proyek";
+
+  // ====================================================
+  // STATUS MODAL
+  // ====================================================
+
+  function setStatus(text, state) {
+    status.textContent = text;
+
+    status.dataset.state = state;
+  }
+
+  // ====================================================
+  // MEMUAT JSON API
+  // ====================================================
+
+  async function fetchSumJSON(
+    url,
+    signal
+  ) {
+    const response = await fetch(
+      url,
+      {
+        credentials:
+          "same-origin",
+
+        cache:
+          "no-store",
+
+        headers: {
+          Accept:
+            "application/json"
+        },
+
+        signal
+      }
+    );
+
+    if (response.status === 401) {
+      throw new Error(
+        "Sesi berakhir. Silakan login kembali."
+      );
+    }
+
+    const contentType =
+      response.headers.get(
+        "content-type"
+      ) || "";
+
+    if (
+      !contentType.includes(
+        "application/json"
+      )
+    ) {
+      throw new Error(
+        "Response API bukan JSON " +
+        `(HTTP ${response.status}).`
+      );
+    }
+
+    const data =
+      await response.json();
+
+    if (
+      !response.ok ||
+      data?.success === false ||
+      data?.error
+    ) {
+      throw new Error(
+        data?.error ||
+        data?.message ||
+        (
+          "Gagal memuat data " +
+          `(HTTP ${response.status}).`
+        )
+      );
+    }
+
+    return data;
+  }
+
+  // ====================================================
+  // MENAMPILKAN RINGKASAN FINAL
+  // ====================================================
+
+  function renderSum(text) {
+    content.replaceChildren();
+
+    // Semua data sudah terisi.
+    if (text === "Lengkap") {
+      setStatus(
+        "Lengkap",
+        "success"
+      );
+
+      const message =
+        document.createElement(
+          "div"
+        );
+
+      message.className =
+        "project-sum-success";
+
+      message.textContent =
+        "✓ Seluruh data Ringkasan Final sudah terisi.";
+
+      content.append(message);
+
+      return;
+    }
+
+    if (
+      !text.startsWith(
+        "Belum lengkap\n"
+      )
+    ) {
+      throw new Error(
+        text ||
+        "Ringkasan Final belum tersedia."
+      );
+    }
+
+    // Ambil daftar data yang masih kosong.
+    const lines =
+      text
+        .split("\n")
+        .slice(1)
+        .filter(Boolean);
+
+    setStatus(
+      `${lines.length} data belum lengkap`,
+      "warning"
+    );
+
+    const list =
+      document.createElement(
+        "ul"
+      );
+
+    list.className =
+      "project-sum-list";
+
+    lines.forEach(line => {
+      const item =
+        document.createElement(
+          "li"
+        );
+
+      const separator =
+        line.indexOf(":");
+
+      const label =
+        document.createElement(
+          "strong"
+        );
+
+      const value =
+        document.createElement(
+          "span"
+        );
+
+      label.textContent =
+        separator < 0
+          ? line
+          : line.slice(
+              0,
+              separator
+            );
+
+      value.textContent =
+        separator < 0
+          ? "Belum diisi"
+          : line
+              .slice(separator + 1)
+              .trim();
+
+      item.append(
+        label,
+        value
+      );
+
+      list.append(item);
+    });
+
+    content.append(list);
+  }
+
+  // ====================================================
+  // MEMUAT DATA PROYEK YANG DIPILIH
+  // ====================================================
+
+  async function loadProjectSum() {
+    const currentRequest =
+      ++requestId;
+
+    // Batalkan pemuatan proyek sebelumnya.
+    controller?.abort();
+
+    const activeController =
+      new AbortController();
+
+    controller =
+      activeController;
+
+    let timedOut = false;
+
+    const timeout =
+      setTimeout(
+        () => {
+          timedOut = true;
+
+          activeController.abort();
+        },
+        30000
+      );
+
+    projectName.textContent =
+      selectedName;
+
+    content.replaceChildren();
+
+    retry.hidden = true;
+
+    setStatus(
+      "Memeriksa kelengkapan data…",
+      "loading"
+    );
+
+    modal.setAttribute(
+      "aria-busy",
+      "true"
+    );
+
+    try {
+      const helper =
+        window.PortoproSummaryFinal;
+
+      if (!helper) {
         throw new Error(
-          responseText ||
-          `Server menghasilkan status ${response.status}`
+          "Fungsi Ringkasan Final belum tersedia. " +
+          "Periksa pemuatan summary.js."
         );
       }
 
-      const result =
-        await response.json();
+      const id =
+        encodeURIComponent(
+          selectedId
+        );
 
-      if (!response.ok) {
-        let pesanError =
-          result.error ||
-          "Gagal menghapus proyek.";
+      const [
+        detail,
+        tasks,
+        rentals,
+        rentalTerms
+      ] = await Promise.all([
+        fetchSumJSON(
+          `/api/proyek/${id}/detail`,
+          activeController.signal
+        ),
 
-        if (result.constraint) {
-          pesanError +=
-            `\n\nConstraint: ${result.constraint}`;
-        }
+        fetchSumJSON(
+          `/api/proyek/${id}/task-list`,
+          activeController.signal
+        ),
 
-        if (result.detail) {
-          pesanError +=
-            `\n${result.detail}`;
-        }
+        fetchSumJSON(
+          "/api/proyek-sewa",
+          activeController.signal
+        ),
 
-        throw new Error(pesanError);
+        fetchSumJSON(
+          "/api/pendapatan/sewa/detail",
+          activeController.signal
+        )
+      ]);
+
+      // Abaikan respons lama atau modal yang sudah ditutup.
+      if (
+        currentRequest !== requestId ||
+        !modal.open
+      ) {
+        return;
       }
 
-      window.alert(
-        result.message ||
-        "Proyek berhasil dihapus."
+      const listing =
+        allProyek.find(
+          item =>
+            Number(item.id) ===
+            selectedId
+        ) || {};
+
+      // Gunakan perhitungan yang sama dengan halaman Summary.
+      const row =
+        helper.normalizeProject(
+          listing,
+          detail,
+
+          helper.collection(
+            tasks
+          ),
+
+          helper.collection(
+            rentals
+          ),
+
+          helper.collection(
+            rentalTerms
+          )
+        );
+
+      projectName.textContent =
+        row.nama ||
+        selectedName;
+
+      renderSum(
+        helper.finalSummary(row)
       );
-
-      currentPage = 1;
-
-      await loadProyek();
 
     } catch (error) {
-      console.error(
-        "ERROR HAPUS PROYEK:",
-        error
+      if (
+        currentRequest !== requestId ||
+        !modal.open
+      ) {
+        return;
+      }
+
+      activeController.abort();
+
+      setStatus(
+        "Ringkasan gagal dimuat",
+        "error"
       );
 
-      window.alert(
-        `Gagal menghapus proyek:\n${error.message}`
+      const message =
+        document.createElement(
+          "p"
+        );
+
+      message.className =
+        "project-sum-error";
+
+      message.textContent =
+        timedOut
+          ? (
+              "Pemuatan data terlalu lama. " +
+              "Silakan coba lagi."
+            )
+          : error.message;
+
+      content.replaceChildren(
+        message
       );
 
-      deleteButton.disabled = false;
+      retry.hidden = false;
 
-      deleteButton.textContent =
-        textSebelumnya;
+    } finally {
+      clearTimeout(timeout);
+
+      if (
+        currentRequest === requestId
+      ) {
+        modal.setAttribute(
+          "aria-busy",
+          "false"
+        );
+
+        controller = null;
+      }
     }
   }
-);
 
+  // ====================================================
+  // KLIK TOMBOL SUM
+  // ====================================================
+
+  table.addEventListener(
+    "click",
+    event => {
+      const button =
+        event.target.closest(
+          "[data-project-sum]"
+        );
+
+      if (!button) {
+        return;
+      }
+
+      const id =
+        Number(
+          button.dataset.projectId
+        );
+
+      if (
+        !Number.isInteger(id) ||
+        id <= 0
+      ) {
+        return;
+      }
+
+      selectedId = id;
+
+      selectedName =
+        button.dataset.projectName ||
+        "Proyek";
+
+      if (!modal.open) {
+        modal.showModal();
+      }
+
+      document.body.classList.add(
+        "project-sum-open"
+      );
+
+      loadProjectSum();
+    }
+  );
+
+  // ====================================================
+  // TUTUP MODAL
+  // ====================================================
+
+  modal
+    .querySelectorAll(
+      "[data-close-project-sum]"
+    )
+    .forEach(button => {
+      button.addEventListener(
+        "click",
+        () => modal.close()
+      );
+    });
+
+  // Tombol Escape ditangani otomatis oleh dialog.
+  modal.addEventListener(
+    "close",
+    () => {
+      requestId++;
+
+      controller?.abort();
+
+      controller = null;
+
+      modal.setAttribute(
+        "aria-busy",
+        "false"
+      );
+
+      document.body.classList.remove(
+        "project-sum-open"
+      );
+    }
+  );
+
+  // ====================================================
+  // COBA LAGI
+  // ====================================================
+
+  retry.addEventListener(
+    "click",
+    loadProjectSum
+  );
+})();
 // ======================================================
 // START
 // ======================================================

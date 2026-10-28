@@ -1,0 +1,5909 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Detail Proyek - Portopro</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+  <style>
+    body {
+      margin: 0;
+      background: #f5f7fb;
+      color: #1f2937;
+      overflow-x: hidden;
+    }
+
+    .app-layout {
+      min-height: 100vh;
+    }
+
+    .main-content {
+      width: calc(100% - 260px);
+      margin-left: 260px;
+      padding: 32px;
+      box-sizing: border-box;
+    }
+
+    .detail-page {
+      width: 100%;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    .detail-topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .breadcrumb {
+      color: #64748b;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .breadcrumb a {
+      color: #4f46e5;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .project-title {
+      margin: 0 0 6px;
+      font-size: 28px;
+      font-weight: 750;
+      letter-spacing: -0.7px;
+    }
+
+    .project-category {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+/* =====================================================
+   TRENDY SUMMARY CARDS
+===================================================== */
+
+.summary-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.summary-card {
+  --card-color: #4f46e5;
+  --card-light: #eef2ff;
+  --card-shadow: rgba(79, 70, 229, 0.16);
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  min-width: 0;
+  min-height: 145px;
+  padding: 24px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(248, 250, 252, 0.95)
+    );
+
+  border:
+    1px solid
+    rgba(226, 232, 240, 0.95);
+
+  border-radius: 20px;
+
+  box-shadow:
+    0 2px 5px rgba(15, 23, 42, 0.04),
+    0 14px 35px var(--card-shadow);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+
+/* WARNA BAGIAN ATAS */
+
+.summary-card::before {
+  content: "";
+
+  position: absolute;
+  z-index: -1;
+
+  top: 0;
+  right: 0;
+  left: 0;
+
+  height: 5px;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--card-color),
+      color-mix(
+        in srgb,
+        var(--card-color),
+        white 35%
+      )
+    );
+}
+
+
+/* LINGKARAN DEKORASI */
+
+.summary-card::after {
+  content: "";
+
+  position: absolute;
+  z-index: -1;
+
+  width: 130px;
+  height: 130px;
+
+  top: -65px;
+  right: -45px;
+
+  background:
+    radial-gradient(
+      circle,
+      var(--card-light) 0%,
+      rgba(255, 255, 255, 0) 70%
+    );
+
+  border-radius: 50%;
+}
+
+
+.summary-card:hover {
+  transform:
+    translateY(-5px);
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--card-color),
+      white 55%
+    );
+
+  box-shadow:
+    0 5px 12px rgba(15, 23, 42, 0.06),
+    0 20px 45px var(--card-shadow);
+}
+
+
+/* LABEL */
+
+.summary-label {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  margin-bottom: 16px;
+
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 750;
+
+  line-height: 1.4;
+
+  text-transform: uppercase;
+  letter-spacing: 0.65px;
+}
+
+
+/* TITIK ICON LABEL */
+
+.summary-label::before {
+  content: "";
+
+  flex: 0 0 auto;
+
+  width: 10px;
+  height: 10px;
+
+  background:
+    var(--card-color);
+
+  border:
+    4px solid
+    var(--card-light);
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 0 1px
+    color-mix(
+      in srgb,
+      var(--card-color),
+      white 55%
+    );
+}
+
+
+/* NILAI */
+
+.summary-value {
+  position: relative;
+
+  max-width: 100%;
+
+  color: #0f172a;
+
+  font-size:
+    clamp(
+      23px,
+      2vw,
+      32px
+    );
+
+  font-weight: 800;
+
+  line-height: 1.18;
+
+  letter-spacing: -0.8px;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* GARIS KECIL DI BAWAH NILAI */
+
+.summary-value::after {
+  content: "";
+
+  display: block;
+
+  width: 38px;
+  height: 4px;
+
+  margin-top: 17px;
+
+  background:
+    var(--card-color);
+
+  border-radius: 999px;
+
+  opacity: 0.8;
+}
+
+
+/* =====================================================
+   WARNA SETIAP CARD
+===================================================== */
+
+/* Nilai Klien */
+
+.summary-card:nth-child(1) {
+  --card-color: #4f46e5;
+  --card-light: #eef2ff;
+  --card-shadow: rgba(79, 70, 229, 0.14);
+}
+
+
+/* Nilai Partner */
+
+.summary-card:nth-child(2) {
+  --card-color: #2563eb;
+  --card-light: #dbeafe;
+  --card-shadow: rgba(37, 99, 235, 0.14);
+}
+
+
+/* Margin */
+
+.summary-card:nth-child(3) {
+  --card-color: #059669;
+  --card-light: #d1fae5;
+  --card-shadow: rgba(5, 150, 105, 0.14);
+}
+
+
+/* Margin Persen */
+
+.summary-card:nth-child(4) {
+  --card-color: #7c3aed;
+  --card-light: #ede9fe;
+  --card-shadow: rgba(124, 58, 237, 0.14);
+}
+
+
+/* Dibayar Klien */
+
+.summary-card:nth-child(5) {
+  --card-color: #16a34a;
+  --card-light: #dcfce7;
+  --card-shadow: rgba(22, 163, 74, 0.14);
+}
+
+
+/* Belum Dibayar Klien */
+
+.summary-card:nth-child(6) {
+  --card-color: #f59e0b;
+  --card-light: #fef3c7;
+  --card-shadow: rgba(245, 158, 11, 0.14);
+}
+
+
+/* Dibayar Partner */
+
+.summary-card:nth-child(7) {
+  --card-color: #0891b2;
+  --card-light: #cffafe;
+  --card-shadow: rgba(8, 145, 178, 0.14);
+}
+
+
+/* Belum Dibayar Partner */
+
+.summary-card:nth-child(8) {
+  --card-color: #ef4444;
+  --card-light: #fee2e2;
+  --card-shadow: rgba(239, 68, 68, 0.14);
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1200px) {
+  .summary-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+@media (max-width: 650px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .summary-card {
+    min-height: 125px;
+    padding: 20px;
+  }
+
+  .summary-value {
+    font-size: 25px;
+  }
+}
+
+    /* =========================
+       SECTION
+    ========================= */
+
+    .project-section {
+      overflow: hidden;
+      margin-bottom: 20px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 4px 12px rgba(15, 23, 42, 0.03);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 18px 22px;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      background: #eef2ff;
+      border-radius: 10px;
+      font-size: 18px;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .section-heading p {
+      margin: 2px 0 0;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .section-body {
+      padding: 22px;
+    }
+
+    /* =========================
+       INFORMATION GRID
+    ========================= */
+
+    .grid {
+      display: grid;
+      grid-template-columns:
+        repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+    }
+
+    .info {
+      padding: 15px;
+      background: #f8fafc;
+      border: 1px solid #eef2f7;
+      border-radius: 11px;
+    }
+
+    .label {
+      margin-bottom: 5px;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .value {
+      color: #0f172a;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* =========================
+       BUTTON
+    ========================= */
+
+    .btn-edit {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 7px 13px;
+      background: #ffffff;
+      border: 1px solid #dbe2ea;
+      border-radius: 9px;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .btn-edit:hover {
+      color: #4f46e5;
+      border-color: #a5b4fc;
+      background: #eef2ff;
+    }
+
+    /* =========================
+       SUB SECTION
+    ========================= */
+
+    .sub-section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid #eef2f7;
+    }
+
+    .sub-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
+    .sub-section-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    /* =========================
+       PROGRESS
+    ========================= */
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .progress-track {
+      overflow: hidden;
+      height: 7px;
+      margin-bottom: 18px;
+      background: #e5e7eb;
+      border-radius: 999px;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      background: #4f46e5;
+      border-radius: inherit;
+      transition: width 0.3s ease;
+    }
+
+    .progress-card-link {
+      display: block;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .progress-click-card {
+      cursor: pointer;
+      border-color: #c7d2fe;
+      transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+
+    .progress-click-card:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 10px 25px rgba(79, 70, 229, 0.12);
+    }
+
+    .progress-description {
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    /* =========================
+       TABLE
+    ========================= */
+
+    .table-wrapper,
+    .project-task-table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      padding: 12px 13px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: left;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 13px;
+      border-top: 1px solid #f1f5f9;
+      color: #334155;
+      font-size: 12px;
+      vertical-align: middle;
+    }
+
+    .project-task-table {
+      min-width: 1200px;
+    }
+
+    .empty {
+      padding: 22px;
+      background: #f8fafc;
+      border: 1px dashed #dbe2ea;
+      border-radius: 10px;
+      color: #64748b;
+      text-align: center;
+    }
+
+    /* =========================
+       MODAL
+    ========================= */
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      width: min(560px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-sizing: border-box;
+      box-shadow:
+        0 25px 70px rgba(15, 23, 42, 0.22);
+    }
+
+    .modal-large {
+      width: min(760px, 100%);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    /* =========================
+       FORM
+    ========================= */
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 7px;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid #dbe2ea;
+      border-radius: 9px;
+      box-sizing: border-box;
+      font: inherit;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    @media (max-width: 1000px) {
+      .summary-grid {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        width: 100%;
+        margin-left: 0;
+        padding: 20px;
+      }
+
+      .detail-topbar {
+        flex-direction: column;
+      }
+
+      .section-header {
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 650px) {
+      .summary-grid,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .contract-expiry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid;
+  border-radius: 11px;
+}
+
+.contract-expiry-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.contract-expiry-value {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+/* Sisa kontrak di bawah 3 bulan */
+
+.contract-expiry-warning {
+  color: #854d0e;
+  background: #fef9c3;
+  border-color: #fde047;
+}
+
+/* Sisa kontrak 3 bulan atau lebih */
+
+.contract-expiry-safe {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+/* Kontrak sudah berakhir */
+
+.contract-expiry-expired {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+@media (max-width: 650px) {
+  .contract-expiry {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* =====================================================
+   PAYMENT ACTION
+===================================================== */
+
+.payment-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+  margin-bottom: 26px;
+}
+
+.payment-modal-button {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  min-width: 320px;
+  padding: 13px 16px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff,
+      #f8fafc
+    );
+
+  border: 1px solid #dbe2ea;
+  border-radius: 14px;
+
+  color: #1e293b;
+  cursor: pointer;
+
+  box-shadow:
+    0 3px 12px
+    rgba(15, 23, 42, 0.06);
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.payment-modal-button:hover {
+  transform: translateY(-2px);
+  border-color: #a5b4fc;
+
+  box-shadow:
+    0 10px 25px
+    rgba(79, 70, 229, 0.12);
+}
+
+.payment-modal-button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 auto;
+
+  width: 42px;
+  height: 42px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5,
+      #7c3aed
+    );
+
+  border-radius: 12px;
+
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.payment-modal-button-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.payment-modal-button-text strong {
+  font-size: 13px;
+}
+
+.payment-modal-button-text small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.payment-modal-button-arrow {
+  color: #4f46e5;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+
+/* =====================================================
+   PAYMENT MODAL
+===================================================== */
+
+.payment-modal-content {
+  width: min(760px, 100%);
+}
+
+.payment-modal-header {
+  align-items: flex-start;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.payment-modal-header h3 {
+  margin: 5px 0 4px;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.payment-modal-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.payment-modal-subtitle {
+  color: #4f46e5;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+}
+
+.modal-close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  padding: 0;
+
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  color: #64748b;
+  font-size: 25px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.modal-close-button:hover {
+  color: #dc2626;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+
+/* =====================================================
+   PAYMENT GROUP
+===================================================== */
+
+.payment-group {
+  margin-top: 22px;
+  padding: 18px;
+
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 15px;
+}
+
+.payment-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.payment-group-header h4 {
+  margin: 0 0 3px;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.payment-group-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.payment-group-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  border-radius: 11px;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.payment-group-icon.client {
+  color: #4338ca;
+  background: #e0e7ff;
+}
+
+.payment-group-icon.partner {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+
+/* =====================================================
+   PAYMENT STAT
+===================================================== */
+
+.payment-stat-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.payment-stat-card {
+  position: relative;
+  overflow: hidden;
+
+  min-width: 0;
+  padding: 17px;
+
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 13px;
+}
+
+.payment-stat-card::before {
+  content: "";
+
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+
+  width: 4px;
+}
+
+.payment-stat-card.paid::before {
+  background: #16a34a;
+}
+
+.payment-stat-card.unpaid::before {
+  background: #f59e0b;
+}
+
+.payment-stat-label {
+  margin-bottom: 9px;
+
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+}
+
+.payment-stat-value {
+  color: #0f172a;
+
+  font-size:
+    clamp(
+      18px,
+      2.2vw,
+      25px
+    );
+
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+
+  overflow-wrap: anywhere;
+}
+
+.payment-stat-status {
+  display: inline-flex;
+
+  margin-top: 12px;
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.payment-stat-card.paid
+.payment-stat-status {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.payment-stat-card.unpaid
+.payment-stat-status {
+  color: #854d0e;
+  background: #fef3c7;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 650px) {
+  .payment-action {
+    justify-content: stretch;
+  }
+
+  .payment-modal-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .payment-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =====================================================
+   PERBAIKAN KOMPOSISI SUMMARY CARD
+===================================================== */
+
+.summary-grid {
+  display: grid !important;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+}
+
+
+/* Card menggunakan susunan vertikal */
+
+.summary-grid > .summary-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+
+  min-width: 0 !important;
+  min-height: 150px !important;
+
+  padding: 22px 24px !important;
+
+  box-sizing: border-box !important;
+}
+
+
+/* Label selalu berada di atas */
+
+.summary-grid
+> .summary-card
+> .summary-label {
+  display: flex !important;
+  align-items: center !important;
+
+  width: 100% !important;
+  margin: 0 0 14px !important;
+
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+
+  white-space: nowrap !important;
+}
+
+
+/* Nominal mendapat lebar card penuh */
+
+.summary-grid
+> .summary-card
+> .summary-value {
+  display: block !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  margin: 0 !important;
+
+  color: #0f172a !important;
+
+  font-size:
+    clamp(
+      20px,
+      1.85vw,
+      31px
+    ) !important;
+
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+
+  letter-spacing: -0.9px !important;
+
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+
+  text-align: left !important;
+}
+
+
+/* Garis dekorasi di bawah nominal */
+
+.summary-grid
+> .summary-card
+> .summary-value::after {
+  content: "";
+
+  display: block;
+
+  width: 46px;
+  height: 4px;
+
+  margin-top: 18px;
+
+  background:
+    var(
+      --card-color,
+      #4f46e5
+    );
+
+  border-radius: 999px;
+}
+
+
+/* =====================================================
+   UKURAN BERDASARKAN LAYAR
+===================================================== */
+
+@media (min-width: 1600px) {
+  .summary-grid
+  > .summary-card
+  > .summary-value {
+    font-size: 31px !important;
+  }
+}
+
+
+@media (
+  min-width: 1201px
+)
+and (
+  max-width: 1599px
+) {
+  .summary-grid
+  > .summary-card
+  > .summary-value {
+    font-size: 25px !important;
+  }
+}
+
+
+@media (
+  min-width: 1001px
+)
+and (
+  max-width: 1200px
+) {
+  .summary-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      ) !important;
+  }
+
+  .summary-grid
+  > .summary-card
+  > .summary-value {
+    font-size: 28px !important;
+  }
+}
+
+
+@media (max-width: 650px) {
+  .summary-grid {
+    grid-template-columns:
+      1fr !important;
+  }
+
+  .summary-grid
+  > .summary-card {
+    min-height: 135px !important;
+  }
+
+  .summary-grid
+  > .summary-card
+  > .summary-value {
+    font-size: 26px !important;
+  }
+}
+
+/* =====================================================
+   TERMIN PEMBAYARAN
+   ===================================================== */
+
+.sub-section-description {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+.termin-summary {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+
+.termin-summary-item {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #f8fafc
+    );
+}
+
+
+.termin-summary-item::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: #5747e8;
+  content: "";
+}
+
+
+.termin-summary-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+
+.termin-summary-value {
+  display: block;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+
+.progress-section {
+  margin-bottom: 18px;
+}
+
+
+.termin-information {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+.termin-table {
+  width: 100%;
+  min-width: 1150px;
+  border-collapse: collapse;
+}
+
+
+.termin-table th {
+  white-space: nowrap;
+}
+
+
+.termin-table td {
+  vertical-align: middle;
+}
+
+
+.termin-table td:nth-child(7) {
+  min-width: 230px;
+  white-space: normal;
+  line-height: 1.5;
+}
+
+
+.empty-table {
+  padding: 30px !important;
+  color: #94a3b8;
+  text-align: center;
+}
+
+
+@media (max-width: 1100px) {
+  .termin-summary {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+@media (max-width: 600px) {
+  .termin-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .sub-section-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  #tambahTerminButton {
+    width: 100%;
+  }
+}
+
+/* =====================================================
+   DOKUMEN KLIEN & PARTNER
+===================================================== */
+
+.dokumen-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+
+  padding: 20px 0;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dokumen-item:last-child {
+  border-bottom: none;
+}
+
+
+.dokumen-info {
+  display: flex;
+  align-items: flex-start;
+
+  min-width: 0;
+  flex: 1;
+}
+
+
+.dokumen-detail {
+  min-width: 0;
+}
+
+
+.dokumen-detail strong {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #0f172a;
+
+  font-size: 16px;
+  font-weight: 750;
+}
+
+
+.dokumen-detail .label {
+  margin-top: 4px;
+
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+
+/* =====================================================
+   ACTION DOKUMEN
+===================================================== */
+
+.dokumen-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+
+  gap: 8px;
+}
+
+
+/* BUTTON DASAR */
+
+.btn-file {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 38px;
+
+  padding: 0 14px;
+
+  border: 1px solid #dbe2ea;
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #334155;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+
+  text-decoration: none;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+.btn-file:hover {
+  transform: translateY(-1px);
+}
+
+
+/* LIHAT */
+
+.btn-lihat-file {
+  color: #4338ca;
+
+  border-color: #c7d2fe;
+
+  background: #eef2ff;
+}
+
+
+.btn-lihat-file:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+
+
+/* UNDUH */
+
+.btn-unduh-file {
+  color: #1d4ed8;
+
+  border-color: #bfdbfe;
+
+  background: #eff6ff;
+}
+
+
+.btn-unduh-file:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+
+/* EDIT */
+
+.btn-edit-file {
+  color: #92400e;
+
+  border-color: #fde68a;
+
+  background: #fffbeb;
+}
+
+
+.btn-edit-file:hover {
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+
+
+/* HAPUS */
+
+.btn-hapus-file {
+  color: #b91c1c;
+
+  border-color: #fecaca;
+
+  background: #fef2f2;
+}
+
+
+.btn-hapus-file:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+
+/* =====================================================
+   FILE LAMA SAAT EDIT
+===================================================== */
+
+.dokumen-file-lama {
+  margin-bottom: 16px;
+
+  padding: 14px 16px;
+
+  background: #f8fafc;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  color: #334155;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+
+.dokumen-file-lama[hidden] {
+  display: none;
+}
+
+
+.dokumen-file-lama strong {
+  color: #0f172a;
+}
+
+
+.dokumen-file-lama a {
+  color: #4f46e5;
+
+  font-weight: 700;
+
+  text-decoration: none;
+}
+
+
+.dokumen-file-lama a:hover {
+  text-decoration: underline;
+}
+
+
+/* =====================================================
+   FORM HINT
+===================================================== */
+
+.form-hint {
+  display: block;
+
+  margin-top: 7px;
+
+  color: #64748b;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 768px) {
+
+  .dokumen-item {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 14px;
+  }
+
+
+  .dokumen-action {
+    width: 100%;
+
+    justify-content: flex-start;
+  }
+
+
+  .btn-file,
+  .btn-hapus-file {
+    flex: 1;
+
+    min-width: 80px;
+  }
+
+}
+
+.partner-detail-card {
+  padding: 26px 22px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.partner-detail-card:last-child {
+  border-bottom: none;
+}
+
+.partner-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.partner-name {
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.partner-sub-section {
+  margin-top: 30px;
+  padding-top: 26px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.partner-sub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.partner-sub-title {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.partner-sub-description {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .partner-detail-card {
+    padding: 20px 0;
+  }
+
+  .partner-sub-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* =====================================================
+   TIMELINE LISTING
+===================================================== */
+.col-number,
+.timeline-number {
+  width: 60px;
+  min-width: 60px;
+  text-align: center !important;
+}
+
+.timeline-number {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.timeline-table {
+  width: 100%;
+  min-width: 950px;
+  border-collapse: collapse;
+}
+
+.timeline-table th {
+  padding: 13px 14px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.timeline-table td {
+  padding: 15px 14px;
+  border-top: 1px solid #eef2f7;
+  color: #334155;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.timeline-table tbody tr:hover {
+  background: #fafbff;
+}
+
+.timeline-description-cell {
+  min-width: 280px;
+  max-width: 420px;
+  color: #0f172a !important;
+  font-weight: 650;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.timeline-expiry-text {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.timeline-safe {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.timeline-ending {
+  color: #854d0e;
+  background: #fef3c7;
+}
+
+.timeline-expired {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.timeline-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.timeline-status-aktif {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.timeline-status-berakhir {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.timeline-status-diperpanjang {
+  color: #4338ca;
+  background: #e0e7ff;
+}
+
+.project-last-update {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.project-last-update::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px
+    rgba(34, 197, 94, 0.12);
+}
+
+/* =====================================================
+   DETAIL PROJECT TASK LIST
+===================================================== */
+
+.project-task-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.project-task-table {
+  width: 100%;
+  min-width: 1380px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.project-task-table thead {
+  background: #f8fafc;
+}
+
+.project-task-table th {
+  padding: 13px 12px;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.3;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  white-space: nowrap;
+}
+
+.project-task-table td {
+  padding: 14px 12px;
+  color: #334155;
+  border-bottom: 1px solid #edf2f7;
+  font-size: 12px;
+  line-height: 1.5;
+  vertical-align: top;
+}
+
+.project-task-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.project-task-table tbody tr:hover {
+  background: #fafbff;
+}
+
+/* =====================================================
+   LEBAR KOLOM
+===================================================== */
+
+.project-task-table th:nth-child(1),
+.task-cell-pic {
+  width: 115px;
+}
+
+.project-task-table th:nth-child(2),
+.task-cell-name {
+  width: 175px;
+}
+
+.project-task-table th:nth-child(3),
+.task-cell-catatan {
+  width: 330px;
+}
+
+.project-task-table th:nth-child(4),
+.task-cell-link {
+  width: 60px;
+  text-align: center;
+}
+
+.project-task-table th:nth-child(5),
+.task-cell-status {
+  width: 115px;
+}
+
+.project-task-table th:nth-child(6),
+.project-task-table th:nth-child(7),
+.project-task-table th:nth-child(8),
+.project-task-table th:nth-child(9),
+.task-cell-date {
+  width: 105px;
+}
+
+.project-task-table th:nth-child(10) {
+  width: 135px;
+}
+
+.project-task-table th:nth-child(11),
+.task-cell-action {
+  width: 125px;
+  text-align: right;
+}
+
+/* =====================================================
+   PIC DAN TASK
+===================================================== */
+
+.task-pic-name {
+  display: block;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.task-name-value {
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.task-parent-label {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 3px 7px;
+  color: #4338ca;
+  background: #eef2ff;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* =====================================================
+   CATATAN
+===================================================== */
+
+.task-cell-catatan {
+  min-width: 330px;
+}
+
+.task-note-wrapper {
+  width: 100%;
+}
+
+.task-note-text {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.task-note-text[hidden] {
+  display: none !important;
+}
+
+.task-note-empty {
+  color: #94a3b8;
+}
+
+.task-note-toggle {
+  display: inline;
+  width: auto;
+  min-width: 0;
+  margin: 5px 0 0;
+  padding: 0;
+  color: #334155;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-note-toggle:hover {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+/* =====================================================
+   LINK DAN STATUS
+===================================================== */
+
+.detail-task-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #4f46e5;
+  background: #eef2ff;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.detail-task-link:hover {
+  color: #ffffff;
+  background: #4f46e5;
+}
+
+.detail-task-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.3;
+  text-align: center;
+  white-space: normal;
+}
+
+.detail-task-status-not-started {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.detail-task-status-on-progress {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.detail-task-status-hold {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.detail-task-status-urgent {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.detail-task-status-done {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.detail-task-status-need-follow-up {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
+/* =====================================================
+   TANGGAL
+===================================================== */
+
+.task-cell-date {
+  color: #475569;
+  font-size: 11px !important;
+  white-space: normal;
+}
+
+/* =====================================================
+   AKSI
+===================================================== */
+
+.task-cell-action {
+  white-space: nowrap;
+}
+
+.task-action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.task-action-button {
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 9px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.task-action-button.edit {
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+
+.task-action-button.edit:hover {
+  color: #ffffff;
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.task-action-button.delete {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.task-action-button.delete:hover {
+  color: #ffffff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+/* =====================================================
+   PERBAIKAN MODAL TERTIMPA SIDEBAR
+===================================================== */
+
+.app-layout {
+  position: relative;
+  z-index: 1;
+}
+
+/* Batasi lapisan sidebar */
+#sidebarContainer,
+.sidebar,
+.app-sidebar,
+#sidebar {
+  position: relative;
+  z-index: 1000 !important;
+}
+
+/* Root khusus seluruh modal */
+#modalRoot {
+  position: relative;
+  z-index: 2147483000 !important;
+}
+
+/* Semua overlay modal */
+#modalRoot > .modal {
+  display: none;
+
+  position: fixed !important;
+
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+
+  margin: 0 !important;
+  padding: 20px !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: rgba(
+    15,
+    23,
+    42,
+    0.62
+  ) !important;
+
+  backdrop-filter: blur(4px);
+
+  box-sizing: border-box;
+
+  z-index: 2147483000 !important;
+}
+
+/* Modal ketika dibuka */
+#modalRoot > .modal.show {
+  display: flex !important;
+}
+
+/* Isi modal */
+#modalRoot .modal-content,
+#modalRoot .modal-dialog,
+#modalRoot .modal-box {
+  position: relative !important;
+
+  max-height: calc(
+    100vh - 40px
+  );
+
+  overflow-y: auto;
+
+  z-index: 2147483001 !important;
+}
+
+/* Ukuran modal normal */
+#modalRoot .modal-content {
+  width: min(
+    560px,
+    100%
+  );
+}
+
+/* Ukuran modal besar */
+#modalRoot .modal-content.modal-large {
+  width: min(
+    760px,
+    100%
+  );
+}
+
+/* Ukuran modal pembayaran */
+#modalRoot .payment-modal-content {
+  width: min(
+    760px,
+    100%
+  );
+}
+
+/* Cegah halaman ikut bergeser */
+body.modal-open {
+  overflow: hidden;
+}
+
+@media (max-width: 650px) {
+  #modalRoot > .modal {
+    padding: 12px !important;
+  }
+
+  #modalRoot .modal-content,
+  #modalRoot .modal-dialog,
+  #modalRoot .modal-box {
+    max-height: calc(
+      100vh - 24px
+    );
+  }
+}
+
+/* CEGAH HALAMAN BERGESER SAAT MODAL TERBUKA */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* =====================================================
+   MODAL TASK DETAIL PROYEK
+===================================================== */
+/* =====================================================
+   MODAL TASK LIST DETAIL PROYEK
+===================================================== */
+
+#taskDetailModal {
+  padding: 24px !important;
+  overflow-y: auto !important;
+}
+
+#taskDetailModal .modal-content {
+  width: min(900px, 100%) !important;
+  max-width: 900px !important;
+  max-height: calc(100vh - 48px) !important;
+  margin: auto !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  border-radius: 18px !important;
+  box-sizing: border-box !important;
+}
+
+#taskDetailModal .modal-header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding: 22px 24px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+#taskDetailModal .modal-header > div {
+  min-width: 0;
+}
+
+#taskDetailModal .modal-header h3 {
+  margin: 0 !important;
+  color: #0f172a;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+#taskDetailModal .task-modal-description {
+  margin: 5px 0 0 !important;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+#taskDetailModal #taskDetailForm {
+  display: block !important;
+  padding: 22px 24px 24px !important;
+  max-height: calc(100vh - 145px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* =====================================================
+   FORM
+===================================================== */
+
+#taskDetailModal .form-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0 0 15px;
+}
+
+#taskDetailModal .form-group label {
+  display: block;
+  margin: 0 0 7px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+#taskDetailModal input,
+#taskDetailModal select,
+#taskDetailModal textarea {
+  display: block;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 43px;
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  outline: none;
+  box-sizing: border-box !important;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+#taskDetailModal textarea {
+  height: auto;
+  min-height: 105px;
+  resize: vertical;
+}
+
+#taskDetailModal input[readonly] {
+  color: #475569;
+  background: #f8fafc;
+  cursor: default;
+}
+
+#taskDetailModal input:focus,
+#taskDetailModal select:focus,
+#taskDetailModal textarea:focus {
+  border-color: #6366f1;
+  box-shadow:
+    0 0 0 3px
+    rgba(99, 102, 241, 0.13);
+}
+
+/* =====================================================
+   BARIS PROYEK, KATEGORI, TARGET DATE
+===================================================== */
+
+#taskDetailModal .task-detail-form-grid {
+  display: grid !important;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 14px !important;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#taskDetailModal .task-detail-form-grid > * {
+  min-width: 0 !important;
+}
+
+#taskDetailModal .task-detail-form-grid.project-row {
+  grid-template-columns:
+    minmax(0, 1.3fr)
+    minmax(0, 1fr)
+    minmax(170px, 0.7fr);
+}
+
+/* =====================================================
+   NEED FOLLOW UP DAN STATUS
+===================================================== */
+
+#taskDetailModal .follow-up-status-row {
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+  align-items: start;
+}
+
+#taskDetailModal .task-follow-up-check {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100%;
+  min-height: 43px;
+  margin: 0 !important;
+  padding: 10px 13px !important;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+#taskDetailModal .task-follow-up-check input {
+  flex: 0 0 auto;
+  width: 17px !important;
+  height: 17px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  accent-color: #4f46e5;
+}
+
+#taskDetailModal .task-follow-up-check span {
+  min-width: 0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* =====================================================
+   FIELD FOLLOW UP
+===================================================== */
+
+#taskDetailModal .task-follow-up-fields {
+  width: 100%;
+  margin: 0 0 15px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+#taskDetailModal .task-follow-up-fields[hidden] {
+  display: none !important;
+}
+
+#taskDetailModal .task-follow-up-fields .form-group {
+  margin-bottom: 0;
+}
+
+/* =====================================================
+   TOMBOL MODAL
+===================================================== */
+
+#taskDetailModal .modal-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  width: 100%;
+  margin: 7px 0 0 !important;
+  padding: 18px 0 0 !important;
+  border-top: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+#taskDetailModal .modal-actions button {
+  width: auto !important;
+  min-width: 120px;
+  margin: 0 !important;
+}
+
+#taskDetailModal .modal-close-button {
+  flex: 0 0 auto;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 0;
+  border-radius: 9px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 900px) {
+  #taskDetailModal {
+    padding: 14px !important;
+  }
+
+  #taskDetailModal .task-detail-form-grid.project-row {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  #taskDetailModal .project-row .form-group:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  #taskDetailModal {
+    align-items: flex-start !important;
+    padding: 10px !important;
+  }
+
+  #taskDetailModal .modal-content {
+    max-height: calc(100vh - 20px) !important;
+    border-radius: 14px !important;
+  }
+
+  #taskDetailModal .modal-header {
+    padding: 18px !important;
+  }
+
+  #taskDetailModal #taskDetailForm {
+    max-height: calc(100vh - 115px);
+    padding: 18px !important;
+  }
+
+  #taskDetailModal .task-detail-form-grid,
+  #taskDetailModal .task-detail-form-grid.project-row,
+  #taskDetailModal .follow-up-status-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  #taskDetailModal .project-row .form-group:first-child {
+    grid-column: auto;
+  }
+
+  #taskDetailModal .modal-actions {
+    display: grid !important;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  #taskDetailModal .modal-actions button {
+    width: 100% !important;
+    min-width: 0;
+  }
+}
+
+/* =====================================================
+   AKSI TASK LIST
+===================================================== */
+
+.task-cell-action {
+  width: 125px;
+  min-width: 125px;
+  text-align: right;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.task-action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.task-action-button {
+  min-width: 0;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.task-action-button.edit {
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+
+.task-action-button.edit:hover {
+  color: #ffffff;
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.task-action-button.delete {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.task-action-button.delete:hover {
+  color: #ffffff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* =====================================================
+   HILANGKAN SPASI BERLEBIH TASK LIST
+===================================================== */
+
+#taskListSection {
+  margin-top: 20px !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+#taskListSection .section-header {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 18px 20px !important;
+}
+
+#taskListSection .section-heading {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#taskListSection .section-heading h2 {
+  margin: 0 0 3px !important;
+}
+
+#taskListSection .section-heading p {
+  margin: 0 !important;
+}
+
+#taskListSection .section-body {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 20px 20px !important;
+}
+
+#taskListSection .project-task-table-wrapper {
+  margin: 0 !important;
+}
+/* =====================================================
+   TASK LIST SECTION
+===================================================== */
+
+#taskListSection {
+  display: block;
+  width: 100%;
+  margin: 20px 0 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+#taskListSection .task-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  min-height: 0;
+  margin: 0 !important;
+  padding: 18px 20px !important;
+
+  border-bottom: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+#taskListSection .section-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#taskListSection .section-heading-content {
+  min-width: 0;
+}
+
+#taskListSection .section-heading h2 {
+  margin: 0 0 3px !important;
+  padding: 0;
+  color: #0f172a;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+#taskListSection .section-heading p {
+  margin: 0 !important;
+  padding: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#taskListSection .section-icon {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+
+  color: #ffffff;
+  background: #4f46e5;
+  border-radius: 10px;
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+#taskListSection .task-add-button {
+  flex: 0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  width: auto;
+  min-width: 120px;
+  min-height: 38px;
+
+  margin: 0 !important;
+  padding: 9px 14px !important;
+
+  white-space: nowrap;
+}
+
+#taskListSection .task-list-body {
+  width: 100%;
+  min-height: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  box-sizing: border-box;
+}
+
+#taskListSection .project-task-table-wrapper {
+  width: 100%;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  overflow-x: auto;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  box-sizing: border-box;
+}
+
+#taskListSection .project-task-table {
+  width: 100%;
+  min-width: 1380px;
+
+  margin: 0;
+  border-spacing: 0;
+  border-collapse: collapse;
+
+  table-layout: fixed;
+}
+
+#taskListSection .project-task-table thead {
+  background: #f8fafc;
+}
+
+#taskListSection .project-task-table th {
+  margin: 0;
+  padding: 12px;
+
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.3;
+
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  white-space: nowrap;
+}
+
+#taskListSection .project-task-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #edf2f7;
+  vertical-align: top;
+}
+
+#taskListSection .project-task-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+#taskListSection .task-header-action {
+  text-align: right;
+}
+
+#taskListSection .task-loading-cell {
+  height: auto !important;
+  min-height: 0 !important;
+
+  padding: 28px 20px !important;
+
+  color: #64748b;
+  text-align: center;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 650px) {
+
+  #taskListSection .task-list-header {
+    align-items: flex-start;
+    padding: 16px !important;
+  }
+
+  #taskListSection .task-add-button {
+    min-width: auto;
+    padding: 9px 11px !important;
+  }
+
+  #taskListSection .section-heading p {
+    display: none;
+  }
+
+}
+.task-empty-value {
+  color: #94a3b8;
+}
+
+.task-main-label {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 3px 7px;
+  color: #0369a1;
+  background: #e0f2fe;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.task-error-cell {
+  color: #dc2626 !important;
+}
+
+#detailProjectTaskBody .task-cell-status {
+  min-width: 150px;
+  white-space: nowrap;
+}
+
+#detailProjectTaskBody .detail-task-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: max-content;
+  max-width: none;
+  white-space: nowrap !important;
+}
+
+.timeline-status.timeline-status-selesai {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.timeline-expiry-text.timeline-completed {
+  color: #1e40af;
+}
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-layout > .main-content {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: 0;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+#sidebarContainer {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  z-index: 1000;
+}
+
+#sidebarContainer .sidebar {
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.app-layout > .main-content {
+  width: auto;
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: 0;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .app-layout > .main-content {
+    padding: 20px;
+  }
+}
+
+  
+/* Modal detail proyek: scoped to the existing modal root. */
+#modalRoot > .modal {
+  padding: 24px !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  background: rgba(15, 23, 42, .48) !important;
+  backdrop-filter: blur(5px);
+  overscroll-behavior: contain;
+}
+
+#modalRoot .modal-content {
+  box-sizing: border-box;
+  width: min(600px, 100%);
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid rgba(226, 232, 240, .9);
+  border-radius: 20px;
+  background: #fff;
+  color: #172033;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, .22);
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+#modalRoot .modal-content.modal-large,
+#modalRoot .payment-modal-content {
+  width: min(880px, 100%);
+}
+
+#modalRoot #taskDetailModal .modal-content {
+  width: min(980px, 100%);
+}
+
+#modalRoot .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0;
+  padding: 22px 24px;
+  border-bottom: 1px solid #e9edf5;
+  background: #fff;
+}
+
+#modalRoot .modal-header h3 {
+  margin: 0;
+  color: #172033;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+#modalRoot .modal-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+#modalRoot .modal-content > form,
+#modalRoot #taskDetailModal #taskDetailForm,
+#modalRoot #editPartnerContainer {
+  padding: 22px 24px 24px;
+  margin: 0;
+}
+
+#modalRoot .form-group { margin-bottom: 18px; }
+#modalRoot .form-group label { line-height: 1.5; }
+
+#modalRoot input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+#modalRoot select,
+#modalRoot textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #d9e1ed;
+  border-radius: 10px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+  font-size: 14px;
+}
+
+#modalRoot input:focus,
+#modalRoot select:focus,
+#modalRoot textarea:focus {
+  outline: 3px solid #ede9fe;
+  outline-offset: 1px;
+  border-color: #8b7af3;
+}
+
+#modalRoot input[readonly],
+#modalRoot input:disabled,
+#modalRoot select:disabled,
+#modalRoot textarea:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+#modalRoot .modal-actions,
+#modalRoot #taskDetailModal .modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: wrap;
+  gap: 10px !important;
+  box-sizing: border-box;
+  width: auto;
+  margin: 24px -24px -24px !important;
+  padding: 18px 24px !important;
+  border-top: 1px solid #e9edf5;
+  background: #fff;
+}
+
+#modalRoot .modal-content > .modal-actions {
+  margin: 0 !important;
+}
+
+#modalRoot .modal-actions > button,
+#modalRoot #taskDetailModal .modal-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  min-width: 110px;
+  min-height: 44px;
+  margin: 0 !important;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+#modalRoot .modal-actions > [data-modal-close] {
+  background: #fff;
+  border-color: #d9e1ed;
+  color: #475569;
+}
+
+#modalRoot .modal-actions > [data-modal-close]:hover {
+  background: #f1f5f9;
+}
+
+#modalRoot .modal-actions > button[type="submit"] {
+  background: #5b43ef;
+  border-color: #5b43ef;
+  color: #fff;
+}
+
+#modalRoot .modal-actions > button[type="submit"]:hover {
+  background: #4933d5;
+}
+
+#modalRoot .modal-header > .modal-close-button,
+#modalRoot #taskDetailModal .modal-close-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+  width: 38px !important;
+  min-width: 38px !important;
+  height: 38px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+  font: inherit;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#modalRoot .modal-header > .modal-close-button:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+}
+
+#modalRoot button:focus-visible {
+  outline: 3px solid #c4b5fd;
+  outline-offset: 3px;
+}
+
+#modalRoot button:disabled { opacity: .6; cursor: wait; }
+
+@media (max-width: 650px) {
+  #modalRoot > .modal { padding: 12px !important; }
+  #modalRoot .modal-content {
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 16px;
+  }
+  #modalRoot .modal-header { padding: 18px; }
+  #modalRoot .modal-header h3 { font-size: 18px; }
+  #modalRoot .modal-content > form,
+  #modalRoot #taskDetailModal #taskDetailForm,
+  #modalRoot #editPartnerContainer { padding: 18px; }
+  #modalRoot .modal-actions,
+  #modalRoot #taskDetailModal .modal-actions {
+    margin: 20px -18px -18px !important;
+    padding: 16px 18px !important;
+  }
+  #modalRoot .modal-content > .modal-actions { margin: 0 !important; }
+  #modalRoot .modal-actions > button { flex: 1 1 130px; }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="app-layout">
+
+  <div id="sidebarContainer"></div>
+
+  <main class="main-content">
+
+    <div class="detail-page">
+
+      <!-- HEADER -->
+
+      <div class="detail-topbar">
+
+        <div>
+
+          <div class="breadcrumb">
+            <a href="/proyek.html">Proyek</a>
+            / Detail Proyek
+          </div>
+
+          <h1
+            class="project-title"
+            id="judulProyek"
+          >
+            Memuat proyek...
+          </h1>
+
+          <div class="project-category">
+
+            Kategori:
+
+            <strong id="kategoriProyek">
+              -
+            </strong>
+
+          </div>
+
+          <div
+              class="project-last-update"
+              id="projectLastUpdate"
+            >
+              Terakhir diperbarui: -
+            </div>
+
+        </div>
+
+        <a
+          href="/proyek.html"
+          class="btn btn-secondary"
+        >
+          ← Kembali
+        </a>
+
+      </div>
+
+
+<!-- =====================================================
+   SUMMARY UTAMA
+===================================================== -->
+
+<div class="summary-grid">
+
+  <div class="summary-card">
+
+    <div class="summary-label">
+      Nilai Klien
+    </div>
+
+    <div
+      class="summary-value"
+      id="nilaiKlien"
+    >
+      Rp 0
+    </div>
+
+  </div>
+
+
+  <div class="summary-card">
+
+    <div class="summary-label">
+      Nilai Partner
+    </div>
+
+    <div
+      class="summary-value"
+      id="nilaiPartner"
+    >
+      Rp 0
+    </div>
+
+  </div>
+
+
+  <div class="summary-card">
+
+    <div class="summary-label">
+      Margin
+    </div>
+
+    <div
+      class="summary-value"
+      id="margin"
+    >
+      Rp 0
+    </div>
+
+  </div>
+
+
+  <div class="summary-card">
+
+    <div class="summary-label">
+      Margin %
+    </div>
+
+    <div
+      class="summary-value"
+      id="marginPersen"
+    >
+      0.00%
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- TOMBOL RINGKASAN PEMBAYARAN -->
+
+<div class="payment-action">
+
+  <button
+    type="button"
+    class="payment-modal-button"
+    id="bukaPembayaranButton"
+  >
+
+    <span class="payment-modal-button-icon">
+      Rp
+    </span>
+
+    <span class="payment-modal-button-text">
+
+      <strong>
+        Ringkasan Pembayaran
+      </strong>
+
+      <small>
+        Lihat pembayaran Klien dan Partner
+      </small>
+
+    </span>
+
+    <span class="payment-modal-button-arrow">
+      →
+    </span>
+
+  </button>
+
+</div>
+
+
+      <!-- INFORMASI PROYEK -->
+
+      <section class="project-section">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              📁
+            </div>
+
+            <div>
+              <h2>Informasi Proyek</h2>
+              <p>Informasi utama dan status proyek</p>
+            </div>
+
+          </div>
+
+          <button
+            type="button"
+            class="btn-edit"
+            id="editProyekButton"
+          >
+            ✎ Edit
+          </button>
+
+        </div>
+
+
+        <div class="section-body">
+
+          <div class="grid">
+
+            <div class="info">
+
+              <div class="label">
+                Kategori
+              </div>
+
+              <div
+                class="value"
+                id="kategoriInfoProyek"
+              >
+                -
+              </div>
+
+            </div>
+
+
+            <div class="info">
+
+              <div class="label">
+                Jenis Proyek
+              </div>
+
+              <div
+                class="value"
+                id="jenisProyek"
+              >
+                -
+              </div>
+
+            </div>
+
+
+            <div class="info">
+
+              <div class="label">
+                Sub Jenis Proyek
+              </div>
+
+              <div
+                class="value"
+                id="subJenisProyek"
+              >
+                -
+              </div>
+
+            </div>
+
+
+            <div class="info">
+
+              <div class="label">
+                Status
+              </div>
+
+              <div
+                class="value"
+                id="statusFinal"
+              >
+                -
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div
+            class="info"
+            style="margin-top:14px;"
+          >
+
+            <div class="label">
+              Deskripsi
+            </div>
+
+            <div
+              class="value"
+              id="deskripsi"
+              style="
+                white-space:pre-wrap;
+                font-weight:500;
+              "
+            >
+              -
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- PIC -->
+
+      <section class="project-section">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              👤
+            </div>
+
+            <div>
+              <h2>PIC</h2>
+              <p>Person in Charge proyek</p>
+            </div>
+
+          </div>
+
+          <button
+            type="button"
+            class="btn-edit"
+            id="editPicButton"
+          >
+            ✎ Edit PIC
+          </button>
+
+        </div>
+
+        <div
+          class="section-body"
+          id="picContainer"
+        >
+
+          <div class="empty">
+            Memuat PIC...
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- KLIEN -->
+
+      <section class="project-section">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              🏢
+            </div>
+
+            <div>
+
+              <h2>Klien</h2>
+
+              <p>
+                Kontrak, nilai dan pembayaran klien
+              </p>
+
+            </div>
+
+          </div>
+
+          <button
+            type="button"
+            class="btn-edit"
+            id="editKlienButton"
+          >
+            ✎ Edit Klien
+          </button>
+
+        </div>
+
+
+        <div class="section-body">
+
+          <!-- Informasi Klien dibuat oleh JS -->
+
+          <div id="klienInfo">
+
+            <div class="empty">
+              Memuat data klien...
+            </div>
+
+          </div>
+
+<!-- TIMELINE PROYEK -->
+
+<div class="sub-section">
+
+  <div class="sub-section-header">
+
+    <div>
+      <div class="sub-section-title">
+        Timeline
+      </div>
+
+      <div class="sub-section-description">
+        Jadwal dan periode pelaksanaan proyek
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="btn btn-secondary"
+      id="tambahTimelineButton"
+    >
+      + Tambah Timeline
+    </button>
+
+  </div>
+
+  <div
+    id="timelineContainer"
+    style="display:none;"
+  ></div>
+
+</div>
+          
+<!-- TERMIN KLIEN -->
+<div class="sub-section">
+
+  <!-- HEADER -->
+  <div class="sub-section-header">
+
+    <div>
+      <div class="sub-section-title">
+        Termin Pembayaran
+      </div>
+
+      <div class="sub-section-description">
+        Persentase dan nominal termin dihitung otomatis berdasarkan nilai final.
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="btn btn-secondary"
+      id="tambahTerminButton"
+    >
+      + Tambah Termin
+    </button>
+
+  </div>
+
+
+  <!-- RINGKASAN TERMIN -->
+  <div class="termin-summary">
+
+    <div class="termin-summary-item">
+
+      <span class="termin-summary-label">
+        Total Persentase
+      </span>
+
+      <strong
+        class="termin-summary-value"
+        id="totalTermin"
+      >
+        0.00%
+      </strong>
+
+    </div>
+
+
+    <div class="termin-summary-item">
+
+      <span class="termin-summary-label">
+        Total Nominal
+      </span>
+
+      <strong
+        class="termin-summary-value"
+        id="totalNominalTermin"
+      >
+        Rp 0
+      </strong>
+
+    </div>
+
+
+    <div class="termin-summary-item">
+
+      <span class="termin-summary-label">
+        Nilai Final
+      </span>
+
+      <strong
+        class="termin-summary-value"
+        id="nilaiFinalTermin"
+      >
+        Rp 0
+      </strong>
+
+    </div>
+
+
+    <div class="termin-summary-item">
+
+      <span class="termin-summary-label">
+        Sisa Termin
+      </span>
+
+      <strong
+        class="termin-summary-value"
+        id="sisaTermin"
+      >
+        100.00%
+      </strong>
+
+    </div>
+
+  </div>
+
+  <!-- INFORMASI MODE TERMIN -->
+  <div
+    class="termin-information"
+    id="terminInformation"
+  >
+    Persentase dan nominal dapat diisi. Nilai lainnya akan dihitung otomatis.
+  </div>
+
+
+  <!-- TABEL TERMIN -->
+  <div class="table-wrapper">
+
+    <table class="termin-table">
+
+      <thead>
+
+        <tr>
+
+          <th>
+            Termin
+          </th>
+
+          <th>
+            Persentase
+          </th>
+
+          <th>
+            Nominal
+          </th>
+
+          <th>
+            Status
+          </th>
+
+          <th>
+            Tanggal Tagihan
+          </th>
+
+          <th>
+            Tanggal Bayar
+          </th>
+
+          <th>
+            Syarat Pembayaran
+          </th>
+
+          <th>
+            Aksi
+          </th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody id="terminTable">
+
+        <tr>
+
+          <td
+            colspan="8"
+            class="empty-table"
+          >
+            Memuat termin...
+          </td>
+
+        </tr>
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+
+          <!-- DOKUMEN KLIEN -->
+
+          <div class="sub-section">
+
+            <div class="sub-section-header">
+
+              <div class="sub-section-title">
+                Dokumen Klien
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="tambahDokumenButton"
+              >
+                + Tambah Dokumen
+              </button>
+
+            </div>
+
+            <div id="dokumenContainer">
+
+              <div class="empty">
+                Memuat dokumen...
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- PARTNER -->
+
+      <section class="project-section">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              🤝
+            </div>
+
+            <div>
+
+              <h2>Partner</h2>
+
+              <p>
+                Partner, kontrak, termin dan dokumen proyek
+              </p>
+
+            </div>
+
+          </div>
+
+          <button
+            type="button"
+            class="btn-edit"
+            id="editPartnerButton"
+          >
+            ✎ Kelola Partner
+          </button>
+
+        </div>
+
+        <!-- Partner dibuat oleh JS -->
+
+        <div
+          class="section-body"
+          id="partnerContainer"
+        >
+
+          <div class="empty">
+            Memuat partner...
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- PROGRESS REPORT -->
+
+      <section  
+      class="project-section"
+    id="progressReportSection">
+
+        <div class="section-header">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              📊
+            </div>
+
+            <div>
+
+              <h2>
+                Progress Report
+              </h2>
+
+              <p>
+                Klik card untuk memperbarui progress proyek
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="section-body">
+
+          <a
+            id="progressReportLink"
+            class="progress-card-link"
+            href="/update-progress.html"
+          >
+
+            <div
+              class="
+                summary-card
+                progress-click-card
+              "
+            >
+
+              <div class="summary-label">
+                Persentase Progress
+              </div>
+
+              <div
+                class="summary-value"
+                id="totalProgressProyek"
+              >
+                0.00%
+              </div>
+
+
+              <div
+                class="progress-track"
+                style="margin-top:14px;"
+              >
+
+                <div
+                  class="progress-bar"
+                  id="progressBarProyek"
+                ></div>
+
+              </div>
+
+
+              <div
+                class="progress-description"
+                id="progressReportInfo"
+              >
+                Klik untuk membuka laporan progress.
+              </div>
+
+            </div>
+
+          </a>
+
+        </div>
+
+      </section>
+
+
+      <!-- TASK LIST -->
+
+      <!-- =====================================================
+     TASK LIST
+===================================================== -->
+
+<section
+  class="project-section task-list-section"
+  id="taskListSection"
+>
+
+  <!-- HEADER TASK LIST -->
+
+  <div class="section-header task-list-header">
+
+    <div class="section-heading">
+
+      <div class="section-icon">
+        ✓
+      </div>
+
+      <div class="section-heading-content">
+
+        <h2>
+          Task List
+        </h2>
+
+        <p>
+          Aktivitas seluruh PIC pada proyek ini
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <button
+      type="button"
+      class="btn btn-primary task-add-button"
+      id="tambahTaskDetailButton"
+    >
+      <span aria-hidden="true">
+        +
+      </span>
+
+      <span>
+        Tambah Task
+      </span>
+    </button>
+
+  </div>
+
+
+  <!-- TABEL TASK LIST -->
+
+  <div class="section-body task-list-body">
+
+    <div class="project-task-table-wrapper">
+
+      <table class="project-task-table">
+
+        <thead>
+
+          <tr>
+
+            <th scope="col">
+              PIC
+            </th>
+
+            <th scope="col">
+              Task
+            </th>
+
+            <th scope="col">
+              Catatan
+            </th>
+
+            <th scope="col">
+              Link
+            </th>
+
+
+            <th scope="col">
+              Status
+            </th>
+
+            <th scope="col">
+             Mulai
+            </th>
+
+            <th scope="col">
+              Target
+            </th>
+
+            <th scope="col">
+              Tindak Lanjut
+            </th>
+
+            <th scope="col">
+              Selesai
+            </th>
+
+
+            <th
+              scope="col"
+              class="task-header-action"
+            >
+              Aksi
+            </th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody id="detailProjectTaskBody">
+
+          <tr>
+
+            <td
+              colspan="11"
+              class="task-loading-cell"
+            >
+              Memuat task...
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+</div>
+</main>
+</div>
+
+<!-- ================================================= -->
+<!-- SELURUH MODAL BERADA DI LUAR APP-LAYOUT           -->
+<!-- MODAL AKAN BERADA DI ATAS SIDEBAR                  -->
+<!-- ================================================= -->
+
+<div id="modalRoot">
+
+
+<!-- =====================================================
+     MODAL TERMIN KLIEN/PARTNER
+===================================================== -->
+
+<div
+  class="modal"
+  id="terminModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h3 id="terminModalTitle">
+        Tambah Termin
+      </h3>
+
+    </div>
+
+
+    <form id="terminForm">
+
+      <input
+        type="hidden"
+        id="terminId"
+      >
+
+
+      <div class="form-group">
+
+        <label for="namaTermin">
+          Nama Termin
+        </label>
+
+        <input
+          type="text"
+          id="namaTermin"
+          placeholder="Contoh: Termin 1"
+          required
+        >
+
+      </div>
+
+
+      <div
+        class="form-group"
+        id="persentaseTerminGroup"
+      >
+
+        <label for="persentaseTermin">
+          Persentase
+        </label>
+
+        <input
+          type="number"
+          id="persentaseTermin"
+          min="0.01"
+          max="100"
+          step="0.01"
+          placeholder="Contoh: 30"
+        >
+
+      </div>
+
+
+      <div
+        class="form-group"
+        id="nominalTerminGroup"
+      >
+
+        <label for="nominalTermin">
+          Nominal
+        </label>
+
+        <input
+          type="number"
+          id="nominalTermin"
+          min="0"
+          step="0.01"
+          placeholder="Contoh: 50000000"
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="statusPembayaran">
+          Status Pembayaran
+        </label>
+
+        <select
+          id="statusPembayaran"
+          required
+        >
+
+          <option value="Belum Dibayar">
+            Belum Dibayar
+          </option>
+
+          <option value="Proses">
+            Proses
+          </option>
+
+          <option value="Dibayar">
+            Dibayar
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="tanggalJatuhTempo">
+            Tanggal Tagihan
+          </label>
+
+          <input
+            type="date"
+            id="tanggalJatuhTempo"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="tanggalBayar">
+            Tanggal Bayar
+          </label>
+
+          <input
+            type="date"
+            id="tanggalBayar"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="syaratPembayaran">
+          Syarat Pembayaran
+        </label>
+
+        <textarea
+          id="syaratPembayaran"
+          rows="3"
+          placeholder="Contoh: Pembayaran setelah BAST ditandatangani"
+        ></textarea>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalTermin"
+        >
+          Batal
+        </button>
+
+        <button
+  type="submit"
+  form="terminForm"
+  class="btn btn-primary"
+  id="simpanTerminButton"
+>
+  Simpan
+</button>
+
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+
+<!-- =====================================================
+     MODAL TAMBAH / EDIT TASK LIST
+===================================================== -->
+
+<div
+  class="modal"
+  id="taskDetailModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <div>
+
+        <h3 id="taskDetailModalTitle">
+          Tambah Task
+        </h3>
+
+        <p class="task-modal-description">
+          Tambahkan aktivitas untuk proyek ini.
+        </p>
+
+      </div>
+
+
+      <button
+        type="button"
+        class="modal-close-button"
+        id="tutupTaskDetailModal"
+        aria-label="Tutup"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form id="taskDetailForm">
+
+      <input
+        type="hidden"
+        id="taskDetailId"
+      >
+
+      <input
+        type="hidden"
+        id="taskDetailParentId"
+      >
+
+
+      <!-- PROYEK DAN KATEGORI -->
+
+      <div class="task-detail-form-grid project-row">
+
+        <div class="form-group">
+
+          <label for="taskDetailProyek">
+            Nama Proyek
+          </label>
+
+          <input
+            type="text"
+            id="taskDetailProyek"
+            readonly
+          >
+
+        </div>
+
+        
+
+
+        <div class="form-group">
+
+          <label for="taskDetailKategori">
+            Kategori
+          </label>
+
+          <input
+            type="text"
+            id="taskDetailKategori"
+            readonly
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="taskDetailTargetDate">
+            Target Date
+          </label>
+
+          <input
+            type="date"
+            id="taskDetailTargetDate"
+            required
+          >
+
+        </div>
+
+      </div>
+
+
+      <!-- TASK -->
+
+      <div class="form-group">
+
+        <label for="taskDetailTask">
+          Task
+        </label>
+
+        <input
+          type="text"
+          id="taskDetailTask"
+          maxlength="500"
+          placeholder="Masukkan nama task"
+          required
+        >
+
+      </div>
+
+
+      <!-- LINK -->
+
+      <div class="form-group">
+
+        <label for="taskDetailLink">
+          Link
+        </label>
+
+        <input
+          type="url"
+          id="taskDetailLink"
+          placeholder="https://contoh.com"
+        >
+
+      </div>
+
+
+      <!-- CATATAN -->
+
+      <div class="form-group">
+
+        <label for="taskDetailCatatan">
+          Catatan
+        </label>
+
+        <textarea
+          id="taskDetailCatatan"
+          rows="5"
+          placeholder="Masukkan catatan task"
+        ></textarea>
+
+      </div>
+
+
+      <!-- STATUS DAN NEED FOLLOW UP -->
+
+      <div class="task-detail-form-grid follow-up-status-row">
+
+        <div class="form-group">
+
+          <label>
+            Need Follow Up
+          </label>
+
+          <label class="task-follow-up-check">
+
+            <input
+              type="checkbox"
+              id="taskDetailNeedFollowUp"
+            >
+
+            <span>
+              Perlu tindak lanjut
+            </span>
+
+          </label>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="taskDetailStatus">
+            Status
+          </label>
+
+          <select
+            id="taskDetailStatus"
+            required
+          >
+
+            <option value="Not Started">
+              Not Started
+            </option>
+
+            <option value="On Progress">
+              On Progress
+            </option>
+
+            <option value="Hold">
+              Hold
+            </option>
+
+            <option value="Urgent">
+              Urgent
+            </option>
+
+            <option value="Done">
+              Done
+            </option>
+
+            <option value="Need Follow Up">
+              Need Follow Up
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <!-- FIELD FOLLOW UP -->
+
+      <div
+        class="task-follow-up-fields"
+        id="taskDetailFollowUpFields"
+        hidden
+      >
+
+        <div class="task-detail-form-grid">
+
+          <div class="form-group">
+
+            <label for="taskDetailSubTask">
+              Sub Task
+            </label>
+
+            <input
+              type="text"
+              id="taskDetailSubTask"
+              maxlength="500"
+              placeholder="Tindak Lanjut Nama Task"
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="taskDetailTanggalTindakLanjut">
+              Tanggal Tindak Lanjut
+            </label>
+
+            <input
+              type="date"
+              id="taskDetailTanggalTindakLanjut"
+            >
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalTaskDetailButton"
+        >
+          Batal
+        </button>
+
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+          id="simpanTaskDetailButton"
+        >
+          Simpan Task
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+<!-- =====================================================
+     MODAL DOKUMEN KLIEN/PARTNER
+===================================================== -->
+
+<div
+  class="modal"
+  id="dokumenModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <div>
+
+        <h3 id="dokumenModalTitle">
+          Tambah Dokumen
+        </h3>
+
+        <div
+          class="sub-section-description"
+          id="dokumenModalDescription"
+        >
+          Tambahkan dokumen proyek.
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <form
+      id="dokumenForm"
+      enctype="multipart/form-data"
+    >
+
+      <div class="form-group">
+
+        <label for="namaDokumen">
+          Nama Dokumen
+        </label>
+
+        <select
+          id="namaDokumen"
+          name="nama_dokumen"
+          required
+        >
+
+          <option value="">
+            Pilih Kode Dokumen
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="nomorDokumen">
+          Nomor Dokumen
+        </label>
+
+        <input
+          type="text"
+          id="nomorDokumen"
+          name="nomor_dokumen"
+          placeholder="Contoh: PKS/001/IX/2026"
+        >
+
+      </div>
+
+
+      <div
+        id="dokumenFileLama"
+        class="dokumen-file-lama"
+        hidden
+      ></div>
+
+
+      <div class="form-group">
+
+        <label for="fileDokumen">
+          Upload Dokumen
+        </label>
+
+        <input
+          type="file"
+          id="fileDokumen"
+          name="file_dokumen"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+        >
+
+        <small class="form-hint">
+
+          PDF, Word, Excel, JPG, atau PNG.
+          Maksimal 20 MB.
+
+          <br>
+
+          Saat Edit, kosongkan upload jika
+          file lama tidak ingin diganti.
+
+        </small>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalDokumen"
+        >
+          Batal
+        </button>
+
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+          id="simpanDokumenButton"
+        >
+          Simpan Dokumen
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL EDIT PROYEK
+===================================================== -->
+
+<div
+  class="modal"
+  id="editProyekModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <h3>
+        Edit Informasi Proyek
+      </h3>
+
+    </div>
+
+
+    <form id="editProyekForm">
+
+      <div class="form-group">
+
+        <label for="editNamaProyek">
+          Nama Proyek
+        </label>
+
+        <input
+          type="text"
+          id="editNamaProyek"
+          required
+        >
+
+      </div>
+
+      <div class="form-group klien-pengadaan-full">
+        <label for="editNamaPengadaanKlien">
+          Nama Pengadaan sesuai TOR
+        </label>
+
+        <input
+          type="text"
+          id="editNamaPengadaanKlien"
+          placeholder="Masukkan nama pengadaan sesuai TOR"
+        >
+      </div>
+
+
+      <div class="form-group">
+
+        <label>
+          Kategori
+        </label>
+
+        <div
+          style="
+            display:flex;
+            gap:8px;
+            align-items:center;
+          "
+        >
+
+          <select id="editKategoriSelect">
+
+            <option value="">
+              Pilih Kategori
+            </option>
+
+          </select>
+
+          <button
+            type="button"
+            id="tambahEditKategori"
+          >
+            + Tambah
+          </button>
+
+        </div>
+
+        <div
+          id="editKategoriTerpilih"
+          style="
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            margin-top:10px;
+          "
+        ></div>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editJenisProyek">
+            Jenis Proyek
+          </label>
+
+          <select id="editJenisProyek">
+
+            <option value="">
+              Pilih Jenis
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editSubJenisProyek">
+            Sub Jenis Proyek
+          </label>
+
+          <select id="editSubJenisProyek">
+
+            <option value="">
+              Pilih Sub Jenis
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="editStatusFinal">
+          Status
+        </label>
+
+        <select id="editStatusFinal">
+
+          <option value="">
+            Pilih Status
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="editDeskripsi">
+          Deskripsi
+        </label>
+
+        <textarea
+          id="editDeskripsi"
+          rows="5"
+        ></textarea>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalEditProyek"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Perubahan
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL EDIT PIC
+===================================================== -->
+
+<div
+  class="modal"
+  id="editPicModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h3>
+        Edit PIC Proyek
+      </h3>
+
+    </div>
+
+
+    <form id="editPicForm">
+
+      <div id="editPicContainer">
+
+        <div class="empty">
+          Memuat daftar PIC...
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalEditPic"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan PIC
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL EDIT KLIEN
+===================================================== -->
+
+<div
+  class="modal"
+  id="editKlienModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <h3>
+        Edit Data Klien
+      </h3>
+
+    </div>
+
+
+    <form id="editKlienForm">
+
+      <div class="form-group">
+
+        <label for="editKlienId">
+          Klien
+        </label>
+
+        <select id="editKlienId">
+
+          <option value="">
+            Pilih Klien
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editNilaiSubmitKlien">
+            Nilai Submit
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiSubmitKlien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editNilaiNego1Klien">
+            Nilai Nego 1
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiNego1Klien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editNilaiNego2Klien">
+            Nilai Nego 2
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiNego2Klien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editNilaiNego3Klien">
+            Nilai Nego 3
+          </label>
+
+          <input
+            type="number"
+            id="editNilaiNego3Klien"
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editTanggalMulaiKlien">
+            Tanggal Mulai
+          </label>
+
+          <input
+            type="date"
+            id="editTanggalMulaiKlien"
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editTanggalAkhirKlien">
+            Tanggal Akhir
+          </label>
+
+          <input
+            type="date"
+            id="editTanggalAkhirKlien"
+          >
+
+        </div>
+
+      </div>
+      
+
+<div class="klien-pembayaran-row">
+
+  <div class="form-grid">
+
+  <!-- KIRI: MODEL PEMBAYARAN -->
+  <div class="form-group">
+    <label for="editModelPembayaranKlien">
+      Model Pembayaran
+    </label>
+
+    <select id="editModelPembayaranKlien">
+      <option value="">
+        Pilih Model Pembayaran
+      </option>
+
+      <option value="Tahunan">
+        Tahunan
+      </option>
+
+      <option value="Bulanan">
+        Bulanan
+      </option>
+
+      <option value="Termin">
+        Termin
+      </option>
+
+      <option value="One Time Charge">
+        One Time Charge
+      </option>
+    </select>
+  </div>
+
+  <!-- KANAN: METODE PENGADAAN -->
+  <div class="form-group">
+    <label for="editMetodePengadaanKlien">
+      Metode Pengadaan
+    </label>
+
+    <select id="editMetodePengadaanKlien">
+      <option value="">
+        Pilih Metode Pengadaan
+      </option>
+    </select>
+  </div>
+
+</div>
+
+</div>
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="editStatusPengadaanKlien">
+            Status Pengadaan
+          </label>
+
+          <select id="editStatusPengadaanKlien">
+
+            <option value="">
+              Pilih Status Pengadaan
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="editStatusTeknisKlien">
+            Status Teknis
+          </label>
+
+          <select id="editStatusTeknisKlien">
+
+            <option value="">
+              Pilih Status Teknis
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalEditKlien"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Perubahan
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL KELOLA PARTNER
+===================================================== -->
+
+<div
+  class="modal"
+  id="editPartnerModal"
+>
+
+  <div class="modal-content modal-large">
+
+    <div class="modal-header">
+
+      <h3>
+        Kelola Partner Proyek
+      </h3>
+
+    </div>
+
+
+    <div id="editPartnerContainer">
+
+      <div class="empty">
+        Memuat data partner...
+      </div>
+
+    </div>
+
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        id="batalEditPartner"
+      >
+        Tutup
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL RINGKASAN PEMBAYARAN
+===================================================== -->
+
+<div
+  class="modal"
+  id="pembayaranModal"
+>
+
+  <div class="modal-content payment-modal-content">
+
+    <div class="modal-header payment-modal-header">
+
+      <div>
+
+        <div class="payment-modal-subtitle">
+          FINANCIAL SUMMARY
+        </div>
+
+        <h3>
+          Ringkasan Pembayaran
+        </h3>
+
+        <p>
+          Informasi pembayaran Klien dan Partner
+        </p>
+
+      </div>
+
+
+      <button
+        type="button"
+        class="modal-close-button"
+        id="tutupPembayaranButton"
+        aria-label="Tutup"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <div class="payment-group">
+
+      <div class="payment-group-header">
+
+        <div class="payment-group-icon client">
+          K
+        </div>
+
+        <div>
+
+          <h4>
+            Pembayaran Klien
+          </h4>
+
+          <p>
+            Pembayaran yang diterima dari Klien
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="payment-stat-grid">
+
+        <div class="payment-stat-card paid">
+
+          <div class="payment-stat-label">
+            Dibayar Klien
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="dibayarKlien"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Sudah diterima
+          </div>
+
+        </div>
+
+
+        <div class="payment-stat-card unpaid">
+
+          <div class="payment-stat-label">
+            Belum Dibayar Klien
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="belumDibayarKlien"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Belum diterima
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="payment-group">
+
+      <div class="payment-group-header">
+
+        <div class="payment-group-icon partner">
+          P
+        </div>
+
+        <div>
+
+          <h4>
+            Pembayaran Partner
+          </h4>
+
+          <p>
+            Pembayaran yang dilakukan kepada Partner
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="payment-stat-grid">
+
+        <div class="payment-stat-card paid">
+
+          <div class="payment-stat-label">
+            Dibayar Ke Partner
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="dibayarPartner"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Sudah dibayarkan
+          </div>
+
+        </div>
+
+
+        <div class="payment-stat-card unpaid">
+
+          <div class="payment-stat-label">
+            Belum Dibayar Ke Partner
+          </div>
+
+          <div
+            class="payment-stat-value"
+            id="belumDibayarPartner"
+          >
+            Rp 0
+          </div>
+
+          <div class="payment-stat-status">
+            Belum dibayarkan
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        id="tutupPembayaranButtonBawah"
+      >
+        Tutup
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL TIMELINE
+===================================================== -->
+
+<div
+  class="modal"
+  id="timelineModal"
+>
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h3 id="timelineModalTitle">
+        Tambah Timeline
+      </h3>
+
+    </div>
+
+
+    <form id="timelineForm">
+
+      <input
+        type="hidden"
+        id="timelineId"
+      >
+
+
+      <div class="form-group">
+
+        <label for="timelineDeskripsi">
+          Deskripsi
+        </label>
+
+        <textarea
+          id="timelineDeskripsi"
+          rows="4"
+          placeholder="Masukkan deskripsi Timeline"
+          required
+        ></textarea>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="timelineTanggalMulai">
+            Tanggal Mulai
+          </label>
+
+          <input
+            type="date"
+            id="timelineTanggalMulai"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="timelineTanggalAkhir">
+            Tanggal Akhir
+          </label>
+
+          <input
+            type="date"
+            id="timelineTanggalAkhir"
+            required
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label for="timelineDurasi">
+            Durasi
+          </label>
+
+          <input
+            type="text"
+            id="timelineDurasi"
+            value="-"
+            readonly
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label for="timelineBerakhirDalam">
+            Berakhir Dalam
+          </label>
+
+          <input
+            type="text"
+            id="timelineBerakhirDalam"
+            value="-"
+            readonly
+          >
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="timelineStatus">
+          Status
+        </label>
+
+        <select
+          id="timelineStatus"
+          required
+        >
+
+          <option value="Aktif">
+            Aktif
+          </option>
+
+          <option value="Berakhir">
+            Berakhir
+          </option>
+
+          <option value="Diperpanjang">
+            Diperpanjang
+          </option>
+
+           <option value="Selesai">
+            Selesai
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          id="batalTimeline"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Simpan Timeline
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- AKHIR SELURUH MODAL                               -->
+<!-- ================================================= -->
+
+</div>
+
+
+<script src="/layout.js"></script>
+<script src="/sidebar.js"></script>
+<script src="/detail-proyek.js"></script>
+
+
+<script>
+// Independent close controls for the existing .modal.show convention.
+(() => {
+  'use strict';
+  const root = document.getElementById('modalRoot');
+  if (!root || root.dataset.closeControlsReady === 'true') return;
+  root.dataset.closeControlsReady = 'true';
+
+  // Preserve the original cancellation handlers and their state cleanup.
+  const closeIds = {
+    terminModal: ['batalTermin'],
+    taskDetailModal: ['tutupTaskDetailModal', 'batalTaskDetailButton'],
+    dokumenModal: ['batalDokumen'],
+    editProyekModal: ['batalEditProyek'],
+    editPicModal: ['batalEditPic'],
+    editKlienModal: ['batalEditKlien'],
+    editPartnerModal: ['batalEditPartner'],
+    pembayaranModal: ['tutupPembayaranButton', 'tutupPembayaranButtonBawah'],
+    timelineModal: ['batalTimeline']
+  };
+  const focusBefore = new WeakMap();
+  const knownOpen = new Set();
+  const closing = new WeakSet();
+  const openOrder = [];
+  const selector = 'button:not(:disabled), a[href], input:not(:disabled):not([type="hidden"]), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+  const modals = () => Array.from(root.children).filter(node => node.classList.contains('modal'));
+  const visible = modal => modal?.classList.contains('show');
+  const topModal = () => openOrder.filter(visible).at(-1) || null;
+  const nativeDialogOpen = () => Boolean(document.querySelector('dialog[open]'));
+  const focusable = modal => Array.from(modal.querySelectorAll(selector)).filter(node =>
+    !node.closest('[hidden], [inert]') && node.getClientRects().length &&
+    getComputedStyle(node).visibility !== 'hidden'
+  );
+
+  function focusModal(modal) {
+    if (!modal || nativeDialogOpen()) return;
+    const target = focusable(modal)[0] || modal.querySelector('.modal-content');
+    target?.focus({preventScroll: true});
+  }
+
+  function enhance() {
+    modals().forEach(modal => {
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      const content = modal.querySelector('.modal-content');
+      if (content) content.tabIndex = -1;
+      const header = modal.querySelector('.modal-header');
+      const title = header?.querySelector('h3');
+      if (title) {
+        if (!title.id) title.id = `${modal.id}Heading`;
+        modal.setAttribute('aria-labelledby', title.id);
+      }
+      (closeIds[modal.id] || []).forEach(id => {
+        const button = document.getElementById(id);
+        if (button && modal.contains(button)) {
+          button.type = 'button';
+          button.dataset.modalClose = '';
+        }
+      });
+      if (header) {
+        let button = header.querySelector('.modal-close-button, [data-modal-close]');
+        if (!button) {
+          button = document.createElement('button');
+          button.className = 'modal-close-button';
+          button.textContent = '×';
+          header.appendChild(button);
+        }
+        button.type = 'button';
+        button.dataset.modalClose = '';
+        button.setAttribute('aria-label', 'Tutup modal');
+      }
+    });
+  }
+
+  function sync() {
+    modals().forEach(modal => {
+      const isOpen = visible(modal);
+      if (modal.getAttribute('aria-hidden') !== String(!isOpen)) {
+        modal.setAttribute('aria-hidden', String(!isOpen));
+      }
+      if (isOpen && !knownOpen.has(modal)) {
+        knownOpen.add(modal);
+        focusBefore.set(modal, document.activeElement);
+        openOrder.push(modal);
+        queueMicrotask(() => { if (topModal() === modal) focusModal(modal); });
+      } else if (!isOpen && knownOpen.has(modal)) {
+        knownOpen.delete(modal);
+        const index = openOrder.indexOf(modal);
+        if (index >= 0) openOrder.splice(index, 1);
+        const previous = focusBefore.get(modal);
+        queueMicrotask(() => {
+          if (nativeDialogOpen()) return;
+          const top = topModal();
+          if (previous?.isConnected && !previous.disabled && previous.getClientRects().length &&
+              (!top || top.contains(previous))) {
+            previous.focus({preventScroll: true});
+          } else if (top) focusModal(top);
+        });
+      }
+    });
+    openOrder.forEach((modal, index) => {
+      modal.style.setProperty('z-index', String(2147483000 + index * 4), 'important');
+    });
+    document.body.classList.toggle('modal-open', Boolean(topModal()) || nativeDialogOpen());
+  }
+
+  function close(modal, origin = null) {
+    if (!visible(modal) || closing.has(modal)) return;
+    closing.add(modal);
+    try {
+      const originalButtons = (closeIds[modal.id] || []).map(id => document.getElementById(id))
+        .filter(button => button && modal.contains(button));
+      // New × / Escape / backdrop invoke the old cancel handler if available.
+      if (!originalButtons.includes(origin)) {
+        originalButtons.find(button => !button.disabled)?.click();
+      }
+      modal.classList.remove('show');
+      modal.dispatchEvent(new CustomEvent('portopro:modal-closed', {bubbles: true}));
+    } finally {
+      closing.delete(modal);
+      sync();
+    }
+  }
+
+  enhance();
+  sync();
+
+  // Capture first; close after the existing handlers have had a chance to run.
+  document.addEventListener('click', event => {
+    const target = event.target instanceof Element ? event.target : null;
+    const button = target?.closest('[data-modal-close]');
+    const modal = button?.closest('.modal');
+    if (button && modal?.parentElement === root && !button.disabled) {
+      event.preventDefault();
+      queueMicrotask(() => close(modal, button));
+      return;
+    }
+    if (target?.parentElement === root && target.classList.contains('modal') &&
+        target.dataset.modalBackdrop !== 'static') {
+      queueMicrotask(() => close(target));
+    }
+  }, true);
+
+  document.addEventListener('keydown', event => {
+    const modal = topModal();
+    if (!modal || nativeDialogOpen()) return;
+    if (event.key === 'Escape') {
+      queueMicrotask(() => { if (!event.defaultPrevented) close(modal); });
+    } else if (event.key === 'Tab') {
+      const items = focusable(modal);
+      if (!items.length) {
+        event.preventDefault();
+        focusModal(modal);
+      } else if (event.shiftKey && (!modal.contains(document.activeElement) || document.activeElement === items[0])) {
+        event.preventDefault();
+        items.at(-1).focus();
+      } else if (!event.shiftKey && (!modal.contains(document.activeElement) || document.activeElement === items.at(-1))) {
+        event.preventDefault();
+        items[0].focus();
+      }
+    }
+  });
+
+  // Observer only watches .show changes, avoiding changes to form fields.
+  const observer = new MutationObserver(sync);
+  modals().forEach(modal => observer.observe(modal, {attributes: true, attributeFilter: ['class']}));
+
+  window.PortoproModal = {
+    open(id) {
+      const modal = document.getElementById(id);
+      if (modal?.parentElement !== root) return;
+      modal.classList.add('show');
+      sync();
+    },
+    close(id) {
+      const modal = document.getElementById(id);
+      if (modal?.parentElement === root) close(modal);
+    }
+  };
+})();
+
+</script>
+
+</body>
+
+</html>

@@ -1059,9 +1059,9 @@ const uploadDokumenKlien = multer({
   // File disimpan sementara di memory
   storage: multer.memoryStorage(),
 
-  // Maksimal 10 MB
+  // Maksimal 20 MB
   limits: {
-    fileSize: 10 * 1024 * 1024
+    fileSize: 20 * 1024 * 1024
   },
 
   fileFilter: (
@@ -7436,8 +7436,8 @@ app.post(
 
     try {
     // ==================================================
-// VALIDASI LOGIN DAN PIC PEMBUAT
-// ==================================================
+    // VALIDASI LOGIN DAN PIC PEMBUAT
+    // ==================================================
 
 if (!req.session?.user) {
   return res.status(401).json({
@@ -7471,6 +7471,7 @@ if (
         sub_jenis_proyek_id,
 
         nama_proyek,
+        nama_pengadaan,
         deskripsi,
 
         status_final,
@@ -7479,6 +7480,8 @@ if (
         pic_ids,
 
         klien_id,
+
+        metode_pengadaan_klien,
 
         nilai_submit_klien,
         nilai_nego_1_klien,
@@ -7499,6 +7502,19 @@ if (
         partners = []
 
       } = req.body;
+
+      if (
+        nama_pengadaan !== null &&
+        nama_pengadaan !== undefined &&
+        typeof nama_pengadaan !== "string"
+      ) {
+        return res.status(400).json({
+          error: "Nama Pengadaan harus berupa teks."
+        });
+      }
+
+      const namaPengadaan =
+        nama_pengadaan?.trim() || null;
 
 
       // ==================================================
@@ -7856,68 +7872,61 @@ if (
       // PROYEK UTAMA
       // ==================================================
 
-      const proyekResult =
-        await client.query(
-          `
-            INSERT INTO public.proyek
-            (
-              kategori_produk_id,
+      const proyekResult = await client.query(
+  `
+    INSERT INTO public.proyek (
+      kategori_produk_id,
 
-              jenis_proyek,
-              jenis_proyek_id,
+      jenis_proyek,
+      jenis_proyek_id,
 
-              sub_jenis_proyek,
-              sub_jenis_proyek_id,
+      sub_jenis_proyek,
+      sub_jenis_proyek_id,
 
-              nama_proyek,
-              deskripsi,
+      nama_proyek,
+      deskripsi,
 
-              status_final,
-              status_final_id
-            )
-            VALUES
-            (
-              $1,
+      status_final,
+      status_final_id,
 
-              $2,
-              $3,
+      nama_pengadaan
+    )
+    VALUES (
+      $1,
+      $2, $3,
+      $4, $5,
+      $6, $7,
+      $8, $9,
+      $10
+    )
+    RETURNING *
+  `,
+  [
+    kategoriUtamaId,
 
-              $4,
-              $5,
+    jenisData.name,
+    jenisData.id,
 
-              $6,
-              $7,
+    subJenisData
+      ? subJenisData.name
+      : null,
 
-              $8,
-              $9
-            )
-            RETURNING *
-          `,
-          [
-            kategoriUtamaId,
+    subJenisData
+      ? subJenisData.id
+      : null,
 
-            jenisData.name,
-            jenisData.id,
+    nama_proyek.trim(),
 
-            subJenisData
-              ? subJenisData.name
-              : null,
+    deskripsi
+      ? String(deskripsi).trim()
+      : null,
 
-            subJenisData
-              ? subJenisData.id
-              : null,
+    statusFinalValue,
+    statusFinalId,
 
-            nama_proyek.trim(),
-
-            deskripsi
-              ? String(deskripsi).trim()
-              : null,
-
-            statusFinalValue,
-
-            statusFinalId
-          ]
-        );
+    namaPengadaan
+  ]
+);
 
 
       const proyek =
@@ -7956,7 +7965,7 @@ if (
       }
 
 
-      // ==================================================
+// ==================================================
 // PIC PROYEK
 // PIC LOGIN OTOMATIS IKUT TERSIMPAN
 // ==================================================
@@ -8073,110 +8082,144 @@ for (
       // INFORMASI KLIEN
       // ==================================================
 
-      const klienId =
-        numberOrNull(
-          klien_id
-        );
+      // ==================================================
+      // MASTER METODE PENGADAAN
+      // ==================================================
 
+const masterMetode = await client.query(`
+  SELECT deskripsi
+  FROM public.status_proyek
+  WHERE LOWER(TRIM(flag)) = 'mpengadaan'
+    AND LOWER(TRIM(status)) = 'aktif'
+`);
 
-      if (klienId) {
+const metodeMap = new Map(
+  masterMetode.rows.map(row => [
+    row.deskripsi.trim().toLowerCase(),
+    row.deskripsi
+  ])
+);
 
-        await client.query(
-          `
-            INSERT INTO public.proyek_klien
-            (
-              proyek_id,
-              klien_id,
+// ==================================================
+// NORMALISASI ISIAN PENGADAAN
+// ==================================================
 
-              nilai_submit,
-              nilai_nego_1,
-              nilai_nego_2,
-              nilai_nego_3,
+const teksPengadaan = value => {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return null;
+  }
 
-              tanggal_mulai,
-              tanggal_akhir,
+  if (typeof value !== "string") {
+    const error = new Error(
+      "Nama dan Metode Pengadaan harus berupa teks."
+    );
 
-              model_pembayaran,
-              jumlah_bulan,
-              jumlah_hari,
+    error.statusCode = 400;
 
-              status_pengadaan,
-              status_teknis,
-              status_administrasi
-            )
-            VALUES
-            (
-              $1,
-              $2,
+    throw error;
+  }
 
-              $3,
-              $4,
-              $5,
-              $6,
+  return value.trim() || null;
+};
 
-              $7,
-              $8,
+// ==================================================
+// VALIDASI METODE DARI MASTER STATUS
+// ==================================================
 
-              $9,
-              $10,
-              $11,
+const metodePengadaan = value => {
+  const text = teksPengadaan(value);
 
-              $12,
-              $13,
-              $14
-            )
-          `,
-          [
-            proyek.id,
-            klienId,
+  if (!text) {
+    return null;
+  }
 
-            numberOrNull(
-              nilai_submit_klien
-            ) ?? 0,
+  const metode = metodeMap.get(
+    text.toLowerCase()
+  );
 
-            numberOrNull(
-              nilai_nego_1_klien
-            ),
+  if (!metode) {
+    const error = new Error(
+      "Metode Pengadaan tidak ditemukan atau tidak aktif " +
+      "pada master status dengan flag mpengadaan."
+    );
 
-            numberOrNull(
-              nilai_nego_2_klien
-            ),
+    error.statusCode = 400;
 
-            numberOrNull(
-              nilai_nego_3_klien
-            ),
+    throw error;
+  }
 
-            tanggal_mulai_klien ||
-              null,
+  return metode;
+};
 
-            tanggal_akhir_klien ||
-              null,
+// ==================================================
+// INFORMASI KLIEN
+// ==================================================
 
-            model_pembayaran_klien ||
-              null,
+const klienId = numberOrNull(
+  klien_id
+);
 
-            numberOrNull(
-              jumlah_bulan_klien
-            ),
+if (klienId) {
+  await client.query(
+    `
+      INSERT INTO public.proyek_klien (
+        proyek_id,
+        klien_id,
 
-            numberOrNull(
-              jumlah_hari_klien
-            ),
+        nilai_submit,
+        nilai_nego_1,
+        nilai_nego_2,
+        nilai_nego_3,
 
-            status_pengadaan_klien ||
-              null,
+        tanggal_mulai,
+        tanggal_akhir,
 
-            status_teknis_klien ||
-              null,
+        model_pembayaran,
+        jumlah_bulan,
+        jumlah_hari,
 
-            status_administrasi_klien ||
-              null
-          ]
-        );
+        status_pengadaan,
+        status_teknis,
+        status_administrasi,
 
-      }
+        metode_pengadaan
+      )
+      VALUES (
+        $1, $2,
+        $3, $4, $5, $6,
+        $7, $8,
+        $9, $10, $11,
+        $12, $13, $14,
+        $15
+      )
+    `,
+    [
+      proyek.id,
+      klienId,
 
+      numberOrNull(nilai_submit_klien) ?? 0,
+      numberOrNull(nilai_nego_1_klien),
+      numberOrNull(nilai_nego_2_klien),
+      numberOrNull(nilai_nego_3_klien),
 
+      tanggal_mulai_klien || null,
+      tanggal_akhir_klien || null,
+
+      model_pembayaran_klien || null,
+      numberOrNull(jumlah_bulan_klien),
+      numberOrNull(jumlah_hari_klien),
+
+      status_pengadaan_klien || null,
+      status_teknis_klien || null,
+      status_administrasi_klien || null,
+
+      metodePengadaan(metode_pengadaan_klien)
+    ]
+  );
+}
       // ==================================================
       // MULTI PARTNER
       // ==================================================
@@ -8803,6 +8846,7 @@ app.get(
           SELECT
             p.id,
             p.nama_proyek,
+            p.nama_pengadaan,
             p.jenis_proyek,
             p.sub_jenis_proyek,
             p.status_final,
@@ -9618,6 +9662,7 @@ app.get("/api/proyek/:id/detail",
   SELECT
     p.id,
     p.nama_proyek,
+    p.nama_pengadaan,
     p.deskripsi,
     p.jenis_proyek,
     p.sub_jenis_proyek,
@@ -10917,7 +10962,7 @@ const klienResult =
        * FIELD YANG SEBELUMNYA BELUM DIAMBIL
        */
       pk.model_pembayaran,
-
+      pk.metode_pengadaan,
       pk.status_pengadaan,
       pk.status_teknis,
       pk.status_administrasi,
@@ -19716,14 +19761,15 @@ app.put("/api/proyek/:id",
       const { id } =
         req.params;
 
-      const {
-        kategori_produk_ids,
-        nama_proyek,
-        jenis_proyek,
-        sub_jenis_proyek,
-        status_final,
-        deskripsi
-      } = req.body;
+     const {
+      kategori_produk_ids,
+      nama_proyek,
+      nama_pengadaan,
+      jenis_proyek,
+      sub_jenis_proyek,
+      status_final,
+      deskripsi
+    } = req.body;
 
 
       // =========================================
@@ -19742,6 +19788,17 @@ app.put("/api/proyek/:id",
             "Minimal satu kategori wajib dipilih"
         });
 
+      }
+
+      if (
+        nama_pengadaan !== undefined &&
+        nama_pengadaan !== null &&
+        typeof nama_pengadaan !== "string"
+      ) {
+        return res.status(400).json({
+          error:
+            "Nama Pengadaan sesuai TOR harus berupa teks"
+        });
       }
 
 
@@ -19799,6 +19856,7 @@ const oldResult =
     SELECT
       p.id,
       p.nama_proyek,
+      p.nama_pengadaan,
       p.jenis_proyek,
       p.sub_jenis_proyek,
       p.status_final,
@@ -19856,6 +19914,11 @@ const proyekLama =
 const namaProyekBaru =
   nama_proyek.trim();
 
+const namaPengadaanBaru =
+  nama_pengadaan === undefined
+    ? proyekLama.nama_pengadaan
+    : nama_pengadaan?.trim() || null;
+
 const jenisProyekBaru =
   jenis_proyek || null;
 
@@ -19885,10 +19948,10 @@ const result =
       sub_jenis_proyek = $4,
       status_final = $5,
       deskripsi = $6,
-      updated_at =
-        CURRENT_TIMESTAMP
+      nama_pengadaan = $7,
+      updated_at = CURRENT_TIMESTAMP
 
-    WHERE id = $7
+    WHERE id = $8
 
     RETURNING *
     `,
@@ -19899,6 +19962,7 @@ const result =
       subJenisProyekBaru,
       statusFinalBaru,
       deskripsiBaru,
+      namaPengadaanBaru,
       id
     ]
   );
@@ -20121,6 +20185,17 @@ const daftarPerubahan = [
   },
 
   {
+  field:
+    "NAMA PENGADAAN SESUAI TOR",
+
+  lama:
+    proyekLama.nama_pengadaan,
+
+  baru:
+    namaPengadaanBaru
+},
+
+  {
     field:
       "JENIS PROYEK",
 
@@ -20252,11 +20327,6 @@ for (
 await client.query(
   "COMMIT"
 );
-
-      await client.query(
-        "COMMIT"
-      );
-
 
       res.json({
         message:
@@ -20438,6 +20508,7 @@ app.put(
         tanggal_mulai,
         tanggal_akhir,
         model_pembayaran,
+        metode_pengadaan,
         status_pengadaan,
         status_teknis,
         status_administrasi
@@ -20605,6 +20676,23 @@ app.put(
         });
       }
 
+      // ================================================
+      // VALIDASI DAN NORMALISASI MEDIA PENGADAAN
+      // ================================================
+
+      if (
+        metode_pengadaan !== undefined &&
+        metode_pengadaan !== null &&
+        typeof metode_pengadaan !== "string"
+      ) {
+        return res.status(400).json({
+          error:
+            "Media Pengadaan harus berupa teks"
+        });
+      }
+
+      const metodePengadaan =
+        metode_pengadaan?.trim() || null;
 
       // ================================================
       // NORMALISASI STATUS
@@ -20759,6 +20847,7 @@ app.put(
         pk.tanggal_mulai,
         pk.tanggal_akhir,
         pk.model_pembayaran,
+        pk.metode_pengadaan,
         pk.status_pengadaan,
         pk.status_teknis,
         pk.status_administrasi,
@@ -20782,16 +20871,16 @@ app.put(
 const dataKlienLama =
   proyekKlienResult.rows[0] || null;
 
+    let result;
+    let modeSimpan;
 
-      // ================================================
-      // UPDATE JIKA DATA SUDAH ADA
-      // ================================================
-if (dataKlienLama) {
-  const proyekKlienId =
-    dataKlienLama.id;
-
-  // query UPDATE tetap seperti sebelumnya
-}
+    // Jika field tidak dikirim, pertahankan nilai lama.
+    // Jika form dikosongkan, simpan null.
+    const metodePengadaanBaru =
+      metode_pengadaan === undefined
+        ? dataKlienLama?.metode_pengadaan ?? null
+        : metodePengadaan;
+        
       if (
         proyekKlienResult.rowCount > 0
       ) {
@@ -20799,67 +20888,68 @@ if (dataKlienLama) {
           proyekKlienResult
             .rows[0]
             .id;
-        result =
-          await client.query(
-            `
-            UPDATE public.proyek_klien
-            SET
-              klien_id = $1,
-              nilai_submit = $2,
-              nilai_nego_1 = $3,
-              nilai_nego_2 = $4,
-              nilai_nego_3 = $5,
-              tanggal_mulai = $6,
-              tanggal_akhir = $7,
-              model_pembayaran = $8,
-              status_pengadaan = $9,
-              status_teknis = $10,
+       result =
+  await client.query(
+    `
+    UPDATE public.proyek_klien
 
-              status_administrasi =
-                COALESCE(
-                  $11,
-                  status_administrasi
-                ),
+    SET
+      klien_id = $1,
+      nilai_submit = $2,
+      nilai_nego_1 = $3,
+      nilai_nego_2 = $4,
+      nilai_nego_3 = $5,
+      tanggal_mulai = $6,
+      tanggal_akhir = $7,
+      model_pembayaran = $8,
+      status_pengadaan = $9,
+      status_teknis = $10,
 
-              updated_at = NOW()
+      status_administrasi =
+        COALESCE(
+          $11,
+          status_administrasi
+        ),
 
-            WHERE id = $12
+      metode_pengadaan = $12,
+      updated_at = NOW()
 
-            RETURNING
-              id,
-              proyek_id,
-              klien_id,
-              nilai_submit,
-              nilai_nego_1,
-              nilai_nego_2,
-              nilai_nego_3,
-              tanggal_mulai,
-              tanggal_akhir,
-              model_pembayaran,
-              status_pengadaan,
-              status_teknis,
-              status_administrasi,
-              created_at,
-              updated_at
-            `,
-            [
-              klienId,
-              nilaiSubmit,
-              nilaiNego1,
-              nilaiNego2,
-              nilaiNego3,
-              tanggalMulai,
-              tanggalAkhir,
-              modelPembayaran,
-              statusPengadaan,
-              statusTeknis,
-              statusAdministrasi,
-              proyekKlienId
-            ]
-          );
+    WHERE id = $13
 
-        modeSimpan =
-          "edit";
+    RETURNING
+      id,
+      proyek_id,
+      klien_id,
+      nilai_submit,
+      nilai_nego_1,
+      nilai_nego_2,
+      nilai_nego_3,
+      tanggal_mulai,
+      tanggal_akhir,
+      model_pembayaran,
+      metode_pengadaan,
+      status_pengadaan,
+      status_teknis,
+      status_administrasi,
+      created_at,
+      updated_at
+    `,
+    [
+      klienId,
+      nilaiSubmit,
+      nilaiNego1,
+      nilaiNego2,
+      nilaiNego3,
+      tanggalMulai,
+      tanggalAkhir,
+      modelPembayaran,
+      statusPengadaan,
+      statusTeknis,
+      statusAdministrasi,
+      metodePengadaanBaru,
+      proyekKlienId
+    ]
+  );
       }
 
 
@@ -20869,80 +20959,83 @@ if (dataKlienLama) {
 
       else {
         result =
-          await client.query(
-            `
-            INSERT INTO public.proyek_klien (
-              proyek_id,
-              klien_id,
-              nilai_submit,
-              nilai_nego_1,
-              nilai_nego_2,
-              nilai_nego_3,
-              tanggal_mulai,
-              tanggal_akhir,
-              model_pembayaran,
-              status_pengadaan,
-              status_teknis,
-              status_administrasi,
-              created_at,
-              updated_at
-            )
-            VALUES (
-              $1, $2, $3, $4,
-              $5, $6, $7, $8,
-              $9, $10, $11, $12,
-              NOW(), NOW()
-            )
-            RETURNING
-              id,
-              proyek_id,
-              klien_id,
-              nilai_submit,
-              nilai_nego_1,
-              nilai_nego_2,
-              nilai_nego_3,
-              tanggal_mulai,
-              tanggal_akhir,
-              model_pembayaran,
-              status_pengadaan,
-              status_teknis,
-              status_administrasi,
-              created_at,
-              updated_at
-            `,
-            [
-              proyekId,
-              klienId,
-              nilaiSubmit,
-              nilaiNego1,
-              nilaiNego2,
-              nilaiNego3,
-              tanggalMulai,
-              tanggalAkhir,
-              modelPembayaran,
-              statusPengadaan,
-              statusTeknis,
-              statusAdministrasi
-            ]
-          );
+  await client.query(
+    `
+    INSERT INTO public.proyek_klien (
+      proyek_id,
+      klien_id,
+      nilai_submit,
+      nilai_nego_1,
+      nilai_nego_2,
+      nilai_nego_3,
+      tanggal_mulai,
+      tanggal_akhir,
+      model_pembayaran,
+      status_pengadaan,
+      status_teknis,
+      status_administrasi,
+      metode_pengadaan,
+      created_at,
+      updated_at
+    )
 
-        modeSimpan =
-          "tambah";
+    VALUES (
+      $1, $2, $3, $4,
+      $5, $6, $7, $8,
+      $9, $10, $11, $12,
+      $13,
+      NOW(), NOW()
+    )
+
+    RETURNING
+      id,
+      proyek_id,
+      klien_id,
+      nilai_submit,
+      nilai_nego_1,
+      nilai_nego_2,
+      nilai_nego_3,
+      tanggal_mulai,
+      tanggal_akhir,
+      model_pembayaran,
+      metode_pengadaan,
+      status_pengadaan,
+      status_teknis,
+      status_administrasi,
+      created_at,
+      updated_at
+    `,
+    [
+      proyekId,
+      klienId,
+      nilaiSubmit,
+      nilaiNego1,
+      nilaiNego2,
+      nilaiNego3,
+      tanggalMulai,
+      tanggalAkhir,
+      modelPembayaran,
+      statusPengadaan,
+      statusTeknis,
+      statusAdministrasi,
+      metodePengadaanBaru
+    ]
+  );
       }
 
 
-      // ================================================
-      // SUSUN RESPONSE
-      // ================================================
+// ================================================
+// SUSUN RESPONSE
+// ================================================
 
-const dataKlien = {
-  ...result.rows[0],
+      const dataKlien = {
+        ...result.rows[0],
 
-  perusahaan_klien:
-    masterKlienResult
-      .rows[0]
-      .perusahaan_klien
-};
+        perusahaan_klien:
+          masterKlienResult
+            .rows[0]
+            .perusahaan_klien
+      };
 
 
 // ================================================
@@ -20952,8 +21045,18 @@ const dataKlien = {
 const namaProyek =
   proyekResult.rows[0].nama_proyek;
 
-const detailBaru =
-  buatDetailLogKlien(dataKlien);
+const detailBaru = [
+  ...buatDetailLogKlien(dataKlien),
+
+  {
+    label: "MEDIA PENGADAAN",
+
+    nilai:
+      String(
+        dataKlien.metode_pengadaan ?? ""
+      ).trim() || "-"
+  }
+];
 
 
 if (modeSimpan === "tambah") {
@@ -20984,10 +21087,18 @@ if (modeSimpan === "tambah") {
     }
   );
 } else {
-  const detailLama =
-    buatDetailLogKlien(
-      dataKlienLama
-    );
+  const detailLama = [
+  ...buatDetailLogKlien(dataKlienLama),
+
+  {
+    label: "MEDIA PENGADAAN",
+
+    nilai:
+      String(
+        dataKlienLama.metode_pengadaan ?? ""
+      ).trim() || "-"
+  }
+];
 
   // Hanya field yang benar-benar berubah
   const perubahan =
@@ -38489,7 +38600,7 @@ const uploadS3 =
     limits: {
 
       fileSize:
-        10 * 1024 * 1024
+        20 * 1024 * 1024
 
     }
 
@@ -40133,6 +40244,294 @@ app.get("/api/total-pengeluaran", async (req, res) => {
   }
 });
 
+
+// ======================================================
+// API MASTER STATUS PROYEK
+// Kolom:
+// id, deskripsi, flag, status, created_at, updated_at
+// ======================================================
+
+(() => {
+  const router = require("express").Router();
+
+  // ====================================================
+  // CEK LOGIN
+  // ====================================================
+
+  router.use((req, res, next) => {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        error: "Belum login."
+      });
+    }
+
+    return next();
+  });
+
+  // ====================================================
+  // VALIDASI
+  // ====================================================
+
+  function validationError(message) {
+    const error = new Error(message);
+
+    error.status = 400;
+
+    return error;
+  }
+
+  function getPayload(body) {
+    const payload = {};
+
+    for (const field of [
+      "deskripsi",
+      "flag",
+      "status"
+    ]) {
+      const value = body?.[field];
+
+      if (
+        typeof value !== "string" ||
+        !value.trim()
+      ) {
+        throw validationError(
+          "Deskripsi, flag, dan status wajib diisi."
+        );
+      }
+
+      payload[field] = value.trim();
+    }
+
+    return payload;
+  }
+
+  router.param("id", (req, res, next, value) => {
+    if (
+      !/^[1-9]\d*$/.test(value) ||
+      !Number.isSafeInteger(Number(value))
+    ) {
+      return res.status(400).json({
+        error: "ID status tidak valid."
+      });
+    }
+
+    return next();
+  });
+
+  // ====================================================
+  // PENANGANAN ERROR REQUEST ASYNC
+  // ====================================================
+
+  function handleRequest(handler) {
+    return (req, res, next) => {
+      Promise.resolve()
+        .then(() => handler(req, res))
+        .catch(next);
+    };
+  }
+
+  // ====================================================
+  // GET: DAFTAR STATUS
+  // ====================================================
+
+  router.get(
+    "/",
+    handleRequest(async (req, res) => {
+      const { rows } = await pool.query(`
+        SELECT
+          id,
+          deskripsi,
+          flag,
+          status,
+          created_at,
+          updated_at
+        FROM public.status_proyek
+        ORDER BY
+          flag ASC,
+          deskripsi ASC,
+          id ASC
+      `);
+
+      return res.json(rows);
+    })
+  );
+
+  // ====================================================
+  // POST: TAMBAH STATUS
+  // ====================================================
+
+  router.post(
+    "/",
+    handleRequest(async (req, res) => {
+      const payload = getPayload(req.body);
+
+      const { rows } = await pool.query(
+        `
+        INSERT INTO public.status_proyek (
+          deskripsi,
+          flag,
+          status,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, NOW(), NOW())
+        RETURNING
+          id,
+          deskripsi,
+          flag,
+          status,
+          created_at,
+          updated_at
+        `,
+        [
+          payload.deskripsi,
+          payload.flag,
+          payload.status
+        ]
+      );
+
+      return res.status(201).json({
+        message: "Status berhasil ditambahkan.",
+        data: rows[0]
+      });
+    })
+  );
+
+  // ====================================================
+  // PUT: EDIT STATUS
+  // ====================================================
+
+  router.put(
+    "/:id",
+    handleRequest(async (req, res) => {
+      const payload = getPayload(req.body);
+
+      const { rows } = await pool.query(
+        `
+        UPDATE public.status_proyek
+        SET
+          deskripsi = $1,
+          flag = $2,
+          status = $3,
+          updated_at = NOW()
+        WHERE id = $4
+        RETURNING
+          id,
+          deskripsi,
+          flag,
+          status,
+          created_at,
+          updated_at
+        `,
+        [
+          payload.deskripsi,
+          payload.flag,
+          payload.status,
+          req.params.id
+        ]
+      );
+
+      if (!rows.length) {
+        return res.status(404).json({
+          error: "Data status tidak ditemukan."
+        });
+      }
+
+      return res.json({
+        message: "Status berhasil diperbarui.",
+        data: rows[0]
+      });
+    })
+  );
+
+  // ====================================================
+  // DELETE: HAPUS STATUS
+  // ====================================================
+
+  router.delete(
+    "/:id",
+    handleRequest(async (req, res) => {
+      const { rowCount } = await pool.query(
+        `
+        DELETE FROM public.status_proyek
+        WHERE id = $1
+        `,
+        [req.params.id]
+      );
+
+      if (!rowCount) {
+        return res.status(404).json({
+          error: "Data status tidak ditemukan."
+        });
+      }
+
+      return res.json({
+        message: "Status berhasil dihapus."
+      });
+    })
+  );
+
+  // ====================================================
+  // ERROR HANDLER
+  // ====================================================
+
+  router.use((error, req, res, next) => {
+    if (res.headersSent) {
+      return next(error);
+    }
+
+    console.error("API MASTER STATUS PROYEK:", error);
+
+    if (error.status === 400) {
+      return res.status(400).json({
+        error: error.message
+      });
+    }
+
+    if (error.code === "23505") {
+      const primaryKeyConflict =
+        String(error.constraint || "")
+          .endsWith("_pkey");
+
+      return res.status(409).json({
+        error: primaryKeyConflict
+          ? "Urutan ID status perlu disinkronkan dengan data tabel."
+          : "Data status sudah ada."
+      });
+    }
+
+    if (error.code === "23503") {
+      return res.status(409).json({
+        error:
+          "Status masih digunakan oleh data lain sehingga tidak dapat dihapus atau diubah."
+      });
+    }
+
+    if (error.code === "23514") {
+      return res.status(400).json({
+        error:
+          "Nilai flag atau status tidak sesuai dengan ketentuan tabel status_proyek."
+      });
+    }
+
+    if (error.code === "22001") {
+      return res.status(400).json({
+        error:
+          "Teks yang diisi melebihi panjang maksimal kolom."
+      });
+    }
+
+    return res.status(500).json({
+      error: "Gagal memproses data master status proyek."
+    });
+  });
+
+  // ====================================================
+  // DAFTARKAN ROUTER
+  // ====================================================
+
+  app.use("/api/status-proyek", router);
+})();
 
 // ======================================================
 // START SERVER
