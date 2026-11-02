@@ -22519,8 +22519,16 @@ app.get(
             OR t.created_by = $2
           )
 
-          ORDER BY
-            t.id DESC
+         ORDER BY
+            CASE t.status
+              WHEN 'Not Started' THEN 1
+              WHEN 'Need Follow up' THEN 2
+              WHEN 'On Progress' THEN 3
+              WHEN 'Done' THEN 4
+              ELSE 5
+            END ASC,
+            t.tanggal_mulai ASC NULLS LAST,
+            t.id ASC
           `,
           [
             dapat_melihat_semua,

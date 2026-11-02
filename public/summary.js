@@ -41,7 +41,7 @@
     ["final", "Status Final"],
     ["rfqTor", "RFQ/TOR"],
     ["sph", "SPH"],
-    ["spk", "SPK/PKS"],
+    ["spk", "SPK/PKS/KPBJ"],
     ["bast", "BAST"]
   ];
 
@@ -254,22 +254,17 @@
 
     const partners = arr(row.partners);
 
-    if (!partners.length) {
-      missing.push(
-        "Data Partner: Belum diisi"
-      );
-    } else {
-      partners.forEach(
-        (partner, index) => {
-          checkParty(
-            partner,
-            index === 0
-              ? "Partner"
-              : `Partner ${index + 1}`
-          );
-        }
-      );
-    }
+    // Periksa hanya partner yang ada pada proyek.
+    partners.forEach(
+      (partner, index) => {
+        checkParty(
+          partner,
+          index === 0
+            ? "Partner"
+            : `Partner ${index + 1}`
+        );
+      }
+    );
 
     // Periksa Tasklist.
     if (isUnfilled(row.tasksText)) {
@@ -693,7 +688,7 @@
         /\bsph\b|surat\s+penawaran/,
 
       spk:
-        /\bspk\b|\bpks\b|surat\s+perintah\s+kerja|perjanjian\s+kerja\s*sama/,
+        /\bspk\b|\bpks\b|\bkpbj\b|surat\s+perintah\s+kerja|perjanjian\s+kerja\s*sama/,
 
       bast:
         /\bbast\b|berita\s+acara\s+serah\s+terima/
@@ -867,20 +862,30 @@
         )
       ).join("; ");
 
-    const clientEntity = client
-      ? {
-          ...client,
+    const clientMediaPengadaan = [
+  client?.media_pengadaan,
+  detail.proyek?.media_pengadaan,
+  list.media_pengadaan
+].find(
+  value => !isUnfilled(value)
+);
 
-          media_pengadaan:
-            client.media_pengadaan ||
-            proyek.media_pengadaan ||
-            list.media_pengadaan
-        }
-      : {
-          ...list,
-          termin: [],
-          dokumen: []
-        };
+const clientEntity = {
+  ...(client || list),
+
+  media_pengadaan:
+    clientMediaPengadaan || "",
+
+  termin:
+    client
+      ? arr(client.termin)
+      : [],
+
+  dokumen:
+    client
+      ? arr(client.dokumen)
+      : []
+};
 
     const hasClient =
       client ||
@@ -2919,7 +2924,7 @@
         [
           "Dokumen",
 
-          "RFQ/TOR, SPH, SPK/PKS, BAST berisi dokumen " +
+          "RFQ/TOR, SPH, SPK/PKS/KPBJ, BAST berisi dokumen " +
           "klien dan seluruh partner beserta label pemiliknya."
         ],
 
