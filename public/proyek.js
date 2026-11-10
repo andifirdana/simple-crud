@@ -1735,22 +1735,27 @@ function renderTable(data) {
 
         return `
           <tr>
-            <td class="proyek-info-cell">
+          <td class="proyek-info-cell">
               <div class="proyek-main-name">
                 ${renderKlasifikasiProyek(item)}
 
                 ${escapeHTML(
-                  [
-                    item?.nama_proyek || "-",
-
-                    String(
-                      item?.nama_pengadaan ?? ""
-                    ).trim()
-                  ]
-                    .filter(Boolean)
-                    .join(" / ")
+                  item?.nama_proyek || "-"
                 )}
               </div>
+
+              ${String(item?.nama_pengadaan ?? "").trim()
+                ? `
+                  <div
+                    class="sub-text"
+                    style="font-weight: 400;"
+                  >
+                    ${escapeHTML(
+                      String(item.nama_pengadaan).trim()
+                    )}
+                  </div>
+                `
+                : ""}
 
               <div class="proyek-category-name">
                 ${escapeHTML(kategoriText)}

@@ -61,7 +61,17 @@ app.use(
   })
 );
 
-require('./calendar-api')(app, pool);
+const googleCalendar =
+  require('./google-calendar-api')(
+    app,
+    pool
+  );
+
+require('./calendar-api')(
+  app,
+  pool,
+  googleCalendar
+);
 
 console.log(
   'API Master Produk Sewa terdaftar'
@@ -347,7 +357,17 @@ app.post("/api/logout",
   }
 );
 
+// =====================================================
+// DOK API
+// =====================================================
 
+const pasangDokumenAI =
+  require("./dokumen-ai-api");
+
+pasangDokumenAI(
+  app,
+  pool
+);
 // =====================================================
 // PIC PENGGUNA YANG SEDANG LOGIN
 // =====================================================
@@ -1025,14 +1045,48 @@ app.get(
 );
 
 // ======================================================
+// PROTEKSI SELURUH HALAMAN HTML
+// ======================================================
+
+app.use((req, res, next) => {
+  const halaman =
+    req.path.toLowerCase();
+
+  // File CSS, JavaScript, gambar, dan endpoint API
+  // diteruskan ke penanganannya masing-masing.
+  if (!halaman.endsWith(".html")) {
+    return next();
+  }
+
+  // Halaman login dapat diakses tanpa session.
+  if (halaman === "/login.html") {
+    return next();
+  }
+
+  res.setHeader(
+    "Cache-Control",
+    "no-store"
+  );
+
+  if (!req.session?.user) {
+    return res.redirect("/login.html");
+  }
+
+  next();
+});
+
+// ======================================================
 // STATIC FILE
 // ======================================================
+
 app.use(
   express.static(
-    path.join(
-      __dirname,
-      "public"
-    )
+    path.join(__dirname, "public"),
+    {
+      // Agar "/" ditangani oleh route app.get("/")
+      // yang sudah kamu buat setelah bagian ini.
+      index: false
+    }
   )
 );
 
@@ -22408,160 +22462,177 @@ app.get(
 
   async (req, res) => {
     try {
-
       const {
         pic_id,
         dapat_melihat_semua
       } = req.taskListAccess;
 
+      const result = await pool.query(
+        `
+        SELECT
+          t.id,
+          t.proyek_id,
+          t.created_by,
 
-      const result =
-        await pool.query(
-          `
-          SELECT
-            t.id,
-            t.proyek_id,
-            t.created_by,
+          t.parent_task_id,
+          t.need_follow_up,
 
-            t.parent_task_id,
-            t.need_follow_up,
+          t.task,
+          t.catatan,
+          t.link,
 
-            t.task,
-            t.catatan,
-            t.link,
+          t.master_dokumen_id,
+          t.nomor_dokumen,
 
-            t.master_dokumen_id,
-            t.nomor_dokumen,
+          md.kode AS kode_dokumen,
+          md.deskripsi AS deskripsi_dokumen,
+          md.flag AS flag_dokumen,
 
-            md.kode
-              AS kode_dokumen,
+          t.status,
+          t.tanggal_mulai,
+          t.target_date,
+          t.tanggal_tindak_lanjut,
+          t.tanggal_selesai,
 
-            md.deskripsi
-              AS deskripsi_dokumen,
+          t.created_at,
+          t.updated_at,
 
-            md.flag
-              AS flag_dokumen,
+          (t.proyek_id IS NULL) AS no_project,
 
-            t.status,
-            t.tanggal_mulai,
-            t.target_date,
+          CASE
+            WHEN t.proyek_id IS NULL
+              THEN 'Belum ada proyek'
+            ELSE p.nama_proyek
+          END AS nama_proyek,
 
-            t.tanggal_tindak_lanjut,
+          COALESCE(
+            kategori_data.kategori,
+            kategori_utama.nama_kategori_produk,
+            'Tanpa Kategori'
+          ) AS kategori,
 
-            t.tanggal_selesai,
-            t.created_at,
-            t.updated_at,
+          pembuat.nama AS dibuat_oleh,
 
-            p.nama_proyek,
-
-            COALESCE(
-              kategori_data.kategori,
-              kategori_utama.nama_kategori_produk,
-              'Tanpa Kategori'
-            ) AS kategori,
-
+          COALESCE(
+            task_pic.nama_pic,
             pembuat.nama
-              AS dibuat_oleh
+          ) AS nama_pic,
 
-          FROM public.task_list t
+          (
+            COALESCE(task_pic.jumlah_pic, 0) > 1
+          ) AS is_group_task,
 
-          INNER JOIN public.proyek p
-            ON p.id =
-               t.proyek_id
+          task_pic.pic_ids,
 
-          LEFT JOIN public.kategori_produk
-            kategori_utama
+          t.calendar_agenda_id
 
-            ON kategori_utama.id =
-               p.kategori_produk_id
+        FROM public.task_list t
 
-          LEFT JOIN LATERAL (
-            SELECT
-              STRING_AGG(
-                DISTINCT
-                kategori.nama_kategori_produk,
-                ', '
-                ORDER BY
-                  kategori.nama_kategori_produk
-              ) AS kategori
+        LEFT JOIN public.proyek p
+          ON p.id = t.proyek_id
 
-            FROM public.proyek_kategori relasi
+        LEFT JOIN public.kategori_produk kategori_utama
+          ON kategori_utama.id = p.kategori_produk_id
 
-            INNER JOIN public.kategori_produk kategori
-              ON kategori.id =
-                 relasi.kategori_produk_id
+        LEFT JOIN LATERAL (
+          SELECT
+            STRING_AGG(
+              DISTINCT kategori.nama_kategori_produk,
+              ', '
+              ORDER BY kategori.nama_kategori_produk
+            ) AS kategori
+
+          FROM public.proyek_kategori relasi
+
+          INNER JOIN public.kategori_produk kategori
+            ON kategori.id = relasi.kategori_produk_id
+
+          WHERE relasi.proyek_id = p.id
+        ) kategori_data ON TRUE
+
+        LEFT JOIN public.pic pembuat
+          ON pembuat.id = t.created_by
+
+        LEFT JOIN public.master_dokumen md
+          ON md.id = t.master_dokumen_id
+
+        LEFT JOIN LATERAL (
+          SELECT
+            STRING_AGG(
+              anggota.nama,
+              ', '
+              ORDER BY anggota.nama, anggota.id
+            ) AS nama_pic,
+
+            COUNT(*) AS jumlah_pic,
+
+            ARRAY_AGG(
+              relasi.pic_id
+              ORDER BY anggota.nama, anggota.id
+            ) AS pic_ids
+
+          FROM public.task_list_pic relasi
+
+          INNER JOIN public.pic anggota
+            ON anggota.id = relasi.pic_id
+
+          WHERE relasi.task_id = t.id
+        ) task_pic ON TRUE
+
+        WHERE (
+          $1::boolean = TRUE
+
+          OR t.created_by = $2
+
+          OR EXISTS (
+            SELECT 1
+
+            FROM public.task_list_pic akses_task
 
             WHERE
-              relasi.proyek_id =
-                p.id
-          ) kategori_data
-            ON TRUE
+              akses_task.task_id = t.id
 
-          LEFT JOIN public.pic pembuat
-            ON pembuat.id =
-               t.created_by
-
-          LEFT JOIN public.master_dokumen md
-            ON md.id =
-               t.master_dokumen_id
-
-          /*
-           * Kabag/Kadiv:
-           * $1 = TRUE sehingga melihat seluruh task.
-           *
-           * Selain Kabag/Kadiv:
-           * hanya task yang dibuat oleh PIC login.
-           */
-
-          WHERE (
-            $1::boolean = TRUE
-
-            OR t.created_by = $2
+              AND akses_task.pic_id = $2
           )
+        )
 
-         ORDER BY
-            CASE t.status
-              WHEN 'Not Started' THEN 1
-              WHEN 'Need Follow up' THEN 2
-              WHEN 'On Progress' THEN 3
-              WHEN 'Done' THEN 4
-              ELSE 5
-            END ASC,
-            t.tanggal_mulai ASC NULLS LAST,
-            t.id ASC
-          `,
-          [
-            dapat_melihat_semua,
-            pic_id
-          ]
-        );
+        ORDER BY
+          CASE LOWER(TRIM(COALESCE(t.status, '')))
+            WHEN 'not started' THEN 1
+            WHEN 'need follow up' THEN 2
+            WHEN 'need follow-up' THEN 2
+            WHEN 'on progress' THEN 3
+            WHEN 'done' THEN 4
+            ELSE 5
+          END ASC,
 
-
-      return res.json(
-        result.rows
+          t.tanggal_mulai ASC NULLS LAST,
+          t.id ASC
+        `,
+        [
+          dapat_melihat_semua,
+          pic_id
+        ]
       );
 
+      return res.json(result.rows);
 
     } catch (error) {
-
       console.error(
         "ERROR GET TASK LIST:",
         error
       );
-
 
       return res.status(500).json({
         error:
           error.message ||
           "Gagal mengambil Task List"
       });
-
     }
   }
 );
-
 // =====================================================
-// CREATE TASK LIST
+// CREATE TASK LIST + ACTIVITY LOG
 // =====================================================
 app.post(
   "/api/task-list",
@@ -22596,6 +22667,7 @@ app.post(
 
       const {
         proyek_id,
+        no_project,
         task,
         catatan,
         link,
@@ -22616,8 +22688,16 @@ app.post(
       // NORMALISASI ID
       // =================================================
 
-      const proyekId =
-        Number(proyek_id);
+      const noProjectValue = [
+        true,
+        "true",
+        1,
+        "1"
+      ].includes(no_project);
+
+      const proyekId = noProjectValue
+        ? null
+        : Number(proyek_id);
 
 
       const parentTaskId =
@@ -22640,18 +22720,18 @@ app.post(
       // VALIDASI ID PROYEK
       // =================================================
 
-      if (
-        !Number.isInteger(proyekId) ||
-        proyekId <= 0
+    if (
+        !noProjectValue &&
+        (
+          !Number.isInteger(proyekId) ||
+          proyekId <= 0
+        )
       ) {
-
         return res.status(400).json({
           error:
-            "Proyek wajib dipilih"
+            'Pilih proyek atau centang "Belum ada proyek".'
         });
-
       }
-
 
       // =================================================
       // VALIDASI TASK
@@ -22961,69 +23041,62 @@ app.post(
       // CEK PROYEK DAN HAK AKSES
       // =================================================
 
-      const proyekResult =
-        await client.query(
-          `
-          SELECT
-            proyek.id,
-            proyek.nama_proyek
+           let namaProyek =
+        "Belum ada proyek";
 
-          FROM public.proyek proyek
+      // Task tanpa proyek menjadi task milik pembuatnya.
+      // Task dengan proyek tetap mengikuti pemeriksaan akses.
+      if (proyekId !== null) {
+        const proyekResult =
+          await client.query(
+            `
+            SELECT
+              proyek.id,
+              proyek.nama_proyek
 
-          WHERE
-            proyek.id = $1
+            FROM public.proyek proyek
 
-            AND (
-              $2::boolean = TRUE
+            WHERE
+              proyek.id = $1
 
-              OR EXISTS (
-                SELECT 1
+              AND (
+                $2::boolean = TRUE
 
-                FROM public.proyek_pic akses
+                OR EXISTS (
+                  SELECT 1
 
-                WHERE
-                  akses.proyek_id =
-                    proyek.id
+                  FROM public.proyek_pic akses
 
-                  AND akses.pic_id =
-                    $3
+                  WHERE
+                    akses.proyek_id = proyek.id
+
+                    AND akses.pic_id = $3
+                )
               )
-            )
 
-          LIMIT 1
-          `,
-          [
-            proyekId,
-            isAdmin,
-            Number(user.id)
-          ]
-        );
+            LIMIT 1
+            `,
+            [
+              proyekId,
+              isAdmin,
+              Number(user.id)
+            ]
+          );
 
+        if (proyekResult.rowCount === 0) {
+          await client.query("ROLLBACK");
 
-      if (
-        proyekResult.rowCount === 0
-      ) {
+          transactionAktif = false;
 
-        await client.query(
-          "ROLLBACK"
-        );
+          return res.status(403).json({
+            error:
+              "Proyek tidak ditemukan atau Anda tidak memiliki akses"
+          });
+        }
 
-        transactionAktif =
-          false;
-
-
-        return res.status(403).json({
-          error:
-            "Proyek tidak ditemukan atau Anda tidak memiliki akses"
-        });
-
+        namaProyek =
+          proyekResult.rows[0].nama_proyek;
       }
-
-
-      const namaProyek =
-        proyekResult
-          .rows[0]
-          .nama_proyek;
 
 
       // =================================================
@@ -23038,7 +23111,7 @@ app.post(
         parentTaskId !== null
       ) {
 
-        const parentResult =
+                const parentResult =
           await client.query(
             `
             SELECT
@@ -23051,13 +23124,23 @@ app.post(
             WHERE
               id = $1
 
-              AND proyek_id = $2
+              AND proyek_id IS NOT DISTINCT FROM $2::integer
+
+              AND (
+                proyek_id IS NOT NULL
+
+                OR created_by = $3::integer
+
+                OR $4::boolean = TRUE
+              )
 
             LIMIT 1
             `,
             [
               parentTaskId,
-              proyekId
+              proyekId,
+              Number(user.id),
+              isAdmin
             ]
           );
 
@@ -23433,27 +23516,31 @@ app.put(
       await pool.connect();
 
 
-    try {
+      try {
 
-      const user =
-        req.session.user;
-
-      const taskId =
-        Number(req.params.id);
-
-
-      if (
-        !Number.isInteger(taskId) ||
-        taskId <= 0
-      ) {
-        return res.status(400).json({
-          error: "ID task tidak valid"
-        });
-      }
-
+        const user =
+          req.session.user;
+      
+        const isAdmin =
+          String(user.role || "")
+            .trim()
+            .toLowerCase() === "admin";
+      
+        const taskId =
+          Number(req.params.id);
+      
+        if (
+          !Number.isInteger(taskId) ||
+          taskId <= 0
+        ) {
+          return res.status(400).json({
+            error: "ID task tidak valid"
+          });
+        }
 
       const {
         proyek_id,
+        no_project,
         parent_task_id,
         task,
         catatan,
@@ -23471,8 +23558,16 @@ app.put(
       // NORMALISASI DATA
       // =================================================
 
-      const proyekId =
-        Number(proyek_id);
+      const noProjectValue = [
+        true,
+        "true",
+        1,
+        "1"
+      ].includes(no_project);
+
+      const proyekId = noProjectValue
+        ? null
+        : Number(proyek_id);
 
       const namaTask =
         String(task || "").trim();
@@ -23527,16 +23622,18 @@ app.put(
       // VALIDASI DASAR
       // =================================================
 
-      if (
-        !Number.isInteger(proyekId) ||
-        proyekId <= 0
+          if (
+        !noProjectValue &&
+        (
+          !Number.isInteger(proyekId) ||
+          proyekId <= 0
+        )
       ) {
         return res.status(400).json({
           error:
-            "Proyek wajib dipilih"
+            'Pilih proyek atau centang "Belum ada proyek".'
         });
       }
-
 
       if (!namaTask) {
         return res.status(400).json({
@@ -23691,6 +23788,8 @@ app.put(
         });
       }
 
+      
+
 
       await client.query("BEGIN");
 
@@ -23699,40 +23798,62 @@ app.put(
       // AMBIL DATA TASK LAMA
       // =================================================
 
-      const oldResult =
-        await client.query(
-          `
-          SELECT
-            t.*,
+            const oldResult = await client.query(
+        `
+        SELECT
+          t.*,
 
-            p.nama_proyek,
+          CASE
+            WHEN t.proyek_id IS NULL
+              THEN 'Belum ada proyek'
+            ELSE p.nama_proyek
+          END AS nama_proyek,
 
-            md.deskripsi
-              AS nama_master_dokumen,
+          md.deskripsi AS nama_master_dokumen,
 
-            parent.task
-              AS nama_parent_task
+          parent.task AS nama_parent_task
 
-          FROM public.task_list t
+        FROM public.task_list t
 
-          JOIN public.proyek p
-            ON p.id =
-               t.proyek_id
+        LEFT JOIN public.proyek p
+          ON p.id = t.proyek_id
 
-          LEFT JOIN public.master_dokumen md
-            ON md.id =
-               t.master_dokumen_id
+        LEFT JOIN public.master_dokumen md
+          ON md.id = t.master_dokumen_id
 
-          LEFT JOIN public.task_list parent
-            ON parent.id =
-               t.parent_task_id
+        LEFT JOIN public.task_list parent
+          ON parent.id = t.parent_task_id
 
-          WHERE t.id = $1
+        WHERE
+          t.id = $1
 
-          FOR UPDATE OF t
-          `,
-          [taskId]
-        );
+          AND (
+            $2::boolean = TRUE
+
+            OR (
+              t.proyek_id IS NULL
+              AND t.created_by = $3::integer
+            )
+
+            OR EXISTS (
+              SELECT 1
+
+              FROM public.proyek_pic akses_lama
+
+              WHERE
+                akses_lama.proyek_id = t.proyek_id
+                AND akses_lama.pic_id = $3::integer
+            )
+          )
+
+        FOR UPDATE OF t
+        `,
+        [
+          taskId,
+          isAdmin,
+          Number(user.id)
+        ]
+      );
 
 
       if (
@@ -23757,106 +23878,73 @@ app.put(
       // CEK PROYEK TUJUAN
       // =================================================
 
-      const proyekResult =
-        await client.query(
-          `
-          SELECT
-            id,
-            nama_proyek
+            let namaProyekBaru =
+        "Belum ada proyek";
 
-          FROM public.proyek
-
-          WHERE id = $1
-
-          LIMIT 1
-          `,
-          [proyekId]
-        );
-
-
-      if (
-        proyekResult.rowCount === 0
-      ) {
-        await client.query(
-          "ROLLBACK"
-        );
-
-        return res.status(404).json({
-          error:
-            "Proyek tidak ditemukan"
-        });
-      }
-
-
-      const namaProyekBaru =
-        proyekResult.rows[0]
-          .nama_proyek;
-
-
-      // =================================================
-      // CEK HAK AKSES PROYEK
-      // =================================================
-
-      const isAdmin =
-        String(user.role || "")
-          .trim()
-          .toLowerCase() ===
-        "admin";
-
-
-      if (!isAdmin) {
-
-        const aksesResult =
+      if (proyekId !== null) {
+        const proyekResult =
           await client.query(
             `
-            SELECT 1
+            SELECT
+              p.id,
+              p.nama_proyek
 
-            FROM public.proyek_pic
+            FROM public.proyek p
 
             WHERE
-              proyek_id = $1
-              AND pic_id = $2
+              p.id = $1
+
+              AND (
+                $2::boolean = TRUE
+
+                OR EXISTS (
+                  SELECT 1
+
+                  FROM public.proyek_pic akses
+
+                  WHERE
+                    akses.proyek_id = p.id
+                    AND akses.pic_id = $3::integer
+                )
+              )
 
             LIMIT 1
             `,
             [
               proyekId,
-              user.id
+              isAdmin,
+              Number(user.id)
             ]
           );
 
-
-        if (
-          aksesResult.rowCount === 0
-        ) {
-          await client.query(
-            "ROLLBACK"
-          );
+        if (proyekResult.rowCount === 0) {
+          await client.query("ROLLBACK");
 
           return res.status(403).json({
             error:
-              "Anda tidak memiliki akses ke proyek ini"
+              "Proyek tidak ditemukan atau Anda tidak memiliki akses"
           });
         }
+
+        namaProyekBaru =
+          proyekResult.rows[0].nama_proyek;
       }
 
 
-      // =================================================
+            // =================================================
       // VALIDASI PARENT TASK
       // =================================================
 
-      let namaParentBaru =
-        null;
-
+      let namaParentBaru = null;
 
       if (parentTaskId !== null) {
-
         const parentResult =
           await client.query(
             `
             SELECT
               id,
               proyek_id,
+              created_by,
               task
 
             FROM public.task_list
@@ -23868,13 +23956,8 @@ app.put(
             [parentTaskId]
           );
 
-
-        if (
-          parentResult.rowCount === 0
-        ) {
-          await client.query(
-            "ROLLBACK"
-          );
+        if (parentResult.rowCount === 0) {
+          await client.query("ROLLBACK");
 
           return res.status(404).json({
             error:
@@ -23882,26 +23965,38 @@ app.put(
           });
         }
 
+        const parentTask =
+          parentResult.rows[0];
 
-        if (
-          Number(
-            parentResult.rows[0]
-              .proyek_id
-          ) !== proyekId
-        ) {
-          await client.query(
-            "ROLLBACK"
-          );
+        const parentProyekId =
+          parentTask.proyek_id === null
+            ? null
+            : Number(parentTask.proyek_id);
+
+        if (parentProyekId !== proyekId) {
+          await client.query("ROLLBACK");
 
           return res.status(400).json({
             error:
-              "Parent Task harus berasal dari proyek yang sama"
+              "Parent Task harus berasal dari proyek yang sama atau sama-sama belum ada proyek"
           });
         }
 
+        if (
+          proyekId === null &&
+          !isAdmin &&
+          Number(parentTask.created_by) !== Number(user.id)
+        ) {
+          await client.query("ROLLBACK");
+
+          return res.status(403).json({
+            error:
+              "Anda tidak memiliki akses ke Parent Task ini"
+          });
+        }
 
         namaParentBaru =
-          parentResult.rows[0].task;
+          parentTask.task;
       }
 
 
@@ -24066,6 +24161,53 @@ app.put(
 
       const taskBaru =
         updateResult.rows[0];
+      
+              // Jika proyek parent berubah, seluruh subtask
+      // mengikuti proyek parent dalam transaksi yang sama.
+      const proyekLamaId =
+        taskLama.proyek_id === null
+          ? null
+          : Number(taskLama.proyek_id);
+
+      if (proyekLamaId !== proyekId) {
+        await client.query(
+          `
+          WITH RECURSIVE turunan AS (
+            SELECT id
+
+            FROM public.task_list
+
+            WHERE parent_task_id = $2::integer
+
+            UNION
+
+            SELECT anak.id
+
+            FROM public.task_list anak
+
+            INNER JOIN turunan
+              ON anak.parent_task_id = turunan.id
+          )
+
+          UPDATE public.task_list
+
+          SET
+            proyek_id = $1::integer,
+            updated_at = CURRENT_TIMESTAMP
+
+          WHERE
+            id IN (
+              SELECT id FROM turunan
+            )
+
+            AND id <> $2::integer
+          `,
+          [
+            proyekId,
+            taskId
+          ]
+        );
+      }
 
 
       // =================================================

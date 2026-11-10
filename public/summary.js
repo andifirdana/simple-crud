@@ -862,36 +862,49 @@
         )
       ).join("; ");
 
+        // Ambil Media Pengadaan Klien dari data yang tersedia.
+       // Sesuaikan sumber data dengan tampilan detail proyek.
     const clientMediaPengadaan = [
-  client?.media_pengadaan,
-  detail.proyek?.media_pengadaan,
-  list.media_pengadaan
-].find(
-  value => !isUnfilled(value)
-);
+      client?.metode_pengadaan,
+      client?.media_pengadaan,
+      client?.model_pengadaan,
+      detail.proyek?.media_pengadaan,
+      list.media_pengadaan
+    ]
+      .map(
+        value => String(value ?? "").trim()
+      )
+      .find(
+        value => !isUnfilled(value)
+      ) || "";
 
-const clientEntity = {
-  ...(client || list),
+    const clientEntity = {
+      ...(client || list),
 
-  media_pengadaan:
-    clientMediaPengadaan || "",
+      media_pengadaan:
+        String(
+          clientMediaPengadaan ?? ""
+        ).trim(),
 
-  termin:
-    client
-      ? arr(client.termin)
-      : [],
+      termin:
+        client
+          ? arr(client.termin)
+          : [],
 
-  dokumen:
-    client
-      ? arr(client.dokumen)
-      : []
-};
+      dokumen:
+        client
+          ? arr(client.dokumen)
+          : []
+    };
 
+    // Tetap tampilkan data jika nama atau media klien tersedia.
     const hasClient =
       client ||
       override ||
       list.proyek_klien_id ||
-      list.klien_id;
+      list.klien_id ||
+      !isUnfilled(clientName) ||
+      !isUnfilled(clientMediaPengadaan);
 
     const clientParty = hasClient
       ? normalizeParty(

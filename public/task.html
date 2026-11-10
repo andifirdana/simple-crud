@@ -2109,6 +2109,71 @@
     flex-wrap: wrap !important;
   }
 }
+  
+/* ==================================================
+   PILIHAN BELUM ADA PROYEK
+================================================== */
+
+.task-form .form-group label.no-project-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 36px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.task-form .no-project-option #belumAdaProyek {
+  appearance: auto;
+  position: static;
+  display: block;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  max-width: 16px;
+  max-height: 16px;
+  margin: 0;
+  padding: 0;
+  opacity: 1;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.task-form .no-project-option span {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.task-form .form-group label.no-project-option:hover {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+
+.task-form .form-group label.no-project-option:has(input:checked) {
+  border-color: #a5b4fc;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.task-form .form-group label.no-project-option:focus-within {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
   </style>
 
 </head>
@@ -2331,6 +2396,19 @@
               </option>
 
             </select>
+
+            <label
+              for="belumAdaProyek"
+              class="no-project-option"
+            >
+              <input
+                type="checkbox"
+                id="belumAdaProyek"
+                name="no_project"
+              >
+
+              <span>Belum ada proyek</span>
+            </label>
 
           </div>
 

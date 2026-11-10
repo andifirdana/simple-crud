@@ -3874,29 +3874,53 @@ refreshDashboard
 // RESIZE GRAFIK
 // ======================================================
 
+function jadwalkanResizeGrafik() {
+  window.clearTimeout(resizeTimer);
+
+  resizeTimer = window.setTimeout(() => {
+    if (currentDashboardData) {
+      renderCharts(currentDashboardData);
+    }
+  }, 160);
+}
+
+// Menyesuaikan grafik saat halaman di-zoom
+// atau ukuran jendela berubah.
 window.addEventListener(
   "resize",
-  () => {
-    window.clearTimeout(
-      resizeTimer
-    );
-
-    resizeTimer =
-      window.setTimeout(
-        () => {
-          if (
-            currentDashboardData
-          ) {
-            renderCharts(
-              currentDashboardData
-            );
-          }
-        },
-        160
-      );
-  }
+  jadwalkanResizeGrafik
 );
 
+// Menyesuaikan grafik saat sidebar diminimalkan
+// atau diperbesar kembali.
+const dashboardMainContent =
+  document.querySelector(".main-content");
+
+if (
+  dashboardMainContent &&
+  typeof ResizeObserver !== "undefined"
+) {
+  let dashboardObservedWidth =
+    dashboardMainContent.getBoundingClientRect().width;
+
+  const dashboardResizeObserver =
+    new ResizeObserver(() => {
+      const width =
+        dashboardMainContent.getBoundingClientRect().width;
+
+      if (width === dashboardObservedWidth) {
+        return;
+      }
+
+      dashboardObservedWidth = width;
+
+      jadwalkanResizeGrafik();
+    });
+
+  dashboardResizeObserver.observe(
+    dashboardMainContent
+  );
+}
 
 // ======================================================
 // INISIALISASI
@@ -4155,4 +4179,5 @@ async function ambilBulananPengeluaranDetail(filter) {
 
   return bulanan;
 }
+
 

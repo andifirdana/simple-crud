@@ -35,6 +35,80 @@ const simpanTaskButton = document.getElementById("simpanTaskButton");
 const batalButton = document.getElementById("batalButton");
 const formTitle = document.getElementById("formTitle");
 
+
+const belumAdaProyekInput =
+  document.getElementById("belumAdaProyek");
+
+function aturBelumAdaProyekTask() {
+  const tanpaProyek =
+    belumAdaProyekInput.checked;
+
+  const pencarian =
+    document.getElementById("proyekSearchInput");
+
+  const hasilPencarian =
+    document.getElementById("proyekSearchList");
+
+  proyekInput.disabled = tanpaProyek;
+
+  // Jika pencarian proyek sudah dibuat, validasi required
+  // berada pada input pencarian, bukan select tersembunyi.
+  proyekInput.required =
+    !tanpaProyek && !pencarian;
+
+  if (tanpaProyek) {
+    proyekInput.value = "";
+  }
+
+  if (pencarian) {
+    pencarian.disabled = tanpaProyek;
+    pencarian.required = !tanpaProyek;
+
+    pencarian.placeholder = tanpaProyek
+      ? "Task belum memiliki proyek"
+      : "Ketik nama proyek...";
+
+    if (tanpaProyek) {
+      pencarian.value = "";
+
+      pencarian.setAttribute(
+        "aria-expanded",
+        "false"
+      );
+
+      pencarian.removeAttribute(
+        "aria-activedescendant"
+      );
+    }
+
+    pencarian.setCustomValidity("");
+  }
+
+  if (hasilPencarian) {
+    hasilPencarian.hidden = true;
+  }
+
+  // Sinkronkan pencarian dan kategori yang sudah ada.
+  proyekInput.dispatchEvent(
+    new Event("change", {
+      bubbles: true
+    })
+  );
+
+  if (tanpaProyek) {
+    kategoriContainer.innerHTML = `
+      <span class="category-placeholder">
+        Tidak ada kategori proyek
+      </span>
+    `;
+  }
+}
+
+belumAdaProyekInput.addEventListener(
+  "change",
+  aturBelumAdaProyekTask
+);
+
 // ======================================================
 // ELEMENT DAFTAR
 // ======================================================
@@ -746,10 +820,14 @@ function renderTask() {
 
           <td>
             <div class="project-name">
-              ${escapeHTML(
-                item.nama_proyek ||
-                proyek?.nama_proyek ||
-                "-"
+               ${escapeHTML(
+                item.proyek_id == null
+                  ? "Belum ada proyek"
+                  : (
+                      item.nama_proyek ||
+                      proyek?.nama_proyek ||
+                      "-"
+                    )
               )}
             </div>
 
@@ -759,15 +837,22 @@ function renderTask() {
           </td>
 
           <td>
-            <div class="task-name">
+                        <div class="task-name">
               ${escapeHTML(item.task || "-")}
             </div>
 
             ${
-              namaSubTask
+              item.is_group_task
                 ? `
-                  <div class="task-sub-name">
-                    ${escapeHTML(namaSubTask)}
+                  <div
+                    style="
+                      margin-top: 5px;
+                      color: #6d28d9;
+                      font-size: 12px;
+                      font-weight: 600;
+                    "
+                  >
+                    Group Task
                   </div>
                 `
                 : ""
@@ -1109,7 +1194,13 @@ function buatPayloadParent() {
     : statusInput.value;
 
   return {
-    proyek_id: Number(proyekInput.value),
+        no_project:
+      belumAdaProyekInput.checked,
+
+    proyek_id:
+      belumAdaProyekInput.checked
+        ? null
+        : Number(proyekInput.value),
     task: taskInput.value.trim(),
     catatan: sanitasiCatatan(catatanEditor.innerHTML) || null,
     link: normalisasiLink(linkInput.value),
@@ -1129,7 +1220,13 @@ function buatPayloadParent() {
 
 function buatPayloadSubTask(parentTaskId) {
   return {
-    proyek_id: Number(proyekInput.value),
+        no_project:
+      belumAdaProyekInput.checked,
+
+    proyek_id:
+      belumAdaProyekInput.checked
+        ? null
+        : Number(proyekInput.value),
     task: subTaskInput.value.trim(),
     catatan: null,
     link: normalisasiLink(linkInput.value),
@@ -1146,13 +1243,19 @@ function buatPayloadSubTask(parentTaskId) {
 // ======================================================
 
 function validasiForm() {
-  const proyekId = Number(proyekInput.value);
+    const proyekId =
+    Number(proyekInput.value);
 
   if (
-    !Number.isInteger(proyekId) ||
-    proyekId <= 0
+    !belumAdaProyekInput.checked &&
+    (
+      !Number.isInteger(proyekId) ||
+      proyekId <= 0
+    )
   ) {
-    alert("Pilih Nama Proyek.");
+    alert(
+      'Pilih Nama Proyek atau centang "Belum ada proyek".'
+    );
 
     (
       document.getElementById("proyekSearchInput") ||
@@ -1161,7 +1264,6 @@ function validasiForm() {
 
     return false;
   }
-
   if (!targetDateInput.value) {
     alert("Target Date wajib diisi.");
     targetDateInput.focus();
@@ -1320,12 +1422,15 @@ window.editTask = function (id) {
 
   taskIdInput.value = item.id;
   subTaskIdInput.value = subTask?.id || "";
-  proyekInput.value = item.proyek_id || "";
+    belumAdaProyekInput.checked =
+    item.proyek_id === null ||
+    item.proyek_id === undefined ||
+    item.proyek_id === "";
 
-  // Sinkronkan nama pada kolom pencarian.
-  proyekInput.dispatchEvent(
-    new Event("change", { bubbles: true })
-  );
+  proyekInput.value =
+    item.proyek_id || "";
+
+  aturBelumAdaProyekTask();
 
   const proyek = getProyekById(item.proyek_id);
 
@@ -1478,6 +1583,9 @@ function resetTaskForm() {
   formTitle.textContent = "Tambah Task";
   simpanTaskButton.textContent = "Simpan Task";
   batalButton.hidden = true;
+    belumAdaProyekInput.checked = false;
+
+  aturBelumAdaProyekTask();
 }
 
 batalButton.addEventListener("click", () => {
@@ -1491,6 +1599,7 @@ batalButton.addEventListener("click", () => {
 async function init() {
   try {
     await loadProyek();
+    aturBelumAdaProyekTask();
     await loadTask();
 
     const urlParams = new URLSearchParams(
