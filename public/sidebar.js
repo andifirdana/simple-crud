@@ -314,6 +314,27 @@ if (document.readyState === "loading") {
 
 }
 
+// ==========================================
+// ICON WEBSITE UNTUK SEMUA HALAMAN
+// ==========================================
+
+function setWebsiteIcon() {
+  let icon = document.querySelector(
+    'link[rel="icon"]'
+  );
+
+  if (!icon) {
+    icon = document.createElement("link");
+    icon.rel = "icon";
+
+    document.head.appendChild(icon);
+  }
+
+  icon.type = "image/png";
+  icon.href = "public/images/favicon.png";
+}
+
+setWebsiteIcon();
 // ==================================================
 // INISIALISASI
 // ==================================================

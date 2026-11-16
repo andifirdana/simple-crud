@@ -2357,6 +2357,15 @@ function searchProjects() {
     $('view-time-info').textContent =
       `${event.time}–${event.end_time} WIB`;
 
+      const additionalEmails = Array.isArray(event.additional_emails)
+      ? event.additional_emails
+      : [];
+
+    $('view-additional-emails').textContent =
+      additionalEmails.length
+        ? additionalEmails.join(', ')
+        : '—';
+
     $('view-project').textContent =
       event.no_project
         ? 'Belum ada proyek'
@@ -2454,6 +2463,218 @@ function searchProjects() {
   // MODAL TAMBAH / EDIT
   // ======================================================
 
+   let activeEmailSuggestion = -1;
+
+  // Tutup daftar saran.
+  function closeEmailSuggestions() {
+    $('additional-email-options').hidden = true;
+
+    $('additional-emails').setAttribute(
+      'aria-expanded',
+      'false'
+    );
+
+    $('additional-emails').removeAttribute(
+      'aria-activedescendant'
+    );
+
+    activeEmailSuggestion = -1;
+  }
+
+  // Masukkan email yang dipilih.
+  function chooseEmailSuggestion(email) {
+    const input = $('additional-emails');
+
+    const token =
+      input.value.match(/[^,;\s]*$/)?.[0] || '';
+
+    // Pertahankan email yang sudah diketik sebelumnya.
+    const prefix = input.value.slice(
+      0,
+      input.value.length - token.length
+    );
+
+    input.value = prefix + email + ', ';
+
+    input.focus();
+
+    input.setSelectionRange(
+      input.value.length,
+      input.value.length
+    );
+
+    closeEmailSuggestions();
+  }
+
+  // Tampilkan email yang cocok dengan ketikan pengguna.
+  function updateEmailSuggestions() {
+    const input = $('additional-emails');
+    const list = $('additional-email-options');
+
+    const token =
+      input.value.match(/[^,;\s]*$/)?.[0] || '';
+
+    const prefix = input.value.slice(
+      0,
+      input.value.length - token.length
+    );
+
+    const selectedEmails = new Set(
+      prefix
+        .split(/[,;\s]+/)
+        .map(email => email.trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    const query = token.toLowerCase();
+
+    const suggestions = (
+      Array.isArray(master.email_suggestions)
+        ? master.email_suggestions
+        : []
+    )
+      .filter(
+        email =>
+          !selectedEmails.has(email) &&
+          email.includes(query)
+      )
+      .slice(0, 8);
+
+    list.replaceChildren();
+    closeEmailSuggestions();
+
+    if (
+      document.activeElement !== input ||
+      !suggestions.length
+    ) {
+      return;
+    }
+
+    suggestions.forEach((email, index) => {
+      const option = document.createElement('button');
+
+      option.type = 'button';
+      option.tabIndex = -1;
+      option.id = `email-suggestion-${index}`;
+      option.className = 'email-suggestion';
+
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', 'false');
+
+      const icon = document.createElement('span');
+
+      icon.className = 'email-suggestion-icon';
+      icon.textContent = '@';
+      icon.setAttribute('aria-hidden', 'true');
+
+      const text = document.createElement('span');
+
+      text.className = 'email-suggestion-text';
+      text.textContent = email;
+
+      const arrow = document.createElement('span');
+
+      arrow.className = 'email-suggestion-arrow';
+      arrow.textContent = '↵';
+      arrow.setAttribute('aria-hidden', 'true');
+
+      option.append(icon, text, arrow);
+
+      // Jaga fokus input ketika saran diklik atau disentuh.
+      option.addEventListener(
+        'pointerdown',
+        event => event.preventDefault()
+      );
+
+      option.addEventListener(
+        'click',
+        () => chooseEmailSuggestion(email)
+      );
+
+      list.append(option);
+    });
+
+    list.hidden = false;
+
+    input.setAttribute(
+      'aria-expanded',
+      'true'
+    );
+  }
+
+  // Pilih saran menggunakan tombol panah dan Enter.
+  function handleEmailSuggestionKeydown(event) {
+    const list = $('additional-email-options');
+
+    if (event.key === 'Escape' && !list.hidden) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      closeEmailSuggestions();
+      return;
+    }
+
+    if (
+      !['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)
+    ) {
+      return;
+    }
+
+    if (list.hidden) {
+      if (event.key !== 'ArrowDown') {
+        return;
+      }
+
+      updateEmailSuggestions();
+    }
+
+    const options = [...list.children];
+
+    if (list.hidden || !options.length) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.key === 'Enter') {
+      const index =
+        activeEmailSuggestion < 0
+          ? 0
+          : activeEmailSuggestion;
+
+      options[index].click();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      activeEmailSuggestion =
+        (activeEmailSuggestion + 1) % options.length;
+    } else {
+      activeEmailSuggestion =
+        activeEmailSuggestion <= 0
+          ? options.length - 1
+          : activeEmailSuggestion - 1;
+    }
+
+    options.forEach((option, index) => {
+      option.setAttribute(
+        'aria-selected',
+        String(index === activeEmailSuggestion)
+      );
+    });
+
+    const active = options[activeEmailSuggestion];
+
+    $('additional-emails').setAttribute(
+      'aria-activedescendant',
+      active.id
+    );
+
+    active.scrollIntoView({
+      block: 'nearest'
+    });
+  }
+
   function openForm(
     event = null,
     hour = 9,
@@ -2523,6 +2744,13 @@ function searchProjects() {
       $(field).value =
         event?.[field] || '';
     }
+
+    $('additional-emails').value =
+    Array.isArray(event?.additional_emails)
+      ? event.additional_emails.join(', ')
+      : '';
+
+        updateEmailSuggestions();
 
     const selected =
       new Set(
@@ -2675,6 +2903,27 @@ function searchProjects() {
 
   const picIds =
     selectedPicIds();
+  
+  const additionalEmails = [
+    ...new Set(
+      $('additional-emails').value
+        .split(/[,;\s]+/)
+        .map(email => email.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  ];
+
+  const invalidEmail = additionalEmails.find(
+    email => !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(email)
+  );
+
+  if (invalidEmail) {
+    $('additional-emails').focus();
+
+    return formError(
+      `Format email tambahan tidak valid: ${invalidEmail}`
+    );
+  }
 
   if (!picIds.length) {
     return formError(
@@ -2749,6 +2998,9 @@ function searchProjects() {
 
     pic_ids:
       picIds,
+
+    additional_emails:
+      additionalEmails,
 
     no_project:
       noProject,
@@ -2851,6 +3103,14 @@ function searchProjects() {
   // ======================================================
   // PERBARUI TAMPILAN
   // ======================================================
+  
+  // Email baru langsung tersedia untuk agenda berikutnya.
+  master.email_suggestions = [
+    ...new Set([
+      ...(master.email_suggestions || []),
+      ...additionalEmails
+    ])
+  ].sort();
 
   $('dialog').close();
 
@@ -3174,6 +3434,26 @@ function searchProjects() {
     }
   );
 
+  $('additional-emails').addEventListener(
+    'input',
+    updateEmailSuggestions
+  );
+
+  $('additional-emails').addEventListener(
+    'focus',
+    updateEmailSuggestions
+  );
+
+  $('additional-emails').addEventListener(
+    'blur',
+    closeEmailSuggestions
+  );
+
+  $('additional-emails').addEventListener(
+    'keydown',
+    handleEmailSuggestionKeydown
+  );
+
   $('week-board').addEventListener(
     'click',
     event => {
@@ -3289,3 +3569,4 @@ $('project-filter').addEventListener(
     60000
   );
 })();
+

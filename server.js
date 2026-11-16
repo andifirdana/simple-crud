@@ -1544,1052 +1544,562 @@ app.delete("/api/data/:id",
 // MASTER DATA PARTNER
 // ======================================================
 
-// READ PARTNER
-app.get("/api/partner", 
-  async (req, res) => {
+// ============================================
+// HELPER PARTNER
+// ============================================
+
+function partnerError(message, status = 400) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
+function partnerText(value, field) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  if (typeof value !== "string") {
+    throw partnerError(`${field} harus berupa teks`);
+  }
+
+  return value.trim();
+}
+
+function partnerPhone(value) {
+  let number = value.replace(/[\s\-()]/g, "");
+
+  if (number.startsWith("+62")) {
+    number = number.substring(1);
+  }
+
+  if (number.startsWith("0")) {
+    number = "62" + number.substring(1);
+  }
+
+  return number;
+}
+
+function partnerId(value) {
+  if (!/^[1-9]\d*$/.test(String(value))) {
+    throw partnerError("ID partner tidak valid");
+  }
+
+  const id = Number(value);
+
+  if (!Number.isSafeInteger(id)) {
+    throw partnerError("ID partner tidak valid");
+  }
+
+  return id;
+}
+
+// Validasi seluruh PIC dari request.
+function validatePartnerPics(value) {
+  if (!Array.isArray(value)) {
+    throw partnerError("pics harus berupa array");
+  }
+
+  const result = [];
+
+  value.forEach((item, index) => {
+    const label = `PIC ${index + 1}`;
+
+    if (
+      !item ||
+      typeof item !== "object" ||
+      Array.isArray(item)
+    ) {
+      throw partnerError(`${label} harus berupa objek`);
+    }
+
+    const pic = {
+      nama_pic: partnerText(
+        item.nama_pic,
+        `Nama ${label}`
+      ),
+
+      no_pic: partnerPhone(
+        partnerText(item.no_pic, `Nomor ${label}`)
+      ),
+
+      email_pic: partnerText(
+        item.email_pic,
+        `Email ${label}`
+      )
+    };
+
+    // Baris kosong tidak disimpan.
+    if (
+      !pic.nama_pic &&
+      !pic.no_pic &&
+      !pic.email_pic
+    ) {
+      return;
+    }
+
+    if (!pic.nama_pic) {
+      throw partnerError(
+        `Nama ${label} wajib diisi`
+      );
+    }
+
+    if (
+      pic.email_pic &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pic.email_pic)
+    ) {
+      throw partnerError(
+        `Format email ${label} tidak valid`
+      );
+    }
+
+    result.push(pic);
+  });
+
+  return result;
+}
+
+function validatePartnerBody(body, oldPartner = null) {
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body)
+  ) {
+    throw partnerError("Body request tidak valid");
+  }
+
+  const nama_partner = partnerText(
+    body.nama_partner,
+    "Nama Partner"
+  );
+
+  if (!nama_partner) {
+    throw partnerError("Nama Partner wajib diisi");
+  }
+
+  const status =
+    partnerText(body.status, "Status") || "Aktif";
+
+  if (!["Aktif", "Nonaktif"].includes(status)) {
+    throw partnerError(
+      "Status harus Aktif atau Nonaktif"
+    );
+  }
+
+  let pics;
+
+  if (
+    Object.prototype.hasOwnProperty.call(body, "pics")
+  ) {
+    // Array kosong berarti menghapus seluruh PIC.
+    pics = validatePartnerPics(body.pics);
+  } else if (oldPartner) {
+    // Jika PUT tidak menyertakan pics,
+    // pertahankan daftar PIC yang tersimpan.
+    pics = oldPartner.pics;
+  } else {
+    // Kompatibilitas POST lama dengan satu PIC.
+    pics = validatePartnerPics([{
+      nama_pic: body.nama_pic,
+      no_pic: body.no_pic,
+      email_pic: body.email_pic
+    }]);
+  }
+
+  return {
+    nama_partner,
+
+    inisial:
+    partnerText(body.inisial, "Inisial").toUpperCase() || null,
+
+    jenis_partner:
+      partnerText(
+        body.jenis_partner,
+        "Jenis Partner"
+      ) || null,
+
+    alamat:
+      partnerText(body.alamat, "Alamat") || null,
+
+    status,
+    pics
+  };
+}
+
+// Menyiapkan parameter INSERT dan UPDATE.
+// Kolom PIC lama mengikuti PIC pertama.
+function partnerValues(data) {
+  const firstPic = data.pics[0] || {};
+
+  return [
+    data.nama_partner,
+    data.inisial,
+    data.jenis_partner,
+    firstPic.nama_pic || null,
+    firstPic.no_pic || null,
+    firstPic.email_pic || null,
+    data.alamat,
+    data.status,
+    JSON.stringify(data.pics)
+  ];
+}
+
+// Format activity log, termasuk seluruh PIC.
+function partnerLogFields(partner) {
+  const text = value => {
+    if (
+      value === null ||
+      value === undefined ||
+      String(value).trim() === ""
+    ) {
+      return "-";
+    }
+
+    return String(value).trim();
+  };
+
+  return {
+    "NAMA PARTNER": text(partner.nama_partner),
+    "INISIAL": text(partner.inisial),
+    "JENIS PARTNER": text(partner.jenis_partner),
+
+    // JSON menjaga pasangan nama, nomor, dan email
+    // tetap terbaca sebagai satu kontak.
+    "DAFTAR PIC": JSON.stringify(
+      (partner.pics || []).map(pic => ({
+        nama_pic: pic.nama_pic || "",
+        no_pic: pic.no_pic || "",
+        email_pic: pic.email_pic || ""
+      }))
+    ),
+
+    "ALAMAT": text(partner.alamat),
+    "STATUS": text(partner.status)
+  };
+}
+
+function partnerLogText(fields, labels) {
+  const keys = labels || Object.keys(fields);
+
+  return keys.map(label => {
+    return `${label} = ${fields[label]}`;
+  }).join(", ");
+}
+
+async function writePartnerActivity(
+  client,
+  req,
+  aktivitas,
+  oldPartner,
+  newPartner
+) {
+  const oldFields = oldPartner
+    ? partnerLogFields(oldPartner)
+    : null;
+
+  const newFields = newPartner
+    ? partnerLogFields(newPartner)
+    : null;
+
+  let changedLabels;
+
+  if (aktivitas === "UPDATE") {
+    changedLabels = Object.keys(newFields).filter(
+      label => oldFields[label] !== newFields[label]
+    );
+
+    // Tidak membuat log bila tidak ada perubahan.
+    if (changedLabels.length === 0) {
+      return;
+    }
+  }
+
+  const partner = newPartner || oldPartner;
+
+  const descriptions = {
+    CREATE: "menambahkan master partner",
+    UPDATE: "memperbarui master partner",
+    DELETE: "menghapus master partner"
+  };
+
+  await simpanActivityLog(client, {
+    ...getActivityUser(req),
+
+    aktivitas,
+    modul: "MASTER PARTNER",
+
+    entity_id: partner.id,
+    entity_nama: partner.nama_partner,
+    field_name: "DATA PARTNER",
+
+    nilai_lama: oldFields
+      ? partnerLogText(oldFields, changedLabels)
+      : null,
+
+    nilai_baru: newFields
+      ? partnerLogText(newFields, changedLabels)
+      : null,
+
+    deskripsi: descriptions[aktivitas]
+  });
+}
+
+// Seluruh perubahan data dan activity log
+// berada dalam satu transaksi.
+async function partnerTransaction(
+  res,
+  label,
+  successStatus,
+  action
+) {
+  let client;
+  let started = false;
+
   try {
+    client = await pool.connect();
 
-    const result = await pool.query(
-      `SELECT *
-       FROM partner
-       ORDER BY id DESC`
-    );
+    await client.query("BEGIN");
+    started = true;
 
+    const result = await action(client);
 
-    res.json(result.rows);
+    await client.query("COMMIT");
+    started = false;
 
-
+    return res.status(successStatus).json(result);
   } catch (error) {
+    if (client && started) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        console.error(
+          `ERROR ROLLBACK ${label}:`,
+          rollbackError
+        );
+      }
+    }
 
-    console.error(
-      "ERROR READ PARTNER:",
-      error
-    );
+    console.error(`ERROR ${label}:`, error);
 
-
-    res.status(500).json({
-      error: error.message
+    return res.status(error.status || 500).json({
+      error: error.status
+        ? error.message
+        : "Terjadi kesalahan saat memproses data partner"
     });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+}
 
+// ============================================
+// READ PARTNER
+// ============================================
+
+app.get("/api/partner", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT *
+      FROM partner
+      ORDER BY id DESC
+    `);
+
+    // PostgreSQL JSONB otomatis menjadi array JavaScript
+    // melalui driver pg.
+    return res.json(result.rows);
+  } catch (error) {
+    console.error("ERROR READ PARTNER:", error);
+
+    return res.status(500).json({
+      error: "Gagal mengambil data partner"
+    });
   }
 });
 
+// ============================================
 // CREATE PARTNER
-app.post(
-  "/api/partner",
-  async (req, res) => {
-    const client =
-      await pool.connect();
+// ============================================
 
-    let transaksiDimulai =
-      false;
+app.post("/api/partner", async (req, res) => {
+  return partnerTransaction(
+    res,
+    "CREATE PARTNER",
+    201,
 
-    try {
-      const {
-        nama_partner,
-        inisial,
-        jenis_partner,
-        nama_pic,
-        no_pic,
-        email_pic,
-        alamat,
-        status
-      } = req.body;
+    async client => {
+      const data = validatePartnerBody(req.body);
 
-
-      // ================================================
-      // VALIDASI
-      // ================================================
-
-      if (
-        !nama_partner ||
-        !String(
-          nama_partner
-        ).trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "Nama Partner wajib diisi"
-        });
-      }
-
-
-      // ================================================
-      // MULAI TRANSAKSI
-      // ================================================
-
-      await client.query("BEGIN");
-
-      transaksiDimulai = true;
-
-
-      // ================================================
-      // SIMPAN PARTNER
-      // ================================================
-
-      const result =
-        await client.query(
-          `
-            INSERT INTO partner (
-              nama_partner,
-              inisial,
-              jenis_partner,
-              nama_pic,
-              no_pic,
-              email_pic,
-              alamat,
-              status
-            )
-
-            VALUES (
-              $1,
-              $2,
-              $3,
-              $4,
-              $5,
-              $6,
-              $7,
-              $8
-            )
-
-            RETURNING *
-          `,
-          [
-            String(
-              nama_partner
-            ).trim(),
-
-            String(
-              inisial || ""
-            ).trim() || null,
-
-            String(
-              jenis_partner || ""
-            ).trim() || null,
-
-            String(
-              nama_pic || ""
-            ).trim() || null,
-
-            String(
-              no_pic || ""
-            ).trim() || null,
-
-            String(
-              email_pic || ""
-            ).trim() || null,
-
-            String(
-              alamat || ""
-            ).trim() || null,
-
-            String(
-              status || "Aktif"
-            ).trim()
-          ]
-        );
-
-
-      const partnerBaru =
-        result.rows[0];
-
-
-      // ================================================
-      // FORMAT NILAI LOG
-      // ================================================
-
-      const formatNilaiPartner =
-        value => {
-          if (
-            value === null ||
-            value === undefined ||
-            String(value).trim() === ""
-          ) {
-            return "-";
-          }
-
-          return String(value).trim();
-        };
-
-
-      const nilaiBaruLog = [
-        `NAMA PARTNER = ${
-          formatNilaiPartner(
-            partnerBaru.nama_partner
+      const result = await client.query(
+        `
+          INSERT INTO partner (
+            nama_partner,
+            inisial,
+            jenis_partner,
+            nama_pic,
+            no_pic,
+            email_pic,
+            alamat,
+            status,
+            pics
           )
-        }`,
-
-        `INISIAL = ${
-          formatNilaiPartner(
-            partnerBaru.inisial
+          VALUES (
+            $1, $2, $3,
+            $4, $5, $6,
+            $7, $8, $9::jsonb
           )
-        }`,
+          RETURNING *
+        `,
+        partnerValues(data)
+      );
 
-        `JENIS PARTNER = ${
-          formatNilaiPartner(
-            partnerBaru.jenis_partner
-          )
-        }`,
+      const partnerBaru = result.rows[0];
 
-        `NAMA PIC = ${
-          formatNilaiPartner(
-            partnerBaru.nama_pic
-          )
-        }`,
-
-        `NO. PIC = ${
-          formatNilaiPartner(
-            partnerBaru.no_pic
-          )
-        }`,
-
-        `EMAIL PIC = ${
-          formatNilaiPartner(
-            partnerBaru.email_pic
-          )
-        }`,
-
-        `ALAMAT = ${
-          formatNilaiPartner(
-            partnerBaru.alamat
-          )
-        }`,
-
-        `STATUS = ${
-          formatNilaiPartner(
-            partnerBaru.status
-          )
-        }`
-      ].join(", ");
-
-
-      // ================================================
-      // SIMPAN ACTIVITY LOG
-      // CREATE HANYA NILAI BARU
-      // ================================================
-
-      await simpanActivityLog(
+      await writePartnerActivity(
         client,
-        {
-          ...getActivityUser(req),
-
-          aktivitas: "CREATE",
-
-          modul:
-            "MASTER PARTNER",
-
-          // Master partner memakai ID partner
-          entity_id:
-            partnerBaru.id,
-
-          entity_nama:
-            partnerBaru.nama_partner,
-
-          field_name:
-            "DATA PARTNER",
-
-          nilai_lama: null,
-
-          nilai_baru:
-            nilaiBaruLog,
-
-          deskripsi:
-            "menambahkan master partner"
-        }
-      );
-
-
-      // ================================================
-      // COMMIT
-      // ================================================
-
-      await client.query("COMMIT");
-
-      transaksiDimulai = false;
-
-
-      return res
-        .status(201)
-        .json(partnerBaru);
-
-    } catch (error) {
-      if (transaksiDimulai) {
-        try {
-          await client.query(
-            "ROLLBACK"
-          );
-
-        } catch (rollbackError) {
-          console.error(
-            "ERROR ROLLBACK CREATE PARTNER:",
-            rollbackError
-          );
-        }
-      }
-
-
-      console.error(
-        "ERROR CREATE PARTNER:",
-        error
-      );
-
-
-      return res.status(500).json({
-        error:
-          error.message
-      });
-
-    } finally {
-      client.release();
-    }
-  }
-);
-
-// UPDATE PARTNER
-app.put(
-  "/api/partner/:id",
-  async (req, res) => {
-    const client =
-      await pool.connect();
-
-    let transaksiDimulai =
-      false;
-
-    try {
-      const id =
-        Number(req.params.id);
-
-
-      const {
-        nama_partner,
-        inisial,
-        jenis_partner,
-        nama_pic,
-        no_pic,
-        email_pic,
-        alamat,
-        status
-      } = req.body;
-
-
-      // ================================================
-      // VALIDASI
-      // ================================================
-
-      if (
-        !Number.isInteger(id) ||
-        id <= 0
-      ) {
-        return res.status(400).json({
-          error:
-            "ID partner tidak valid"
-        });
-      }
-
-
-      if (
-        !nama_partner ||
-        !String(
-          nama_partner
-        ).trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "Nama Partner wajib diisi"
-        });
-      }
-
-
-      // ================================================
-      // MULAI TRANSAKSI
-      // ================================================
-
-      await client.query("BEGIN");
-
-      transaksiDimulai = true;
-
-
-      // ================================================
-      // AMBIL DATA PARTNER LAMA
-      // ================================================
-
-      const oldResult =
-        await client.query(
-          `
-            SELECT
-              id,
-              nama_partner,
-              inisial,
-              jenis_partner,
-              nama_pic,
-              no_pic,
-              email_pic,
-              alamat,
-              status
-
-            FROM partner
-
-            WHERE id = $1
-
-            FOR UPDATE
-          `,
-          [id]
-        );
-
-
-      if (
-        oldResult.rows.length === 0
-      ) {
-        await client.query(
-          "ROLLBACK"
-        );
-
-        transaksiDimulai = false;
-
-        return res.status(404).json({
-          error:
-            "Data partner tidak ditemukan"
-        });
-      }
-
-
-      const partnerLama =
-        oldResult.rows[0];
-
-
-      // ================================================
-      // UPDATE PARTNER
-      // ================================================
-
-      const result =
-        await client.query(
-          `
-            UPDATE partner
-
-            SET
-              nama_partner = $1,
-              inisial = $2,
-              jenis_partner = $3,
-              nama_pic = $4,
-              no_pic = $5,
-              email_pic = $6,
-              alamat = $7,
-              status = $8,
-              updated_at =
-                CURRENT_TIMESTAMP
-
-            WHERE id = $9
-
-            RETURNING *
-          `,
-          [
-            String(
-              nama_partner
-            ).trim(),
-
-            String(
-              inisial || ""
-            ).trim() || null,
-
-            String(
-              jenis_partner || ""
-            ).trim() || null,
-
-            String(
-              nama_pic || ""
-            ).trim() || null,
-
-            String(
-              no_pic || ""
-            ).trim() || null,
-
-            String(
-              email_pic || ""
-            ).trim() || null,
-
-            String(
-              alamat || ""
-            ).trim() || null,
-
-            String(
-              status || "Aktif"
-            ).trim(),
-
-            id
-          ]
-        );
-
-
-      const partnerBaru =
-        result.rows[0];
-
-
-      // ================================================
-      // FORMAT NILAI LOG
-      // ================================================
-
-      const formatNilaiPartner =
-        value => {
-          if (
-            value === null ||
-            value === undefined ||
-            String(value).trim() === ""
-          ) {
-            return "-";
-          }
-
-          return String(value).trim();
-        };
-
-
-      const detailPartnerLama = [
-        {
-          label:
-            "NAMA PARTNER",
-
-          nilai:
-            formatNilaiPartner(
-              partnerLama.nama_partner
-            )
-        },
-        {
-          label:
-            "INISIAL",
-
-          nilai:
-            formatNilaiPartner(
-              partnerLama.inisial
-            )
-        },
-        {
-          label:
-            "JENIS PARTNER",
-
-          nilai:
-            formatNilaiPartner(
-              partnerLama.jenis_partner
-            )
-        },
-        {
-          label:
-            "NAMA PIC",
-
-          nilai:
-            formatNilaiPartner(
-              partnerLama.nama_pic
-            )
-        },
-        {
-          label:
-            "NO. PIC",
-
-          nilai:
-            formatNilaiPartner(
-              partnerLama.no_pic
-            )
-        },
-        {
-          label:
-            "EMAIL PIC",
-
-          nilai:
-            formatNilaiPartner(
-              partnerLama.email_pic
-            )
-        },
-        {
-          label:
-            "ALAMAT",
-
-          nilai:
-            formatNilaiPartner(
-              partnerLama.alamat
-            )
-        },
-        {
-          label:
-            "STATUS",
-
-          nilai:
-            formatNilaiPartner(
-              partnerLama.status
-            )
-        }
-      ];
-
-
-      const detailPartnerBaru = [
-        {
-          label:
-            "NAMA PARTNER",
-
-          nilai:
-            formatNilaiPartner(
-              partnerBaru.nama_partner
-            )
-        },
-        {
-          label:
-            "INISIAL",
-
-          nilai:
-            formatNilaiPartner(
-              partnerBaru.inisial
-            )
-        },
-        {
-          label:
-            "JENIS PARTNER",
-
-          nilai:
-            formatNilaiPartner(
-              partnerBaru.jenis_partner
-            )
-        },
-        {
-          label:
-            "NAMA PIC",
-
-          nilai:
-            formatNilaiPartner(
-              partnerBaru.nama_pic
-            )
-        },
-        {
-          label:
-            "NO. PIC",
-
-          nilai:
-            formatNilaiPartner(
-              partnerBaru.no_pic
-            )
-        },
-        {
-          label:
-            "EMAIL PIC",
-
-          nilai:
-            formatNilaiPartner(
-              partnerBaru.email_pic
-            )
-        },
-        {
-          label:
-            "ALAMAT",
-
-          nilai:
-            formatNilaiPartner(
-              partnerBaru.alamat
-            )
-        },
-        {
-          label:
-            "STATUS",
-
-          nilai:
-            formatNilaiPartner(
-              partnerBaru.status
-            )
-        }
-      ];
-
-
-      // ================================================
-      // HANYA AMBIL FIELD YANG BERUBAH
-      // ================================================
-
-      const perubahanPartner =
-        detailPartnerBaru
-          .map(
-            (
-              itemBaru,
-              index
-            ) => ({
-              label:
-                itemBaru.label,
-
-              nilai_lama:
-                detailPartnerLama[index]
-                  .nilai,
-
-              nilai_baru:
-                itemBaru.nilai
-            })
-          )
-          .filter(
-            item =>
-              item.nilai_lama !==
-              item.nilai_baru
-          );
-
-
-      // ================================================
-      // SIMPAN SATU ACTIVITY LOG
-      // ================================================
-
-      if (
-        perubahanPartner.length > 0
-      ) {
-        await simpanActivityLog(
-          client,
-          {
-            ...getActivityUser(req),
-
-            aktivitas: "UPDATE",
-
-            modul:
-              "MASTER PARTNER",
-
-            // Master partner menggunakan ID partner
-            entity_id:
-              partnerBaru.id,
-
-            entity_nama:
-              partnerBaru.nama_partner,
-
-            field_name:
-              "DATA PARTNER",
-
-            nilai_lama:
-              perubahanPartner
-                .map(
-                  item =>
-                    `${item.label} = ${item.nilai_lama}`
-                )
-                .join(", "),
-
-            nilai_baru:
-              perubahanPartner
-                .map(
-                  item =>
-                    `${item.label} = ${item.nilai_baru}`
-                )
-                .join(", "),
-
-            deskripsi:
-              "memperbarui master partner"
-          }
-        );
-      }
-
-
-      // ================================================
-      // COMMIT
-      // ================================================
-
-      await client.query("COMMIT");
-
-      transaksiDimulai = false;
-
-
-      return res.json(
+        req,
+        "CREATE",
+        null,
         partnerBaru
       );
 
-    } catch (error) {
-      if (transaksiDimulai) {
-        try {
-          await client.query(
-            "ROLLBACK"
-          );
+      // Mengembalikan id dan seluruh pics,
+      // sesuai kebutuhan JavaScript sebelumnya.
+      return partnerBaru;
+    }
+  );
+});
 
-        } catch (rollbackError) {
-          console.error(
-            "ERROR ROLLBACK UPDATE PARTNER:",
-            rollbackError
-          );
-        }
-      }
+// ============================================
+// UPDATE PARTNER
+// ============================================
 
+app.put("/api/partner/:id", async (req, res) => {
+  return partnerTransaction(
+    res,
+    "UPDATE PARTNER",
+    200,
 
-      console.error(
-        "ERROR UPDATE PARTNER:",
-        error
+    async client => {
+      const id = partnerId(req.params.id);
+
+      const oldResult = await client.query(
+        `
+          SELECT *
+          FROM partner
+          WHERE id = $1
+          FOR UPDATE
+        `,
+        [id]
       );
 
-
-      return res.status(500).json({
-        error:
-          error.message
-      });
-
-    } finally {
-      client.release();
-    }
-  }
-);
-
-// DELETE PARTNER
-app.delete(
-  "/api/partner/:id",
-  async (req, res) => {
-    const client =
-      await pool.connect();
-
-    let transaksiDimulai =
-      false;
-
-    try {
-      const id =
-        Number(req.params.id);
-
-
-      // ================================================
-      // VALIDASI ID
-      // ================================================
-
-      if (
-        !Number.isInteger(id) ||
-        id <= 0
-      ) {
-        return res.status(400).json({
-          error:
-            "ID partner tidak valid"
-        });
+      if (oldResult.rows.length === 0) {
+        throw partnerError(
+          "Data partner tidak ditemukan",
+          404
+        );
       }
 
+      const partnerLama = oldResult.rows[0];
 
-      // ================================================
-      // MULAI TRANSAKSI
-      // ================================================
+      const data = validatePartnerBody(
+        req.body,
+        partnerLama
+      );
 
-      await client.query("BEGIN");
+      const result = await client.query(
+        `
+          UPDATE partner
+          SET
+            nama_partner = $1,
+            inisial = $2,
+            jenis_partner = $3,
+            nama_pic = $4,
+            no_pic = $5,
+            email_pic = $6,
+            alamat = $7,
+            status = $8,
+            pics = $9::jsonb,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $10
+          RETURNING *
+        `,
+        [
+          ...partnerValues(data),
+          id
+        ]
+      );
 
-      transaksiDimulai = true;
+      const partnerBaru = result.rows[0];
 
-
-      // ================================================
-      // AMBIL DATA PARTNER LAMA
-      // ================================================
-
-      const oldResult =
-        await client.query(
-          `
-            SELECT
-              id,
-              nama_partner,
-              inisial,
-              jenis_partner,
-              nama_pic,
-              no_pic,
-              email_pic,
-              alamat,
-              status
-
-            FROM partner
-
-            WHERE id = $1
-
-            FOR UPDATE
-          `,
-          [id]
-        );
-
-
-      if (
-        oldResult.rows.length === 0
-      ) {
-        await client.query(
-          "ROLLBACK"
-        );
-
-        transaksiDimulai = false;
-
-        return res.status(404).json({
-          error:
-            "Data partner tidak ditemukan"
-        });
-      }
-
-
-      const partnerLama =
-        oldResult.rows[0];
-
-
-      // ================================================
-      // HAPUS PARTNER
-      // ================================================
-
-      const result =
-        await client.query(
-          `
-            DELETE FROM partner
-
-            WHERE id = $1
-
-            RETURNING *
-          `,
-          [id]
-        );
-
-
-      if (
-        result.rows.length === 0
-      ) {
-        await client.query(
-          "ROLLBACK"
-        );
-
-        transaksiDimulai = false;
-
-        return res.status(404).json({
-          error:
-            "Data partner tidak ditemukan"
-        });
-      }
-
-
-      // ================================================
-      // FORMAT NILAI LAMA
-      // ================================================
-
-      const formatNilaiPartner =
-        value => {
-          if (
-            value === null ||
-            value === undefined ||
-            String(value).trim() === ""
-          ) {
-            return "-";
-          }
-
-          return String(value).trim();
-        };
-
-
-      const nilaiLamaLog = [
-        `NAMA PARTNER = ${
-          formatNilaiPartner(
-            partnerLama.nama_partner
-          )
-        }`,
-
-        `INISIAL = ${
-          formatNilaiPartner(
-            partnerLama.inisial
-          )
-        }`,
-
-        `JENIS PARTNER = ${
-          formatNilaiPartner(
-            partnerLama.jenis_partner
-          )
-        }`,
-
-        `NAMA PIC = ${
-          formatNilaiPartner(
-            partnerLama.nama_pic
-          )
-        }`,
-
-        `NO. PIC = ${
-          formatNilaiPartner(
-            partnerLama.no_pic
-          )
-        }`,
-
-        `EMAIL PIC = ${
-          formatNilaiPartner(
-            partnerLama.email_pic
-          )
-        }`,
-
-        `ALAMAT = ${
-          formatNilaiPartner(
-            partnerLama.alamat
-          )
-        }`,
-
-        `STATUS = ${
-          formatNilaiPartner(
-            partnerLama.status
-          )
-        }`
-      ].join(", ");
-
-
-      // ================================================
-      // SIMPAN ACTIVITY LOG
-      // DELETE HANYA NILAI LAMA
-      // ================================================
-
-      await simpanActivityLog(
+      await writePartnerActivity(
         client,
-        {
-          ...getActivityUser(req),
-
-          aktivitas: "DELETE",
-
-          modul:
-            "MASTER PARTNER",
-
-          // Master partner menggunakan ID partner
-          entity_id:
-            partnerLama.id,
-
-          entity_nama:
-            partnerLama.nama_partner,
-
-          field_name:
-            "DATA PARTNER",
-
-          nilai_lama:
-            nilaiLamaLog,
-
-          nilai_baru: null,
-
-          deskripsi:
-            "menghapus master partner"
-        }
+        req,
+        "UPDATE",
+        partnerLama,
+        partnerBaru
       );
 
+      return partnerBaru;
+    }
+  );
+});
 
-      // ================================================
-      // COMMIT
-      // ================================================
+// ============================================
+// DELETE PARTNER
+// ============================================
 
-      await client.query("COMMIT");
+app.delete("/api/partner/:id", async (req, res) => {
+  return partnerTransaction(
+    res,
+    "DELETE PARTNER",
+    200,
 
-      transaksiDimulai = false;
+    async client => {
+      const id = partnerId(req.params.id);
 
+      const oldResult = await client.query(
+        `
+          SELECT *
+          FROM partner
+          WHERE id = $1
+          FOR UPDATE
+        `,
+        [id]
+      );
 
-      return res.json({
-        message:
-          "Data partner berhasil dihapus"
-      });
-
-    } catch (error) {
-      if (transaksiDimulai) {
-        try {
-          await client.query(
-            "ROLLBACK"
-          );
-
-        } catch (rollbackError) {
-          console.error(
-            "ERROR ROLLBACK DELETE PARTNER:",
-            rollbackError
-          );
-        }
+      if (oldResult.rows.length === 0) {
+        throw partnerError(
+          "Data partner tidak ditemukan",
+          404
+        );
       }
 
+      const partnerLama = oldResult.rows[0];
 
-      console.error(
-        "ERROR DELETE PARTNER:",
-        error
+      await client.query(
+        `
+          DELETE FROM partner
+          WHERE id = $1
+        `,
+        [id]
       );
 
+      await writePartnerActivity(
+        client,
+        req,
+        "DELETE",
+        partnerLama,
+        null
+      );
 
-      return res.status(500).json({
-        error:
-          error.message
-      });
-
-    } finally {
-      client.release();
+      return {
+        message:
+          "Data partner beserta seluruh PIC berhasil dihapus"
+      };
     }
-  }
-);
+  );
+});
 
 // ======================================================
 // MASTER PIC

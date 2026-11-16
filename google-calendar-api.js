@@ -1082,6 +1082,7 @@ module.exports = function registerGoogleCalendar(
           a.link_lokasi,
           a.catatan,
           a.nama_proyek,
+          a.additional_emails,
 
           a.created_by::text AS creator_id,
 
@@ -1173,6 +1174,36 @@ module.exports = function registerGoogleCalendar(
             displayName: pic.nama
           }
         );
+      }
+    }
+
+        // Tambahkan penerima yang diisi manual pada form Calendar.
+    const additionalEmails =
+      Array.isArray(event.additional_emails)
+        ? event.additional_emails
+        : [];
+
+    for (const value of additionalEmails) {
+      const email = String(value || '')
+        .trim()
+        .toLowerCase();
+
+      if (
+        email.length > 254 ||
+        !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(email)
+      ) {
+        throw fail(
+          400,
+          `Format email tambahan tidak valid: ${email}`
+        );
+      }
+
+      // Hindari duplikat dengan email PIC atau penyelenggara.
+      if (
+        email !== divisionEmail &&
+        !emails.has(email)
+      ) {
+        emails.set(email, { email });
       }
     }
 
@@ -1442,6 +1473,51 @@ module.exports = function registerGoogleCalendar(
       );
     }
 
+      // Bandingkan informasi undangan tanpa isi catatan.
+    function invitationInfo(event) {
+      const attendeeEmails = [
+        ...new Set(
+          (event.attendees || [])
+            .filter(person => !person.organizer)
+            .map(person =>
+              String(person.email || '')
+                .trim()
+                .toLowerCase()
+            )
+            .filter(Boolean)
+        )
+      ].sort();
+
+      return JSON.stringify({
+        agenda: event.summary || '',
+
+        lokasi: event.location || '',
+
+        mulai: event.start?.dateTime
+          ? Date.parse(event.start.dateTime)
+          : event.start?.date || '',
+
+        selesai: event.end?.dateTime
+          ? Date.parse(event.end.dateTime)
+          : event.end?.date || '',
+
+        peserta: attendeeEmails,
+
+        // Sesuai format description di enqueueAgenda:
+        // baris 1 = proyek, baris 2 = pembuat.
+        // Baris selanjutnya merupakan catatan.
+        informasiAgenda: String(event.description || '')
+          .split('\n')
+          .slice(0, 2)
+          .join('\n')
+      });
+    }
+
+    const sendUpdates =
+      invitationInfo(existing) === invitationInfo(payload)
+        ? 'none'
+        : 'all';
+
     // Pertahankan jawaban peserta yang masih terdaftar.
     const previous = new Map(
       (existing.attendees || []).map(
@@ -1474,7 +1550,7 @@ module.exports = function registerGoogleCalendar(
       {
         ...base,
 
-        sendUpdates: 'all',
+        sendUpdates,
 
         requestBody: {
           ...payload,

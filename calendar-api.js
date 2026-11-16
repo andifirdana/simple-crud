@@ -57,6 +57,8 @@ module.exports = function registerCalendarApi(
       ''
     ) AS notes,
 
+    a.additional_emails,
+
     COALESCE(
       (
         SELECT JSON_AGG(
@@ -451,7 +453,57 @@ module.exports = function registerCalendarApi(
             : 0
     );
 
+      // Email tambahan bersifat opsional.
+    const additionalEmails =
+      body?.additional_emails === undefined
+        ? []
+        : body.additional_emails;
+
+    if (
+      !Array.isArray(additionalEmails) ||
+      !additionalEmails.every(
+        email => typeof email === 'string'
+      )
+    ) {
+      throw calendarError(
+        400,
+        'additional_emails harus berupa array email'
+      );
+    }
+
+    data.additional_emails = [
+      ...new Set(
+        additionalEmails
+          .map(email => email.trim().toLowerCase())
+          .filter(Boolean)
+      )
+    ];
+
+    const invalidEmail =
+      data.additional_emails.find(
+        email =>
+          email.length > 254 ||
+          !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(email)
+      );
+
+    if (invalidEmail) {
+      throw calendarError(
+        400,
+        `Format email tambahan tidak valid: ${invalidEmail}`
+      );
+    }
+
+    if (
+      data.additional_emails.join(', ').length > 2000
+    ) {
+      throw calendarError(
+        400,
+        'Daftar email tambahan maksimal 2000 karakter'
+      );
+    }
+
     return data;
+
   }
 
   // ======================================================
@@ -524,11 +576,29 @@ module.exports = function registerCalendarApi(
             `
           )
         ]);
+                const emailSuggestions = await pool.query(
+          `
+            SELECT DISTINCT
+              LOWER(BTRIM(item.email)) AS email
 
-        return res.json({
+            FROM public.calendar_agenda a
+
+            CROSS JOIN LATERAL
+              UNNEST(a.additional_emails) AS item(email)
+
+            WHERE BTRIM(item.email) <> ''
+
+            ORDER BY email
+          `
+        );
+
+                return res.json({
           pics: pics.rows,
 
           projects: projects.rows,
+
+          email_suggestions:
+            emailSuggestions.rows.map(row => row.email),
 
           current_pic_id:
             calendarCurrentPicId(
@@ -1449,6 +1519,21 @@ module.exports = function registerCalendarApi(
 
           eventId = result.rows[0].id;
         }
+
+                // Simpan email tambahan untuk agenda ini.
+        await client.query(
+          `
+            UPDATE public.calendar_agenda
+
+            SET additional_emails = $2::text[]
+
+            WHERE id = $1
+          `,
+          [
+            eventId,
+            data.additional_emails
+          ]
+        );
 
         // Simpan seluruh PIC agenda.
         await client.query(
