@@ -148,6 +148,8 @@
   // ==========================================
 
   function render() {
+    byId("addStatus").disabled = state.loading || state.loadError || state.busy;
+
     const filtered = state.rows.filter(
       row =>
         [
@@ -412,6 +414,7 @@
 
   function setBusy(value) {
     state.busy = value;
+    byId("addStatus").disabled = value || state.loading || state.loadError;
 
     document
       .querySelectorAll(
@@ -441,8 +444,22 @@
   // BUKA FORM TAMBAH / EDIT
   // ==========================================
 
+  function isiPilihanFlag(flagTerpilih) {
+    const flags = [...new Set(
+      state.rows.map(row => String(row.flag ?? "").trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, "id-ID"));
+
+    const select = byId("flag");
+    select.replaceChildren(
+      new Option(flags.length ? "Pilih Flag" : "Belum ada flag di Master Status", ""),
+      ...flags.map(flag => new Option(flag, flag))
+    );
+    select.value = String(flagTerpilih ?? "").trim();
+  }
+
   function openForm(item = null) {
     byId("statusForm").reset();
+    isiPilihanFlag(item?.flag);
 
     state.editingId = item
       ? String(item.id)
@@ -457,7 +474,6 @@
     for (
       const key of [
         "deskripsi",
-        "flag",
         "status"
       ]
     ) {
@@ -481,7 +497,7 @@
 
   byId("addStatus")
     .addEventListener("click", () => {
-      if (!state.busy) {
+      if (!state.busy && !state.loading && !state.loadError) {
         openForm();
       }
     });

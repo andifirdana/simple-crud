@@ -4,15 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>BISBOARD - KALENDER </title>
+  <title>BISBOARD - KALENDER</title>
 
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/styleform.css">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
 
   <style>
+    /* DASAR */
+
     .main-content.calendar-main {
       min-width: 0;
       padding: 0;
@@ -27,6 +33,7 @@
       --cal-green: #16846d;
       --cal-purple: #7165d8;
       --hour: 96px;
+
       font-family: "Poppins", "Segoe UI", Arial, sans-serif;
       font-size: 15px;
       color: var(--cal-ink);
@@ -78,44 +85,15 @@
         #f5f7fb;
     }
 
-    .calendar-page .primary,
-    .calendar-dialog .primary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border: 0;
-      border-radius: 11px;
-      padding: 12px 17px;
-      color: #fff;
-      font-size: 15px;
-      font-weight: 650;
-      background: linear-gradient(120deg, #188d74, #116b5b);
-      box-shadow: 0 5px 13px #188d7426;
-    }
-
-    .calendar-page .primary:hover,
-    .calendar-dialog .primary:hover {
-      box-shadow: 0 7px 18px #188d7438;
-    }
-
-    .calendar-page .primary .plus {
-      display: grid;
-      place-items: center;
-      width: 22px;
-      height: 22px;
-      border-radius: 7px;
-      background: #ffffff20;
-      font-size: 18px;
-    }
-
     .calendar-page .calendar {
-      background: #fff;
+      overflow: hidden;
       border: 1px solid var(--cal-border);
       border-radius: 20px;
-      overflow: hidden;
+      background: #fff;
       box-shadow: 0 8px 35px #24395806;
     }
+
+    /* TOOLBAR */
 
     .calendar-page .toolbar {
       display: flex;
@@ -155,14 +133,14 @@
     }
 
     .calendar-page .navigation button:hover {
+      border-color: #ded9fa;
       background: #f5f3ff;
       color: var(--cal-purple);
-      border-color: #ded9fa;
     }
 
     .calendar-page .navigation #today {
-      background: #edf7f2;
       border-color: #dfeee6;
+      background: #edf7f2;
       color: var(--cal-green);
     }
 
@@ -196,18 +174,67 @@
       width: 100%;
       height: 36px;
       min-width: 0;
+      padding: 0 10px;
       border: 1px solid var(--cal-border);
       border-radius: 9px;
-      padding: 0 10px;
       background: #fafbfe;
-      font-size: 14px;
       color: #64738b;
+      font-size: 14px;
     }
-
 
     .calendar-page .filters input::placeholder {
       color: #99a3b2;
     }
+
+    /* TOMBOL GOOGLE DAN LIBUR */
+
+    .calendar-page .calendar-tools {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 20px 0;
+    }
+
+    .calendar-page .tool-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 15px;
+      border: 1px solid #e4def7;
+      border-radius: 11px;
+      background: #f7f4ff;
+      color: #7360bb;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s, border-color .18s;
+    }
+
+    .calendar-page .tool-button:hover {
+      border-color: #c8bce8;
+      background: #eee8fc;
+    }
+
+    .calendar-page .tool-button svg {
+      width: 17px;
+      height: 17px;
+      flex: none;
+    }
+
+    .calendar-page .holiday-button {
+      border-color: #fecdd3;
+      background: #fff1f2;
+      color: #be123c;
+    }
+
+    .calendar-page .holiday-button:hover {
+      border-color: #fda4af;
+      background: #ffe4e6;
+    }
+
+    /* JUDUL TANGGAL */
 
     .calendar-page .date-header {
       display: flex;
@@ -215,23 +242,25 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
-      padding: 16px 22px 11px;
+      padding: 18px 22px;
     }
 
     .calendar-page .date-caption {
       display: flex;
       align-items: center;
       gap: 11px;
+      min-width: 0;
     }
 
     .calendar-page .calendar-icon {
       display: grid;
       place-items: center;
+      flex: none;
       width: 36px;
       height: 36px;
       border-radius: 11px;
-      color: var(--cal-purple);
       background: #f0edfe;
+      color: var(--cal-purple);
     }
 
     .calendar-page .calendar-icon svg {
@@ -263,35 +292,7 @@
       line-height: 1.6;
     }
 
-    .calendar-page .legend {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px 15px;
-      padding: 0 22px 17px;
-      font-size: 13px;
-      color: #7a8696;
-    }
-
-    .calendar-page .legend:empty {
-      display: none;
-    }
-
-    .calendar-page .legend > span {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .calendar-page .swatch {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 3px;
-      background: var(--pic-color);
-    }
-
-    /* Kalender */
+    /* KALENDER MINGGUAN */
 
     .calendar-page .scroll {
       max-height: 70vh;
@@ -316,8 +317,8 @@
       position: sticky;
       top: 0;
       z-index: 5;
-      background: #fff;
       border-bottom: 1px solid var(--cal-border);
+      background: #fff;
       box-shadow: 0 3px 10px #26395803;
     }
 
@@ -357,8 +358,8 @@
     }
 
     .calendar-page .week-day-head.current .date-number {
-      color: #fff;
       background: linear-gradient(135deg, #8b7ae7, #6c5bd0);
+      color: #fff;
       box-shadow: 0 4px 12px #7b6bd336;
     }
 
@@ -372,9 +373,9 @@
     }
 
     .calendar-page .week-day-head.has-conflict {
-      background: #fff1f2;
-      border-top: 3px solid #ef4444;
       padding-top: 9px;
+      border-top: 3px solid #ef4444;
+      background: #fff1f2;
     }
 
     .calendar-page .week-day-head.has-conflict > span {
@@ -383,10 +384,12 @@
     }
 
     .calendar-page .week-day-head.has-conflict .date-number {
-      color: #fff;
       background: #dc2626;
+      color: #fff;
       box-shadow: 0 4px 12px #dc262626;
     }
+
+    /* INFORMASI BENTROK */
 
     .calendar-page .day-conflict {
       width: 100%;
@@ -428,6 +431,8 @@
       margin: 7px 0 0;
       font-size: 12px;
     }
+
+    /* JAM DAN KOLOM */
 
     .calendar-page .zone-label {
       position: sticky;
@@ -519,25 +524,25 @@
       opacity: 1;
     }
 
-    /* Kartu agenda */
+    /* KARTU AGENDA */
 
     .calendar-page .event {
       position: absolute;
       z-index: 1;
       overflow-x: hidden;
       overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: #b9c7d8 transparent;
       overflow-wrap: anywhere;
+      padding: 6px 8px 6px 11px;
       border: 1px solid var(--pic-color);
       border-left: 0;
       border-radius: 10px;
-      padding: 6px 8px 6px 11px;
       background: var(--pic-bg);
       color: #223044;
       box-shadow: 0 3px 12px #2539621a;
       font-size: 13px;
       line-height: 1.4;
+      scrollbar-width: thin;
+      scrollbar-color: #b9c7d8 transparent;
       cursor: pointer;
     }
 
@@ -546,8 +551,8 @@
     }
 
     .calendar-page .event::-webkit-scrollbar-thumb {
-      background: #b9c7d8;
       border-radius: 6px;
+      background: #b9c7d8;
     }
 
     .calendar-page .event::before {
@@ -564,12 +569,10 @@
       box-shadow: 0 4px 12px #25396215;
     }
 
-    /* Agenda PIC lain transparan. */
     .calendar-page .event:not(.own-event) {
       background: transparent;
     }
 
-    /* Agenda yang melibatkan PIC login menggunakan warna palet PIC. */
     .calendar-page .event.own-event {
       z-index: 2;
       border-color: var(--pic-color);
@@ -598,14 +601,14 @@
     }
 
     .calendar-page .event-time {
-      margin-bottom: 4px;
       overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+      margin-bottom: 4px;
       color: #435269;
       font-size: 11px;
       font-weight: 700;
       line-height: 1.3;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     .calendar-page .event-title {
@@ -639,23 +642,75 @@
       max-width: 100%;
       min-width: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
       padding: 1px 5px;
       border: 1px solid var(--pic-color);
       border-radius: 5px;
       background: var(--pic-bg);
       color: #223044;
       font-size: 11px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
+
+    /* LIBUR SEHARI PENUH */
+
+    .calendar-page .holiday-badge {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #fecaca;
+      border-radius: 9px;
+      background: #fff1f2;
+      color: #b91c1c;
+      text-align: left;
+    }
+
+    .calendar-page .holiday-badge-text {
+      flex: 1;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .calendar-page .holiday-badge-text small {
+      display: block;
+      margin-top: 3px;
+      color: #dc6b6b;
+      font-size: 10px;
+      font-weight: 400;
+    }
+
+    .calendar-page .holiday-remove {
+      flex: none;
+      padding: 0 4px;
+      border: 0;
+      background: transparent;
+      color: #dc2626;
+      font-size: 17px;
+      cursor: pointer;
+    }
+
+    .calendar-page .track.holiday-track {
+      background: #fff5f5;
+    }
+
+    .calendar-page .track.holiday-track .slot:hover,
+    .calendar-page .track.holiday-track .slot:focus-visible {
+      background: #ffe4e6;
+    }
+
+    /* GARIS WAKTU SEKARANG */
 
     .calendar-page .now-line {
       position: absolute;
       left: 0;
       right: 0;
+      z-index: 4;
       height: 2px;
       background: #ed8b79;
-      z-index: 4;
       pointer-events: none;
     }
 
@@ -677,10 +732,10 @@
       margin: 0;
       padding: 14px 20px;
       border-top: 1px solid var(--cal-border);
+      background: #fdfdff;
       color: #9aa4b3;
       font-size: 13px;
       line-height: 1.8;
-      background: #fdfdff;
     }
 
     .calendar-page .hint strong {
@@ -688,11 +743,12 @@
       font-weight: 600;
     }
 
-    /* Modal */
+    /* MODAL */
 
     dialog.calendar-dialog {
       width: min(640px, calc(100% - 28px));
       max-height: 90vh;
+      max-height: 90dvh;
       margin: auto;
       padding: 0;
       overflow: hidden;
@@ -707,10 +763,12 @@
       backdrop-filter: blur(4px);
     }
 
-    .calendar-dialog #agenda-form {
+    .calendar-dialog #agenda-form,
+    .calendar-dialog #holiday-form {
       display: flex;
       flex-direction: column;
       max-height: 90vh;
+      max-height: 90dvh;
       margin: 0;
     }
 
@@ -733,8 +791,7 @@
       letter-spacing: 1.3px;
     }
 
-    .calendar-dialog #dialog-title,
-    .calendar-dialog #view-title {
+    .calendar-dialog .modal-head h2 {
       margin: 0;
       color: var(--cal-ink);
       font-size: 24px;
@@ -743,49 +800,46 @@
       overflow-wrap: anywhere;
     }
 
-    .calendar-dialog #close,
-    .calendar-dialog #view-close {
+    .calendar-dialog .modal-close {
       display: grid;
       place-items: center;
+      flex: none;
       width: 32px;
       height: 32px;
       padding: 0;
       border: 1px solid #e6e1f2;
       border-radius: 10px;
-      color: #9b91ae;
       background: #ffffffb8;
+      color: #9b91ae;
       font-size: 22px;
     }
 
-  /* Modal detail menggunakan susunan vertikal. */
-dialog#view-dialog.calendar-dialog[open] {
-  display: flex;
-  flex-direction: column;
+    .calendar-dialog .modal-close:hover {
+      background: #eee9fa;
+      color: #7360bb;
+    }
 
-  max-height: 90vh;
-  max-height: 90dvh;
+    /* MODAL DETAIL */
 
-  overflow: hidden;
-}
+    dialog#view-dialog.calendar-dialog[open] {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-/* Header dan tombol mendapatkan ruang tetap. */
-#view-dialog > .modal-head,
-#view-dialog > .actions {
-  flex: 0 0 auto;
-}
+    #view-dialog > .modal-head,
+    #view-dialog > .actions {
+      flex: 0 0 auto;
+    }
 
-/* Isi detail menyesuaikan ruang yang tersisa. */
-#view-dialog > .view-body {
-  flex: 1 1 auto;
-
-  min-height: 0;
-  max-height: none;
-
-  padding: 23px 24px;
-
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
+    #view-dialog > .view-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
+      padding: 23px 24px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
 
     .calendar-dialog .view-grid {
       display: grid;
@@ -808,16 +862,16 @@ dialog#view-dialog.calendar-dialog[open] {
 
     .calendar-dialog .view-grid dt {
       margin-bottom: 5px;
+      color: #778599;
       font-size: 12px;
       font-weight: 600;
-      color: #778599;
     }
 
     .calendar-dialog .view-grid dd {
       margin: 0;
+      color: #334358;
       font-size: 15px;
       font-weight: 500;
-      color: #334358;
       overflow-wrap: anywhere;
     }
 
@@ -848,9 +902,12 @@ dialog#view-dialog.calendar-dialog[open] {
       text-underline-offset: 2px;
     }
 
+    /* FORM AGENDA */
+
     .calendar-dialog .form-body {
       display: grid;
       gap: 17px;
+      flex: 1 1 auto;
       min-height: 0;
       padding: 23px 24px;
       overflow: auto;
@@ -870,9 +927,9 @@ dialog#view-dialog.calendar-dialog[open] {
       width: 100%;
       min-width: 0;
       margin: 0;
+      padding: 11px 12px;
       border: 1px solid #e3e8f0;
       border-radius: 10px;
-      padding: 11px 12px;
       background: #fafbfd;
       color: #334358;
       font-size: 15px;
@@ -893,16 +950,16 @@ dialog#view-dialog.calendar-dialog[open] {
     }
 
     .calendar-dialog .form-body input[type="checkbox"] {
+      flex: none;
       width: 15px;
       height: 15px;
       padding: 0;
-      flex: none;
       accent-color: var(--cal-green);
     }
 
     .calendar-dialog .form-body select:disabled {
-      color: #a8b0bc;
       background: #f1f3f6;
+      color: #a8b0bc;
       cursor: not-allowed;
     }
 
@@ -915,9 +972,9 @@ dialog#view-dialog.calendar-dialog[open] {
     .calendar-dialog fieldset {
       min-width: 0;
       margin: 0;
+      padding: 13px;
       border: 1px solid #e6e2f3;
       border-radius: 13px;
-      padding: 13px;
       background: #fdfcff;
     }
 
@@ -925,7 +982,7 @@ dialog#view-dialog.calendar-dialog[open] {
       padding: 0 6px;
       color: #8275b5;
       font-size: 13px;
-      font-weight: 650;
+      font-weight: 600;
     }
 
     .calendar-dialog #pic-search {
@@ -967,8 +1024,8 @@ dialog#view-dialog.calendar-dialog[open] {
       padding: 12px;
       border: 1px dashed #d8d2ed;
       border-radius: 10px;
-      color: #8275b5 !important;
       background: #faf8ff;
+      color: #8275b5 !important;
       font-weight: 400 !important;
       cursor: pointer;
     }
@@ -985,6 +1042,8 @@ dialog#view-dialog.calendar-dialog[open] {
       line-height: 1.7;
     }
 
+    /* TOMBOL FORM */
+
     .calendar-dialog .actions {
       display: flex;
       flex-wrap: wrap;
@@ -997,40 +1056,504 @@ dialog#view-dialog.calendar-dialog[open] {
       background: #fcfcff;
     }
 
+    .calendar-page .primary,
+    .calendar-dialog .primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 17px;
+      border: 0;
+      border-radius: 11px;
+      background: linear-gradient(120deg, #188d74, #116b5b);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      box-shadow: 0 5px 13px #188d7426;
+    }
+
+    .calendar-page .primary:hover,
+    .calendar-dialog .primary:hover {
+      box-shadow: 0 7px 18px #188d7438;
+    }
+
     .calendar-dialog .secondary {
+      padding: 11px 15px;
       border: 1px solid #e4e8f0;
       border-radius: 10px;
-      padding: 11px 15px;
-      color: #7d889a;
       background: #fff;
+      color: #7d889a;
       font-size: 14px;
     }
 
     .calendar-dialog .danger {
       margin-right: auto;
-      border: 0;
       padding: 8px 0;
-      color: #d08383;
+      border: 0;
       background: transparent;
+      color: #d08383;
       font-size: 14px;
     }
 
-    .calendar-dialog #form-error {
+    .calendar-dialog #form-error,
+    .calendar-dialog #holiday-error {
       margin: 0;
       padding: 10px 12px;
       border: 1px solid #f2d9d8;
       border-radius: 9px;
       background: #fff5f4;
-      color: #bf7776;
-      font-size: 15px;
+      color: #b54848;
+      font-size: 13px;
       line-height: 1.6;
     }
+
+    /* PILIHAN PROYEK */
+
+    .calendar-dialog .project-field {
+      display: grid;
+      gap: 8px;
+      color: #677589;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .calendar-dialog .project-picker {
+      position: relative;
+    }
+
+    .calendar-dialog #project-search {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid #e3e8f0;
+      border-radius: 10px;
+      background: #fafbfd;
+      color: #334358;
+      font-size: 15px;
+    }
+
+    .calendar-dialog #project-options {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: auto;
+      z-index: 9999;
+      width: 300px;
+      max-height: 260px;
+      overflow-y: auto;
+      padding: 5px;
+      border: 1px solid #dbe4f2;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 12px 28px #26395824;
+    }
+
+    .calendar-dialog #project-options button {
+      display: block;
+      width: 100%;
+      padding: 11px 12px;
+      border: 0;
+      border-bottom: 1px solid #edf0f5;
+      border-radius: 7px;
+      background: #fff;
+      color: #263449;
+      font-size: 14px;
+      text-align: left;
+    }
+
+    .calendar-dialog #project-options button:hover,
+    .calendar-dialog #project-options button:focus {
+      background: #edf4ff;
+    }
+
+    .calendar-dialog #project-options p {
+      margin: 7px 10px;
+      color: #778599;
+      font-size: 13px;
+    }
+
+    /* PERULANGAN */
+
+    .calendar-dialog .repeat-toggle,
+    .calendar-dialog .repeat-days label {
+      display: flex !important;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .calendar-dialog #repeat-settings {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .calendar-dialog .repeat-days {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .calendar-dialog #repeat-settings p {
+      margin: 0;
+      color: #677589;
+      font-size: 14px;
+    }
+
+    /* EMAIL TAMBAHAN */
+
+    .calendar-dialog .email-field {
+      display: grid;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .calendar-dialog .email-field > label {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin: 0;
+      color: #334155;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .calendar-dialog .email-optional {
+      color: #8791a4;
+      font-size: 11px;
+      font-weight: 400;
+    }
+
+    .calendar-dialog .email-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 0;
+      padding: 0 14px;
+      border: 1px solid #dde3ee;
+      border-radius: 12px;
+      background: #fff;
+      transition: border-color .18s, box-shadow .18s;
+    }
+
+    .calendar-dialog .email-input-wrap:focus-within {
+      border-color: #9183db;
+      box-shadow: 0 0 0 3px #7165d815;
+    }
+
+    .calendar-dialog .email-input-icon {
+      display: grid;
+      place-items: center;
+      flex: 0 0 29px;
+      height: 29px;
+      border-radius: 9px;
+      background: #f1eefc;
+      color: #7968c9;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .calendar-dialog #additional-emails {
+      flex: 1;
+      width: 100%;
+      min-width: 0;
+      height: 48px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      outline: none;
+      background: transparent;
+      color: #334155;
+      font-size: 14px;
+      box-shadow: none;
+    }
+
+    .calendar-dialog #additional-emails:focus,
+    .calendar-dialog #additional-emails:focus-visible {
+      border: 0;
+      outline: none;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .calendar-dialog #additional-emails::placeholder {
+      color: #a0a9b8;
+    }
+
+    .calendar-dialog .email-suggestions {
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 6px;
+      border: 1px solid #e6e2f3;
+      border-radius: 13px;
+      background: #fff;
+      box-shadow: 0 8px 24px #26334d0a;
+    }
+
+    .calendar-dialog .email-suggestion {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 10px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #475569;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .calendar-dialog .email-suggestion:hover,
+    .calendar-dialog .email-suggestion[aria-selected="true"] {
+      background: #f4f1fd;
+      color: #6956b7;
+    }
+
+    .calendar-dialog .email-suggestion-icon {
+      display: grid;
+      place-items: center;
+      flex: 0 0 30px;
+      height: 30px;
+      border: 1px solid #ebe7f7;
+      border-radius: 9px;
+      background: #faf8ff;
+      color: #8b7ac3;
+      font-size: 14px;
+    }
+
+    .calendar-dialog .email-suggestion-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+    }
+
+    .calendar-dialog .email-suggestion-arrow {
+      margin-left: auto;
+      color: #aaa1c8;
+      font-size: 16px;
+    }
+
+    .calendar-dialog .email-hint {
+      color: #919aaa;
+      font-size: 11px;
+      font-weight: 400;
+      line-height: 1.7;
+    }
+
+    /* MODAL GOOGLE CALENDAR */
+
+    #google-dialog {
+      width: min(720px, calc(100vw - 32px));
+    }
+
+    #google-dialog[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #google-dialog .google-dialog-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .google-panel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 16px 20px;
+      margin: 0;
+      padding: 18px;
+      border: 1px solid #e4def7;
+      border-radius: 14px;
+      background: #faf9ff;
+    }
+
+    .google-account {
+      flex: 1;
+      min-width: 0;
+      flex-basis: 260px;
+    }
+
+    .google-account-heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .google-account-heading h3 {
+      margin: 0;
+      color: #51449a;
+      font-size: 14px;
+    }
+
+    .google-account p {
+      margin: 7px 0 0;
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+
+    #google-account-email {
+      color: #334155;
+      font-weight: 600;
+    }
+
+    #google-account-checked,
+    .google-help {
+      color: #64748b;
+      font-size: 11px;
+    }
+
+    .google-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .google-panel .google-connect,
+    .google-panel #google-refresh {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 12px;
+      border: 1px solid #d0c8f2;
+      border-radius: 9px;
+      background: #fff;
+      color: #5845a6;
+      font: inherit;
+      font-size: 12px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .google-panel .google-connect {
+      border-color: #6d5bd0;
+      background: #6d5bd0;
+      color: #fff;
+    }
+
+    .google-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      width: 100%;
+      padding-top: 14px;
+      border-top: 1px solid #e9e4f6;
+    }
+
+    .google-pill {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      max-width: 100%;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #edf1f6;
+      color: #536175;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.45;
+      white-space: normal;
+    }
+
+    .google-pill.pending {
+      background: #fff0ca;
+      color: #885300;
+    }
+
+    .google-pill.sent,
+    .google-pill.connected {
+      background: #d9f5e9;
+      color: #11654e;
+    }
+
+    .google-pill.failed,
+    .google-pill.reauth_required {
+      background: #ffe1e6;
+      color: #a32a3b;
+    }
+
+    .google-pill.not_connected,
+    .google-pill.unavailable {
+      background: #fff0ca;
+      color: #885300;
+    }
+
+    .google-help,
+    #google-jobs-message {
+      flex-basis: 100%;
+      margin: 0;
+      line-height: 1.7;
+    }
+
+    #google-jobs-message {
+      color: #885300;
+      font-size: 12px;
+    }
+
+    .event .google-delivery {
+      margin-top: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+    }
+
+    .google-detail {
+      display: grid;
+      gap: 6px;
+    }
+
+    .google-detail p {
+      margin: 0;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    /* MODAL LIBUR */
+
+    #holiday-dialog {
+      width: min(480px, calc(100vw - 32px));
+    }
+
+    #holiday-dialog .modal-head {
+      background: linear-gradient(110deg, #fffafa, #fff1f2);
+    }
+
+    #holiday-dialog .modal-kicker {
+      color: #be123c;
+    }
+
+    #holiday-dialog .holiday-info {
+      display: grid;
+      gap: 5px;
+      padding: 14px;
+      border: 1px solid #fecdd3;
+      border-radius: 12px;
+      background: #fff1f2;
+      color: #be123c;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    #holiday-save {
+      background: #dc2626;
+      box-shadow: none;
+    }
+
+    #holiday-save:hover {
+      background: #b91c1c;
+      box-shadow: none;
+    }
+
+    /* NOTIFIKASI */
 
     .calendar-toast {
       position: fixed;
       bottom: 24px;
       left: 50%;
-      transform: translateX(-50%);
       z-index: 1000;
       max-width: 90%;
       padding: 13px 20px;
@@ -1039,7 +1562,10 @@ dialog#view-dialog.calendar-dialog[open] {
       color: #fff;
       font-size: 15px;
       box-shadow: 0 8px 25px #213e3726;
+      transform: translateX(-50%);
     }
+
+    /* RESPONSIF */
 
     @media (max-width: 1100px) {
       .calendar-page .toolbar {
@@ -1068,6 +1594,17 @@ dialog#view-dialog.calendar-dialog[open] {
         padding: 2px;
       }
 
+      .calendar-page .calendar-tools {
+        gap: 8px;
+        padding: 14px 12px 0;
+      }
+
+      .calendar-page .tool-button {
+        flex: 1;
+        padding: 10px;
+        font-size: 12px;
+      }
+
       .calendar-page .date-header {
         padding: 17px 15px;
       }
@@ -1076,8 +1613,8 @@ dialog#view-dialog.calendar-dialog[open] {
         font-size: 14px;
       }
 
-      .calendar-page .legend {
-        padding: 0 15px 15px;
+      .calendar-page .date-subtitle {
+        font-size: 11px;
       }
 
       .calendar-page .filters {
@@ -1105,403 +1642,45 @@ dialog#view-dialog.calendar-dialog[open] {
         padding: 20px;
       }
 
+      .calendar-dialog .modal-head h2 {
+        font-size: 21px;
+      }
+
       .calendar-dialog .actions {
         padding: 15px 20px;
       }
+
+      #view-dialog > .view-body {
+        padding: 20px;
+      }
+
+      #google-dialog .google-dialog-body {
+        padding: 14px;
+      }
+
+      .google-panel {
+        padding: 14px;
+      }
+
+      .google-actions {
+        width: 100%;
+      }
+
+      .google-actions > * {
+        flex: 1;
+      }
     }
-    .calendar-dialog .project-field {
-  display: grid;
-  gap: 8px;
-  color: #677589;
-  font-size: 14px;
-  font-weight: 600;
+
+    /* Posisikan tombol Google Calendar dan Tambah libur di kanan */
+.calendar-page .calendar-tools {
+  justify-content: flex-end;
 }
 
-.calendar-dialog .project-picker {
-  position: relative;
-}
-
-.calendar-dialog #project-search {
-  width: 100%;
-  border: 1px solid #e3e8f0;
-  border-radius: 10px;
-  padding: 11px 12px;
-  background: #fafbfd;
-  color: #334358;
-  font-size: 15px;
-}
-
-.calendar-dialog #project-options {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: auto;
-  z-index: 9999;
-  width: 300px;
-  max-height: 260px;
-  overflow-y: auto;
-  padding: 5px;
-  border: 1px solid #dbe4f2;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 12px 28px #26395824;
-}
-
-.calendar-dialog #project-options button {
-  display: block;
-  width: 100%;
-  padding: 11px 12px;
-  border: 0;
-  border-bottom: 1px solid #edf0f5;
-  border-radius: 7px;
-  background: #fff;
-  color: #263449;
-  text-align: left;
-  font-size: 14px;
-}
-
-.calendar-dialog #project-options button:hover,
-.calendar-dialog #project-options button:focus {
-  background: #edf4ff;
-}
-
-.calendar-dialog #project-options p {
-  margin: 7px 10px;
-  color: #778599;
-  font-size: 13px;
-}
-.calendar-dialog .repeat-toggle,
-.calendar-dialog .repeat-days label {
-  display: flex !important;
-  align-items: center;
-  gap: 8px;
-}
-
-.calendar-dialog #repeat-settings {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.calendar-dialog .repeat-days {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.calendar-dialog #repeat-settings p {
-  margin: 0;
-  color: #677589;
-  font-size: 14px;
-}
-
-.google-panel {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 12px 20px;
-  margin: 0 20px 18px;
-  padding: 16px 18px;
-  border: 1px solid #ded9f6;
-  border-radius: 14px;
-  background: #faf9ff;
-}
-
-.google-account {
-  flex: 1;
-  min-width: 220px;
-}
-
-.google-account-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.google-account-heading h3 {
-  margin: 0;
-  font-size: 14px;
-  color: #51449a;
-}
-
-.google-account p {
-  margin: 5px 0 0;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-
-#google-account-email {
-  font-weight: 600;
-}
-
-#google-account-checked,
-.google-help {
-  color: #64748b;
-  font-size: 11px;
-}
-
-.google-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.google-panel .google-connect,
-.google-panel #google-refresh {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 9px 12px;
-  border: 1px solid #d0c8f2;
-  border-radius: 9px;
-  color: #5845a6;
-  background: #fff;
-  font: inherit;
-  font-size: 12px;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.google-panel .google-connect {
-  background: #6d5bd0;
-  color: #fff;
-  border-color: #6d5bd0;
-}
-
-.google-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  width: 100%;
-}
-
-.google-pill {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  max-width: 100%;
-  border-radius: 999px;
-  padding: 3px 9px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.45;
-  color: #536175;
-  background: #edf1f6;
-  white-space: normal;
-}
-
-.google-pill.pending {
-  color: #885300;
-  background: #fff0ca;
-}
-
-.google-pill.sent,
-.google-pill.connected {
-  color: #11654e;
-  background: #d9f5e9;
-}
-
-.google-pill.failed,
-.google-pill.reauth_required {
-  color: #a32a3b;
-  background: #ffe1e6;
-}
-
-.google-pill.not_connected,
-.google-pill.unavailable {
-  color: #885300;
-  background: #fff0ca;
-}
-
-.google-help,
-#google-jobs-message {
-  flex-basis: 100%;
-  margin: 0;
-}
-
-#google-jobs-message {
-  font-size: 12px;
-  color: #885300;
-}
-
-.event .google-delivery {
-  margin-top: 4px;
-  padding: 2px 6px;
-  font-size: 10px;
-}
-
-.google-detail {
-  display: grid;
-  gap: 6px;
-}
-
-.google-detail p {
-  margin: 0;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-
-@media (max-width: 600px) {
-  .google-panel {
-    margin: 0 12px 14px;
-    padding: 14px;
-  }
-
-  .google-actions {
-    width: 100%;
-  }
-
-  .google-actions > * {
-    flex: 1;
-  }
-}
-
-.calendar-dialog .email-field {
-  display: grid;
-  gap: 9px;
-  min-width: 0;
-}
-
-.calendar-dialog .email-field > label {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  margin: 0;
-  color: #334155;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.calendar-dialog .email-optional {
-  color: #8791a4;
-  font-size: 11px;
-  font-weight: 400;
-}
-
-.calendar-dialog .email-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  min-width: 0;
-  padding: 0 14px;
-  border: 1px solid #dde3ee;
-  border-radius: 12px;
-  background: #fff;
-  transition: border-color .18s, box-shadow .18s;
-}
-
-.calendar-dialog .email-input-wrap:focus-within {
-  border-color: #9183db;
-  box-shadow: 0 0 0 3px #7165d815;
-}
-
-.calendar-dialog .email-input-icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 29px;
-  height: 29px;
-  border-radius: 9px;
-  background: #f1eefc;
-  color: #7968c9;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.calendar-dialog #additional-emails {
-  flex: 1;
-  width: 100%;
-  min-width: 0;
-  height: 48px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  outline: none;
-  background: transparent;
-  box-shadow: none;
-  color: #334155;
-  font-size: 14px;
-}
-
-.calendar-dialog #additional-emails:focus,
-.calendar-dialog #additional-emails:focus-visible {
-  border: 0;
-  outline: none;
-  box-shadow: none;
-}
-
-.calendar-dialog #additional-emails::placeholder {
-  color: #a0a9b8;
-}
-
-.calendar-dialog .email-suggestions {
-  max-height: 220px;
-  overflow-y: auto;
-  padding: 6px;
-  border: 1px solid #e6e2f3;
-  border-radius: 13px;
-  background: #fff;
-  box-shadow: 0 8px 24px #26334d0a;
-}
-
-.calendar-dialog .email-suggestions[hidden] {
-  display: none;
-}
-
-.calendar-dialog .email-suggestion {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  padding: 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #475569;
-  text-align: left;
-  cursor: pointer;
-}
-
-.calendar-dialog .email-suggestion:hover,
-.calendar-dialog .email-suggestion[aria-selected="true"] {
-  background: #f4f1fd;
-  color: #6956b7;
-}
-
-.calendar-dialog .email-suggestion-icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 30px;
-  height: 30px;
-  border: 1px solid #ebe7f7;
-  border-radius: 9px;
-  background: #faf8ff;
-  color: #8b7ac3;
-  font-size: 14px;
-}
-
-.calendar-dialog .email-suggestion-text {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-size: 13px;
-}
-
-.calendar-dialog .email-suggestion-arrow {
-  margin-left: auto;
-  color: #aaa1c8;
-  font-size: 16px;
-}
-
-.calendar-dialog .email-hint {
-  color: #919aaa;
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.7;
+/* Ukuran tombol mengikuti isinya, termasuk pada layar kecil */
+.calendar-page .calendar-tools .tool-button {
+  flex: 0 0 auto;
 }
   </style>
-
 </head>
 
 <body>
@@ -1511,139 +1690,130 @@ dialog#view-dialog.calendar-dialog[open] {
     <main class="main-content calendar-main">
       <div class="calendar-page">
         <section class="calendar" aria-label="Kalender agenda mingguan">
+
+          <!-- NAVIGASI DAN FILTER -->
           <div class="toolbar">
-            
             <div class="navigation">
-              <button type="button" id="prev" class="nav-arrow" aria-label="Minggu sebelumnya">‹</button>
-              <input id="view-date" type="date" aria-label="Pilih tanggal dalam minggu" required min="1000-01-01" max="9999-12-31">
-              <button type="button" id="next" class="nav-arrow" aria-label="Minggu berikutnya">›</button>
-              <button type="button" id="today">Hari ini</button>
-              <button type="button" id="reload">↻ Muat ulang</button>
+              <button
+                type="button"
+                id="prev"
+                class="nav-arrow"
+                aria-label="Minggu sebelumnya"
+              >‹</button>
+
+              <input
+                id="view-date"
+                type="date"
+                aria-label="Pilih tanggal dalam minggu"
+                required
+                min="1000-01-01"
+                max="9999-12-31"
+              >
+
+              <button
+                type="button"
+                id="next"
+                class="nav-arrow"
+                aria-label="Minggu berikutnya"
+              >›</button>
+
+              <button type="button" id="today">
+                Hari ini
+              </button>
+
+              <button type="button" id="reload">
+                ↻ Muat ulang
+              </button>
             </div>
 
             <div class="filters">
-              <input id="search" type="search" placeholder="Cari agenda / catatan…" aria-label="Cari agenda">
+              <input
+                id="search"
+                type="search"
+                placeholder="Cari agenda / catatan…"
+                aria-label="Cari agenda"
+              >
+
               <select id="pic-filter" aria-label="Filter PIC">
                 <option value="">Semua PIC</option>
               </select>
+
               <input
-                  id="project-filter"
-                  type="search"
-                  placeholder="Ketik nama proyek…"
-                  aria-label="Cari nama proyek"
-                  autocomplete="off"
-                >
+                id="project-filter"
+                type="search"
+                placeholder="Ketik nama proyek…"
+                aria-label="Cari nama proyek"
+                autocomplete="off"
+              >
             </div>
           </div>
 
-          <section
-              id="google-panel"
-              class="google-panel"
-              aria-label="Koneksi Google dan pengiriman undangan"
+          <!-- TOMBOL PEMBUKA MODAL -->
+          <div class="calendar-tools">
+            <button
+              type="button"
+              id="open-google-dialog"
+              class="tool-button"
+              aria-haspopup="dialog"
+              aria-controls="google-dialog"
             >
-              <div class="google-account">
-                <div class="google-account-heading">
-                  <h3>
-                    Akun Google / Gmail Divisi
-                  </h3>
-
-                  <span
-                    id="google-account-state"
-                    class="google-pill unknown"
-                    role="status"
-                  >
-                    Memeriksa…
-                  </span>
-                </div>
-
-                <p id="google-account-email"></p>
-
-                <p
-                  id="google-account-message"
-                  role="status"
-                >
-                  Memeriksa koneksi akun Google divisi…
-                </p>
-
-                <p id="google-account-checked"></p>
-              </div>
-
-              <div class="google-actions">
-                <a
-                  id="google-connect"
-                  class="google-connect"
-                  href="/api/google-calendar/connect"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  hidden
-                >
-                  Hubungkan akun
-                </a>
-
-                <button
-                  type="button"
-                  id="google-refresh"
-                >
-                  Periksa status
-                </button>
-              </div>
-
-              <div
-                class="google-summary"
-                aria-label="Status undangan agenda yang ditampilkan"
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-                <span
-                  class="google-pill pending"
-                  id="google-count-pending"
-                >
-                  Pending: 0
-                </span>
+                <rect x="3" y="5" width="18" height="16" rx="4"/>
+                <path d="M7 3v4M17 3v4M3 11h18"/>
+                <path d="m8 16 2.5 2.5L16 13"/>
+              </svg>
+              Cek Google Calendar
+            </button>
 
-                <span
-                  class="google-pill sent"
-                  id="google-count-sent"
-                >
-                  Sent: 0
-                </span>
+            <button
+              type="button"
+              id="open-holiday-dialog"
+              class="tool-button holiday-button"
+              aria-haspopup="dialog"
+              aria-controls="holiday-dialog"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="5" width="18" height="16" rx="4"/>
+                <path d="M7 3v4M17 3v4M3 11h18"/>
+                <path d="M12 14v5M9.5 16.5h5"/>
+              </svg>
+              Tambah libur
+            </button>
+          </div>
 
-                <span
-                  class="google-pill failed"
-                  id="google-count-failed"
-                >
-                  Failed: 0
-                </span>
-
-                <span
-                  class="google-pill unknown"
-                  id="google-count-other"
-                >
-                  Belum terkonfirmasi: 0
-                </span>
-              </div>
-
-              <p class="google-help">
-                Status untuk agenda yang ditampilkan.
-                Sent berarti Google Calendar telah memproses
-                pengiriman undangan.
-              </p>
-
-              <p
-                id="google-jobs-message"
-                role="status"
-                hidden
-              ></p>
-            </section>
-
+          <!-- JUDUL MINGGU -->
           <div class="date-header">
             <div class="date-caption">
               <span class="calendar-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="1.7" stroke-linecap="round"
-                     stroke-linejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <rect x="3" y="5" width="18" height="16" rx="4"/>
                   <path d="M7 3v4M17 3v4M3 11h18M8 15h2M14 15h2"/>
                 </svg>
               </span>
+
               <div>
                 <h2 id="date-title"></h2>
                 <span class="date-subtitle">
@@ -1651,18 +1821,25 @@ dialog#view-dialog.calendar-dialog[open] {
                 </span>
               </div>
             </div>
+
             <span id="status" role="status" aria-live="polite">
               Memuat agenda…
             </span>
           </div>
 
-          <div id="legend" class="legend" aria-label="Warna masing-masing PIC"></div>
+          <!-- Elemen kompatibilitas JS lama; legenda tidak ditampilkan. -->
+          <div id="legend" hidden></div>
 
+          <!-- KALENDER -->
           <div id="calendar-scroll" class="scroll">
             <div id="week-board" class="week-board">
               <div id="week-head" class="week-head"></div>
-              <div id="week-columns" class="week-columns"
-                   aria-label="Agenda Minggu sampai Sabtu per jam"></div>
+
+              <div
+                id="week-columns"
+                class="week-columns"
+                aria-label="Agenda Minggu sampai Sabtu per jam"
+              ></div>
             </div>
           </div>
 
@@ -1670,9 +1847,9 @@ dialog#view-dialog.calendar-dialog[open] {
             <strong>Tip</strong>
             <span>
               Klik tanggal atau kotak jam untuk menambah agenda.
-              Klik kartu agenda untuk melihat detailnya, lalu pilih Edit
-              jika ingin mengubah. Agenda bersamaan tampil berdampingan.
-              Tanggal merah menandakan bentrok PIC.
+              Klik kartu agenda untuk melihat detail dan mengedit.
+              Libur ditandai merah dengan keterangan sehari penuh.
+              Peringatan bentrok muncul jika jadwal PIC bertabrakan.
             </span>
           </p>
         </section>
@@ -1680,224 +1857,548 @@ dialog#view-dialog.calendar-dialog[open] {
     </main>
   </div>
 
-  <dialog id="view-dialog" class="calendar-dialog" aria-labelledby="view-title">
+  <!-- MODAL GOOGLE CALENDAR -->
+  <dialog
+    id="google-dialog"
+    class="calendar-dialog"
+    aria-labelledby="google-dialog-title"
+  >
+    <div class="modal-head">
+      <div>
+        <p class="modal-kicker">STATUS KONEKSI</p>
+        <h2 id="google-dialog-title">Cek Google Calendar</h2>
+      </div>
+
+      <button
+        type="button"
+        id="google-dialog-close"
+        class="modal-close"
+        aria-label="Tutup Google Calendar"
+      >×</button>
+    </div>
+
+    <div class="google-dialog-body">
+      <section
+        id="google-panel"
+        class="google-panel"
+        aria-label="Koneksi Google dan pengiriman undangan"
+      >
+        <div class="google-account">
+          <div class="google-account-heading">
+            <h3>Akun Google / Gmail Divisi</h3>
+
+            <span
+              id="google-account-state"
+              class="google-pill unknown"
+              role="status"
+            >
+              Memeriksa…
+            </span>
+          </div>
+
+          <p id="google-account-email"></p>
+
+          <p id="google-account-message" role="status">
+            Memeriksa koneksi akun Google divisi…
+          </p>
+
+          <p id="google-account-checked"></p>
+        </div>
+
+        <div class="google-actions">
+          <a
+            id="google-connect"
+            class="google-connect"
+            href="/api/google-calendar/connect"
+            target="_blank"
+            rel="noopener noreferrer"
+            hidden
+          >
+            Hubungkan akun
+          </a>
+
+          <button type="button" id="google-refresh">
+            Periksa status
+          </button>
+        </div>
+
+        <div
+          class="google-summary"
+          aria-label="Status undangan agenda yang ditampilkan"
+        >
+          <span
+            id="google-count-pending"
+            class="google-pill pending"
+          >
+            Pending: 0
+          </span>
+
+          <span
+            id="google-count-sent"
+            class="google-pill sent"
+          >
+            Sent: 0
+          </span>
+
+          <span
+            id="google-count-failed"
+            class="google-pill failed"
+          >
+            Failed: 0
+          </span>
+
+          <span
+            id="google-count-other"
+            class="google-pill unknown"
+          >
+            Belum terkonfirmasi: 0
+          </span>
+        </div>
+
+        <p class="google-help">
+          Status untuk agenda yang ditampilkan.
+          Sent berarti Google Calendar telah memproses pengiriman undangan.
+        </p>
+
+        <p id="google-jobs-message" role="status" hidden></p>
+      </section>
+    </div>
+  </dialog>
+
+  <!-- MODAL TAMBAH LIBUR -->
+  <dialog
+    id="holiday-dialog"
+    class="calendar-dialog"
+    aria-labelledby="holiday-dialog-title"
+  >
+    <form id="holiday-form">
+      <div class="modal-head">
+        <div>
+          <p class="modal-kicker">KALENDER LIBUR</p>
+          <h2 id="holiday-dialog-title">Tambah libur</h2>
+        </div>
+
+        <button
+          type="button"
+          id="holiday-close"
+          class="modal-close"
+          aria-label="Tutup tambah libur"
+        >×</button>
+      </div>
+
+      <div class="form-body">
+        <p id="holiday-error" role="alert" hidden></p>
+
+        <label for="holiday-name">
+          Nama libur *
+          <input
+            id="holiday-name"
+            type="text"
+            required
+            maxlength="150"
+            placeholder="Contoh: Hari Raya Idulfitri"
+          >
+        </label>
+
+        <label for="holiday-date">
+          Tanggal *
+          <input
+            id="holiday-date"
+            type="date"
+            required
+            min="1000-01-01"
+            max="9999-12-31"
+          >
+        </label>
+
+        <div class="holiday-info">
+          <strong>Sehari penuh</strong>
+          <span>
+            Libur berlaku pukul 00.00 sampai akhir hari dalam WIB.
+          </span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button
+          type="button"
+          id="holiday-cancel"
+          class="secondary"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          id="holiday-save"
+          class="primary"
+        >
+          Simpan libur
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- MODAL DETAIL AGENDA -->
+  <dialog
+    id="view-dialog"
+    class="calendar-dialog"
+    aria-labelledby="view-title"
+  >
     <div class="modal-head">
       <div>
         <p class="modal-kicker">DETAIL AGENDA</p>
         <h2 id="view-title"></h2>
       </div>
-      <button type="button" id="view-close" aria-label="Tutup detail agenda">×</button>
+
+      <button
+        type="button"
+        id="view-close"
+        class="modal-close"
+        aria-label="Tutup detail agenda"
+      >×</button>
     </div>
 
     <div class="view-body">
       <dl class="view-grid">
-        <div><dt>Tanggal</dt><dd id="view-date-info"></dd></div>
-        <div><dt>Waktu (WIB)</dt><dd id="view-time-info"></dd></div>
-        <div class="view-full"><dt>PIC</dt><dd id="view-pics" class="view-pics"></dd></div>
+        <div>
+          <dt>Tanggal</dt>
+          <dd id="view-date-info"></dd>
+        </div>
+
+        <div>
+          <dt>Waktu (WIB)</dt>
+          <dd id="view-time-info"></dd>
+        </div>
+
         <div class="view-full">
-  <dt>Email tambahan</dt>
-  <dd id="view-additional-emails"></dd>
-</div>
-        <div><dt>Proyek</dt><dd id="view-project"></dd></div>
-        <div><dt>Jenis meeting</dt><dd id="view-type"></dd></div>
-        <div class="view-full"><dt>Link/Lokasi meeting</dt><dd id="view-meeting"></dd></div>
-        <div class="view-full"><dt>Catatan</dt><dd id="view-notes" class="view-notes"></dd></div>
+          <dt>PIC</dt>
+          <dd id="view-pics" class="view-pics"></dd>
+        </div>
+
         <div class="view-full">
-  <dt>
-    Undangan Google Calendar
-  </dt>
+          <dt>Email tambahan</dt>
+          <dd id="view-additional-emails"></dd>
+        </div>
 
-  <dd class="google-detail">
-    <span
-      id="view-google-state"
-      class="google-pill unknown"
-    >
-      Belum terkonfirmasi
-    </span>
+        <div>
+          <dt>Proyek</dt>
+          <dd id="view-project"></dd>
+        </div>
 
-    <p id="view-google-message"></p>
+        <div>
+          <dt>Jenis meeting</dt>
+          <dd id="view-type"></dd>
+        </div>
 
-    <p id="view-google-time"></p>
-  </dd>
-</div>
+        <div class="view-full">
+          <dt>Link/Lokasi meeting</dt>
+          <dd id="view-meeting"></dd>
+        </div>
+
+        <div class="view-full">
+          <dt>Catatan</dt>
+          <dd id="view-notes" class="view-notes"></dd>
+        </div>
+
+        <div class="view-full">
+          <dt>Undangan Google Calendar</dt>
+
+          <dd class="google-detail">
+            <span
+              id="view-google-state"
+              class="google-pill unknown"
+            >
+              Belum terkonfirmasi
+            </span>
+
+            <p id="view-google-message"></p>
+            <p id="view-google-time"></p>
+          </dd>
+        </div>
       </dl>
     </div>
 
     <div class="actions">
-      <button type="button" id="view-cancel" class="secondary">Tutup</button>
-      <button type="button" id="view-edit" class="primary">Edit agenda</button>
+      <button
+        type="button"
+        id="view-cancel"
+        class="secondary"
+      >
+        Tutup
+      </button>
+
+      <button
+        type="button"
+        id="view-edit"
+        class="primary"
+      >
+        Edit agenda
+      </button>
     </div>
   </dialog>
 
-  <dialog id="dialog" class="calendar-dialog">
+  <!-- MODAL TAMBAH / EDIT AGENDA -->
+  <dialog
+    id="dialog"
+    class="calendar-dialog"
+    aria-labelledby="dialog-title"
+  >
     <form id="agenda-form" novalidate>
       <div class="modal-head">
         <div>
           <p class="modal-kicker">RENCANAKAN PERTEMUAN</p>
           <h2 id="dialog-title">Tambah agenda</h2>
         </div>
-        <button type="button" id="close" aria-label="Tutup">×</button>
+
+        <button
+          type="button"
+          id="close"
+          class="modal-close"
+          aria-label="Tutup form agenda"
+        >×</button>
       </div>
 
       <div class="form-body">
         <input id="event-id" type="hidden">
+
         <p id="form-error" role="alert" hidden></p>
 
-        <label>
+        <label for="agenda">
           Agenda *
-          <input id="agenda" required maxlength="150"
-                 placeholder="Contoh: Review progres PNMDigi">
+          <input
+            id="agenda"
+            type="text"
+            required
+            maxlength="150"
+            placeholder="Contoh: Review progres proyek"
+          >
         </label>
 
-        <label>
+        <label for="date">
           Tanggal *
-          <input id="date" type="date" required
-                 min="1000-01-01" max="9999-12-31">
+          <input
+            id="date"
+            type="date"
+            required
+            min="1000-01-01"
+            max="9999-12-31"
+          >
         </label>
+
+        <!-- PERULANGAN AGENDA -->
         <fieldset id="repeat-fieldset">
-  <legend>Perulangan agenda</legend>
+          <legend>Perulangan agenda</legend>
 
-  <label class="repeat-toggle">
-    <input id="repeat-enabled" type="checkbox">
-    Ulangi agenda pada hari tertentu
-  </label>
-
-  <div id="repeat-settings" hidden>
-    <label>
-      Tanggal akhir *
-      <input id="repeat-end" type="date">
-    </label>
-
-    <p>Pilih hari:</p>
-
-    <div class="repeat-days">
-      <label><input type="checkbox" name="repeat-day" value="0"> Minggu</label>
-      <label><input type="checkbox" name="repeat-day" value="1"> Senin</label>
-      <label><input type="checkbox" name="repeat-day" value="2"> Selasa</label>
-      <label><input type="checkbox" name="repeat-day" value="3"> Rabu</label>
-      <label><input type="checkbox" name="repeat-day" value="4"> Kamis</label>
-      <label><input type="checkbox" name="repeat-day" value="5"> Jumat</label>
-      <label><input type="checkbox" name="repeat-day" value="6"> Sabtu</label>
-    </div>
-  </div>
-</fieldset>
-
-        <div class="form-row">
-          <label>
-            Jam mulai (WIB) *
-            <input id="time" type="text" inputmode="text" required
-                   maxlength="5"
-                   pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
-                   placeholder="09:00"
-                   title="Format 24 jam HH:mm">
+          <label class="repeat-toggle">
+            <input id="repeat-enabled" type="checkbox">
+            Ulangi agenda pada hari tertentu
           </label>
-          <label>
+
+          <div id="repeat-settings" hidden>
+            <label for="repeat-end">
+              Tanggal akhir *
+              <input
+                id="repeat-end"
+                type="date"
+                min="1000-01-01"
+                max="9999-12-31"
+              >
+            </label>
+
+            <p>Pilih hari:</p>
+
+            <div class="repeat-days">
+              <label>
+                <input type="checkbox" name="repeat-day" value="0">
+                Minggu
+              </label>
+
+              <label>
+                <input type="checkbox" name="repeat-day" value="1">
+                Senin
+              </label>
+
+              <label>
+                <input type="checkbox" name="repeat-day" value="2">
+                Selasa
+              </label>
+
+              <label>
+                <input type="checkbox" name="repeat-day" value="3">
+                Rabu
+              </label>
+
+              <label>
+                <input type="checkbox" name="repeat-day" value="4">
+                Kamis
+              </label>
+
+              <label>
+                <input type="checkbox" name="repeat-day" value="5">
+                Jumat
+              </label>
+
+              <label>
+                <input type="checkbox" name="repeat-day" value="6">
+                Sabtu
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- JAM -->
+        <div class="form-row">
+          <label for="time">
+            Jam mulai (WIB) *
+            <input
+              id="time"
+              type="text"
+              inputmode="text"
+              required
+              maxlength="5"
+              pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
+              placeholder="09:00"
+              title="Format 24 jam HH:mm"
+            >
+          </label>
+
+          <label for="end-time">
             Jam selesai (WIB) *
-            <input id="end-time" type="text" inputmode="text" required
-                   maxlength="5"
-                   pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00"
-                   placeholder="10:00"
-                   title="Format 24 jam HH:mm; 24:00 untuk akhir hari">
+            <input
+              id="end-time"
+              type="text"
+              inputmode="text"
+              required
+              maxlength="5"
+              pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00"
+              placeholder="10:00"
+              title="Format 24 jam HH:mm; 24:00 untuk akhir hari"
+            >
           </label>
         </div>
 
+        <!-- PIC -->
         <fieldset>
-          <legend>PIC dari Master PIC · boleh lebih dari satu *</legend>
-          <input id="pic-search" type="search"
-                 placeholder="Cari nama PIC…" aria-label="Cari nama PIC">
+          <legend>
+            PIC dari Master PIC · boleh lebih dari satu *
+          </legend>
+
+          <input
+            id="pic-search"
+            type="search"
+            placeholder="Cari nama PIC…"
+            aria-label="Cari nama PIC"
+          >
+
           <div id="pic-options"></div>
+
           <p id="pic-selected" aria-live="polite"></p>
         </fieldset>
 
-      <div class="email-field">
-        <label for="additional-emails">
-          Email tambahan
-          <span class="email-optional">Opsional · selain PIC</span>
-        </label>
+        <!-- EMAIL TAMBAHAN -->
+        <div class="email-field">
+          <label for="additional-emails">
+            Email tambahan
+            <span class="email-optional">Opsional · selain PIC</span>
+          </label>
 
-        <div class="email-input-wrap">
-          <span class="email-input-icon" aria-hidden="true">@</span>
+          <div class="email-input-wrap">
+            <span class="email-input-icon" aria-hidden="true">@</span>
 
-          <input
-            id="additional-emails"
-            type="text"
-            maxlength="2000"
-            autocomplete="off"
-            placeholder="Ketik alamat email…"
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded="false"
-            aria-controls="additional-email-options"
-            aria-describedby="additional-emails-hint"
-          >
+            <input
+              id="additional-emails"
+              type="text"
+              maxlength="2000"
+              autocomplete="off"
+              placeholder="Ketik alamat email…"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="additional-email-options"
+              aria-describedby="additional-emails-hint"
+            >
+          </div>
+
+          <div
+            id="additional-email-options"
+            class="email-suggestions"
+            role="listbox"
+            aria-label="Saran email"
+            hidden
+          ></div>
+
+          <small id="additional-emails-hint" class="email-hint">
+            Pilih saran atau ketik email baru.
+            Pisahkan beberapa email dengan koma.
+          </small>
         </div>
 
-        <div
-          id="additional-email-options"
-          class="email-suggestions"
-          role="listbox"
-          aria-label="Saran email"
-          hidden
-        ></div>
-
-        <small id="additional-emails-hint" class="email-hint">
-          Pilih saran atau ketik email baru.
-          Pisahkan beberapa email dengan koma.
-        </small>
-      </div>
-
+        <!-- PROYEK -->
         <label class="no-project-option">
           <input id="no-project" type="checkbox">
           Belum ada proyek
         </label>
 
-       <div class="project-field">
-      <label for="project-search">
-        Proyek berstatus Aktif
-        <span id="project-required">*</span>
-      </label>
+        <div class="project-field">
+          <label for="project-search">
+            Proyek berstatus Aktif
+            <span id="project-required">*</span>
+          </label>
 
-  <div class="project-picker">
-    <input
-      id="project-search"
-      type="search"
-      autocomplete="off"
-      required
-      placeholder="Ketik atau pilih proyek…"
-      role="combobox"
-      aria-autocomplete="list"
-      aria-expanded="false"
-      aria-controls="project-options"
-    >
+          <div class="project-picker">
+            <input
+              id="project-search"
+              type="search"
+              autocomplete="off"
+              required
+              placeholder="Ketik atau pilih proyek…"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="project-options"
+            >
 
-    <input id="project" type="hidden">
+            <input id="project" type="hidden">
 
-    <div
-      id="project-options"
-      role="listbox"
-      hidden
-    ></div>
-  </div>
-</div>
+            <div
+              id="project-options"
+              role="listbox"
+              hidden
+            ></div>
+          </div>
+        </div>
 
+        <!-- MEETING -->
         <div class="form-row">
-          <label>
+          <label for="meeting-type">
             Jenis meeting
             <select id="meeting-type">
               <option value="online">Online</option>
               <option value="office">Di lokasi</option>
             </select>
           </label>
-          <label>
+
+          <label for="meeting">
             <span id="meeting-label">Link meeting *</span>
-            <input id="meeting" required maxlength="400">
+
+            <input
+              id="meeting"
+              type="text"
+              required
+              maxlength="400"
+            >
           </label>
         </div>
 
-        <label>
+        <!-- CATATAN -->
+        <label for="notes">
           Catatan
-          <textarea id="notes" maxlength="5000"
-                    placeholder="Tambahkan pembahasan, persiapan, atau tindak lanjut…"></textarea>
+          <textarea
+            id="notes"
+            maxlength="5000"
+            placeholder="Tambahkan pembahasan, persiapan, atau tindak lanjut…"
+          ></textarea>
         </label>
 
         <p class="form-note">
@@ -1907,14 +2408,42 @@ dialog#view-dialog.calendar-dialog[open] {
       </div>
 
       <div class="actions">
-        <button type="button" id="delete" class="danger" hidden>Hapus agenda</button>
-        <button type="button" id="cancel" class="secondary">Batal</button>
-        <button type="submit" id="save" class="primary">Simpan agenda</button>
+        <button
+          type="button"
+          id="delete"
+          class="danger"
+          hidden
+        >
+          Hapus agenda
+        </button>
+
+        <button
+          type="button"
+          id="cancel"
+          class="secondary"
+        >
+          Batal
+        </button>
+
+        <button
+          type="submit"
+          id="save"
+          class="primary"
+        >
+          Simpan agenda
+        </button>
       </div>
     </form>
   </dialog>
 
-  <div id="toast" class="calendar-toast" role="status" hidden></div>
+  <!-- NOTIFIKASI -->
+  <div
+    id="toast"
+    class="calendar-toast"
+    role="status"
+    aria-live="polite"
+    hidden
+  ></div>
 
   <script src="/layout.js"></script>
   <script src="/sidebar.js"></script>

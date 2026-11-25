@@ -1,5 +1,5 @@
 /* ======================================================
-   PORTOPRO — SUMMARY PROYEK
+   BISBOARD — SUMMARY PROYEK
 
    - Kolom klien dan partner terpisah.
    - Setiap partner tambahan memiliki 10 kolom sendiri.
@@ -3413,7 +3413,7 @@
   }
 
   // Fungsi bersama untuk modal Sum pada halaman proyek.
-window.PortoproSummaryFinal = Object.freeze({
+window.BisboardSummaryFinal = Object.freeze({
   normalizeProject,
   finalSummary,
   collection

@@ -105,6 +105,17 @@ function formatNilai(
 
   }
 
+  if (String(fieldName || "").startsWith("LOG STATUS KONTRAK ")) {
+    try {
+      const { status, catatan } = JSON.parse(value);
+      if (Array.isArray(status)) {
+        return catatan ? `${status.join(", ")} · ${catatan}` : status.join(", ");
+      }
+    } catch {
+      return String(value);
+    }
+  }
+
 
   // ===========================================
   // FORMAT FIELD TANGGAL

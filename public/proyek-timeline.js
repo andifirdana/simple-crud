@@ -1,5 +1,5 @@
 // ======================================================
-// PORTOPRO - PROYEK TIMELINE
+// BISBOARD - PROYEK TIMELINE
 // ======================================================
 
 (function () {
@@ -1470,7 +1470,7 @@
     ) {
 
       document.title =
-        `Timeline ${proyek.nama_proyek} - Portopro`;
+        `Timeline ${proyek.nama_proyek} - Bisboard`;
 
     }
 

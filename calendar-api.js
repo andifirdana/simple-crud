@@ -210,7 +210,7 @@ module.exports = function registerCalendarApi(
       return null;
     }
 
-    // Pada PORTOPRO, session.user.id juga dipakai sebagai ID PIC.
+    // Pada BISBOARD, session.user.id juga dipakai sebagai ID PIC.
     return (
       pics.find(
         pic =>
@@ -818,6 +818,166 @@ module.exports = function registerCalendarApi(
           res,
           error
         );
+      }
+    }
+  );
+
+  // ======================================================
+  // DAFTAR LIBUR
+  // Harus terdaftar sebelum GET /api/calendar/:id.
+  // ======================================================
+
+  app.get(
+    '/api/calendar/holidays',
+    async (req, res) => {
+      try {
+        const result = await pool.query(
+          `
+            SELECT
+              id::text AS id,
+              nama AS name,
+              TO_CHAR(
+                tanggal,
+                'YYYY-MM-DD'
+              ) AS date
+
+            FROM public.calendar_holidays
+
+            ORDER BY tanggal, nama
+          `
+        );
+
+        return res.json(result.rows);
+
+      } catch (error) {
+        return calendarHandleError(res, error);
+      }
+    }
+  );
+
+  // ======================================================
+  // TAMBAH LIBUR SEHARI PENUH
+  // ======================================================
+
+  app.post(
+    '/api/calendar/holidays',
+    async (req, res) => {
+      try {
+        const name =
+          typeof req.body?.name === 'string'
+            ? req.body.name.trim()
+            : '';
+
+        const date = req.body?.date;
+
+        const creatorId = String(
+          req.session?.user?.id ?? ''
+        );
+
+        if (!name || name.length > 150) {
+          throw calendarError(
+            400,
+            'Nama libur wajib diisi, maksimal 150 karakter.'
+          );
+        }
+
+        if (!calendarValidDate(date)) {
+          throw calendarError(
+            400,
+            'Tanggal libur tidak valid.'
+          );
+        }
+
+        if (!calendarValidId(creatorId)) {
+          throw calendarError(
+            401,
+            'Silakan login kembali.'
+          );
+        }
+
+        const result = await pool.query(
+          `
+            INSERT INTO public.calendar_holidays (
+              nama,
+              tanggal,
+              created_by
+            )
+
+            VALUES (
+              $1,
+              $2::date,
+              $3::bigint
+            )
+
+            ON CONFLICT (tanggal, nama)
+            DO UPDATE SET
+              nama = EXCLUDED.nama
+
+            RETURNING
+              id::text AS id,
+              nama AS name,
+              TO_CHAR(
+                tanggal,
+                'YYYY-MM-DD'
+              ) AS date
+          `,
+          [
+            name,
+            date,
+            creatorId
+          ]
+        );
+
+        return res
+          .status(201)
+          .json(result.rows[0]);
+
+      } catch (error) {
+        return calendarHandleError(res, error);
+      }
+    }
+  );
+
+  // ======================================================
+  // HAPUS LIBUR
+  // ======================================================
+
+  app.delete(
+    '/api/calendar/holidays/:id',
+    async (req, res) => {
+      try {
+        if (!calendarValidId(req.params.id)) {
+          throw calendarError(
+            400,
+            'ID libur tidak valid.'
+          );
+        }
+
+        const result = await pool.query(
+          `
+            DELETE FROM public.calendar_holidays
+
+            WHERE id = $1
+
+            RETURNING id::text AS id
+          `,
+          [req.params.id]
+        );
+
+        if (!result.rows.length) {
+          throw calendarError(
+            404,
+            'Libur tidak ditemukan.'
+          );
+        }
+
+        return res.json({
+          success: true,
+          id: result.rows[0].id
+        });
+
+      } catch (error) {
+        return calendarHandleError(res, error);
       }
     }
   );

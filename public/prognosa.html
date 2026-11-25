@@ -10,7 +10,7 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Prognosa - Portopro</title>
+  <title>Prognosa - Bisboard</title>
 
   <link
     rel="stylesheet"
@@ -27,10 +27,10 @@
     }
 
     .prognosa-page {
-      margin-left: 260px;
-      width: calc(100% - 260px);
+      margin-inline-start: var(--sidebar-width, 260px);
       padding: 32px;
       box-sizing: border-box;
+      transition: margin-inline-start 0.25s ease;
     }
 
     .prognosa-header {
@@ -317,9 +317,33 @@
 
     @media (max-width: 900px) {
 
-      .prognosa-page {
-        margin-left: 0;
+      #sidebarContainer #sidebar {
+        position: static;
         width: 100%;
+        min-width: 0;
+        height: auto;
+        min-height: 0;
+        max-height: 46dvh;
+        padding: 10px 16px;
+      }
+
+      body.sidebar-collapsed #sidebarContainer #sidebar {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+      }
+
+      #sidebarContainer #sidebar .sidebar-toggle-bar {
+        justify-content: space-between !important;
+        margin: 0;
+      }
+
+      body.sidebar-collapsed #sidebarContainer #sidebar .sidebar-toggle-bar .logo {
+        display: block !important;
+      }
+
+      .prognosa-page {
+        margin-inline-start: 0;
         padding: 20px;
       }
 
@@ -327,6 +351,12 @@
         grid-template-columns: 1fr;
       }
 
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .prognosa-page {
+        transition: none;
+      }
     }
 
   </style>
@@ -476,7 +506,7 @@
 
 
   <script src="/layout.js"></script>
-
+  <script src="/sidebar.js"></script>
   <script src="/prognosa.js"></script>
 
 

@@ -14,6 +14,8 @@ const addPicButton = document.getElementById("addPic");
 const initialInput = document.getElementById("inisial");
 
 const partnerModal = document.getElementById("partnerModal");
+const phoneValidationModal =
+  document.getElementById("phoneValidationModal");
 const openModalButton =
   document.getElementById("openPartnerModal");
 const closeModalButton =
@@ -32,6 +34,7 @@ let editId = null;
 let currentPage = 1;
 let picSequence = 0;
 let saving = false;
+let invalidPhoneInput = null;
 
 const itemsPerPage = 10;
 
@@ -113,6 +116,24 @@ async function request(url, options) {
 // ========================================
 // MODAL
 // ========================================
+
+function showPhoneValidationModal(input) {
+  invalidPhoneInput = input;
+
+  if (!phoneValidationModal.open) {
+    phoneValidationModal.showModal();
+  }
+}
+
+phoneValidationModal.addEventListener("close", () => {
+  const input = invalidPhoneInput;
+  invalidPhoneInput = null;
+
+  if (partnerModal.open && input?.isConnected) {
+    input.focus();
+    input.select();
+  }
+});
 
 function showPartnerModal() {
   if (!partnerModal.open) {
@@ -223,6 +244,10 @@ function renumberPics() {
 
 function addPic(pic = {}, focus = false) {
   const key = ++picSequence;
+  // Data tersimpan memakai 62; tampilkan format lokal saat diedit.
+  const phoneValue = String(pic.no_pic ?? "")
+    .trim()
+    .replace(/^(?:\+62|62)(?=\d)/, "0");
 
   const row = document.createElement("fieldset");
   row.className = "pic-row";
@@ -252,11 +277,13 @@ function addPic(pic = {}, focus = false) {
 
         <input
           type="tel"
+          inputmode="numeric"
           id="pic-phone-${key}"
           data-field="no_pic"
+          aria-describedby="partnerPicHelp"
           placeholder="081234567890"
           maxlength="20"
-          value="${escapeHtml(pic.no_pic)}"
+          value="${escapeHtml(phoneValue)}"
         >
       </div>
 
@@ -324,6 +351,13 @@ function readPics() {
     const emailInput = row.querySelector(
       '[data-field="email_pic"]'
     );
+
+    const phoneNumber = phoneInput.value.trim().replace(/[\s\-()]/g, "");
+
+    if (phoneNumber && !/^0\d+$/.test(phoneNumber)) {
+      showPhoneValidationModal(phoneInput);
+      return null;
+    }
 
     const pic = {
       nama_pic: nameInput.value.trim(),

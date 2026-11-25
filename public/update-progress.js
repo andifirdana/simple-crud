@@ -10,7 +10,7 @@
   ) {
     module.exports = factory();
   } else {
-    root.PortoproProgress = factory();
+    root.BisboardProgress = factory();
   }
 })(
   typeof globalThis !== "undefined"
@@ -648,7 +648,7 @@
   "use strict";
 
   const Core =
-    window.PortoproProgress;
+    window.BisboardProgress;
 
   const $ =
     id =>
@@ -2039,7 +2039,7 @@
         }
 
       document.title =
-        `Progress ${result.proyek.nama_proyek} - Portopro`;
+        `Progress ${result.proyek.nama_proyek} - Bisboard`;
 
       if (result.data) {
         applyDocument(

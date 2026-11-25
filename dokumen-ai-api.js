@@ -1016,7 +1016,7 @@ module.exports = function pasangDokumenAI(
       await fs.mkdtemp(
         path.join(
           os.tmpdir(),
-          "portopro-ocr-"
+          "bisboard-ocr-"
         )
       );
 

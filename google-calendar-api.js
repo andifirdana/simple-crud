@@ -423,7 +423,7 @@ module.exports = function registerGoogleCalendar(
 
       last_error:
         pending
-          ? job.last_error || null
+          ? job.last_error?.replace(/\bportopro\b/gi, 'Bisboard') || null
           : null,
 
       synced_at:
@@ -853,7 +853,7 @@ module.exports = function registerGoogleCalendar(
 
             <p>
               Tutup tab ini, kembali ke halaman kalender
-              PORTOPRO, lalu klik Periksa status.
+              BISBOARD, lalu klik Periksa status.
             </p>
           </body>
           </html>
@@ -1277,7 +1277,7 @@ module.exports = function registerGoogleCalendar(
       [
         agendaId,
 
-        'portopro' +
+        'bisboard' +
           crypto
             .randomBytes(16)
             .toString('hex'),
@@ -1469,7 +1469,7 @@ module.exports = function registerGoogleCalendar(
     ) {
       throw fail(
         409,
-        'ID acara Google tidak cocok dengan agenda PORTOPRO.'
+        'ID acara Google tidak cocok dengan agenda BISBOARD.'
       );
     }
 

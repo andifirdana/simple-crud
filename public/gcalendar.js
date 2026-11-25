@@ -5,47 +5,66 @@
 
   const API = '/api/calendar';
   const HOUR_HEIGHT = 96;
+  const EMAIL_PATTERN = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 
   let events = [];
+  let holidays = [];
 
   let master = {
     pics: [],
     projects: [],
+    email_suggestions: [],
     current_pic_id: null
   };
 
   let ready = false;
   let saving = false;
+  let holidaySaving = false;
+  let holidaysAvailable = false;
+
   let requestNumber = 0;
+  let reloadNumber = 0;
   let toastTimer;
   let loadError = '';
   let viewedEventId = null;
+  let activeEmailSuggestion = -1;
 
   // ======================================================
   // TANGGAL DAN WAKTU
   // ======================================================
 
   function todayKey() {
-    const parts = new Intl.DateTimeFormat(
-      'en-CA',
-      {
-        timeZone: 'Asia/Jakarta',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }
-    ).formatToParts(new Date());
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
 
     const part = name =>
-      parts.find(
-        item => item.type === name
-      ).value;
+      parts.find(item => item.type === name).value;
 
     return `${part('year')}-${part('month')}-${part('day')}`;
   }
 
+  function validDateKey(value) {
+    if (
+      typeof value !== 'string' ||
+      !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(value)
+    ) {
+      return false;
+    }
+
+    const date = new Date(`${value}T12:00:00Z`);
+
+    return (
+      !Number.isNaN(date.getTime()) &&
+      utcKey(date) === value
+    );
+  }
+
   function minutes(value) {
-    const [hour, minute] = value
+    const [hour, minute] = String(value || '')
       .split(':')
       .map(Number);
 
@@ -53,51 +72,44 @@
   }
 
   function timeText(value) {
+    const hour = Math.floor(value / 60);
+    const minute = value % 60;
+
     return (
-      `${String(
-        Math.floor(value / 60)
-      ).padStart(2, '0')}:` +
-      `${String(
-        value % 60
-      ).padStart(2, '0')}`
+      `${String(hour).padStart(2, '0')}:` +
+      String(minute).padStart(2, '0')
     );
   }
 
   function utcKey(date) {
-    return date
-      .toISOString()
-      .split('T')[0];
+    return date.toISOString().split('T')[0];
   }
 
   function weekDays(value) {
-    const date = new Date(
-      `${value}T12:00:00Z`
-    );
+    const selected = validDateKey(value)
+      ? value
+      : todayKey();
 
+    const date = new Date(`${selected}T12:00:00Z`);
     const offset = date.getUTCDay();
 
-    return Array.from(
-      { length: 7 },
-      (_, index) => {
-        const day = new Date(date);
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(date);
 
-        day.setUTCDate(
-          date.getUTCDate() - offset + index
-        );
+      day.setUTCDate(
+        date.getUTCDate() - offset + index
+      );
 
-        return {
-          key: utcKey(day),
-          day: day.getUTCDate(),
-          weekday: index
-        };
-      }
-    );
+      return {
+        key: utcKey(day),
+        day: day.getUTCDate(),
+        weekday: index
+      };
+    });
   }
 
   function calendarRange() {
-    const days = weekDays(
-      $('view-date').value
-    );
+    const days = weekDays($('view-date').value);
 
     return {
       from:
@@ -113,7 +125,7 @@
   }
 
   // ======================================================
-  // HELPER TAMPILAN
+  // HELPER
   // ======================================================
 
   function escapeHtml(value) {
@@ -133,9 +145,7 @@
     try {
       const url = new URL(value);
 
-      return ['http:', 'https:'].includes(
-        url.protocol
-      )
+      return ['http:', 'https:'].includes(url.protocol)
         ? url.href
         : null;
 
@@ -144,9 +154,73 @@
     }
   }
 
+  function projectText(value) {
+    return String(value || '')
+      .trim()
+      .toLocaleLowerCase('id');
+  }
+
+  function normalizeEmails(values) {
+    if (!Array.isArray(values)) {
+      return [];
+    }
+
+    return [
+      ...new Set(
+        values
+          .filter(value => typeof value === 'string')
+          .map(value => value.trim().toLowerCase())
+          .filter(Boolean)
+      )
+    ];
+  }
+
+  function rememberEmailSuggestions(values = []) {
+    master.email_suggestions = normalizeEmails([
+      ...(Array.isArray(master.email_suggestions)
+        ? master.email_suggestions
+        : []),
+
+      ...values
+    ])
+      .filter(email => EMAIL_PATTERN.test(email))
+      .sort();
+  }
+
+  function normalizeEvent(row) {
+    const pics = Array.isArray(row.pics)
+      ? row.pics.map(pic => ({
+          ...pic,
+          id: pic.id == null ? null : String(pic.id),
+          name: String(pic.name || '')
+        }))
+      : [];
+
+    return {
+      ...row,
+      id: String(row.id),
+      pics,
+
+      pic:
+        row.pic ||
+        pics.map(pic => pic.name).join(', '),
+
+      pic_ids: Array.isArray(row.pic_ids)
+        ? row.pic_ids.map(String)
+        : pics
+            .filter(pic => pic.id != null)
+            .map(pic => pic.id),
+
+      additional_emails: normalizeEmails(
+        row.additional_emails
+      )
+    };
+  }
+
   function picColor(pic) {
-    const key =
-      pic.id || `legacy:${pic.name}`;
+    const key = String(
+      pic.id || `legacy:${pic.name}`
+    );
 
     let hash = 0;
 
@@ -158,61 +232,19 @@
     }
 
     const palette = [
-      {
-        border: '#ffcc33',
-        background: '#fff0b2',
-        own: '#896000'
-      },
-      {
-        border: '#ff6fae',
-        background: '#ffc8e0',
-        own: '#9d245d'
-      },
-      {
-        border: '#ff9f1c',
-        background: '#ffdaad',
-        own: '#9a4e00'
-      },
-      {
-        border: '#2ec4b6',
-        background: '#b9f0e9',
-        own: '#08796f'
-      },
-      {
-        border: '#1a7fd1',
-        background: '#bfdefb',
-        own: '#14588f'
-      },
-      {
-        border: '#835af3',
-        background: '#ddd1ff',
-        own: '#5435a5'
-      },
-      {
-        border: '#ff625f',
-        background: '#ffc9c5',
-        own: '#a32f31'
-      },
-      {
-        border: '#91c925',
-        background: '#e5f6b0',
-        own: '#567a0c'
-      },
-      {
-        border: '#df57cb',
-        background: '#f7cff0',
-        own: '#903179'
-      },
-      {
-        border: '#00a9cb',
-        background: '#bdeef8',
-        own: '#006b86'
-      }
+      { border: '#ffcc33', background: '#fff0b2' },
+      { border: '#ff6fae', background: '#ffc8e0' },
+      { border: '#ff9f1c', background: '#ffdaad' },
+      { border: '#2ec4b6', background: '#b9f0e9' },
+      { border: '#1a7fd1', background: '#bfdefb' },
+      { border: '#835af3', background: '#ddd1ff' },
+      { border: '#ff625f', background: '#ffc9c5' },
+      { border: '#91c925', background: '#e5f6b0' },
+      { border: '#df57cb', background: '#f7cff0' },
+      { border: '#00a9cb', background: '#bdeef8' }
     ];
 
-    return palette[
-      hash % palette.length
-    ];
+    return palette[hash % palette.length];
   }
 
   function notify(message) {
@@ -227,33 +259,25 @@
   }
 
   // ======================================================
-  // API
+  // API KALENDER
   // ======================================================
 
-  async function api(
-    path = '',
-    options = {}
-  ) {
-    const response = await fetch(
-      `${API}${path}`,
-      {
-        credentials: 'same-origin',
-        cache: 'no-store',
+  async function api(path = '', options = {}) {
+    const response = await fetch(`${API}${path}`, {
+      credentials: 'same-origin',
+      cache: 'no-store',
 
-        ...options,
+      ...options,
 
-        headers: {
-          ...options.headers,
+      headers: {
+        Accept: 'application/json',
+        ...options.headers,
 
-          ...(options.body
-            ? {
-                'Content-Type':
-                  'application/json'
-              }
-            : {})
-        }
+        ...(options.body
+          ? { 'Content-Type': 'application/json' }
+          : {})
       }
-    );
+    });
 
     const result = await response
       .json()
@@ -277,8 +301,8 @@
     return result;
   }
 
-    // ======================================================
-  // STATUS AKUN GOOGLE DAN PENGIRIMAN UNDANGAN
+  // ======================================================
+  // STATUS GOOGLE CALENDAR
   // ======================================================
 
   let googleJobs = new Map();
@@ -297,43 +321,32 @@
   function setGoogleText(id, value) {
     const node = $(id);
 
-    if (
-      node &&
-      node.textContent !== value
-    ) {
+    if (node && node.textContent !== value) {
       node.textContent = value;
     }
   }
 
   function googleTimestamp(value) {
-    const date = new Date(
-      value || ''
-    );
+    const date = new Date(value || '');
 
-    if (
-      Number.isNaN(date.getTime())
-    ) {
+    if (Number.isNaN(date.getTime())) {
       return '';
     }
 
-    return new Intl.DateTimeFormat(
-      'id-ID',
-      {
-        timeZone: 'Asia/Jakarta',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hourCycle: 'h23'
-      }
-    ).format(date) + ' WIB';
+    return new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23'
+    }).format(date) + ' WIB';
   }
 
   async function googleJSON(path) {
-    const controller =
-      new AbortController();
+    const controller = new AbortController();
 
     const timeout = setTimeout(
       () => controller.abort(),
@@ -358,32 +371,21 @@
         .json()
         .catch(() => null);
 
-      if (
-        !response.ok ||
-        !data
-      ) {
-        const message =
+      if (!response.ok || !data) {
+        throw new Error(
           response.status === 401
-            ? 'Sesi PORTOPRO berakhir. Silakan login kembali ke PORTOPRO.'
+            ? 'Sesi BISBOARD berakhir. Silakan login kembali.'
             : response.status === 404
               ? 'Informasi Google Calendar belum tersedia. Hubungi Admin.'
               : data?.error ||
-                'Status Google Calendar belum dapat diperiksa.';
-
-        throw Object.assign(
-          new Error(message),
-          {
-            status: response.status
-          }
+                'Status Google Calendar belum dapat diperiksa.'
         );
       }
 
       return data;
 
     } catch (error) {
-      if (
-        error.name === 'AbortError'
-      ) {
+      if (error.name === 'AbortError') {
         throw new Error(
           'Pemeriksaan Google melewati batas waktu. Coba kembali.'
         );
@@ -397,9 +399,7 @@
   }
 
   function googleDeliveryState(id) {
-    const job = googleJobs.get(
-      String(id)
-    );
+    const job = googleJobs.get(String(id));
 
     const delivery =
       job?.delivery_status ||
@@ -409,11 +409,7 @@
           : job?.status === 'deleted'
             ? 'cancelled'
             : job?.status === 'pending'
-              ? (
-                  job.last_error
-                    ? 'failed'
-                    : 'pending'
-                )
+              ? (job.last_error ? 'failed' : 'pending')
               : job?.status
       );
 
@@ -421,35 +417,28 @@
       pending: {
         label: 'Pending',
         className: 'pending',
-
         message:
-          'Undangan masih dalam antrean. Status berubah setelah diproses Google Calendar.'
+          'Agenda masih dalam antrean sinkronisasi Google Calendar.'
       },
 
       sent: {
         label: 'Sent',
         className: 'sent',
-
         message:
-          'Google Calendar telah memproses pengiriman undangan untuk versi agenda ini.'
+          'Perubahan agenda telah diproses Google Calendar. Pengiriman notifikasi mengikuti jenis perubahan.'
       },
 
       failed: {
         label: 'Failed',
         className: 'failed',
-
         message:
-          (
-            job?.last_error ||
-            'Pengiriman belum berhasil.'
-          ) +
+          (job?.last_error || 'Sinkronisasi belum berhasil.') +
           ' Antrean akan dicoba ulang otomatis.'
       },
 
       cancelled: {
         label: 'Dibatalkan',
         className: 'cancelled',
-
         message:
           'Pembatalan acara Google telah diproses.'
       },
@@ -457,36 +446,26 @@
       not_queued: {
         label: 'Belum diantrekan',
         className: 'unknown',
-
         message:
-          'Agenda belum masuk antrean Google. Buka Edit lalu Simpan untuk mengirim agenda ini.'
+          'Agenda belum masuk antrean Google. Buka Edit lalu Simpan untuk menyinkronkan agenda.'
       }
     };
 
     return {
-      ...(
-        states[delivery] || {
-          label:
-            'Belum terkonfirmasi',
+      ...(states[delivery] || {
+        label: 'Belum terkonfirmasi',
+        className: 'unknown',
+        message:
+          'Status sinkronisasi agenda belum terkonfirmasi.'
+      }),
 
-          className:
-            'unknown',
-
-          message:
-            'Status pengiriman agenda belum terkonfirmasi.'
-        }
-      ),
-
-      delivery:
-        delivery || 'unknown',
-
+      delivery: delivery || 'unknown',
       job
     };
   }
 
   function googleDeliveryBadge(id) {
-    const state =
-      googleDeliveryState(id);
+    const state = googleDeliveryState(id);
 
     return `
       <span
@@ -500,37 +479,17 @@
   }
 
   function updateGoogleDetails() {
-    const node =
-      $('view-google-state');
-
-    if (
-      !node ||
-      !viewedEventId
-    ) {
+    if (!viewedEventId) {
       return;
     }
 
-    const state =
-      googleDeliveryState(
-        viewedEventId
-      );
+    const state = googleDeliveryState(viewedEventId);
 
-    node.className =
-      'google-pill ' +
-      state.className;
+    $('view-google-state').className =
+      'google-pill ' + state.className;
 
-    if (
-      node.textContent !==
-      state.label
-    ) {
-      node.textContent =
-        state.label;
-    }
-
-    setGoogleText(
-      'view-google-message',
-      state.message
-    );
+    setGoogleText('view-google-state', state.label);
+    setGoogleText('view-google-message', state.message);
 
     const sent = googleTimestamp(
       state.job?.sent_at ||
@@ -550,13 +509,9 @@
 
       state.delivery === 'sent' && sent
         ? 'Diproses Google: ' + sent
-        : (
-            ['pending', 'failed'].includes(
-              state.delivery
-            ) && next
-              ? 'Jadwal percobaan berikutnya: ' + next
-              : ''
-          )
+        : ['pending', 'failed'].includes(state.delivery) && next
+          ? 'Jadwal percobaan berikutnya: ' + next
+          : ''
     );
   }
 
@@ -571,40 +526,27 @@
     const seen = new Set();
 
     for (
-      const node of
-      document.querySelectorAll(
+      const node of document.querySelectorAll(
         '[data-google-delivery-id]'
       )
     ) {
-      const id =
-        node.dataset.googleDeliveryId;
-
-      const state =
-        googleDeliveryState(id);
+      const id = node.dataset.googleDeliveryId;
+      const state = googleDeliveryState(id);
 
       node.className =
         'google-pill google-delivery ' +
         state.className;
 
-      if (
-        node.textContent !==
-        state.label
-      ) {
-        node.textContent =
-          state.label;
-      }
-
-      node.title =
-        state.message;
+      node.textContent = state.label;
+      node.title = state.message;
 
       if (!seen.has(id)) {
         seen.add(id);
 
         const group =
-          ['pending', 'sent', 'failed']
-            .includes(state.delivery)
-              ? state.delivery
-              : 'other';
+          ['pending', 'sent', 'failed'].includes(state.delivery)
+            ? state.delivery
+            : 'other';
 
         counts[group]++;
       }
@@ -627,60 +569,40 @@
 
     setGoogleText(
       'google-count-other',
-      'Belum terkonfirmasi: ' +
-      counts.other
+      'Belum terkonfirmasi: ' + counts.other
     );
 
-    const notice =
-      $('google-jobs-message');
+    const notice = $('google-jobs-message');
 
     if (notice) {
-      const previous =
-        googleTimestamp(
-          googleJobsCheckedAt
-        );
+      const previous = googleTimestamp(
+        googleJobsCheckedAt
+      );
 
-      const message =
-        googleJobsError
-          ? (
-              googleJobsError +
-              (
-                previous
-                  ? ' Status terakhir: ' + previous
-                  : ''
-              )
-            )
-          : '';
+      const message = googleJobsError
+        ? googleJobsError +
+          (previous ? ' Status terakhir: ' + previous : '')
+        : '';
 
-      if (
-        notice.textContent !==
-        message
-      ) {
-        notice.textContent =
-          message;
-      }
-
-      notice.hidden =
-        !message;
+      notice.textContent = message;
+      notice.hidden = !message;
     }
 
     updateGoogleDetails();
   }
 
-  function refreshGoogleJobs(
-    force = false
-  ) {
+  function eventIdsKey() {
+    return [
+      ...new Set(events.map(event => String(event.id)))
+    ].join(',');
+  }
+
+  function refreshGoogleJobs(force = false) {
     const ids = [
-      ...new Set(
-        events.map(
-          event =>
-            String(event.id)
-        )
-      )
+      ...new Set(events.map(event => String(event.id)))
     ];
 
-    const key =
-      ids.join(',');
+    const key = ids.join(',');
 
     if (
       googleJobsFlight?.key === key &&
@@ -689,199 +611,123 @@
       return googleJobsFlight.promise;
     }
 
-    const request =
-      ++googleJobsRequest;
-
-    const flight = {
-      key
-    };
+    const request = ++googleJobsRequest;
+    const flight = { key };
 
     flight.promise = (async () => {
       await Promise.resolve();
 
       try {
-        const next =
-          new Map();
-
-        let checkedAt =
-          null;
+        const next = new Map();
+        let checkedAt = null;
 
         for (
           let offset = 0;
           offset < ids.length;
           offset += 500
         ) {
-          const batch =
-            ids.slice(
-              offset,
-              offset + 500
-            );
+          const batch = ids.slice(offset, offset + 500);
 
-          const result =
-            await googleJSON(
-              '/agenda-statuses?ids=' +
-              encodeURIComponent(
-                batch.join(',')
-              )
-            );
+          const result = await googleJSON(
+            '/agenda-statuses?ids=' +
+            encodeURIComponent(batch.join(','))
+          );
 
-          if (
-            !Array.isArray(result.jobs)
-          ) {
+          if (!Array.isArray(result.jobs)) {
             throw new Error(
               'Format status undangan tidak valid.'
             );
           }
 
-          for (
-            const job of result.jobs
-          ) {
-            next.set(
-              String(job.agenda_id),
-              job
-            );
+          for (const job of result.jobs) {
+            next.set(String(job.agenda_id), job);
           }
 
-          if (
-            batch.some(
-              id => !next.has(id)
-            )
-          ) {
+          if (batch.some(id => !next.has(id))) {
             throw new Error(
               'Status sebagian agenda belum tersedia.'
             );
           }
 
-          checkedAt =
-            result.checked_at;
+          checkedAt = result.checked_at;
         }
-
-        const currentKey = [
-          ...new Set(
-            events.map(
-              event =>
-                String(event.id)
-            )
-          )
-        ].join(',');
 
         if (
           request !== googleJobsRequest ||
-          key !== currentKey
+          key !== eventIdsKey()
         ) {
           return;
         }
 
-        googleJobs =
-          next;
-
+        googleJobs = next;
         googleJobsCheckedAt =
-          checkedAt ||
-          new Date().toISOString();
+          checkedAt || new Date().toISOString();
 
-        googleJobsError =
-          '';
+        googleJobsError = '';
 
       } catch (error) {
-        if (
-          request !==
-          googleJobsRequest
-        ) {
+        if (request !== googleJobsRequest) {
           return;
         }
 
-        googleJobsError =
-          error.message;
+        googleJobsError = error.message;
 
       } finally {
-        if (
-          request ===
-          googleJobsRequest
-        ) {
+        if (request === googleJobsRequest) {
           renderGoogleDelivery();
         }
 
-        if (
-          googleJobsFlight ===
-          flight
-        ) {
-          googleJobsFlight =
-            null;
+        if (googleJobsFlight === flight) {
+          googleJobsFlight = null;
         }
       }
     })();
 
-    googleJobsFlight =
-      flight;
+    googleJobsFlight = flight;
 
     return flight.promise;
   }
 
-  function refreshGoogleAccount(
-    force = false
-  ) {
+  function refreshGoogleAccount(force = false) {
     if (!$('google-panel')) {
       return Promise.resolve();
     }
 
-    if (
-      googleAccountFlight &&
-      !force
-    ) {
+    if (googleAccountFlight && !force) {
       return googleAccountFlight;
     }
 
-    const request =
-      ++googleAccountRequest;
+    const request = ++googleAccountRequest;
 
     const pending = (async () => {
       await Promise.resolve();
 
       try {
-        const meResponse =
-          await fetch(
-            '/api/me',
-            {
-              credentials:
-                'same-origin',
-
-              cache:
-                'no-store'
-            }
-          );
+        const meResponse = await fetch('/api/me', {
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
 
         if (!meResponse.ok) {
           throw new Error(
             meResponse.status === 401
-              ? 'Sesi PORTOPRO berakhir. Silakan login kembali ke PORTOPRO.'
-              : 'Data akun PORTOPRO belum dapat diperiksa.'
+              ? 'Sesi BISBOARD berakhir. Silakan login kembali.'
+              : 'Data akun BISBOARD belum dapat diperiksa.'
           );
         }
 
-        const me =
-          await meResponse.json();
+        const me = await meResponse.json();
 
         const admin =
-          String(
-            me.user?.role || ''
-          )
+          String(me.user?.role || '')
             .trim()
             .toLowerCase() === 'admin';
 
-        const account =
-          await googleJSON(
-            '/status' +
-            (
-              force
-                ? '?refresh=1'
-                : ''
-            )
-          );
+        const account = await googleJSON(
+          '/status' + (force ? '?refresh=1' : '')
+        );
 
-        if (
-          request !==
-          googleAccountRequest
-        ) {
+        if (request !== googleAccountRequest) {
           return;
         }
 
@@ -894,34 +740,19 @@
           );
 
         const labels = {
-          connected:
-            'Terhubung',
-
-          not_connected:
-            'Belum terhubung',
-
-          reauth_required:
-            'Perlu login ulang',
-
-          unavailable:
-            'Belum dapat diperiksa'
+          connected: 'Terhubung',
+          not_connected: 'Belum terhubung',
+          reauth_required: 'Perlu login ulang',
+          unavailable: 'Belum dapat diperiksa'
         };
 
-        const badge =
-          $('google-account-state');
-
-        badge.className =
+        $('google-account-state').className =
           'google-pill ' +
-          (
-            labels[state]
-              ? state
-              : 'unavailable'
-          );
+          (labels[state] ? state : 'unavailable');
 
         setGoogleText(
           'google-account-state',
-          labels[state] ||
-          labels.unavailable
+          labels[state] || labels.unavailable
         );
 
         setGoogleText(
@@ -935,13 +766,9 @@
           (
             account.connected_email &&
             account.division_email &&
-            account.connected_email !==
-              account.division_email
-                ? (
-                    ' • Akun divisi yang dipilih: ' +
-                    account.division_email
-                  )
-                : ''
+            account.connected_email !== account.division_email
+              ? ' • Akun divisi: ' + account.division_email
+              : ''
           )
         );
 
@@ -951,35 +778,24 @@
           (account.message || '') +
           (
             !admin &&
-            [
-              'not_connected',
-              'reauth_required'
-            ].includes(state)
+            ['not_connected', 'reauth_required'].includes(state)
               ? ' Hubungi Admin untuk menghubungkan akun divisi.'
               : ''
           )
         );
 
-        const checked =
-          googleTimestamp(
-            account.checked_at
-          );
+        const checked = googleTimestamp(
+          account.checked_at
+        );
 
         setGoogleText(
           'google-account-checked',
-
-          checked
-            ? 'Diperiksa: ' + checked
-            : ''
+          checked ? 'Diperiksa: ' + checked : ''
         );
 
-        const connect =
-          $('google-connect');
+        $('google-connect').hidden = !admin;
 
-        connect.hidden =
-          !admin;
-
-        connect.textContent =
+        $('google-connect').textContent =
           state === 'reauth_required'
             ? 'Login ulang Google'
             : account.connected_email
@@ -987,16 +803,12 @@
               : 'Hubungkan akun';
 
       } catch (error) {
-        if (
-          request !==
-          googleAccountRequest
-        ) {
+        if (request !== googleAccountRequest) {
           return;
         }
 
-        $('google-account-state')
-          .className =
-            'google-pill unavailable';
+        $('google-account-state').className =
+          'google-pill unavailable';
 
         setGoogleText(
           'google-account-state',
@@ -1008,104 +820,93 @@
           error.message
         );
 
-        $('google-connect').hidden =
-          true;
+        $('google-connect').hidden = true;
 
       } finally {
-        if (
-          request ===
-          googleAccountRequest
-        ) {
-          googleAccountCheckedAt =
-            Date.now();
+        if (request === googleAccountRequest) {
+          googleAccountCheckedAt = Date.now();
         }
 
-        if (
-          googleAccountFlight ===
-          pending
-        ) {
-          googleAccountFlight =
-            null;
+        if (googleAccountFlight === pending) {
+          googleAccountFlight = null;
         }
       }
     })();
 
-    googleAccountFlight =
-      pending;
+    googleAccountFlight = pending;
 
     return pending;
   }
 
   function startGooglePolling() {
-    if (
-      googleMonitorTimer ||
-      !$('google-panel')
-    ) {
+    if (googleMonitorTimer || !$('google-panel')) {
       return;
     }
 
     refreshGoogleAccount(true);
     refreshGoogleJobs(true);
 
-    googleMonitorTimer =
-      setInterval(
-        () => {
-          if (document.hidden) {
-            return;
-          }
+    googleMonitorTimer = setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
 
-          refreshGoogleJobs();
+      refreshGoogleJobs();
 
-          if (
-            Date.now() -
-            googleAccountCheckedAt >=
-            60000
-          ) {
-            refreshGoogleAccount();
-          }
-        },
-        10000
-      );
+      if (
+        Date.now() - googleAccountCheckedAt >= 60000
+      ) {
+        refreshGoogleAccount();
+      }
+    }, 10000);
   }
 
   function initGoogleMonitoring() {
-    if (!$('google-panel')) {
-      return;
-    }
+    $('google-refresh').addEventListener(
+      'click',
+      async () => {
+        $('google-refresh').disabled = true;
 
-    $('google-refresh')
-      .addEventListener(
-        'click',
-        async () => {
-          $('google-refresh')
-            .disabled = true;
+        try {
+          await Promise.all([
+            refreshGoogleAccount(true),
+            refreshGoogleJobs(true)
+          ]);
 
-          try {
-            await Promise.all([
-              refreshGoogleAccount(true),
-              refreshGoogleJobs(true)
-            ]);
-
-          } finally {
-            $('google-refresh')
-              .disabled = false;
-          }
+        } finally {
+          $('google-refresh').disabled = false;
         }
-      );
+      }
+    );
+
+    $('open-google-dialog').addEventListener(
+      'click',
+      async () => {
+        if (!$('google-dialog').open) {
+          $('google-dialog').showModal();
+        }
+
+        await Promise.all([
+          refreshGoogleAccount(true),
+          refreshGoogleJobs(true)
+        ]);
+      }
+    );
+
+    $('google-dialog-close').addEventListener(
+      'click',
+      () => $('google-dialog').close()
+    );
 
     const resume = () => {
       if (!document.hidden) {
         startGooglePolling();
-
         refreshGoogleAccount(true);
         refreshGoogleJobs(true);
       }
     };
 
-    window.addEventListener(
-      'focus',
-      resume
-    );
+    window.addEventListener('focus', resume);
 
     window.addEventListener(
       'pageshow',
@@ -1114,126 +915,68 @@
 
     document.addEventListener(
       'visibilitychange',
-      () => {
-        if (!document.hidden) {
-          resume();
-        }
-      }
+      resume
     );
 
-    window.addEventListener(
-      'pagehide',
-      () => {
-        clearInterval(
-          googleMonitorTimer
-        );
+    window.addEventListener('pagehide', () => {
+      clearInterval(googleMonitorTimer);
 
-        googleMonitorTimer =
-          null;
+      googleMonitorTimer = null;
 
-        googleJobsRequest++;
-        googleAccountRequest++;
-      }
-    );
+      googleJobsRequest++;
+      googleAccountRequest++;
+    });
 
     startGooglePolling();
   }
 
   // ======================================================
-  // FILTER
+  // FILTER PIC
   // ======================================================
 
-  function fillSelect(
-    id,
-    rows,
-    placeholder,
-    selected = ''
-  ) {
-    const select = $(id);
+  function refreshFilters() {
+    const selected = $('pic-filter').value;
 
-    select.replaceChildren(
-      new Option(
-        placeholder,
-        ''
-      )
-    );
-
-    for (const row of rows) {
-      select.add(
-        new Option(
-          row.name,
-          String(row.id)
-        )
-      );
-    }
-
-    select.value = selected;
-  }
-
-  function filterRows(
-    rows,
-    field,
-    name
-  ) {
-    const merged = new Map(
-      rows.map(row => [
-        String(row.id),
+    const pics = new Map(
+      master.pics.map(pic => [
+        String(pic.id),
         {
-          id: String(row.id),
-          name: row.name
+          id: String(pic.id),
+          name: pic.name
         }
       ])
     );
 
     for (const event of events) {
-      const key =
-        event[field] ||
-        `legacy:${event[name]}`;
+      for (const pic of event.pics) {
+        const key =
+          pic.id || `legacy:${pic.name}`;
 
-      if (!merged.has(key)) {
-        merged.set(key, {
+        pics.set(key, {
           id: key,
-          name: event[name]
+          name: pic.name
         });
       }
     }
 
-    return [...merged.values()].sort(
-      (first, second) =>
-        first.name.localeCompare(
-          second.name,
-          'id'
-        )
+    $('pic-filter').replaceChildren(
+      new Option('Semua PIC', '')
     );
-  }
 
-  function refreshFilters() {
-  const pics = new Map(
-    master.pics.map(
-      row => [row.id, row]
-    )
-  );
+    const rows = [...pics.values()].sort(
+      (first, second) =>
+        first.name.localeCompare(second.name, 'id')
+    );
 
-  for (const event of events) {
-    for (const pic of event.pics) {
-      const key =
-        pic.id ||
-        `legacy:${pic.name}`;
-
-      pics.set(key, {
-        id: key,
-        name: pic.name
-      });
+    for (const pic of rows) {
+      $('pic-filter').add(
+        new Option(pic.name, pic.id)
+      );
     }
-  }
 
-  fillSelect(
-    'pic-filter',
-    [...pics.values()],
-    'Semua PIC',
-    $('pic-filter').value
-  );
-}
+    $('pic-filter').value =
+      pics.has(selected) ? selected : '';
+  }
 
   // ======================================================
   // DETEKSI BENTROK PIC
@@ -1244,13 +987,8 @@
     const conflicts = new Map();
 
     for (const event of rows) {
-      const start = minutes(
-        event.time
-      );
-
-      const end = minutes(
-        event.end_time
-      );
+      const start = minutes(event.time);
+      const end = minutes(event.end_time);
 
       if (
         !Number.isFinite(start) ||
@@ -1262,32 +1000,22 @@
 
       const seen = new Set();
 
-      for (
-        const pic of event.pics || []
-      ) {
+      for (const pic of event.pics) {
         const picId =
           pic.id == null
-            ? (
-                `legacy:${String(pic.name || '')
-                  .trim()
-                  .toLocaleLowerCase('id')}`
-              )
+            ? `legacy:${projectText(pic.name)}`
             : `id:${pic.id}`;
 
         if (
           seen.has(picId) ||
-          (
-            pic.id == null &&
-            !String(pic.name || '').trim()
-          )
+          (pic.id == null && !pic.name.trim())
         ) {
           continue;
         }
 
         seen.add(picId);
 
-        const key =
-          `${event.date}\u0000${picId}`;
+        const key = `${event.date}\u0000${picId}`;
 
         if (!groups.has(key)) {
           groups.set(key, []);
@@ -1303,9 +1031,7 @@
       }
     }
 
-    for (
-      const group of groups.values()
-    ) {
+    for (const group of groups.values()) {
       group.sort(
         (first, second) =>
           first.start - second.start ||
@@ -1316,23 +1042,17 @@
 
       for (const current of group) {
         active = active.filter(
-          previous =>
-            previous.end >
-            current.start
+          previous => previous.end > current.start
         );
 
-        for (
-          const previous of active
-        ) {
+        for (const previous of active) {
           if (
-            String(previous.event.id) ===
-            String(current.event.id)
+            previous.event.id === current.event.id
           ) {
             continue;
           }
 
-          const date =
-            current.event.date;
+          const date = current.event.date;
 
           if (!conflicts.has(date)) {
             conflicts.set(date, {
@@ -1341,8 +1061,7 @@
             });
           }
 
-          const conflict =
-            conflicts.get(date);
+          const conflict = conflicts.get(date);
 
           conflict.pics.set(
             current.picId,
@@ -1350,17 +1069,13 @@
           );
 
           const overlap =
-            `${timeText(
-              Math.max(
-                previous.start,
-                current.start
-              )
-            )}–${timeText(
-              Math.min(
-                previous.end,
-                current.end
-              )
-            )}`;
+            timeText(
+              Math.max(previous.start, current.start)
+            ) +
+            '–' +
+            timeText(
+              Math.min(previous.end, current.end)
+            );
 
           conflict.details.push(
             `${current.pic.name} · ${overlap}: ` +
@@ -1400,12 +1115,9 @@
         </p>
 
         <ul class="conflict-details">
-          ${conflict.details
-            .map(
-              detail =>
-                `<li>${escapeHtml(detail)}</li>`
-            )
-            .join('')}
+          ${conflict.details.map(
+            detail => `<li>${escapeHtml(detail)}</li>`
+          ).join('')}
         </ul>
 
         <p class="conflict-note">
@@ -1426,56 +1138,52 @@
         start: minutes(event.time),
         end: minutes(event.end_time)
       }))
+      .filter(
+        event =>
+          Number.isFinite(event.start) &&
+          Number.isFinite(event.end) &&
+          event.end > event.start
+      )
       .sort(
         (first, second) =>
           first.start - second.start ||
           first.end - second.end ||
-          first.id.localeCompare(
-            second.id
-          )
+          first.id.localeCompare(second.id)
       );
 
     const result = [];
 
     let group = [];
     let groupEnd = -1;
-    let groupIndex = 0;
 
     function finishGroup() {
+      if (!group.length) {
+        return;
+      }
+
       const columnEnds = [];
 
       for (const event of group) {
-        let column =
-          columnEnds.findIndex(
-            end =>
-              end <= event.start
-          );
+        let column = columnEnds.findIndex(
+          end => end <= event.start
+        );
 
         if (column === -1) {
           column = columnEnds.length;
         }
 
-        columnEnds[column] =
-          event.end;
-
+        columnEnds[column] = event.end;
         event.column = column;
       }
 
       for (const event of group) {
         result.push({
           ...event,
-
-          columns:
-            columnEnds.length,
-
-          group:
-            groupIndex
+          columns: columnEnds.length
         });
       }
 
       group = [];
-
-      groupIndex++;
     }
 
     for (const event of sorted) {
@@ -1486,15 +1194,9 @@
         finishGroup();
       }
 
-      if (!group.length) {
-        groupEnd = event.end;
-
-      } else {
-        groupEnd = Math.max(
-          groupEnd,
-          event.end
-        );
-      }
+      groupEnd = group.length
+        ? Math.max(groupEnd, event.end)
+        : event.end;
 
       group.push(event);
     }
@@ -1509,14 +1211,11 @@
   // ======================================================
 
   function eventCard(event) {
-    const colors =
-      event.pics.map(picColor);
+    const colors = event.pics.map(picColor);
 
-    const color =
-      colors[0] ||
-      picColor({
-        name: 'Belum ada PIC'
-      });
+    const color = colors[0] || picColor({
+      name: 'Belum ada PIC'
+    });
 
     const myPic =
       master.current_pic_id == null
@@ -1525,82 +1224,55 @@
             pic =>
               pic.id != null &&
               String(pic.id) ===
-                String(
-                  master.current_pic_id
-                )
+                String(master.current_pic_id)
           );
-
-    const myColor =
-      myPic
-        ? picColor(myPic)
-        : null;
 
     const stripe =
       colors.length > 1
-        ? `linear-gradient(
-            to bottom,
-            ${colors
-              .map(
-                (item, index) =>
-                  `${item.border} ` +
-                  `${index / colors.length * 100}% ` +
-                  `${(index + 1) / colors.length * 100}%`
-              )
-              .join(',')}
-          )`
+        ? `linear-gradient(to bottom, ${
+            colors.map(
+              (item, index) =>
+                `${item.border} ` +
+                `${index / colors.length * 100}% ` +
+                `${(index + 1) / colors.length * 100}%`
+            ).join(',')
+          })`
         : color.border;
 
     const cardBackground =
       colors.length > 1
-        ? `linear-gradient(
-            135deg,
-            ${colors
-              .map(
-                (item, index) =>
-                  `${item.background} ` +
-                  `${index / (colors.length - 1) * 100}%`
-              )
-              .join(',')}
-          )`
+        ? `linear-gradient(135deg, ${
+            colors.map(
+              (item, index) =>
+                `${item.background} ` +
+                `${index / (colors.length - 1) * 100}%`
+            ).join(',')
+          })`
         : color.background;
 
-    const badges = event.pics
-      .map(pic => {
-        const badgeColor =
-          picColor(pic);
+    const badges = event.pics.map(pic => {
+      const badgeColor = picColor(pic);
 
-        return `
-          <span
-            class="pic-badge"
-            style="
-              --pic-color:${badgeColor.border};
-              --pic-bg:${badgeColor.background}
-            "
-          >
-            ${escapeHtml(pic.name)}
-          </span>
-        `;
-      })
-      .join('');
+      return `
+        <span
+          class="pic-badge"
+          style="
+            --pic-color:${badgeColor.border};
+            --pic-bg:${badgeColor.background};
+          "
+        >
+          ${escapeHtml(pic.name)}
+        </span>
+      `;
+    }).join('');
 
-    const width =
-      100 / event.columns;
+    const width = 100 / event.columns;
 
     const top =
-      event.start /
-      60 *
-      HOUR_HEIGHT;
+      event.start / 60 * HOUR_HEIGHT;
 
     const height =
-      (event.end - event.start) /
-      60 *
-      HOUR_HEIGHT;
-
-    const position =
-      `top:${top}px;` +
-      `height:${height}px;` +
-      `left:calc(${event.column * width}% + 3px);` +
-      `width:calc(${width}% - 6px);`;
+      (event.end - event.start) / 60 * HOUR_HEIGHT;
 
     return `
       <article
@@ -1609,26 +1281,25 @@
         tabindex="0"
         data-event-id="${escapeHtml(event.id)}"
         style="
-          ${position}
+          top:${top}px;
+          height:${height}px;
+          left:calc(${event.column * width}% + 3px);
+          width:calc(${width}% - 6px);
           --pic-color:${color.border};
           --pic-bg:${cardBackground};
           --pic-stripe:${stripe};
-          ${myColor
-            ? `--own-color:${myColor.own};`
-            : ''}
         "
         aria-label="${escapeHtml(
           `Lihat detail agenda ${event.agenda}, ` +
           `${event.time}–${event.end_time}, ` +
-          `${event.pic}` +
-          (myPic ? ', agenda saya' : '')
+          event.pic
         )}"
       >
         <div class="event-time">
           ${escapeHtml(event.time)}–${escapeHtml(event.end_time)} WIB
         </div>
 
-                ${googleDeliveryBadge(event.id)}
+        ${googleDeliveryBadge(event.id)}
 
         <h3 class="event-title">
           ${escapeHtml(event.agenda)}
@@ -1648,17 +1319,167 @@
 
         <p>
           <strong>Proyek:</strong>
-          ${escapeHtml(
-            event.project || 'Belum ada proyek'
-          )}
+          ${escapeHtml(event.project || 'Belum ada proyek')}
         </p>
 
-        <p class="notes">
-          <strong>Catatan:</strong>
-          ${escapeHtml(event.notes || '—')}
-        </p>
+        <p class="notes"><strong>Catatan:</strong> ${escapeHtml(
+          event.notes || '—'
+        )}</p>
       </article>
     `;
+  }
+
+  // ======================================================
+  // LIBUR SEHARI PENUH
+  // ======================================================
+
+  function holidayMarkup(date) {
+    return holidays
+      .filter(holiday => holiday.date === date)
+      .map(holiday => `
+        <div class="holiday-badge">
+          <div class="holiday-badge-text">
+            ${escapeHtml(holiday.name)}
+            <small>Libur · Sehari penuh</small>
+          </div>
+
+          <button
+            type="button"
+            class="holiday-remove"
+            data-delete-holiday="${escapeHtml(holiday.id)}"
+            aria-label="Hapus libur ${escapeHtml(holiday.name)}"
+            title="Hapus libur"
+          >×</button>
+        </div>
+      `)
+      .join('');
+  }
+
+  function openHolidayDialog() {
+    if (!ready) {
+      return notify(
+        'Tunggu sampai data kalender selesai dimuat.'
+      );
+    }
+
+    if (!holidaysAvailable) {
+      return notify(
+        'API libur belum tersedia. Periksa route /api/calendar/holidays.'
+      );
+    }
+
+    $('holiday-form').reset();
+    $('holiday-error').hidden = true;
+
+    $('holiday-date').value =
+      $('view-date').value || todayKey();
+
+    $('holiday-dialog').showModal();
+    $('holiday-name').focus();
+  }
+
+  function closeHolidayDialog() {
+    if (!holidaySaving) {
+      $('holiday-dialog').close();
+    }
+  }
+
+  function setHolidaySaving(value) {
+    holidaySaving = value;
+
+    for (const control of $('holiday-form').elements) {
+      control.disabled = value;
+    }
+  }
+
+  async function saveHoliday(event) {
+    event.preventDefault();
+
+    if (holidaySaving) {
+      return;
+    }
+
+    $('holiday-name').value =
+      $('holiday-name').value.trim();
+
+    $('holiday-error').hidden = true;
+
+    if (!$('holiday-form').reportValidity()) {
+      return;
+    }
+
+    const body = {
+      name: $('holiday-name').value,
+      date: $('holiday-date').value
+    };
+
+    setHolidaySaving(true);
+
+    let saved;
+
+    try {
+      saved = await api('/holidays', {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+
+    } catch (error) {
+      $('holiday-error').textContent = error.message;
+      $('holiday-error').hidden = false;
+      return;
+
+    } finally {
+      setHolidaySaving(false);
+    }
+
+    const holiday = {
+      ...saved,
+      id: String(saved.id)
+    };
+
+    holidays = holidays.filter(
+      row => String(row.id) !== holiday.id
+    );
+
+    holidays.push(holiday);
+
+    $('holiday-dialog').close();
+    $('view-date').value = holiday.date;
+
+    notify('Libur berhasil disimpan.');
+
+    await loadDay();
+  }
+
+  async function deleteHoliday(button) {
+    if (
+      button.disabled ||
+      !confirm('Hapus libur ini?')
+    ) {
+      return;
+    }
+
+    const id = button.dataset.deleteHoliday;
+
+    button.disabled = true;
+
+    try {
+      await api(
+        `/holidays/${encodeURIComponent(id)}`,
+        { method: 'DELETE' }
+      );
+
+      holidays = holidays.filter(
+        holiday => String(holiday.id) !== id
+      );
+
+      render();
+      notify('Libur berhasil dihapus.');
+
+    } catch (error) {
+      button.disabled = false;
+      notify(error.message);
+    }
   }
 
   // ======================================================
@@ -1666,136 +1487,94 @@
   // ======================================================
 
   function render() {
-    const pic =
-      $('pic-filter').value;
+    const pic = $('pic-filter').value;
 
     const project = projectText(
       $('project-filter').value
     );
 
-    const query = $('search')
-      .value
-      .trim()
-      .toLocaleLowerCase('id');
-
-    const range =
-      calendarRange();
-
-    const visible = events.filter(
-      event =>
-        event.date >= range.from &&
-        event.date <= range.to &&
-        (
-          !pic ||
-          event.pics.some(
-            row =>
-              (
-                row.id ||
-                `legacy:${row.name}`
-              ) === pic
-          )
-        ) &&
-       (
-          !project ||
-          projectText(event.project).includes(project)
-        )&&
-        (
-          !query ||
-          [
-            event.agenda,
-            event.pic,
-            event.project,
-            event.meeting,
-            event.notes
-          ].some(
-            value =>
-              String(value || '')
-                .toLocaleLowerCase('id')
-                .includes(query)
-          )
-        )
+    const query = projectText(
+      $('search').value
     );
 
-    const formatter =
-      new Intl.DateTimeFormat(
-        'id-ID',
-        {
-          timeZone: 'UTC',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        }
-      );
+    const range = calendarRange();
 
-    $('date-title').textContent =
-      formatter.formatRange(
-        new Date(
-          `${range.from}T12:00:00Z`
-        ),
-        new Date(
-          `${range.to}T12:00:00Z`
+    const visible = events.filter(event =>
+      event.date >= range.from &&
+      event.date <= range.to &&
+
+      (
+        !pic ||
+        event.pics.some(
+          row =>
+            (row.id || `legacy:${row.name}`) === pic
         )
-      );
+      ) &&
+
+      (
+        !project ||
+        projectText(event.project).includes(project)
+      ) &&
+
+      (
+        !query ||
+        [
+          event.agenda,
+          event.pic,
+          event.project,
+          event.meeting,
+          event.notes,
+          event.additional_emails.join(' ')
+        ].some(
+          value => projectText(value).includes(query)
+        )
+      )
+    );
+
+    const formatter = new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'UTC',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    $('date-title').textContent = formatter.formatRange(
+      new Date(`${range.from}T12:00:00Z`),
+      new Date(`${range.to}T12:00:00Z`)
+    );
+
+    const holidayCount = holidays.filter(
+      holiday =>
+        holiday.date >= range.from &&
+        holiday.date <= range.to
+    ).length;
 
     $('status').textContent =
       loadError ||
       (
         `${visible.length} agenda` +
-        (
-          query || pic || project
-            ? ' sesuai filter'
-            : ''
-        ) +
+        (query || pic || project ? ' sesuai filter' : '') +
+        (holidayCount ? ` · ${holidayCount} libur` : '') +
         ' minggu ini · WIB'
       );
 
-    const legend = new Map();
-
-    for (const event of visible) {
-      for (
-        const eventPic of event.pics
-      ) {
-        legend.set(
-          eventPic.id ||
-            `legacy:${eventPic.name}`,
-
-          eventPic
-        );
-      }
+    // Legenda nama dan warna PIC tidak ditampilkan.
+    if ($('legend')) {
+      $('legend').replaceChildren();
+      $('legend').hidden = true;
     }
-
-    $('legend').innerHTML =
-      [...legend.values()]
-        .map(
-          eventPic => `
-            <span>
-              <i
-                class="swatch"
-                style="
-                  --pic-color:${picColor(eventPic).border}
-                "
-              ></i>
-
-              ${escapeHtml(eventPic.name)}
-            </span>
-          `
-        )
-        .join('');
 
     renderWeek(visible);
   }
 
   function renderWeek(visible) {
-    const today =
-      todayKey();
+    const today = todayKey();
 
-    const days =
-      weekDays(
-        $('view-date').value
-      );
+    const days = weekDays(
+      $('view-date').value
+    );
 
-    const conflicts =
-      findPicConflicts(events);
+    const conflicts = findPicConflicts(events);
 
     const names = [
       'Minggu',
@@ -1807,96 +1586,68 @@
       'Sabtu'
     ];
 
-    const layouts = days.map(
-      day =>
-        layoutEvents(
-          visible.filter(
-            event =>
-              event.date === day.key
-          )
-        )
+    const layouts = days.map(day =>
+      layoutEvents(
+        visible.filter(event => event.date === day.key)
+      )
     );
 
-    const widths = layouts.map(
-      layout =>
-        Math.max(
-          180,
-
-          ...layout.map(
-            event =>
-              event.columns * 145
-          )
-        )
+    const widths = layouts.map(layout =>
+      Math.max(
+        180,
+        ...layout.map(event => event.columns * 145)
+      )
     );
 
     $('week-board').style.setProperty(
       '--week-cols',
-
-      `64px ${widths
-        .map(
-          width =>
-            `minmax(${width}px,1fr)`
-        )
-        .join(' ')}`
+      '64px ' +
+      widths.map(width => `minmax(${width}px,1fr)`).join(' ')
     );
 
     $('week-board').style.minWidth =
       `${
-        64 +
-        widths.reduce(
-          (total, width) =>
-            total + width,
+        64 + widths.reduce(
+          (total, width) => total + width,
           0
         )
       }px`;
 
     $('week-head').innerHTML =
       '<div class="zone-label">WIB<br>GMT+7</div>' +
-      days
-        .map(day => {
-          const valid =
-            day.key.length === 10 &&
-            day.key >= '1000-01-01';
+      days.map(day => {
+        const valid = validDateKey(day.key);
+        const conflict = conflicts.get(day.key);
 
-          const conflict =
-            conflicts.get(day.key);
+        return `
+          <div
+            class="week-day-head
+              ${day.key === today ? 'current' : ''}
+              ${day.weekday === 0 || day.weekday === 6
+                ? 'weekend'
+                : ''}
+              ${conflict ? 'has-conflict' : ''}"
+          >
+            <span>${names[day.weekday]}</span>
 
-          return `
-            <div
-              class="week-day-head
-                ${day.key === today
-                  ? ' current'
-                  : ''}
-                ${day.weekday === 0 ||
-                  day.weekday === 6
-                  ? ' weekend'
-                  : ''}
-                ${conflict
-                  ? ' has-conflict'
-                  : ''}"
+            <button
+              type="button"
+              class="date-number"
+              data-new-date="${escapeHtml(day.key)}"
+              ${!valid ? 'disabled' : ''}
+              aria-label="Tambah agenda ${escapeHtml(day.key)}"
             >
-              <span>
-                ${names[day.weekday]}
-              </span>
+              ${day.day}
+            </button>
 
-              <button
-                class="date-number"
-                data-new-date="${escapeHtml(day.key)}"
-                ${!valid ? 'disabled' : ''}
-                aria-label="Tambah agenda ${escapeHtml(day.key)}"
-              >
-                ${day.day}
-              </button>
-
-              ${conflictAlert(conflict)}
-            </div>
-          `;
-        })
-        .join('');
+            ${holidayMarkup(day.key)}
+            ${conflictAlert(conflict)}
+          </div>
+        `;
+      }).join('');
 
     const hours = Array.from(
       { length: 24 },
-
       (_, hour) => `
         <div class="hour-label">
           ${String(hour).padStart(2, '0')}:00
@@ -1905,150 +1656,108 @@
     ).join('');
 
     $('week-columns').innerHTML =
-      `
-        <div
-          class="hours"
-          aria-hidden="true"
-        >
-          ${hours}
-        </div>
-      ` +
-      days
-        .map((day, index) => {
-          const valid =
-            day.key.length === 10 &&
-            day.key >= '1000-01-01';
+      `<div class="hours" aria-hidden="true">${hours}</div>` +
+      days.map((day, index) => {
+        const valid = validDateKey(day.key);
 
-          const slots = Array.from(
-            { length: 24 },
+        const isHoliday = holidays.some(
+          holiday => holiday.date === day.key
+        );
 
-            (_, hour) => `
-              <button
-                class="slot"
-                style="
-                  top:${hour * HOUR_HEIGHT}px
-                "
-                data-hour="${hour}"
-                data-date="${escapeHtml(day.key)}"
-                ${!valid ? 'disabled' : ''}
-                aria-label="Tambah agenda ${escapeHtml(day.key)} ${String(hour).padStart(2, '0')}:00"
-              >
-                <span>＋</span>
-              </button>
-            `
-          ).join('');
-
-          return `
-            <section
-              class="track
-                ${day.key === today
-                  ? ' today-track'
-                  : ''}
-                ${index === 0 ||
-                  index === 6
-                  ? ' weekend-track'
-                  : ''}"
-              data-column-date="${escapeHtml(day.key)}"
-              aria-label="Agenda ${escapeHtml(day.key)}"
+        const slots = Array.from(
+          { length: 24 },
+          (_, hour) => `
+            <button
+              type="button"
+              class="slot"
+              style="top:${hour * HOUR_HEIGHT}px"
+              data-hour="${hour}"
+              data-date="${escapeHtml(day.key)}"
+              ${!valid ? 'disabled' : ''}
+              aria-label="Tambah agenda ${escapeHtml(day.key)} ${String(hour).padStart(2, '0')}:00"
             >
-              ${slots}
+              <span>＋</span>
+            </button>
+          `
+        ).join('');
 
-              ${layouts[index]
-                .map(eventCard)
-                .join('')}
-            </section>
-          `;
-        })
-        .join('');
+        return `
+          <section
+            class="track
+              ${day.key === today ? 'today-track' : ''}
+              ${index === 0 || index === 6
+                ? 'weekend-track'
+                : ''}
+              ${isHoliday ? 'holiday-track' : ''}"
+            data-column-date="${escapeHtml(day.key)}"
+            aria-label="Agenda ${escapeHtml(day.key)}"
+          >
+            ${slots}
+            ${layouts[index].map(eventCard).join('')}
+          </section>
+        `;
+      }).join('');
 
     updateCurrentTime();
     renderGoogleDelivery();
   }
 
   function updateCurrentTime() {
-    document
-      .querySelector('#now-line')
-      ?.remove();
+    document.querySelector('#now-line')?.remove();
 
-    const today =
-      todayKey();
+    const today = todayKey();
 
     const track = [
-      ...document.querySelectorAll(
-        '[data-column-date]'
-      )
+      ...document.querySelectorAll('[data-column-date]')
     ].find(
-      node =>
-        node.dataset.columnDate === today
+      node => node.dataset.columnDate === today
     );
 
     if (!track) {
       return;
     }
 
-    const parts =
-      new Intl.DateTimeFormat(
-        'en-GB',
-        {
-          timeZone: 'Asia/Jakarta',
-          hour: '2-digit',
-          minute: '2-digit',
-          hourCycle: 'h23'
-        }
-      ).formatToParts(new Date());
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(new Date());
 
     const part = type =>
       Number(
-        parts.find(
-          item =>
-            item.type === type
-        ).value
+        parts.find(item => item.type === type).value
       );
 
-    const line =
-      document.createElement('div');
+    const line = document.createElement('div');
 
     line.id = 'now-line';
     line.className = 'now-line';
-
-    line.setAttribute(
-      'aria-hidden',
-      'true'
-    );
+    line.setAttribute('aria-hidden', 'true');
 
     line.style.top =
       `${
-        (
-          part('hour') * 60 +
-          part('minute')
-        ) /
-        60 *
-        HOUR_HEIGHT
+        (part('hour') * 60 + part('minute')) /
+        60 * HOUR_HEIGHT
       }px`;
 
     track.append(line);
   }
 
   // ======================================================
-  // LOAD DATA
+  // PEMUATAN DATA
   // ======================================================
 
-  async function loadDay({
-    scroll = false
-  } = {}) {
-    const number =
-      ++requestNumber;
-
-    const range =
-      calendarRange();
+  async function loadDay({ scroll = false } = {}) {
+    const number = ++requestNumber;
+    const range = calendarRange();
 
     loadError = '';
     events = [];
 
     render();
 
-    $('status').textContent =
-      'Memuat agenda…';
+    $('status').textContent = 'Memuat agenda…';
 
     try {
       const rows = await api(
@@ -2056,9 +1765,7 @@
         `&to=${encodeURIComponent(range.to)}`
       );
 
-      if (
-        number !== requestNumber
-      ) {
+      if (number !== requestNumber) {
         return;
       }
 
@@ -2068,11 +1775,16 @@
         );
       }
 
-      events = rows;
-      refreshGoogleJobs(true);
+      events = rows.map(normalizeEvent);
+
+      rememberEmailSuggestions(
+        events.flatMap(event => event.additional_emails)
+      );
 
       refreshFilters();
       render();
+
+      refreshGoogleJobs(true);
 
       if (scroll) {
         $('calendar-scroll').scrollTop =
@@ -2080,54 +1792,119 @@
       }
 
     } catch (error) {
-      if (
-        number !== requestNumber
-      ) {
+      if (number !== requestNumber) {
         return;
       }
 
-      loadError =
-        error.message;
+      loadError = error.message;
 
       render();
-
       notify(error.message);
     }
   }
 
-  async function reload(
-    options = {}
-  ) {
-    if (saving) {
+  async function reload(options = {}) {
+    if (saving || holidaySaving) {
       return;
     }
 
+    const number = ++reloadNumber;
+
+    // Abaikan permintaan agenda lama yang masih berjalan.
+    requestNumber++;
     ready = false;
 
+    $('status').textContent = 'Memuat data kalender…';
+
     try {
-      master = await api(
-        '/options'
-      );
+      const [masterResult, holidayResult] =
+        await Promise.allSettled([
+          api('/options'),
+          api('/holidays')
+        ]);
+
+      if (number !== reloadNumber) {
+        return;
+      }
+
+      if (masterResult.status === 'rejected') {
+        throw masterResult.reason;
+      }
+
+      const loadedMaster = masterResult.value;
 
       if (
-        !Array.isArray(master.pics) ||
-        !Array.isArray(master.projects)
+        !Array.isArray(loadedMaster.pics) ||
+        !Array.isArray(loadedMaster.projects)
       ) {
         throw new Error(
-          'Respons master tidak valid.'
+          'Respons master kalender tidak valid.'
         );
+      }
+
+      master = {
+        ...loadedMaster,
+
+        pics: loadedMaster.pics.map(pic => ({
+          ...pic,
+          id: String(pic.id),
+          name: String(pic.name || '')
+        })),
+
+        projects: loadedMaster.projects.map(project => ({
+          ...project,
+          id: String(project.id),
+          name: String(project.name || '')
+        }))
+      };
+
+      rememberEmailSuggestions();
+
+      let holidayError = '';
+
+      if (
+        holidayResult.status === 'fulfilled' &&
+        Array.isArray(holidayResult.value)
+      ) {
+        holidays = holidayResult.value.map(holiday => ({
+          ...holiday,
+          id: String(holiday.id)
+        }));
+
+        holidaysAvailable = true;
+
+      } else {
+        holidaysAvailable = false;
+        holidays = [];
+
+        holidayError =
+          holidayResult.status === 'rejected'
+            ? holidayResult.reason.message
+            : 'Format daftar libur tidak valid.';
       }
 
       ready = true;
 
       await loadDay(options);
 
+      if (
+        number === reloadNumber &&
+        holidayError
+      ) {
+        notify(
+          'Data libur belum tersedia: ' +
+          holidayError
+        );
+      }
+
     } catch (error) {
-      loadError =
-        error.message;
+      if (number !== reloadNumber) {
+        return;
+      }
+
+      loadError = error.message;
 
       render();
-
       notify(error.message);
     }
   }
@@ -2138,13 +1915,10 @@
 
   function updateMeetingLabel() {
     const online =
-      $('meeting-type').value ===
-      'online';
+      $('meeting-type').value === 'online';
 
     $('meeting-label').textContent =
-      online
-        ? 'Link meeting *'
-        : 'Lokasi meeting *';
+      online ? 'Link meeting *' : 'Lokasi meeting *';
 
     $('meeting').placeholder =
       online
@@ -2153,31 +1927,26 @@
   }
 
   // ======================================================
-  // PILIHAN PROYEK
+  // PENCARIAN PROYEK
   // ======================================================
 
   function toggleProjectField() {
-    const noProject =
-      $('no-project').checked;
+    const noProject = $('no-project').checked;
 
     $('project').setCustomValidity('');
+    $('project-search').setCustomValidity('');
 
-    $('project').required =
-      !noProject;
+    $('project').disabled = saving || noProject;
+    $('project-search').disabled = saving || noProject;
+    $('project-search').required = !noProject;
 
-    $('project').disabled =
-      saving || noProject;
-
-    $('project-search').disabled =
-      saving || noProject;
-
-    $('project-required').hidden =
-      noProject;
+    $('project-required').hidden = noProject;
 
     if (noProject) {
       $('project').value = '';
-
       $('project-search').value = '';
+
+      closeProjectOptions();
     }
   }
 
@@ -2190,282 +1959,99 @@
     );
   }
 
- function projectText(value) {
-  return String(value || '')
-    .trim()
-    .toLocaleLowerCase('id');
-}
-
-function searchProjects() {
-  if (
-    $('project-search').disabled
-  ) {
-    return;
-  }
-
-  const query = projectText(
-    $('project-search').value
-  );
-
-  const candidates = [
-    ...master.projects
-  ];
-
-  const old = events.find(
-    row =>
-      String(row.id) ===
-      $('event-id').value
-  );
-
-  // Proyek lama tetap tersedia ketika mengedit agenda.
-  if (
-    old?.project_id &&
-    !candidates.some(
-      row =>
-        String(row.id) ===
-        String(old.project_id)
-    )
-  ) {
-    candidates.unshift({
-      id: old.project_id,
-      name: old.project,
-      legacy: true
-    });
-  }
-
-  // Nama lengkap yang cocok dengan satu proyek
-  // langsung dipilih tanpa perlu membuka daftar.
-  const exact = candidates.filter(
-    row =>
-      projectText(row.name) === query
-  );
-
-  if (
-    query &&
-    exact.length === 1
-  ) {
-    $('project').value =
-      String(exact[0].id);
-
-    $('project-search')
-      .setCustomValidity('');
-
-    closeProjectOptions();
-
-    return;
-  }
-
-  // Jangan menampilkan seluruh daftar saat kolom kosong.
-  if (query.length < 2) {
-    closeProjectOptions();
-
-    return;
-  }
-
-  const matches = candidates.filter(
-    row =>
-      projectText(row.name)
-        .includes(query)
-  );
-
-  const rows =
-    matches.slice(0, 10);
-
-  $('project-options').innerHTML =
-    rows.length
-      ? (
-          rows.map(
-            row => `
-              <button
-                type="button"
-                role="option"
-                data-project-id="${escapeHtml(row.id)}"
-              >
-                ${escapeHtml(row.name)}
-                ${row.legacy ? ' (proyek lama)' : ''}
-              </button>
-            `
-          ).join('') +
-
-          (
-            matches.length > 10
-              ? `
-                  <p>
-                    Ketik nama lebih lengkap
-                    untuk mempersempit hasil.
-                  </p>
-                `
-              : ''
-          )
-        )
-      : '<p>Tidak ada proyek yang cocok.</p>';
-
-  const input =
-    $('project-search')
-      .getBoundingClientRect();
-
-  const list =
-    $('project-options');
-
-  list.style.left =
-    `${input.left}px`;
-
-  list.style.top =
-    `${input.bottom + 5}px`;
-
-  list.style.width =
-    `${input.width}px`;
-
-  list.hidden = false;
-
-  $('project-search').setAttribute(
-    'aria-expanded',
-    'true'
-  );
-}
-  // ======================================================
-  // MODAL DETAIL
-  // ======================================================
-
-  function openView(event) {
-    if (!event || saving) {
+  function searchProjects() {
+    if ($('project-search').disabled) {
+      closeProjectOptions();
       return;
     }
 
-    viewedEventId =
-      String(event.id);
+    const query = projectText(
+      $('project-search').value
+    );
 
-    $('view-title').textContent =
-      event.agenda;
+    const candidates = [...master.projects];
 
-    $('view-date-info').textContent =
-      new Intl.DateTimeFormat(
-        'id-ID',
-        {
-          timeZone: 'UTC',
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        }
-      ).format(
-        new Date(
-          `${event.date}T12:00:00Z`
-        )
-      );
+    const old = events.find(
+      row => row.id === $('event-id').value
+    );
 
-    $('view-time-info').textContent =
-      `${event.time}–${event.end_time} WIB`;
-
-      const additionalEmails = Array.isArray(event.additional_emails)
-      ? event.additional_emails
-      : [];
-
-    $('view-additional-emails').textContent =
-      additionalEmails.length
-        ? additionalEmails.join(', ')
-        : '—';
-
-    $('view-project').textContent =
-      event.no_project
-        ? 'Belum ada proyek'
-        : event.project || '—';
-
-    $('view-type').textContent =
-      event.type === 'online'
-        ? 'Online'
-        : 'Di lokasi';
-
-    $('view-notes').textContent =
-      event.notes || '—';
-
-    const pics =
-      $('view-pics');
-
-    pics.replaceChildren();
-
-    for (
-      const pic of event.pics || []
-    ) {
-      const badge =
-        document.createElement('span');
-
-      const color =
-        picColor(pic);
-
-      badge.className =
-        'pic-badge';
-
-      badge.style.setProperty(
-        '--pic-color',
-        color.border
-      );
-
-      badge.style.setProperty(
-        '--pic-bg',
-        color.background
-      );
-
-      badge.textContent =
-        pic.name;
-
-      pics.append(badge);
-    }
-
-    if (!event.pics?.length) {
-      pics.textContent = '—';
-    }
-
-    const meeting =
-      $('view-meeting');
-
-    meeting.replaceChildren();
-
-    const link =
-      safeLink(event.meeting);
-
-    if (link) {
-      const anchor =
-        document.createElement('a');
-
-      anchor.href = link;
-
-      anchor.target = '_blank';
-
-      anchor.rel =
-        'noopener noreferrer';
-
-      anchor.textContent =
-        event.meeting;
-
-      meeting.append(anchor);
-
-    } else {
-      meeting.textContent =
-        event.meeting || '—';
-    }
-
-    $('view-dialog').showModal();
-    updateGoogleDetails();
-  }
-
-  function closeView() {
     if (
-      $('view-dialog').open
+      old?.project_id &&
+      !candidates.some(
+        row => String(row.id) === String(old.project_id)
+      )
     ) {
-      $('view-dialog').close();
+      candidates.unshift({
+        id: String(old.project_id),
+        name: old.project || '',
+        legacy: true
+      });
     }
 
-    viewedEventId = null;
+    const exact = candidates.filter(
+      row => projectText(row.name) === query
+    );
+
+    if (query && exact.length === 1) {
+      $('project').value = String(exact[0].id);
+
+      $('project-search').setCustomValidity('');
+
+      closeProjectOptions();
+      return;
+    }
+
+    if (query.length < 2) {
+      closeProjectOptions();
+      return;
+    }
+
+    const matches = candidates.filter(
+      row => projectText(row.name).includes(query)
+    );
+
+    const rows = matches.slice(0, 10);
+
+    $('project-options').innerHTML =
+      rows.length
+        ? rows.map(row => `
+            <button
+              type="button"
+              role="option"
+              data-project-id="${escapeHtml(row.id)}"
+              data-project-name="${escapeHtml(row.name)}"
+            >
+              ${escapeHtml(row.name)}
+              ${row.legacy ? ' (proyek lama)' : ''}
+            </button>
+          `).join('') +
+          (
+            matches.length > 10
+              ? '<p>Ketik nama lebih lengkap untuk mempersempit hasil.</p>'
+              : ''
+          )
+        : '<p>Tidak ada proyek yang cocok.</p>';
+
+    const input = $('project-search')
+      .getBoundingClientRect();
+
+    const list = $('project-options');
+
+    list.style.left = `${input.left}px`;
+    list.style.top = `${input.bottom + 5}px`;
+    list.style.width = `${input.width}px`;
+    list.hidden = false;
+
+    $('project-search').setAttribute(
+      'aria-expanded',
+      'true'
+    );
   }
 
   // ======================================================
-  // MODAL TAMBAH / EDIT
+  // SARAN EMAIL TAMBAHAN
   // ======================================================
 
-   let activeEmailSuggestion = -1;
-
-  // Tutup daftar saran.
   function closeEmailSuggestions() {
     $('additional-email-options').hidden = true;
 
@@ -2481,14 +2067,12 @@ function searchProjects() {
     activeEmailSuggestion = -1;
   }
 
-  // Masukkan email yang dipilih.
   function chooseEmailSuggestion(email) {
     const input = $('additional-emails');
 
     const token =
       input.value.match(/[^,;\s]*$/)?.[0] || '';
 
-    // Pertahankan email yang sudah diketik sebelumnya.
     const prefix = input.value.slice(
       0,
       input.value.length - token.length
@@ -2506,7 +2090,6 @@ function searchProjects() {
     closeEmailSuggestions();
   }
 
-  // Tampilkan email yang cocok dengan ketikan pengguna.
   function updateEmailSuggestions() {
     const input = $('additional-emails');
     const list = $('additional-email-options');
@@ -2541,6 +2124,7 @@ function searchProjects() {
       .slice(0, 8);
 
     list.replaceChildren();
+
     closeEmailSuggestions();
 
     if (
@@ -2580,7 +2164,6 @@ function searchProjects() {
 
       option.append(icon, text, arrow);
 
-      // Jaga fokus input ketika saran diklik atau disentuh.
       option.addEventListener(
         'pointerdown',
         event => event.preventDefault()
@@ -2602,8 +2185,11 @@ function searchProjects() {
     );
   }
 
-  // Pilih saran menggunakan tombol panah dan Enter.
   function handleEmailSuggestionKeydown(event) {
+    if (event.isComposing) {
+      return;
+    }
+
     const list = $('additional-email-options');
 
     if (event.key === 'Escape' && !list.hidden) {
@@ -2649,6 +2235,7 @@ function searchProjects() {
     if (event.key === 'ArrowDown') {
       activeEmailSuggestion =
         (activeEmailSuggestion + 1) % options.length;
+
     } else {
       activeEmailSuggestion =
         activeEmailSuggestion <= 0
@@ -2675,6 +2262,117 @@ function searchProjects() {
     });
   }
 
+  // ======================================================
+  // MODAL DETAIL AGENDA
+  // ======================================================
+
+  function openView(event) {
+    if (!event || saving) {
+      return;
+    }
+
+    viewedEventId = event.id;
+
+    $('view-title').textContent = event.agenda;
+
+    $('view-date-info').textContent =
+      new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'UTC',
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }).format(
+        new Date(`${event.date}T12:00:00Z`)
+      );
+
+    $('view-time-info').textContent =
+      `${event.time}–${event.end_time} WIB`;
+
+    $('view-project').textContent =
+      event.no_project
+        ? 'Belum ada proyek'
+        : event.project || '—';
+
+    $('view-type').textContent =
+      event.type === 'online'
+        ? 'Online'
+        : 'Di lokasi';
+
+    $('view-notes').textContent =
+      event.notes || '—';
+
+    $('view-additional-emails').textContent =
+      event.additional_emails.length
+        ? event.additional_emails.join(', ')
+        : '—';
+
+    const pics = $('view-pics');
+
+    pics.replaceChildren();
+
+    for (const pic of event.pics) {
+      const badge = document.createElement('span');
+      const color = picColor(pic);
+
+      badge.className = 'pic-badge';
+
+      badge.style.setProperty(
+        '--pic-color',
+        color.border
+      );
+
+      badge.style.setProperty(
+        '--pic-bg',
+        color.background
+      );
+
+      badge.textContent = pic.name;
+
+      pics.append(badge);
+    }
+
+    if (!event.pics.length) {
+      pics.textContent = '—';
+    }
+
+    const meeting = $('view-meeting');
+
+    meeting.replaceChildren();
+
+    const link = safeLink(event.meeting);
+
+    if (link) {
+      const anchor = document.createElement('a');
+
+      anchor.href = link;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      anchor.textContent = event.meeting;
+
+      meeting.append(anchor);
+
+    } else {
+      meeting.textContent = event.meeting || '—';
+    }
+
+    $('view-dialog').showModal();
+
+    updateGoogleDetails();
+  }
+
+  function closeView() {
+    if ($('view-dialog').open) {
+      $('view-dialog').close();
+    }
+
+    viewedEventId = null;
+  }
+
+  // ======================================================
+  // MODAL TAMBAH / EDIT AGENDA
+  // ======================================================
+
   function openForm(
     event = null,
     hour = 9,
@@ -2687,37 +2385,25 @@ function searchProjects() {
     $('agenda-form').reset();
 
     $('form-error').hidden = true;
+    $('pic-search').value = '';
 
-    $('event-id').value =
-      event?.id || '';
+    $('event-id').value = event?.id || '';
 
     $('dialog-title').textContent =
-      event
-        ? 'Edit agenda'
-        : 'Tambah agenda';
+      event ? 'Edit agenda' : 'Tambah agenda';
 
-    $('delete').hidden =
-      !event;
+    $('delete').hidden = !event;
 
-    $('date').value =
-      event?.date || date;
+    $('date').value = event?.date || date;
 
-    $('repeat-fieldset').hidden =
-      Boolean(event);
-
-    $('repeat-enabled').checked =
-      false;
-
-    $('repeat-settings').hidden =
-      true;
-
+    $('repeat-fieldset').hidden = Boolean(event);
+    $('repeat-enabled').checked = false;
+    $('repeat-settings').hidden = true;
     $('repeat-end').value = '';
-
     $('repeat-end').required = false;
 
     for (
-      const checkbox of
-      document.querySelectorAll(
+      const checkbox of document.querySelectorAll(
         'input[name="repeat-day"]'
       )
     ) {
@@ -2725,70 +2411,52 @@ function searchProjects() {
     }
 
     $('time').value =
-      event?.time ||
-      timeText(hour * 60);
+      event?.time || timeText(hour * 60);
 
     $('end-time').value =
-      event?.end_time ||
-      timeText(
-        (hour + 1) * 60
-      );
+      event?.end_time || timeText((hour + 1) * 60);
 
-    for (
-      const field of [
-        'agenda',
-        'meeting',
-        'notes'
-      ]
-    ) {
-      $(field).value =
-        event?.[field] || '';
+    for (const field of ['agenda', 'meeting', 'notes']) {
+      $(field).value = event?.[field] || '';
     }
 
     $('additional-emails').value =
-    Array.isArray(event?.additional_emails)
-      ? event.additional_emails.join(', ')
-      : '';
+      event?.additional_emails?.join(', ') || '';
 
-        updateEmailSuggestions();
+    closeEmailSuggestions();
 
-    const selected =
-      new Set(
-        event?.pic_ids || []
-      );
+    const selected = new Set(
+      (event?.pic_ids || []).map(String)
+    );
 
-    $('pic-options')
-      .replaceChildren();
+    $('pic-options').replaceChildren();
 
-    for (
-      const pic of master.pics
-    ) {
-      const label =
-        document.createElement('label');
+    // Pertahankan PIC agenda lama jika tidak ada di daftar master.
+    const formPics = new Map(
+      master.pics.map(pic => [String(pic.id), pic])
+    );
 
-      const check =
-        document.createElement('input');
+    for (const pic of event?.pics || []) {
+      if (pic.id != null && !formPics.has(String(pic.id))) {
+        formPics.set(String(pic.id), pic);
+      }
+    }
+
+    for (const pic of formPics.values()) {
+      const label = document.createElement('label');
+      const check = document.createElement('input');
 
       check.type = 'checkbox';
-
       check.name = 'pic_ids';
-
-      check.value = pic.id;
-
-      check.checked =
-        selected.has(pic.id);
+      check.value = String(pic.id);
+      check.checked = selected.has(String(pic.id));
 
       label.append(
         check,
-
-        document.createTextNode(
-          pic.name
-        )
+        document.createTextNode(pic.name)
       );
 
-      $('pic-options').append(
-        label
-      );
+      $('pic-options').append(label);
     }
 
     updatePicCount();
@@ -2812,12 +2480,14 @@ function searchProjects() {
     updateMeetingLabel();
 
     $('dialog').showModal();
-
     $('agenda').focus();
   }
 
   function closeForm() {
     if (!saving) {
+      closeProjectOptions();
+      closeEmailSuggestions();
+
       $('dialog').close();
     }
   }
@@ -2825,10 +2495,7 @@ function searchProjects() {
   function setSaving(value) {
     saving = value;
 
-    for (
-      const control of
-      $('agenda-form').elements
-    ) {
+    for (const control of $('agenda-form').elements) {
       control.disabled = value;
     }
 
@@ -2836,11 +2503,8 @@ function searchProjects() {
   }
 
   function formError(message) {
-    $('form-error').textContent =
-      message;
-
-    $('form-error').hidden =
-      false;
+    $('form-error').textContent = message;
+    $('form-error').hidden = false;
   }
 
   function selectedPicIds() {
@@ -2848,10 +2512,7 @@ function searchProjects() {
       ...document.querySelectorAll(
         '#pic-options input:checked'
       )
-    ].map(
-      input =>
-        input.value
-    );
+    ].map(input => input.value);
   }
 
   function updatePicCount() {
@@ -2864,286 +2525,211 @@ function searchProjects() {
   // ======================================================
 
   async function saveAgenda(event) {
-  event.preventDefault();
+    event.preventDefault();
 
-  if (saving) {
-    return;
-  }
-
-  toggleProjectField();
-
-  $('form-error').hidden = true;
-
-  for (
-    const field of [
-      'agenda',
-      'meeting',
-      'notes',
-      'end-time'
-    ]
-  ) {
-    $(field).value =
-      $(field).value.trim();
-  }
-
-  if (
-    !$('agenda').value ||
-    !$('meeting').value
-  ) {
-    return formError(
-      'Agenda dan link/lokasi wajib diisi.'
-    );
-  }
-
-  if (
-    !$('agenda-form').reportValidity()
-  ) {
-    return;
-  }
-
-  const picIds =
-    selectedPicIds();
-  
-  const additionalEmails = [
-    ...new Set(
-      $('additional-emails').value
-        .split(/[,;\s]+/)
-        .map(email => email.trim().toLowerCase())
-        .filter(Boolean)
-    )
-  ];
-
-  const invalidEmail = additionalEmails.find(
-    email => !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(email)
-  );
-
-  if (invalidEmail) {
-    $('additional-emails').focus();
-
-    return formError(
-      `Format email tambahan tidak valid: ${invalidEmail}`
-    );
-  }
-
-  if (!picIds.length) {
-    return formError(
-      'Pilih minimal satu PIC dari Master PIC.'
-    );
-  }
-
-  if (
-    minutes(
-      $('end-time').value
-    ) <=
-    minutes(
-      $('time').value
-    )
-  ) {
-    return formError(
-      'Jam selesai harus setelah jam mulai.'
-    );
-  }
-
-  if (
-    $('meeting-type').value === 'online' &&
-    !safeLink(
-      $('meeting').value
-    )
-  ) {
-    return formError(
-      'Link meeting harus diawali http:// atau https://.'
-    );
-  }
-
-  // ======================================================
-  // VALIDASI PROYEK YANG DIKETIK
-  // ======================================================
-
-  const noProject =
-    $('no-project').checked;
-
-  if (!noProject) {
-    $('project-search').value =
-      $('project-search').value.trim();
-
-    // Cocokkan nama lengkap jika proyek belum terpilih.
-    if (!$('project').value) {
-      searchProjects();
+    if (saving) {
+      return;
     }
 
-    if (!$('project').value) {
-      $('project-search').focus();
+    toggleProjectField();
 
+    $('form-error').hidden = true;
+
+    for (
+      const field of [
+        'agenda',
+        'meeting',
+        'notes',
+        'time',
+        'end-time'
+      ]
+    ) {
+      $(field).value = $(field).value.trim();
+    }
+
+    if (
+      !$('agenda').value ||
+      !$('meeting').value
+    ) {
       return formError(
-        'Ketik nama proyek lengkap atau pilih salah satu hasil pencarian.'
+        'Agenda dan link/lokasi wajib diisi.'
       );
     }
-  }
 
-  const id =
-    $('event-id').value;
+    if (!$('agenda-form').reportValidity()) {
+      return;
+    }
 
-  const body = {
-    agenda:
-      $('agenda').value,
+    const picIds = selectedPicIds();
 
-    date:
-      $('date').value,
+    if (!picIds.length) {
+      return formError(
+        'Pilih minimal satu PIC dari Master PIC.'
+      );
+    }
 
-    time:
-      $('time').value,
-
-    end_time:
-      $('end-time').value,
-
-    pic_ids:
-      picIds,
-
-    additional_emails:
-      additionalEmails,
-
-    no_project:
-      noProject,
-
-    project_id:
-      noProject
-        ? null
-        : $('project').value,
-
-    type:
-      $('meeting-type').value,
-
-    meeting:
-      $('meeting').value,
-
-    notes:
-      $('notes').value
-  };
-
-  // ======================================================
-  // PERULANGAN AGENDA
-  // ======================================================
-
-  if (
-    !id &&
-    $('repeat-enabled').checked
-  ) {
-    const weekdays = [
-      ...document.querySelectorAll(
-        'input[name="repeat-day"]:checked'
-      )
-    ].map(
-      input =>
-        Number(input.value)
+    const additionalEmails = normalizeEmails(
+      $('additional-emails').value.split(/[,;\s]+/)
     );
 
-    if (!weekdays.length) {
+    const invalidEmail = additionalEmails.find(
+      email =>
+        email.length > 254 ||
+        !EMAIL_PATTERN.test(email)
+    );
+
+    if (invalidEmail) {
+      $('additional-emails').focus();
+
       return formError(
-        'Pilih minimal satu hari perulangan.'
+        `Format email tambahan tidak valid: ${invalidEmail}`
+      );
+    }
+
+    if (additionalEmails.join(', ').length > 2000) {
+      return formError(
+        'Daftar email tambahan maksimal 2000 karakter.'
       );
     }
 
     if (
-      !$('repeat-end').value ||
-      $('repeat-end').value <
-      $('date').value
+      minutes($('end-time').value) <=
+      minutes($('time').value)
     ) {
       return formError(
-        'Tanggal akhir perulangan harus sama atau setelah tanggal mulai.'
+        'Jam selesai harus setelah jam mulai.'
       );
     }
 
-    body.repeat = {
-      start_date:
-        $('date').value,
+    if (
+      $('meeting-type').value === 'online' &&
+      !safeLink($('meeting').value)
+    ) {
+      return formError(
+        'Link meeting harus diawali http:// atau https://.'
+      );
+    }
 
-      end_date:
-        $('repeat-end').value,
+    const noProject = $('no-project').checked;
 
-      weekdays
-    };
-  }
+    if (!noProject) {
+      $('project-search').value =
+        $('project-search').value.trim();
 
-  // ======================================================
-  // KIRIM KE SERVER
-  // ======================================================
-
-  setSaving(true);
-
-  let saved;
-
-  try {
-    saved = await api(
-      id
-        ? `/${encodeURIComponent(id)}`
-        : '',
-
-      {
-        method:
-          id
-            ? 'PUT'
-            : 'POST',
-
-        body:
-          JSON.stringify(body)
+      if (!$('project').value) {
+        searchProjects();
       }
+
+      if (!$('project').value) {
+        $('project-search').focus();
+
+        return formError(
+          'Ketik nama proyek lengkap atau pilih salah satu hasil pencarian.'
+        );
+      }
+    }
+
+    const id = $('event-id').value;
+
+    const body = {
+      agenda: $('agenda').value,
+      date: $('date').value,
+      time: $('time').value,
+      end_time: $('end-time').value,
+
+      pic_ids: picIds,
+      additional_emails: additionalEmails,
+
+      no_project: noProject,
+
+      project_id:
+        noProject ? null : $('project').value,
+
+      type: $('meeting-type').value,
+      meeting: $('meeting').value,
+      notes: $('notes').value
+    };
+
+    if (!id && $('repeat-enabled').checked) {
+      const weekdays = [
+        ...document.querySelectorAll(
+          'input[name="repeat-day"]:checked'
+        )
+      ].map(input => Number(input.value));
+
+      if (!weekdays.length) {
+        return formError(
+          'Pilih minimal satu hari perulangan.'
+        );
+      }
+
+      if (
+        !$('repeat-end').value ||
+        $('repeat-end').value < $('date').value
+      ) {
+        return formError(
+          'Tanggal akhir perulangan harus sama atau setelah tanggal mulai.'
+        );
+      }
+
+      body.repeat = {
+        start_date: $('date').value,
+        end_date: $('repeat-end').value,
+        weekdays
+      };
+    }
+
+    closeProjectOptions();
+    closeEmailSuggestions();
+
+    setSaving(true);
+
+    let saved;
+
+    try {
+      saved = await api(
+        id ? `/${encodeURIComponent(id)}` : '',
+        {
+          method: id ? 'PUT' : 'POST',
+          body: JSON.stringify(body)
+        }
+      );
+
+    } catch (error) {
+      formError(error.message);
+      return;
+
+    } finally {
+      setSaving(false);
+    }
+
+    rememberEmailSuggestions(additionalEmails);
+
+    $('dialog').close();
+
+    $('view-date').value = saved.date;
+    $('search').value = '';
+    $('pic-filter').value = '';
+    $('project-filter').value = '';
+
+    googleJobs.delete(String(saved.id));
+    googleJobsRequest++;
+
+    notify(
+      (
+        saved.created_count > 1
+          ? `${saved.created_count} agenda berulang berhasil disimpan.`
+          : 'Agenda berhasil disimpan.'
+      ) +
+      (
+        saved.google_status === 'pending'
+          ? ' Sinkronisasi Google sedang diproses.'
+          : ''
+      )
     );
 
-  } catch (error) {
-    formError(
-      error.message
-    );
-
-    return;
-
-  } finally {
-    setSaving(false);
+    await loadDay();
   }
-
-  // ======================================================
-  // PERBARUI TAMPILAN
-  // ======================================================
-  
-  // Email baru langsung tersedia untuk agenda berikutnya.
-  master.email_suggestions = [
-    ...new Set([
-      ...(master.email_suggestions || []),
-      ...additionalEmails
-    ])
-  ].sort();
-
-  $('dialog').close();
-
-  $('view-date').value =
-    saved.date;
-
-  $('search').value = '';
-
-  $('pic-filter').value = '';
-
-  $('project-filter').value = '';
-
-  googleJobs.delete(
-    String(saved.id)
-  );
-
-  googleJobsRequest++;
-
-  notify(
-    (
-      saved.created_count > 1
-        ? `${saved.created_count} agenda berulang berhasil disimpan.`
-        : 'Agenda berhasil disimpan.'
-    ) +
-    (
-      saved.google_status === 'pending'
-        ? ' Undangan Google berstatus Pending.'
-        : ''
-    )
-  );
-
-  await loadDay();
-}
 
   // ======================================================
   // HAPUS AGENDA
@@ -3152,84 +2738,77 @@ function searchProjects() {
   async function deleteAgenda() {
     if (
       saving ||
-      !confirm(
-        'Hapus agenda ini?'
-      )
+      !confirm('Hapus agenda ini?')
     ) {
       return;
     }
 
-    const id =
-      $('event-id').value;
+    const id = $('event-id').value;
+
+    if (!id) {
+      return;
+    }
 
     setSaving(true);
 
     try {
       await api(
         `/${encodeURIComponent(id)}`,
-
-        {
-          method: 'DELETE'
-        }
+        { method: 'DELETE' }
       );
 
     } catch (error) {
-      formError(
-        error.message
-      );
-
+      formError(error.message);
       return;
 
     } finally {
       setSaving(false);
     }
 
+    closeProjectOptions();
+    closeEmailSuggestions();
+
     $('dialog').close();
 
-    notify(
-      'Agenda berhasil dihapus.'
-    );
+    googleJobs.delete(id);
+    googleJobsRequest++;
+
+    notify('Agenda berhasil dihapus.');
 
     await loadDay();
   }
 
   // ======================================================
-  // NAVIGASI MINGGU
+  // NAVIGASI
   // ======================================================
 
   function shiftWeek(amount) {
-    const date = new Date(
-      `${$('view-date').value}T12:00:00Z`
-    );
+    const selected = validDateKey($('view-date').value)
+      ? $('view-date').value
+      : todayKey();
+
+    const date = new Date(`${selected}T12:00:00Z`);
 
     date.setUTCDate(
-      date.getUTCDate() +
-      amount * 7
+      date.getUTCDate() + amount * 7
     );
 
-    const key =
-      utcKey(date);
+    const key = utcKey(date);
 
-    if (
-      key.length !== 10 ||
-      key < '1000-01-01'
-    ) {
+    if (!validDateKey(key)) {
       return;
     }
 
     $('view-date').value = key;
 
-    loadDay({
-      scroll: true
-    });
+    loadDay({ scroll: true });
   }
 
   // ======================================================
   // EVENT LISTENERS
   // ======================================================
 
-  $('view-date').value =
-    todayKey();
+  $('view-date').value = todayKey();
 
   $('prev').addEventListener(
     'click',
@@ -3241,101 +2820,58 @@ function searchProjects() {
     () => shiftWeek(1)
   );
 
-  $('today').addEventListener(
-    'click',
-    () => {
-      $('view-date').value =
-        todayKey();
+  $('today').addEventListener('click', () => {
+    $('view-date').value = todayKey();
 
-      loadDay({
-        scroll: true
-      });
+    loadDay({ scroll: true });
+  });
+
+  $('view-date').addEventListener('change', () => {
+    if (
+      $('view-date').reportValidity() &&
+      validDateKey($('view-date').value)
+    ) {
+      loadDay({ scroll: true });
     }
-  );
-
-  $('view-date').addEventListener(
-    'change',
-    () => {
-      if (
-        $('view-date').reportValidity()
-      ) {
-        loadDay({
-          scroll: true
-        });
-      }
-    }
-  );
-
-  $('repeat-enabled').addEventListener(
-    'change',
-    () => {
-      const aktif =
-        $('repeat-enabled').checked;
-
-      $('repeat-settings').hidden =
-        !aktif;
-
-      $('repeat-end').required =
-        aktif;
-
-      if (
-        aktif &&
-        !$('repeat-end').value
-      ) {
-        $('repeat-end').value =
-          $('date').value;
-      }
-    }
-  );
+  });
 
   $('reload').addEventListener(
     'click',
     () => reload()
   );
 
-  $('close').addEventListener(
-    'click',
-    closeForm
-  );
+  $('repeat-enabled').addEventListener('change', () => {
+    const active = $('repeat-enabled').checked;
 
-  $('cancel').addEventListener(
-    'click',
-    closeForm
-  );
+    $('repeat-settings').hidden = !active;
+    $('repeat-end').required = active;
 
-  $('view-close').addEventListener(
-    'click',
-    closeView
-  );
-
-  $('view-cancel').addEventListener(
-    'click',
-    closeView
-  );
-
-  $('view-dialog').addEventListener(
-    'close',
-    () => {
-      viewedEventId = null;
+    if (active && !$('repeat-end').value) {
+      $('repeat-end').value = $('date').value;
     }
-  );
+  });
 
-  $('view-edit').addEventListener(
-    'click',
-    () => {
-      const event = events.find(
-        row =>
-          String(row.id) ===
-          viewedEventId
-      );
+  $('close').addEventListener('click', closeForm);
+  $('cancel').addEventListener('click', closeForm);
 
-      closeView();
+  $('view-close').addEventListener('click', closeView);
+  $('view-cancel').addEventListener('click', closeView);
 
-      if (event) {
-        openForm(event);
-      }
+  $('view-dialog').addEventListener('close', () => {
+    viewedEventId = null;
+  });
+
+  $('view-edit').addEventListener('click', () => {
+    const event = events.find(
+      row => row.id === viewedEventId
+    );
+
+    closeView();
+
+    if (event) {
+      openForm(event);
     }
-  );
+  });
 
   $('delete').addEventListener(
     'click',
@@ -3347,14 +2883,20 @@ function searchProjects() {
     saveAgenda
   );
 
-  $('dialog').addEventListener(
-    'cancel',
-    event => {
-      if (saving) {
-        event.preventDefault();
-      }
+  $('dialog').addEventListener('cancel', event => {
+    if (saving) {
+      event.preventDefault();
+
+    } else {
+      closeProjectOptions();
+      closeEmailSuggestions();
     }
-  );
+  });
+
+  $('dialog').addEventListener('close', () => {
+    closeProjectOptions();
+    closeEmailSuggestions();
+  });
 
   $('meeting-type').addEventListener(
     'change',
@@ -3371,41 +2913,64 @@ function searchProjects() {
     toggleProjectField
   );
 
+  $('project-search').addEventListener('input', () => {
+    $('project').value = '';
+    $('project-search').setCustomValidity('');
+
+    searchProjects();
+  });
+
   $('project-search').addEventListener(
-    'input',
-    () => {
-      $('project').value = '';
+    'keydown',
+    event => {
+      if (event.key === 'Escape') {
+        if (!$('project-options').hidden) {
+          event.preventDefault();
+          event.stopPropagation();
 
-      $('project-search')
-        .setCustomValidity('');
-
-      searchProjects();
+          closeProjectOptions();
+        }
+      }
     }
   );
 
-  $('project-options').addEventListener(
-    'click',
-    event => {
-      const option =
-        event.target.closest(
-          '[data-project-id]'
-        );
+  $('project-options').addEventListener('click', event => {
+    const option = event.target.closest(
+      '[data-project-id]'
+    );
 
-      if (!option) {
-        return;
-      }
+    if (!option) {
+      return;
+    }
 
-      $('project').value =
-        option.dataset.projectId;
+    $('project').value = option.dataset.projectId;
 
-      $('project-search').value =
-        option.textContent.trim();
+    $('project-search').value =
+      option.dataset.projectName || '';
 
-      $('project-search')
-        .setCustomValidity('');
+    $('project-search').setCustomValidity('');
 
+    closeProjectOptions();
+  });
+
+  $('dialog').addEventListener('click', event => {
+    if (
+      !event.target.closest('.project-picker')
+    ) {
       closeProjectOptions();
     }
+  });
+
+  $('agenda-form')
+    .querySelector('.form-body')
+    .addEventListener(
+      'scroll',
+      closeProjectOptions
+    );
+
+  window.addEventListener(
+    'resize',
+    closeProjectOptions
   );
 
   $('pic-options').addEventListener(
@@ -3413,26 +2978,16 @@ function searchProjects() {
     updatePicCount
   );
 
-  $('pic-search').addEventListener(
-    'input',
-    () => {
-      const query =
-        $('pic-search')
-          .value
-          .trim()
-          .toLocaleLowerCase('id');
+  $('pic-search').addEventListener('input', () => {
+    const query = projectText(
+      $('pic-search').value
+    );
 
-      for (
-        const label of
-        $('pic-options').children
-      ) {
-        label.hidden =
-          !label.textContent
-            .toLocaleLowerCase('id')
-            .includes(query);
-      }
+    for (const label of $('pic-options').children) {
+      label.hidden =
+        !projectText(label.textContent).includes(query);
     }
-  );
+  });
 
   $('additional-emails').addEventListener(
     'input',
@@ -3454,99 +3009,120 @@ function searchProjects() {
     handleEmailSuggestionKeydown
   );
 
-  $('week-board').addEventListener(
+  $('open-holiday-dialog').addEventListener(
     'click',
+    openHolidayDialog
+  );
+
+  $('holiday-close').addEventListener(
+    'click',
+    closeHolidayDialog
+  );
+
+  $('holiday-cancel').addEventListener(
+    'click',
+    closeHolidayDialog
+  );
+
+  $('holiday-form').addEventListener(
+    'submit',
+    saveHoliday
+  );
+
+  $('holiday-dialog').addEventListener(
+    'cancel',
     event => {
-      const card =
-        event.target.closest(
-          '[data-event-id]'
-        );
-
-      if (card) {
-        return openView(
-          events.find(
-            row =>
-              String(row.id) ===
-              card.dataset.eventId
-          )
-        );
-      }
-
-      const date =
-        event.target.closest(
-          '[data-new-date]'
-        );
-
-      if (date) {
-        return openForm(
-          null,
-          9,
-          date.dataset.newDate
-        );
-      }
-
-      const slot =
-        event.target.closest(
-          '[data-hour]'
-        );
-
-      if (slot) {
-        openForm(
-          null,
-
-          Number(
-            slot.dataset.hour
-          ),
-
-          slot.dataset.date
-        );
+      if (holidaySaving) {
+        event.preventDefault();
       }
     }
   );
 
-  $('week-board').addEventListener(
-    'keydown',
-    event => {
-      if (
-        event.key !== 'Enter' &&
-        event.key !== ' '
-      ) {
-        return;
-      }
+  $('week-board').addEventListener('click', event => {
+    const holidayButton = event.target.closest(
+      '[data-delete-holiday]'
+    );
 
-      const card =
-        event.target.closest(
-          '[data-event-id]'
-        );
+    if (holidayButton) {
+      deleteHoliday(holidayButton);
+      return;
+    }
 
-      if (
-        !card ||
-        event.target !== card
-      ) {
-        return;
-      }
+    const card = event.target.closest(
+      '[data-event-id]'
+    );
 
-      event.preventDefault();
-
+    if (card) {
       openView(
         events.find(
-          row =>
-            String(row.id) ===
-            card.dataset.eventId
+          row => row.id === card.dataset.eventId
         )
       );
+
+      return;
     }
-  );
+
+    const date = event.target.closest(
+      '[data-new-date]'
+    );
+
+    if (date) {
+      openForm(
+        null,
+        9,
+        date.dataset.newDate
+      );
+
+      return;
+    }
+
+    const slot = event.target.closest(
+      '[data-hour]'
+    );
+
+    if (slot) {
+      openForm(
+        null,
+        Number(slot.dataset.hour),
+        slot.dataset.date
+      );
+    }
+  });
+
+  $('week-board').addEventListener('keydown', event => {
+    if (
+      event.key !== 'Enter' &&
+      event.key !== ' '
+    ) {
+      return;
+    }
+
+    const card = event.target.closest(
+      '[data-event-id]'
+    );
+
+    if (!card || event.target !== card) {
+      return;
+    }
+
+    event.preventDefault();
+
+    openView(
+      events.find(
+        row => row.id === card.dataset.eventId
+      )
+    );
+  });
 
   $('pic-filter').addEventListener(
-  'change',
-  render
-);
+    'change',
+    render
+  );
 
-$('project-filter').addEventListener(
-  'input',
-  render
-);
+  $('project-filter').addEventListener(
+    'input',
+    render
+  );
 
   $('search').addEventListener(
     'input',
@@ -3557,16 +3133,14 @@ $('project-filter').addEventListener(
   // INISIALISASI
   // ======================================================
 
-  initGoogleMonitoring();
   render();
 
-  reload({
-    scroll: true
-  });
+  initGoogleMonitoring();
+
+  reload({ scroll: true });
 
   setInterval(
     updateCurrentTime,
     60000
   );
 })();
-

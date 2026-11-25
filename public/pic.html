@@ -10,7 +10,7 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Master PIC - Portopro</title>
+  <title>Master PIC - Bisboard</title>
 
   <!-- GLOBAL STYLE -->
   <link
@@ -806,6 +806,20 @@
 
 
 
+              <!-- ROLE -->
+
+              <div class="form-group">
+
+                <label for="role">Role</label>
+
+                <select id="role" disabled>
+                  <option value="">Default sistem</option>
+                </select>
+
+              </div>
+
+
+
               <!-- EMAIL -->
 
               <div class="form-group">
@@ -920,7 +934,7 @@
               id="searchInput"
               type="text"
               class="search-box"
-              placeholder="Cari nama, NIK, jabatan..."
+              placeholder="Cari nama, NIK, jabatan, role..."
             >
 
 
@@ -965,6 +979,10 @@
                 </th>
 
                 <th>
+                  Role
+                </th>
+
+                <th>
                   Email
                 </th>
 
@@ -997,7 +1015,7 @@
               <tr>
 
                 <td
-                  colspan="10"
+                  colspan="11"
                   style="
                     padding:40px;
                     text-align:center;
@@ -1043,150 +1061,6 @@
 
 
 
-<!-- =====================================================
-     SIDEBAR USER + LOGOUT
-====================================================== -->
-
-<script>
-
-  async function loadSidebarUser() {
-
-    try {
-
-      const response =
-        await fetch(
-          "/api/me"
-        );
-
-
-      if (!response.ok) {
-
-        window.location.href =
-          "/login.html";
-
-        return;
-
-      }
-
-
-      const data =
-        await response.json();
-
-
-      const user =
-        data.user || data;
-
-
-      const userNama =
-        document.getElementById(
-          "userNama"
-        );
-
-
-      const userRole =
-        document.getElementById(
-          "userRole"
-        );
-
-
-      if (userNama) {
-
-        userNama.textContent =
-          user.nama ||
-          user.name ||
-          user.email ||
-          "User";
-
-      }
-
-
-      if (userRole) {
-
-        userRole.textContent =
-          user.role ||
-          user.jabatan ||
-          "PIC";
-
-      }
-
-
-    } catch (error) {
-
-      console.error(
-        "ERROR LOAD USER:",
-        error
-      );
-
-    }
-
-  }
-
-
-
-  const logoutButton =
-    document.getElementById(
-      "logoutButton"
-    );
-
-
-  if (logoutButton) {
-
-    logoutButton.addEventListener(
-      "click",
-      async () => {
-
-        try {
-
-          const response =
-            await fetch(
-              "/api/logout",
-              {
-                method: "POST"
-              }
-            );
-
-
-          if (!response.ok) {
-
-            throw new Error(
-              "Logout gagal"
-            );
-
-          }
-
-
-          window.location.href =
-            "/login.html";
-
-
-        } catch (error) {
-
-          console.error(
-            "ERROR LOGOUT:",
-            error
-          );
-
-
-          alert(
-            "Gagal logout."
-          );
-
-        }
-
-      }
-    );
-
-  }
-
-
-
-  loadSidebarUser();
-
-</script>
-
- <!-- =====================================================
-     USER SIDEBAR + LOGOUT
-====================================================== -->
 <script src="/layout.js"></script>
 <script src="/sidebar.js"></script>
 

@@ -331,7 +331,7 @@ function setWebsiteIcon() {
   }
 
   icon.type = "image/png";
-  icon.href = "public/images/favicon.png";
+  icon.href = "/images/favicon.png";
 }
 
 setWebsiteIcon();
@@ -365,7 +365,7 @@ if (document.readyState === "loading") {
   function initMenuGroups() {
 
     if (
-      document.getElementById("portopro-menu-group-style")
+      document.getElementById("bisboard-menu-group-style")
     ) {
       return;
     }
@@ -377,7 +377,7 @@ if (document.readyState === "loading") {
     const style =
       document.createElement("style");
 
-    style.id = "portopro-menu-group-style";
+    style.id = "bisboard-menu-group-style";
 
     style.textContent = `
       .sidebar #sidebarMenu .pp-menu-group {

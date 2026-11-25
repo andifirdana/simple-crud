@@ -39,6 +39,9 @@ const searchUrl =
     ) || ""
   ).trim();
 
+const jenisProyekUrl = String(
+  timelineUrlParams.get("jenis_proyek") || ""
+).trim();
 
 // ======================================================
 // STATE
@@ -47,10 +50,14 @@ const searchUrl =
 let timelinePage = 1;
 
 let timelineTotalPages = 1;
+let timelineRequestNumber = 0;
+let timelineDisplayedData = [];
+let timelineUnassignedOnly = timelineUrlParams.get("unassigned") === "1";
 
 let timelineSearchValue =
   searchUrl;
 
+let timelineJenisProyek = jenisProyekUrl;
 let timelineBulan =
   [1, 3, 6].includes(
     bulanUrl
@@ -91,6 +98,10 @@ const filterBerakhirElement =
     "filterBerakhir"
   );
 
+const filterJenisProyekElement = document.getElementById("filterJenisProyek");
+const timelineJenisInfoElement = document.getElementById("timelineJenisInfo");
+const timelineDataNotice = document.getElementById("timelineDataNotice");
+const timelineUnassignedElement = document.getElementById("timelineUnassignedOnly");
 const resetTimelineFilterElement =
   document.getElementById(
     "resetTimelineFilter"
@@ -517,6 +528,17 @@ function getTimelineExpiry(
   item,
   hariIni
 ) {
+  const statusTimeline = String(item.status || "").trim().toLowerCase();
+
+  // Status yang dipilih pada detail proyek lebih utama dari hitungan tanggal.
+  if (statusTimeline === "selesai") {
+    return { text: "Selesai", className: "expiry-finished" };
+  }
+
+  if (statusTimeline === "diperpanjang") {
+    return { text: "Diperpanjang", className: "expiry-extended" };
+  }
+
   const tanggalAkhir =
     tanggalInput(
       item.tanggal_akhir
@@ -618,6 +640,12 @@ function updateTimelineUrl() {
     );
   }
 
+  if (timelineJenisProyek) {
+    params.set("jenis_proyek", timelineJenisProyek);
+  }
+
+  if (timelineUnassignedOnly) params.set("unassigned", "1");
+
   if (timelineBulan) {
     params.set(
       "bulan",
@@ -667,6 +695,12 @@ function renderTimelineFilterInfo(
     );
 
   const filterAktif = [];
+
+  if (timelineUnassignedOnly) filterAktif.push("Belum di-assign");
+
+  if (timelineJenisProyek) {
+    filterAktif.push(`Jenis Proyek: ${timelineJenisProyek}`);
+  }
 
   if (timelineBulan) {
     filterAktif.push(
@@ -781,6 +815,51 @@ function renderTimelineFilterInfo(
 // LOAD DATA TIMELINE
 // ======================================================
 
+function populateTimelineJenis(values = []) {
+  if (!filterJenisProyekElement) return;
+
+  const choices = new Map();
+  const names = [
+    ...[...filterJenisProyekElement.options].map(option => option.value),
+    ...values,
+    timelineJenisProyek,
+    "Sewa"
+  ];
+
+  names.forEach(value => {
+    const name = String(value || "").trim();
+    if (name) choices.set(name.toLowerCase(), name);
+  });
+
+  const sorted = [...choices.values()].sort((a, b) => a.localeCompare(b, "id"));
+  filterJenisProyekElement.replaceChildren(new Option("Semua Jenis Proyek", ""));
+  sorted.forEach(name => filterJenisProyekElement.add(new Option(name, name)));
+  filterJenisProyekElement.value = choices.get(timelineJenisProyek.toLowerCase()) || "";
+}
+
+async function loadTimelineJenis() {
+  if (!filterJenisProyekElement) return;
+
+  try {
+    const response = await fetch("/api/proyek/jenis", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store"
+    });
+    if (!response.ok) throw new Error("Gagal memuat jenis proyek.");
+    const result = await response.json();
+    if (!Array.isArray(result)) throw new Error("Daftar jenis proyek tidak valid.");
+
+    populateTimelineJenis(result.map(item => item.name));
+    if (timelineJenisInfoElement) timelineJenisInfoElement.hidden = true;
+  } catch (error) {
+    if (timelineJenisInfoElement) {
+      timelineJenisInfoElement.textContent = "Daftar jenis belum lengkap. Muat ulang halaman untuk mencoba kembali.";
+      timelineJenisInfoElement.hidden = false;
+    }
+  }
+}
+
 async function loadTimelinePage() {
   if (!timelineGroupedContainer) {
     console.error(
@@ -789,6 +868,8 @@ async function loadTimelinePage() {
 
     return;
   }
+
+  const requestNumber = ++timelineRequestNumber;
 
   timelineGroupedContainer
     .innerHTML = `
@@ -825,6 +906,12 @@ async function loadTimelinePage() {
         timelineSearchValue
       );
     }
+
+    if (timelineJenisProyek) {
+      query.set("jenis_proyek", timelineJenisProyek);
+    }
+
+    if (timelineUnassignedOnly) query.set("unassigned", "1");
 
     if (timelineBulan) {
       query.set(
@@ -864,6 +951,8 @@ async function loadTimelinePage() {
         }
       );
 
+    if (requestNumber !== timelineRequestNumber) return;
+
     if (
       response.status === 401
     ) {
@@ -897,6 +986,8 @@ async function loadTimelinePage() {
     const result =
       await response.json();
 
+    if (requestNumber !== timelineRequestNumber) return;
+
     if (!response.ok) {
       throw new Error(
         result.error ||
@@ -910,6 +1001,13 @@ async function loadTimelinePage() {
       )
         ? result.data
         : [];
+
+    if (timelineDataNotice) {
+      timelineDataNotice.hidden = result.capabilities?.upload !== false;
+    }
+
+    // Sertakan jenis lama yang masih dipakai meskipun master sudah nonaktif.
+    populateTimelineJenis(data.map(item => item.jenis_proyek));
 
     timelinePage =
       Math.max(
@@ -966,6 +1064,10 @@ async function loadTimelinePage() {
     updateTimelineUrl();
 
   } catch (error) {
+    if (requestNumber !== timelineRequestNumber) return;
+
+    if (timelineDataNotice) timelineDataNotice.hidden = true;
+
     console.error(
       "ERROR LOAD TIMELINE:",
       error
@@ -995,6 +1097,7 @@ async function loadTimelinePage() {
 // ======================================================
 
 function renderTimelineTable(data) {
+  timelineDisplayedData = Array.isArray(data) ? data : [];
   if (
     !Array.isArray(data) ||
     data.length === 0
@@ -1036,6 +1139,7 @@ function renderTimelineTable(data) {
               <th>Tanggal Mulai</th>
               <th>Tanggal Akhir</th>
               <th>Berakhir Pada</th>
+              <th>Aksi</th>
             </tr>
           </thead>
 
@@ -1086,16 +1190,16 @@ function renderTimelineRow(
    * ambil dari deskripsi Timeline.
    *
    * Proyek sewa:
-   * ambil dari nama cabang.
+   * tampilkan lokasi - produk - quantity per order.
    */
   const deskripsi =
     project.adalahProyekSewa
-      ? (
-          String(
-            item.nama_cabang || ""
-          ).trim() ||
-          "-"
-        )
+      ? [
+          String(item.nama_cabang || "").trim() || "-",
+          String(item.item_produk || "").trim() ||
+            String(item.deskripsi || "").trim() || "-",
+          String(item.quantity ?? "").trim() || "-"
+        ].join(" - ")
       : (
           String(
             item.deskripsi || ""
@@ -1140,6 +1244,11 @@ function renderTimelineRow(
       </td>
 
       <td class="description-column">
+        ${project.adalahProyekSewa ? `
+          <strong class="timeline-client-request">${escapeHtml(
+            String(item.no_req_klien || "").trim() || "-"
+          )}</strong>
+        ` : ""}
         ${escapeHtml(
           deskripsi
         )}
@@ -1185,6 +1294,14 @@ function renderTimelineRow(
             expiry.text
           )}
         </span>
+      </td>
+
+      <td>
+        ${item.dapat_diubah ? `
+          <button type="button" class="timeline-action" data-edit-timeline="${escapeHtml(item.timeline_key)}">Edit / Assign</button>
+        ` : project.adalahProyekSewa && project.detailUrl !== "#" ? `
+          <a class="timeline-action" href="${escapeHtml(project.detailUrl)}">Lihat Detail</a>
+        ` : "-"}
       </td>
 
     </tr>
@@ -1463,6 +1580,20 @@ timelineSearchElement
 // FILTER BERAKHIR
 // ======================================================
 
+filterJenisProyekElement?.addEventListener("change", event => {
+  timelineJenisProyek = String(event.target.value || "").trim();
+  timelinePage = 1;
+  updateTimelineUrl();
+  loadTimelinePage();
+});
+
+timelineUnassignedElement?.addEventListener("change", event => {
+  timelineUnassignedOnly = event.target.checked;
+  timelinePage = 1;
+  updateTimelineUrl();
+  loadTimelinePage();
+});
+
 filterBerakhirElement
   ?.addEventListener(
     "change",
@@ -1511,57 +1642,34 @@ filterBerakhirElement
 // RESET FILTER
 // ======================================================
 
-resetTimelineFilterElement
-  ?.addEventListener(
-    "click",
-    () => {
-      if (
-        timelineSearchElement
-      ) {
-        timelineSearchElement
-          .value = "";
-      }
+function resetTimelineFilters({ unassigned = false } = {}) {
+  clearTimeout(timelineSearchTimer);
+  for (const element of [timelineSearchElement, filterBerakhirElement, filterJenisProyekElement]) {
+    if (element) element.value = "";
+  }
+  timelineSearchValue = "";
+  timelineJenisProyek = "";
+  timelineBulan = "";
+  timelineStatus = "";
+  timelineMode = "";
+  timelineUnassignedOnly = unassigned;
+  if (timelineUnassignedElement) timelineUnassignedElement.checked = unassigned;
+  timelinePage = 1;
+  document.getElementById("timelineFilterInfo")?.remove();
+  updateTimelineUrl();
+  return loadTimelinePage();
+}
 
-      if (
-        filterBerakhirElement
-      ) {
-        filterBerakhirElement
-          .value = "";
-      }
+resetTimelineFilterElement?.addEventListener("click", () => resetTimelineFilters());
 
-      timelineSearchValue =
-        "";
-
-      timelineBulan =
-        "";
-
-      timelineStatus =
-        "";
-
-      timelineMode =
-        "";
-
-      timelinePage =
-        1;
-
-      const banner =
-        document.getElementById(
-          "timelineFilterInfo"
-        );
-
-      if (banner) {
-        banner.remove();
-      }
-
-      updateTimelineUrl();
-
-      loadTimelinePage();
-    }
-  );// ======================================================
+// ======================================================
 // INITIAL FILTER
 // ======================================================
 
 function initializeTimelineFilter() {
+  if (timelineUnassignedElement) timelineUnassignedElement.checked = timelineUnassignedOnly;
+  populateTimelineJenis();
+
   if (
     timelineSearchElement
   ) {
@@ -1602,5 +1710,7 @@ function initializeTimelineFilter() {
 // ======================================================
 
 initializeTimelineFilter();
+
+loadTimelineJenis();
 
 loadTimelinePage();

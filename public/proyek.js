@@ -30,9 +30,11 @@ const proyekFilterHelpers = (function () {
     "partner",
     "status_final",
     "pic_id",
+    "pic_ids",
     "dashboard_group",
     "status_pengadaan",
     "tahun",
+    "bulan",
     "periode_kontrak",
     "tanggal_akhir",
     "status_teknis_exclude",
@@ -42,6 +44,13 @@ const proyekFilterHelpers = (function () {
 
   function normalize(filters = {}) {
     const tahun = Number(filters.tahun);
+    const bulan = positif(filters.bulan);
+    const picSource = filters.pic_ids ?? filters.pic_id ?? [];
+    const picIds = [...new Set(
+      (Array.isArray(picSource) ? picSource : text(picSource).split(","))
+        .map(positif)
+        .filter(id => id !== null)
+    )];
 
     const excludes =
       Array.isArray(filters.status_teknis_exclude)
@@ -64,7 +73,9 @@ const proyekFilterHelpers = (function () {
 
       status_final: text(filters.status_final),
 
-      pic_id: positif(filters.pic_id),
+      pic_id: picIds.length === 1 ? picIds[0] : null,
+
+      pic_ids: picIds,
 
       dashboard_group:
         normalisasiFilter(filters.dashboard_group),
@@ -78,6 +89,8 @@ const proyekFilterHelpers = (function () {
         tahun <= 2100
           ? tahun
           : new Date().getFullYear(),
+
+      bulan: bulan <= 12 ? bulan : null,
 
       periode_kontrak:
         normalisasiFilter(filters.periode_kontrak),
@@ -120,7 +133,8 @@ const proyekFilterHelpers = (function () {
     for (const key of parameterKeys) {
       if (
         key === "tahun" ||
-        key === "kontrak"
+        key === "kontrak" ||
+        (key === "pic_ids" && state.pic_ids.length <= 1)
       ) {
         continue;
       }
@@ -348,8 +362,13 @@ const proyekFilterHelpers = (function () {
 
   function isKontrakMasukTahun(
     item,
-    tahun
+    tahun,
+    bulan
   ) {
+    const awalPeriode = new Date(tahun, (bulan || 1) - 1, 1);
+    const akhirPeriode = bulan
+      ? new Date(tahun, bulan, 1)
+      : new Date(tahun + 1, 0, 1);
     const start = tanggalLokal(
       getTanggalMulaiKlien(item)
     );
@@ -362,8 +381,8 @@ const proyekFilterHelpers = (function () {
       start &&
       end &&
       start <= end &&
-      start < new Date(tahun + 1, 0, 1) &&
-      end >= new Date(tahun, 0, 1)
+      start < akhirPeriode &&
+      end >= awalPeriode
     );
   }
 
@@ -433,7 +452,8 @@ const proyekFilterHelpers = (function () {
   function isTotalProjectOverview(
     item,
     tahun,
-    today = new Date()
+    today = new Date(),
+    bulan
   ) {
     const statusFinal =
       normalisasiFilter(item?.status_final);
@@ -467,11 +487,11 @@ const proyekFilterHelpers = (function () {
     const proyekAktif =
       statusFinal === "aktif" &&
       statusPengadaan === "done" &&
-      isKontrakMasukTahun(item, tahun);
+      isKontrakMasukTahun(item, tahun, bulan);
 
     const proyekSelesai =
       ["done", "selesai"].includes(statusFinal) &&
-      isKontrakMasukTahun(item, tahun);
+      isKontrakMasukTahun(item, tahun, bulan);
 
     const proyekTerlambat =
       isProyekTerlambat(item, today);
@@ -586,9 +606,9 @@ const proyekFilterHelpers = (function () {
       );
     }
 
-    if (f.pic_id !== null) {
+    if (f.pic_ids.length > 0) {
       labels.push(
-        `PIC: ${resolvePicLabel(source, f.pic_id)}`
+        `PIC: ${f.pic_ids.map(id => resolvePicLabel(source, id)).join(", ")}`
       );
     }
 
@@ -599,11 +619,16 @@ const proyekFilterHelpers = (function () {
     }
 
     if (
-      f.periode_kontrak === "tahun"
+      f.periode_kontrak === "tahun" ||
+      (f.dashboard_group === "total-project" && f.bulan)
     ) {
-      labels.push(
-        `Periode Kontrak: ${f.tahun}`
-      );
+      const periode = f.bulan
+        ? new Date(f.tahun, f.bulan - 1, 1).toLocaleDateString("id-ID", {
+            month: "long",
+            year: "numeric"
+          })
+        : f.tahun;
+      labels.push(`Periode Kontrak: ${periode}`);
     }
 
     if (
@@ -742,8 +767,8 @@ const proyekFilterHelpers = (function () {
       }
 
       if (
-        f.pic_id !== null &&
-        !getPicIds(item).includes(f.pic_id)
+        f.pic_ids.length > 0 &&
+        !getPicIds(item).some(id => f.pic_ids.includes(id))
       ) {
         return false;
       }
@@ -759,7 +784,7 @@ const proyekFilterHelpers = (function () {
 
       if (
         f.periode_kontrak === "tahun" &&
-        !isKontrakMasukTahun(item, f.tahun)
+        !isKontrakMasukTahun(item, f.tahun, f.bulan)
       ) {
         return false;
       }
@@ -791,7 +816,8 @@ const proyekFilterHelpers = (function () {
         !isTotalProjectOverview(
           item,
           f.tahun,
-          today
+          today,
+          f.bulan
         )
       ) {
         return false;
@@ -1187,6 +1213,189 @@ function getTanggalAkhirKlien(item) {
 // FILTER DROPDOWN
 // ======================================================
 
+const searchableProyekFilters = new Map();
+
+function initSearchableProyekFilter(select, inputId) {
+  const input = document.getElementById(inputId);
+
+  if (!select || !input) return;
+
+  const list = document.createElement("div");
+  list.id = `${inputId}Options`;
+  list.className = "project-filter-options";
+  list.hidden = true;
+  list.setAttribute("role", "listbox");
+  if (select.multiple) list.setAttribute("aria-multiselectable", "true");
+  list.setAttribute("aria-label", input.getAttribute("aria-label"));
+  // Di luar filter-card agar daftar tidak terpotong overflow horizontal.
+  document.body.appendChild(list);
+
+  input.setAttribute("role", "combobox");
+  input.setAttribute("aria-autocomplete", "list");
+  input.setAttribute("aria-controls", list.id);
+  input.setAttribute("aria-expanded", "false");
+  select.hidden = true;
+  input.hidden = false;
+
+  let buttons = [];
+  let activeIndex = -1;
+
+  function sync() {
+    input.value = [...select.selectedOptions]
+      .filter(option => option.value)
+      .map(option => option.textContent)
+      .join(", ");
+    input.title = input.value;
+  }
+
+  function close() {
+    list.hidden = true;
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+    activeIndex = -1;
+  }
+
+  function position() {
+    if (list.hidden) return;
+
+    const rect = input.getBoundingClientRect();
+    const width = Math.min(Math.max(rect.width, 240), window.innerWidth - 16);
+    list.style.width = `${width}px`;
+    list.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))}px`;
+    const below = window.innerHeight - rect.bottom - 12;
+    const above = rect.top - 12;
+    const openAbove = below < 180 && above > below;
+    list.style.maxHeight = `${Math.max(0, Math.min(260, openAbove ? above : below))}px`;
+    list.style.top = openAbove ? "auto" : `${rect.bottom + 4}px`;
+    list.style.bottom = openAbove ? `${window.innerHeight - rect.top + 4}px` : "auto";
+  }
+
+  function choose(option) {
+    const previousIndex = activeIndex;
+    if (select.multiple) {
+      if (option.value) {
+        option.selected = !option.selected;
+        select.options[0].selected = false;
+      } else {
+        [...select.options].forEach(item => { item.selected = false; });
+      }
+    } else {
+      select.value = option.value;
+    }
+    sync();
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    if (select.multiple) {
+      render();
+      // Pertahankan posisi keyboard setelah mencentang pilihan.
+      activeIndex = Math.min(previousIndex, buttons.length - 1);
+      if (activeIndex >= 0) {
+        buttons[activeIndex].classList.toggle("is-active", true);
+        input.setAttribute("aria-activedescendant", buttons[activeIndex].id);
+      }
+    } else {
+      close();
+    }
+  }
+
+  function render(query = "") {
+    const search = normalisasiFilter(query);
+    const matches = [...select.options].filter(option =>
+      !option.disabled &&
+      (!option.value || normalisasiFilter(option.textContent).includes(search))
+    );
+
+    list.replaceChildren();
+    buttons = [];
+    activeIndex = -1;
+    input.removeAttribute("aria-activedescendant");
+
+    matches.forEach((option, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.tabIndex = -1;
+      button.id = `${list.id}-${index}`;
+      button.className = "project-filter-option";
+      button.textContent = option.textContent;
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", String(select.multiple
+        ? (option.value ? option.selected : ![...select.selectedOptions].some(item => item.value))
+        : option.value === select.value));
+      button.addEventListener("pointerdown", event => event.preventDefault());
+      button.addEventListener("click", () => choose(option));
+      buttons.push(button);
+      list.appendChild(button);
+    });
+
+    if (search && !matches.some(option => option.value)) {
+      const empty = document.createElement("p");
+      empty.className = "project-filter-empty";
+      empty.textContent = "Tidak ada hasil yang cocok.";
+      list.appendChild(empty);
+    }
+
+    list.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    position();
+  }
+
+  input.addEventListener("focus", () => {
+    input.select();
+    render();
+  });
+  input.addEventListener("click", () => {
+    if (list.hidden) render();
+  });
+  input.addEventListener("input", () => {
+    if (!input.value && !select.multiple && select.value) {
+      select.value = "";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    render(input.value);
+  });
+  input.addEventListener("blur", () => {
+    sync();
+    close();
+  });
+  input.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      sync();
+      close();
+      return;
+    }
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (list.hidden) render();
+      if (!buttons.length) return;
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      activeIndex = activeIndex < 0
+        ? (direction === 1 ? 0 : buttons.length - 1)
+        : (activeIndex + direction + buttons.length) % buttons.length;
+      buttons.forEach((button, index) => {
+        button.classList.toggle("is-active", index === activeIndex);
+      });
+      input.setAttribute("aria-activedescendant", buttons[activeIndex].id);
+      buttons[activeIndex].scrollIntoView({ block: "nearest" });
+    } else if (event.key === "Enter" && !list.hidden) {
+      event.preventDefault();
+      if (activeIndex >= 0) buttons[activeIndex].click();
+    }
+  });
+
+  select.addEventListener("change", sync);
+  window.addEventListener("resize", position);
+  document.addEventListener("scroll", position, true);
+  searchableProyekFilters.set(select, () => {
+    sync();
+    close();
+  });
+  sync();
+}
+
+initSearchableProyekFilter(kategoriFilter, "kategoriFilterSearch");
+initSearchableProyekFilter(partnerFilter, "partnerFilterSearch");
+initSearchableProyekFilter(picFilter, "picFilterSearch");
+
 function populateFilter(
   select,
   values,
@@ -1236,8 +1445,9 @@ function populatePicFilter() {
     return;
   }
 
-  const previousValue =
-    picFilter.value;
+  const previousValues = new Set(
+    [...picFilter.selectedOptions].map(option => option.value)
+  );
 
   const daftarPic =
     new Map();
@@ -1312,26 +1522,9 @@ function populatePicFilter() {
     );
   });
 
-  if (
-    options.some(([id]) =>
-      id === previousValue
-    )
-  ) {
-    picFilter.value =
-      previousValue;
-
-  } else if (
-    dashboardFilters.pic_id !== null &&
-    options.some(([id]) =>
-      Number(id) === dashboardFilters.pic_id
-    )
-  ) {
-    picFilter.value =
-      String(dashboardFilters.pic_id);
-
-  } else {
-    picFilter.value = "";
-  }
+  [...picFilter.options].forEach(option => {
+    option.selected = Boolean(option.value) && previousValues.has(option.value);
+  });
 }
 
 // ======================================================
@@ -1420,12 +1613,6 @@ function terapkanFilterUrlKeForm() {
     [
       statusFilter,
       dashboardFilters.status_final
-    ],
-    [
-      picFilter,
-      dashboardFilters.pic_id === null
-        ? ""
-        : String(dashboardFilters.pic_id)
     ]
   ];
 
@@ -1443,9 +1630,7 @@ function terapkanFilterUrlKeForm() {
     if (!found && value) {
       select.add(
         new Option(
-          select === picFilter
-            ? `PIC ID ${value}`
-            : value,
+          value,
           value
         )
       );
@@ -1454,6 +1639,20 @@ function terapkanFilterUrlKeForm() {
     select.value =
       found ? found.value : value;
   });
+
+  if (picFilter) {
+    const selectedIds = new Set(dashboardFilters.pic_ids.map(String));
+    for (const id of selectedIds) {
+      if (![...picFilter.options].some(option => option.value === id)) {
+        picFilter.add(new Option(`PIC ID ${id}`, id));
+      }
+    }
+    [...picFilter.options].forEach(option => {
+      option.selected = selectedIds.has(option.value);
+    });
+  }
+
+  searchableProyekFilters.forEach(sync => sync());
 }
 
 // ======================================================
@@ -1492,9 +1691,9 @@ function getActiveProyekFilters() {
       statusFilter?.value ??
       dashboardFilters.status_final,
 
-    pic_id:
-      picFilter?.value ??
-      dashboardFilters.pic_id
+    pic_ids: picFilter
+      ? [...picFilter.selectedOptions].map(option => option.value).filter(Boolean)
+      : dashboardFilters.pic_ids
   });
 }
 
@@ -1520,6 +1719,12 @@ function resetProyekFilters() {
     .forEach(element => {
       element.value = "";
     });
+
+  if (picFilter) {
+    [...picFilter.options].forEach(option => { option.selected = false; });
+  }
+
+  searchableProyekFilters.forEach(sync => sync());
 
   const url =
     new URL(window.location.href);
@@ -3201,7 +3406,7 @@ table.addEventListener(
 
     try {
       const helper =
-        window.PortoproSummaryFinal;
+        window.BisboardSummaryFinal;
 
       if (!helper) {
         throw new Error(

@@ -932,6 +932,65 @@ body.activity-modal-open {
     repeat(7, minmax(140px, 1fr)) !important;
 }
 
+.project-filter-search {
+  min-width: 0;
+}
+
+.project-filter-options {
+  position: fixed;
+  z-index: 1000;
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+}
+
+.project-filter-option {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #334155;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.project-filter-option:hover,
+.project-filter-option.is-active {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.project-filter-option[aria-selected="true"] {
+  font-weight: 700;
+}
+
+.project-filter-options[aria-multiselectable="true"] .project-filter-option::before {
+  content: "☐";
+  margin-right: 8px;
+}
+
+.project-filter-options[aria-multiselectable="true"] .project-filter-option[aria-selected="true"]::before {
+  content: "☑";
+  color: #4338ca;
+}
+
+.project-filter-empty {
+  margin: 0;
+  padding: 10px;
+  color: #64748b;
+  font-size: 13px;
+}
+
 .proyek-klasifikasi {
   display: table;
   margin-bottom: 6px;
@@ -1716,13 +1775,23 @@ body.project-delete-open {
           >
 
 
-          <select id="kategoriFilter">
+          <div class="project-filter-search">
+          <input
+            type="text"
+            id="kategoriFilterSearch"
+            placeholder="Semua Kategori"
+            aria-label="Cari dan pilih kategori"
+            autocomplete="off"
+            hidden
+          >
+          <select id="kategoriFilter" aria-label="Kategori">
 
             <option value="">
               Semua Kategori
             </option>
 
           </select>
+          </div>
 
 
           <select id="jenisFilter">
@@ -1752,13 +1821,23 @@ body.project-delete-open {
           </select>
 
 
-          <select id="partnerFilter">
+          <div class="project-filter-search">
+          <input
+            type="text"
+            id="partnerFilterSearch"
+            placeholder="Semua Partner"
+            aria-label="Cari dan pilih partner"
+            autocomplete="off"
+            hidden
+          >
+          <select id="partnerFilter" aria-label="Partner">
 
             <option value="">
               Semua Partner
             </option>
 
           </select>
+          </div>
 
         <select id="statusFilter">
           <option value="">
@@ -1766,11 +1845,21 @@ body.project-delete-open {
           </option>
         </select>
 
-        <select id="picFilter">
+        <div class="project-filter-search">
+        <input
+          type="text"
+          id="picFilterSearch"
+          placeholder="Semua PIC"
+          aria-label="Cari dan pilih satu atau beberapa PIC"
+          autocomplete="off"
+          hidden
+        >
+        <select id="picFilter" multiple aria-label="Pilih satu atau beberapa PIC">
           <option value="">
             Semua PIC
           </option>
         </select>
+        </div>
         </div>
 
 

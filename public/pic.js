@@ -16,9 +16,31 @@ const cancelButton =
 const formTitle =
   document.getElementById("formTitle");
 
+const roleSelect = document.getElementById("role");
 
 let allPIC = [];
 let editId = null;
+let canManageRoles = false;
+
+function isAdminRole(role) {
+  return ["admin", "administrator"].includes(String(role || "").trim().toLowerCase());
+}
+
+function loadRoleOptions() {
+  const selectedRole = roleSelect.value;
+  const roles = new Set(allPIC.map(pic => pic.role).filter(role => role?.trim()));
+  const normalizedRoles = new Set([...roles].map(role => role.trim().toLowerCase()));
+
+  for (const role of ["PIC", "admin", "Legal"]) {
+    if (!normalizedRoles.has(role.toLowerCase())) roles.add(role);
+  }
+
+  roleSelect.options.length = 1;
+  for (const role of [...roles].sort((a, b) => a.localeCompare(b, "id"))) {
+    roleSelect.add(new Option(role, role));
+  }
+  roleSelect.value = roles.has(selectedRole) ? selectedRole : "";
+}
 
 
 // ========================================
@@ -59,6 +81,7 @@ async function loadPIC() {
 
     allPIC = result;
 
+    loadRoleOptions();
     applySearch();
 
   } catch (error) {
@@ -86,7 +109,7 @@ function tampilkanPIC(data) {
 
     picTable.innerHTML = `
       <tr>
-        <td colspan="10"
+        <td colspan="11"
             style="text-align:center;padding:30px">
           Data PIC belum tersedia
         </td>
@@ -100,58 +123,36 @@ function tampilkanPIC(data) {
 
   data.forEach(pic => {
 
-    const row =
-      document.createElement("tr");
+    const row = document.createElement("tr");
+    row.insertCell().textContent = pic.id;
 
+    const name = document.createElement("strong");
+    name.textContent = pic.nama;
+    row.insertCell().appendChild(name);
 
-    row.innerHTML = `
+    for (const value of [
+      pic.nik, pic.inisial, pic.jabatan, pic.role?.trim(), pic.email, pic.no_hp,
+      formatTanggal(pic.created_at), formatTanggal(pic.updated_at)
+    ]) {
+      row.insertCell().textContent = value || "-";
+    }
 
-      <td>${pic.id}</td>
+    const actions = row.insertCell();
+    if (canManageRoles || !isAdminRole(pic.role)) {
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "btn-edit";
+      editButton.textContent = "Edit";
+      editButton.addEventListener("click", () => editPIC(pic.id));
 
-      <td>
-        <strong>
-          ${pic.nama}
-        </strong>
-      </td>
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "btn-delete";
+      deleteButton.textContent = "Hapus";
+      deleteButton.addEventListener("click", () => deletePIC(pic.id));
 
-      <td>${pic.nik}</td>
-
-      <td>${pic.inisial || "-"}</td>
-
-      <td>${pic.jabatan}</td>
-
-      <td>${pic.email || "-"}</td>
-
-      <td>${pic.no_hp || "-"}</td>
-
-      <td>
-        ${formatTanggal(pic.created_at)}
-      </td>
-
-      <td>
-        ${formatTanggal(pic.updated_at)}
-      </td>
-
-      <td>
-
-        <button
-          class="btn-edit"
-          onclick="editPIC(${pic.id})"
-        >
-          Edit
-        </button>
-
-        <button
-          class="btn-delete"
-          onclick="deletePIC(${pic.id})"
-        >
-          Hapus
-        </button>
-
-      </td>
-
-    `;
-
+      actions.append(editButton, document.createTextNode(" "), deleteButton);
+    }
 
     picTable.appendChild(row);
 
@@ -210,6 +211,10 @@ form.addEventListener(
 
     };
 
+    const currentRole = allPIC.find(pic => pic.id === editId)?.role;
+    if (canManageRoles && roleSelect.value && roleSelect.value !== currentRole) {
+      payload.role = roleSelect.value;
+    }
 
     let url =
       "/api/pic";
@@ -320,6 +325,9 @@ function editPIC(id) {
   document.getElementById("jabatan").value =
     pic.jabatan || "";
 
+  roleSelect.options[0].textContent = "Pertahankan role saat ini";
+  roleSelect.value = pic.role?.trim() ? pic.role : "";
+
   document.getElementById("email").value =
     pic.email || "";
 
@@ -392,6 +400,7 @@ async function deletePIC(id) {
 function resetForm() {
 
   form.reset();
+  roleSelect.options[0].textContent = "Default sistem";
 
   editId = null;
 
@@ -454,6 +463,12 @@ function applySearch() {
 
         ||
 
+        String(pic.role || "")
+          .toLowerCase()
+          .includes(keyword)
+
+        ||
+
         String(pic.email || "")
           .toLowerCase()
           .includes(keyword)
@@ -474,4 +489,23 @@ searchInput.addEventListener(
 );
 
 
-loadPIC();
+async function initPIC() {
+  try {
+    const response = await fetch("/api/me");
+    if (response.status === 401) {
+      window.location.href = "/login.html";
+      return;
+    }
+    if (response.ok) {
+      const { user } = await response.json();
+      canManageRoles = isAdminRole(user?.role);
+      roleSelect.disabled = !canManageRoles;
+    }
+  } catch (error) {
+    console.error("ERROR LOAD PIC PERMISSIONS:", error);
+  }
+
+  await loadPIC();
+}
+
+initPIC();

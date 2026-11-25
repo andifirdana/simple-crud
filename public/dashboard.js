@@ -20,6 +20,8 @@ const dashboardYear =
     "dashboardYear"
   );
 
+const dashboardMonth = document.getElementById("dashboardMonth");
+
 const refreshDashboard =
   document.getElementById(
     "refreshDashboard"
@@ -391,6 +393,8 @@ const bulanSingkat = [
 
 let currentDashboardData =
   null;
+
+let dashboardRequestId = 0;
 
 let timerFilterDashboard =
   null;
@@ -893,6 +897,8 @@ function ambilFilterDashboard() {
         dashboardYear?.value
       ) || periode.tahun,
 
+    bulan: Number(dashboardMonth?.value) || null,
+
     jenis_proyek:
       String(
         dashboardJenisProyek
@@ -919,6 +925,10 @@ function buatQueryDashboard() {
     "tahun",
     String(filter.tahun)
   );
+
+  if (filter.bulan) {
+    parameter.set("bulan", String(filter.bulan));
+  }
 
   if (
     filter.jenis_proyek
@@ -1346,7 +1356,11 @@ function renderFinancialOverview(
   );
 
   renderProgressKpi(data);
-  renderTrendPendapatan(data);
+  renderPerbandinganBulanan(
+    "pendapatanMonthlyTrend",
+    angka(data.pendapatan_bulan_berjalan),
+    angka(data.pendapatan_bulan_sebelumnya)
+  );
 }
 
 
@@ -1382,91 +1396,29 @@ function renderProgressKpi(
 }
 
 
-function renderTrendPendapatan(
-  data
-) {
-  const trend =
-    document.getElementById(
-      "monthlyTrend"
-    );
+function renderPerbandinganBulanan(id, saatIni, sebelumnya) {
+  const trend = document.getElementById(id);
+  if (!trend) return;
 
-  if (!trend) {
+  const selisih = saatIni - sebelumnya;
+  trend.classList.remove("up", "down", "flat");
+  trend.classList.add(selisih > 0 ? "up" : selisih < 0 ? "down" : "flat");
+
+  if (selisih === 0) {
+    trend.textContent = `— Sama dengan bulan sebelumnya (${formatRupiah(sebelumnya)})`;
     return;
   }
 
-  const current =
-    angka(
-      data.pendapatan_bulan_berjalan
-    );
-
-  const previous =
-    angka(
-      data.pendapatan_bulan_sebelumnya
-    );
-
-  let difference = 0;
-
-  if (previous > 0) {
-    difference =
-      (
-        (
-          current -
-          previous
-        ) /
-        previous
-      ) * 100;
-
-  } else if (current > 0) {
-    difference =
-      100;
+  const panah = selisih > 0 ? "↑" : "↓";
+  if (sebelumnya === 0) {
+    trend.textContent = `${panah} dari ${formatRupiah(0)} bulan sebelumnya`;
+    return;
   }
 
-  trend.classList.remove(
-    "up",
-    "down",
-    "flat"
-  );
-
-  if (current > previous) {
-    trend.classList.add(
-      "up"
-    );
-
-    trend.textContent =
-      `↑ ${Math.abs(
-        difference
-      ).toLocaleString(
-        "id-ID",
-        {
-          maximumFractionDigits: 1
-        }
-      )}% dari bulan sebelumnya`;
-
-  } else if (
-    current < previous
-  ) {
-    trend.classList.add(
-      "down"
-    );
-
-    trend.textContent =
-      `↓ ${Math.abs(
-        difference
-      ).toLocaleString(
-        "id-ID",
-        {
-          maximumFractionDigits: 1
-        }
-      )}% dari bulan sebelumnya`;
-
-  } else {
-    trend.classList.add(
-      "flat"
-    );
-
-    trend.textContent =
-      "— Sama dengan bulan sebelumnya";
-  }
+  const persen = (Math.abs(selisih / sebelumnya) * 100).toLocaleString("id-ID", {
+    maximumFractionDigits: 1
+  });
+  trend.textContent = `${panah} ${persen}% dari ${formatRupiah(sebelumnya)} bulan sebelumnya`;
 }
 
 
@@ -1541,30 +1493,19 @@ function siapkanCanvas(
 }
 
 
-function normalisasiBulanan(
-  rows = []
-) {
-  return Array.from(
-    {
-      length: 12
-    },
-    (_, index) => {
-      const bulan =
-        index + 1;
+function normalisasiBulanan(rows = [], bulan) {
+  const daftarBulan = bulan
+    ? [bulan]
+    : Array.from({ length: 12 }, (_, index) => index + 1);
 
-      return (
-        rows.find(
-          item =>
-            Number(
-              item.bulan ??
-              item.month
-            ) === bulan
-        ) || {
-          bulan
-        }
-      );
-    }
+  return daftarBulan.map(nomor =>
+    rows.find(item => Number(item.bulan ?? item.month) === nomor) ||
+    { bulan: nomor }
   );
+}
+
+function posisiBulanGrafik(index, jumlahBulan) {
+  return jumlahBulan === 1 ? 0.5 : index / (jumlahBulan - 1);
 }
 
 
@@ -1592,7 +1533,8 @@ function maksimumBagus(value) {
 
 
 function gambarGrafikPendapatan(
-  rows = []
+  rows = [],
+  bulan
 ) {
   const canvas =
     document.getElementById(
@@ -1613,7 +1555,7 @@ function gambarGrafikPendapatan(
   } = prepared;
 
   const data =
-    normalisasiBulanan(rows);
+    normalisasiBulanan(rows, bulan);
 
  const series = [
   { key: "reguler", color: "#4f46e5" },
@@ -1720,14 +1662,8 @@ function gambarGrafikPendapatan(
   // Label bulan
 
   data.forEach(
-    (_, index) => {
-      const x =
-        padding.left +
-        (
-          chartWidth *
-          index /
-          11
-        );
+    (row, index) => {
+      const x = padding.left + chartWidth * posisiBulanGrafik(index, data.length);
 
       context.fillStyle =
         "#64748b";
@@ -1736,7 +1672,7 @@ function gambarGrafikPendapatan(
         "center";
 
       context.fillText(
-        bulanSingkat[index],
+        bulanSingkat[Number(row.bulan ?? row.month) - 1],
         x,
         height - 12
       );
@@ -1750,13 +1686,7 @@ function gambarGrafikPendapatan(
 
     data.forEach(
       (row, index) => {
-        const x =
-          padding.left +
-          (
-            chartWidth *
-            index /
-            11
-          );
+        const x = padding.left + chartWidth * posisiBulanGrafik(index, data.length);
 
         const value =
           angka(
@@ -1802,13 +1732,7 @@ function gambarGrafikPendapatan(
 
     data.forEach(
       (row, index) => {
-        const x =
-          padding.left +
-          (
-            chartWidth *
-            index /
-            11
-          );
+        const x = padding.left + chartWidth * posisiBulanGrafik(index, data.length);
 
         const value =
           angka(
@@ -1852,14 +1776,14 @@ function gambarGrafikPendapatan(
 }
 
 
-function gambarGrafikPartner(rows = []) {
+function gambarGrafikPartner(rows = [], bulan) {
   const canvas = document.getElementById("partnerChart");
   const prepared = siapkanCanvas(canvas);
 
   if (!prepared) return;
 
   const { context, width, height } = prepared;
-  const data = normalisasiBulanan(rows);
+  const data = normalisasiBulanan(rows, bulan);
 
   const series = [
     { key: "reguler", color: "#4f46e5" },
@@ -1920,16 +1844,16 @@ function gambarGrafikPartner(rows = []) {
   }
 
   // Nama bulan
-  data.forEach((_, index) => {
+  data.forEach((row, index) => {
     const x =
       padding.left +
-      chartWidth * index / 11;
+      chartWidth * posisiBulanGrafik(index, data.length);
 
     context.fillStyle = "#64748b";
     context.textAlign = "center";
 
     context.fillText(
-      bulanSingkat[index],
+      bulanSingkat[Number(row.bulan ?? row.month) - 1],
       x,
       height - 12
     );
@@ -1942,7 +1866,7 @@ function gambarGrafikPartner(rows = []) {
     data.forEach((row, index) => {
       const x =
         padding.left +
-        chartWidth * index / 11;
+        chartWidth * posisiBulanGrafik(index, data.length);
 
       const y =
         padding.top +
@@ -1967,7 +1891,7 @@ function gambarGrafikPartner(rows = []) {
     data.forEach((row, index) => {
       const x =
         padding.left +
-        chartWidth * index / 11;
+        chartWidth * posisiBulanGrafik(index, data.length);
 
       const y =
         padding.top +
@@ -1991,7 +1915,8 @@ function gambarGrafikPartner(rows = []) {
 function pasangTooltipGrafik(
   canvasId,
   tooltipId,
-  rows = []
+  rows = [],
+  bulan
 ) {
   const canvas = document.getElementById(canvasId);
   const tooltip = document.getElementById(tooltipId);
@@ -1999,7 +1924,7 @@ function pasangTooltipGrafik(
   if (!canvas || !tooltip) return;
 
   const shell = canvas.parentElement;
-  const data = normalisasiBulanan(rows);
+  const data = normalisasiBulanan(rows, bulan);
 
   const series = [
     {
@@ -2067,10 +1992,10 @@ function pasangTooltipGrafik(
     const index = Math.max(
       0,
       Math.min(
-        11,
+        data.length - 1,
         Math.round(
           (x - padding.left) /
-          plotWidth * 11
+          plotWidth * (data.length - 1)
         )
       )
     );
@@ -2080,7 +2005,7 @@ function pasangTooltipGrafik(
     // Garis tepat pada posisi bulan terpilih.
     const posisiBulan =
       padding.left +
-      plotWidth * index / 11;
+      plotWidth * posisiBulanGrafik(index, data.length);
 
     crosshair.style.left =
       `${canvas.offsetLeft + posisiBulan}px`;
@@ -2089,7 +2014,7 @@ function pasangTooltipGrafik(
 
     const judul = document.createElement("strong");
     judul.className = "chart-tooltip-title";
-    judul.textContent = bulanSingkat[index];
+    judul.textContent = bulanSingkat[Number(row.bulan ?? row.month) - 1];
 
     const isiTooltip = series.map(item => {
       const baris = document.createElement("div");
@@ -2145,6 +2070,7 @@ function pasangTooltipGrafik(
     tooltip.style.top = `${top}px`;
   };
 
+  sembunyikanTooltip();
   canvas.onpointerleave = sembunyikanTooltip;
 }
 
@@ -2158,19 +2084,21 @@ function renderCharts(data) {
     ? data.partner_monthly
     : [];
 
-  gambarGrafikPendapatan(incomeRows);
-  gambarGrafikPartner(partnerRows);
+  gambarGrafikPendapatan(incomeRows, data.bulan);
+  gambarGrafikPartner(partnerRows, data.bulan);
 
   pasangTooltipGrafik(
     "incomeChart",
     "incomeTooltip",
-    incomeRows
+    incomeRows,
+    data.bulan
   );
 
   pasangTooltipGrafik(
     "partnerChart",
     "partnerTooltip",
-    partnerRows
+    partnerRows,
+    data.bulan
   );
 }
 
@@ -2296,10 +2224,24 @@ function renderDashboard(data) {
       ?.trim() ||
     "Semua PIC";
 
+  const namaBulan = data.bulan
+    ? dashboardMonth.options[data.bulan].textContent
+    : null;
+  const labelPeriode = namaBulan ? `${namaBulan} ${tahun}` : "Tahun Laporan";
+
   if (dashboardPeriod) {
-    dashboardPeriod.textContent =
-      `Periode Januari–Desember ${tahun} • ` +
-      `${jenisLabel} • ${picLabel}`;
+    const rentang = namaBulan ? labelPeriode : `Januari–Desember ${tahun}`;
+    dashboardPeriod.textContent = `Periode ${rentang} • ${jenisLabel} • ${picLabel}`;
+  }
+
+  if (dashboardMonth) {
+    setText("labelPendapatanBulan", `Pendapatan ${namaBulan ?? "Bulan Berjalan"}`);
+    setText("labelPengeluaranBulan", `Pengeluaran ${namaBulan ?? "Bulan Berjalan"}`);
+    setText("labelGrafikPendapatan", `Grafik Pendapatan ${namaBulan ?? "Tahunan"}`);
+    setText("labelGrafikPengeluaran", `Pembayaran Partner ${namaBulan ?? "Tahunan"}`);
+    document.querySelectorAll("[data-label-periode]").forEach(label => {
+      label.textContent = labelPeriode;
+    });
   }
 
   if (lastUpdated) {
@@ -2489,7 +2431,13 @@ function totalPengeluaranPadaBulan(rows, tahun, bulan) {
   }, 0);
 }
 
-async function muatPengeluaranBulanBerjalan() {
+function renderPengeluaranBulanan(current, previous) {
+  setText("pengeluaranBulanBerjalan", formatRupiah(current));
+  renderPerbandinganBulanan("pengeluaranMonthlyTrend", current, previous);
+}
+
+
+async function muatPengeluaranBulanBerjalan(requestId) {
   const nilaiElement = document.getElementById(
     "pengeluaranBulanBerjalan"
   );
@@ -2505,6 +2453,8 @@ async function muatPengeluaranBulanBerjalan() {
       "Pengeluaran Bulan Berjalan",
       "/api/pengeluaran/detail"
     );
+
+    if (requestId !== dashboardRequestId) return;
 
     const rows = Array.isArray(hasil.pengeluaran)
       ? hasil.pengeluaran
@@ -2534,51 +2484,9 @@ async function muatPengeluaranBulanBerjalan() {
       bulanSebelumnya
     );
 
-    nilaiElement.textContent =
-      formatRupiah(current);
-
-    if (trendElement) {
-      trendElement.classList.remove(
-        "up",
-        "down",
-        "flat"
-      );
-
-      if (previous === 0) {
-        trendElement.classList.add("flat");
-
-        trendElement.textContent =
-          current === 0
-            ? "— Belum ada perbandingan"
-            : "— Belum ada pembanding bulan lalu";
-      } else {
-        const perubahan =
-          (current - previous) /
-          previous * 100;
-
-        trendElement.classList.add(
-          perubahan > 0
-            ? "up"
-            : perubahan < 0
-              ? "down"
-              : "flat"
-        );
-
-        const persen = Math.abs(
-          perubahan
-        ).toLocaleString("id-ID", {
-          maximumFractionDigits: 1
-        });
-
-        trendElement.textContent =
-          perubahan > 0
-            ? `↑ ${persen}% dari bulan sebelumnya`
-            : perubahan < 0
-              ? `↓ ${persen}% dari bulan sebelumnya`
-              : "— Sama dengan bulan sebelumnya";
-      }
-    }
+    renderPengeluaranBulanan(current, previous);
   } catch (error) {
+    if (requestId !== dashboardRequestId) return;
     console.error(
       "ERROR PENGELUARAN BULAN BERJALAN:",
       error
@@ -2594,6 +2502,7 @@ async function muatPengeluaranBulanBerjalan() {
 }
 
 async function loadDashboard() {
+  const requestId = ++dashboardRequestId;
   const {
     filter,
     query
@@ -2604,39 +2513,24 @@ async function loadDashboard() {
 
   try {
     const [
-  projectData,
-  financialData,
-  contractData,
-  businessData,
-  pengeluaranData
-] = await Promise.all([
-  ambilDashboardBagian(
-    "Project Overview",
-    `/api/dashboard/project?${query}`
-  ),
+      projectData,
+      financialData,
+      contractData,
+      businessData,
+      pengeluaranData
+    ] = await Promise.all([
+      ambilDashboardBagian("Project Overview", `/api/dashboard/project?${query}`),
+      ambilDashboardBagian("Financial Overview", `/api/dashboard/financial?${query}`),
+      ambilDashboardBagian("Contract Overview", `/api/dashboard/contract?${query}`),
+      ambilDashboardBagian("Business Performance", `/api/dashboard/business?${query}`),
+      ambilDashboardBagian("Total Pengeluaran", `/api/total-pengeluaran?${query}`)
+    ]);
 
-  ambilDashboardBagian(
-    "Financial Overview",
-    `/api/dashboard/financial?${query}`
-  ),
-
-  ambilDashboardBagian(
-    "Contract Overview",
-    `/api/dashboard/contract?${query}`
-  ),
-
-  ambilDashboardBagian(
-    "Business Performance",
-    `/api/dashboard/business?${query}`
-  ),
-
-  ambilDashboardBagian(
-    "Total Pengeluaran",
-    `/api/total-pengeluaran?${query}`
-  )
-]);
+    if (requestId !== dashboardRequestId) return;
 
     const data = {
+      bulan: filter.bulan,
+
       tahun:
         filter.tahun,
 
@@ -2668,10 +2562,9 @@ async function loadDashboard() {
               .income_monthly
           : [],
 
-     partner_monthly:
-  Array.isArray(pengeluaranData.bulanan)
-    ? pengeluaranData.bulanan
-    : [],
+      partner_monthly: Array.isArray(pengeluaranData.bulanan)
+        ? pengeluaranData.bulanan
+        : [],
 
       contract_overview:
         contractData
@@ -2729,8 +2622,19 @@ async function loadDashboard() {
           timelineExpired.value;
     }
 
+    if (requestId !== dashboardRequestId) return;
+
     renderDashboard(data);
-    await muatPengeluaranBulanBerjalan();
+    if (filter.bulan) {
+      renderPengeluaranBulanan(
+        angka(data.financial_overview.dibayar_partner),
+        angka(data.financial_overview.pengeluaran_bulan_sebelumnya)
+      );
+    } else {
+      await muatPengeluaranBulanBerjalan(requestId);
+    }
+
+    if (requestId !== dashboardRequestId) return;
 
     // Simpan filter ke URL dashboard
 
@@ -2743,6 +2647,14 @@ async function loadDashboard() {
       "tahun",
       String(filter.tahun)
     );
+
+    if (dashboardMonth) {
+      if (filter.bulan) {
+        url.searchParams.set("bulan", String(filter.bulan));
+      } else {
+        url.searchParams.delete("bulan");
+      }
+    }
 
     if (
       filter.jenis_proyek
@@ -2775,6 +2687,7 @@ async function loadDashboard() {
     );
 
   } catch (error) {
+    if (requestId !== dashboardRequestId) return;
     console.error(
       "ERROR LOAD DASHBOARD:",
       error
@@ -2785,7 +2698,7 @@ async function loadDashboard() {
     );
 
   } finally {
-    setLoading(false);
+    if (requestId === dashboardRequestId) setLoading(false);
   }
 }
 
@@ -2795,11 +2708,10 @@ async function loadDashboard() {
 // ======================================================
 
 function bukaDetailCard(card) {
-  const periode =
-    dapatkanPeriodeJakarta();
-
   const filterDashboard =
     ambilFilterDashboard();
+
+  const periode = filterDashboard.bulan ? filterDashboard : dapatkanPeriodeJakarta();
 
   const route =
     String(
@@ -3154,9 +3066,6 @@ function bukaDetailCard(card) {
     card.dataset.currentMonth ===
     "true"
   ) {
-    const periode =
-      dapatkanPeriodeJakarta();
-
     params.set(
       "tahun",
       String(periode.tahun)
@@ -3189,8 +3098,10 @@ function bukaDetailCard(card) {
   }
 
   if (card.dataset.currentMonth === "true") {
-    params.delete("jenis_proyek");
-    params.delete("pic_id");
+    if (!filterDashboard.bulan) {
+      params.delete("jenis_proyek");
+      params.delete("pic_id");
+    }
     params.set("tahun", String(periode.tahun));
     params.set("bulan", String(periode.bulan));
     params.set("status_pembayaran", "Sudah Dibayar");
@@ -3257,6 +3168,17 @@ function bukaDetailCard(card) {
   // ====================================================
   // REDIRECT
   // ====================================================
+
+  if (filterDashboard.bulan && (
+    (path === "/proyek.html" && (
+      params.get("periode_kontrak") === "tahun" ||
+      params.get("dashboard_group") === "total-project"
+    )) ||
+    route === "income" ||
+    route === "expense"
+  )) {
+    params.set("bulan", String(filterDashboard.bulan));
+  }
 
   if (path) {
     const query =
@@ -3816,6 +3738,8 @@ function jalankanFilterDashboard() {
 }
 
 
+dashboardMonth?.addEventListener("change", jalankanFilterDashboard);
+
 dashboardYear
   ?.addEventListener(
     "change",
@@ -3859,6 +3783,8 @@ refreshDashboard
         dashboardJenisProyek.value =
           "";
       }
+
+      if (dashboardMonth) dashboardMonth.value = "";
 
       if (dashboardPic) {
         dashboardPic.value =
@@ -4108,7 +4034,9 @@ if (
           tab.classList.toggle("active", tab === button);
         });
 
-    
+        if (currentDashboardData) {
+          renderCharts(currentDashboardData);
+        }
       });
     });
   }

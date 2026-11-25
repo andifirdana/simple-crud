@@ -188,6 +188,27 @@
       backdrop-filter: blur(5px);
     }
 
+    .partner-page .phone-validation-modal {
+      max-width: 420px;
+      padding: 26px;
+    }
+
+    .phone-validation-modal h2 {
+      margin: 0 0 12px;
+      font-size: 19px;
+    }
+
+    .phone-validation-modal p {
+      margin: 0 0 24px;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    .phone-validation-modal form {
+      display: flex;
+      justify-content: flex-end;
+    }
+
     .partner-page .partner-modal > .partner-card {
       border: 0;
       border-radius: 0;
@@ -997,9 +1018,10 @@
                         + Tambah PIC
                       </button>
 
-                      <p class="pic-help">
+                      <p class="pic-help" id="partnerPicHelp">
                         Baris kosong tidak disimpan.
                         Isi nama untuk setiap kontak PIC.
+                        Nomor HP harus berawalan 0, contoh 081234567890.
                       </p>
                     </div>
                   </section>
@@ -1034,6 +1056,22 @@
               </form>
             </div>
           </div>
+        </dialog>
+
+        <dialog
+          id="phoneValidationModal"
+          class="partner-modal phone-validation-modal"
+          role="alertdialog"
+          aria-labelledby="phoneValidationTitle"
+          aria-describedby="phoneValidationMessage"
+        >
+          <h2 id="phoneValidationTitle">Nomor HP tidak valid</h2>
+          <p id="phoneValidationMessage">Pastikan nomor HP berawalan 0</p>
+          <form method="dialog">
+            <button type="submit" class="partner-btn btn-primary" autofocus>
+              Perbaiki nomor HP
+            </button>
+          </form>
         </dialog>
         <!-- MODAL SELESAI -->
 
