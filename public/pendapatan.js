@@ -7,6 +7,7 @@
 let allPendapatan = [];
 let filteredPendapatan = [];
 let currentPagePendapatan = 1;
+let pendapatanSedangDimuat = false;
 
 const tampilPendapatanBulanan = document.body.hasAttribute("data-pendapatan-bulanan");
 const itemsPerPagePendapatan = tampilPendapatanBulanan ? 100 : 20;
@@ -696,6 +697,9 @@ async function fetchSumberPendapatan(
 // ======================================================
 
 async function loadPendapatan({ pertahankanFilter = false } = {}) {
+  pendapatanSedangDimuat = true;
+  const pesanSumber = document.getElementById("pendapatanLoadError");
+  if (pesanSumber) pesanSumber.hidden = true;
   if (tombolUnduhPendapatan) tombolUnduhPendapatan.disabled = true;
   if (pendapatanGroup) {
     pendapatanGroup.innerHTML = `
@@ -760,6 +764,15 @@ async function loadPendapatan({ pertahankanFilter = false } = {}) {
         "ERROR PENDAPATAN SEWA:",
         hasilSewa.reason
       );
+    }
+
+    const sumberGagal = [
+      hasilProyek.status === "rejected" && "proyek",
+      hasilSewa.status === "rejected" && "sewa"
+    ].filter(Boolean);
+    if (pesanSumber && sumberGagal.length) {
+      pesanSumber.textContent = `Data pendapatan ${sumberGagal.join(" dan ")} gagal dimuat. Muat ulang halaman untuk mencoba lagi.`;
+      pesanSumber.hidden = false;
     }
 
     if (
@@ -827,13 +840,17 @@ async function loadPendapatan({ pertahankanFilter = false } = {}) {
 
     loadPendapatanFilters();
 
-    if (!pertahankanFilter) setFilterPendapatanDariUrl();
+    const filterDiubahSaatMemuat = filterRentangPendapatan &&
+      new URLSearchParams(window.location.search).toString() !== pendapatanUrlParams.toString();
+    if (!pertahankanFilter && !filterDiubahSaatMemuat) setFilterPendapatanDariUrl();
 
+    pendapatanSedangDimuat = false;
     currentPagePendapatan = 1;
 
     applyPendapatanFilter();
 
   } catch (error) {
+    pendapatanSedangDimuat = false;
     console.error(
       "ERROR LOAD PENDAPATAN:",
       error
@@ -842,7 +859,9 @@ async function loadPendapatan({ pertahankanFilter = false } = {}) {
     allPendapatan = [];
     filteredPendapatan = [];
 
-    if (pendapatanGroup) {
+    if (pesanSumber?.hidden === false) {
+      renderPendapatanPage();
+    } else if (pendapatanGroup) {
       pendapatanGroup.innerHTML = `
         <div class="empty-state error-state">
           Gagal mengambil data pendapatan:
@@ -1268,6 +1287,12 @@ function setDefaultPendapatanFilter() {
 function applyPendapatanFilter(
   resetPage = true
 ) {
+  if (filterRentangPendapatan && pendapatanSedangDimuat) {
+    bacaRentangPendapatan();
+    updateUrlPendapatan();
+    return;
+  }
+
   const keyword =
     String(
       searchPendapatan?.value || ""
@@ -1951,6 +1976,7 @@ if (tampilPendapatanBulanan) {
 
   function tampilkanTabelRincian() {
     editTermin = null;
+    editError.hidden = true;
     editForm.hidden = true;
     detailTable.hidden = false;
   }
@@ -2053,12 +2079,15 @@ if (tampilPendapatanBulanan) {
     notice.hidden = true;
     try {
       const response = await fetch(`/api/pendapatan/proyek/${proyekId}/${sumber}/${terminId}/termin`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(payload)
+      }).catch(() => {
+        throw new Error("Tidak dapat menghubungi server. Periksa koneksi dan status termin sebelum menekan Simpan lagi.");
       });
       const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.data) throw new Error(result?.error || "Gagal menyimpan termin pembayaran.");
+      if (!response.ok) throw new Error(result?.error || `Gagal menyimpan termin pembayaran (HTTP ${response.status}).`);
+      if (!result?.data) throw new Error("Server tidak mengonfirmasi penyimpanan. Periksa daftar termin sebelum mencoba lagi.");
       modal.close();
       await loadPendapatan({ pertahankanFilter: true });
       notice.textContent = "Termin pembayaran tersimpan.";
@@ -2684,6 +2713,11 @@ if (resetPendapatanFilter) {
 // START
 // ======================================================
 
+if (filterRentangPendapatan) {
+  loadPendapatanFilters();
+  setFilterPendapatanDariUrl();
+  bacaRentangPendapatan();
+}
 loadPendapatan();
 
 (() => {

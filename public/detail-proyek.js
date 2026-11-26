@@ -4305,7 +4305,9 @@ if (terminForm) {
                   payload
                 )
             }
-          );
+          ).catch(() => {
+            throw new Error("Tidak dapat menghubungi server. Periksa koneksi dan status termin sebelum menekan Simpan lagi.");
+          });
 
 
         // ==================================================
@@ -4379,8 +4381,7 @@ if (!response.ok) {
 
   throw new Error(
     result.error ||
-    responseText ||
-    "Gagal menyimpan termin."
+    `Gagal menyimpan termin (HTTP ${response.status}).`
   );
 
 }

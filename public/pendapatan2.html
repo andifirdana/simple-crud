@@ -19,19 +19,19 @@
     <div class="projection-filters" role="search" aria-label="Filter pendapatan">
       <div class="projection-filter">
         <label for="filterBulanAwalPendapatan">Bulan Awal</label>
-        <select id="filterBulanAwalPendapatan"></select>
+        <select id="filterBulanAwalPendapatan"><option value="">Awal tahun</option></select>
       </div>
       <div class="projection-filter">
         <label for="filterTahunAwalPendapatan">Tahun Awal</label>
-        <select id="filterTahunAwalPendapatan"></select>
+        <select id="filterTahunAwalPendapatan"><option value="">Tanpa batas awal</option></select>
       </div>
       <div class="projection-filter">
         <label for="filterBulanAkhirPendapatan">Bulan Akhir</label>
-        <select id="filterBulanAkhirPendapatan"></select>
+        <select id="filterBulanAkhirPendapatan"><option value="">Akhir tahun</option></select>
       </div>
       <div class="projection-filter">
         <label for="filterTahunAkhirPendapatan">Tahun Akhir</label>
-        <select id="filterTahunAkhirPendapatan"></select>
+        <select id="filterTahunAkhirPendapatan"><option value="">Tanpa batas akhir</option></select>
       </div>
       <div class="projection-filter">
         <label for="filterJenisPendapatan">Jenis Proyek</label>
@@ -49,6 +49,7 @@
       <button type="button" id="pendapatanExport" class="projection-export" disabled>Unduh Excel</button>
     </div>
     <p class="projection-message" id="pendapatanRentangError" role="alert" hidden>Periode awal harus sama dengan atau sebelum periode akhir.</p>
+    <p class="projection-message" id="pendapatanLoadError" role="alert" hidden></p>
     <p class="pendapatan2-filter-info" id="pendapatanStatusInfo" role="status" hidden></p>
     <p class="pendapatan2-filter-info" id="pendapatanEditNotice" role="status" hidden></p>
     <p class="projection-message" id="pendapatanExportError" role="alert" hidden></p>
@@ -139,6 +140,6 @@
 
   <script src="/layout.js"></script>
   <script src="/sidebar.js"></script>
-  <script src="/pendapatan.js"></script>
+  <script src="/pendapatan.js?v=filter-periode"></script>
 </body>
 </html>

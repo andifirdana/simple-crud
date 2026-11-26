@@ -9413,93 +9413,12 @@ app.get(
   }
 );
 
-// DETAIL PROYEK
-app.get("/api/proyek/:id/detail", 
-  async (req, res) => {
-
-  console.log("DETAIL PROYEK DIPANGGIL:", req.params.id);
-
-  try {
-
-    const id = req.params.id;
-
-    console.log("ID PROYEK:", id);
-
-    // ------------------------------------------
-    // 1. DATA UTAMA PROYEK
-    // ------------------------------------------
-
-    const proyekResult = await pool.query(`
-  SELECT
-    p.id,
-    p.nama_proyek,
-    p.nama_pengadaan,
-    p.deskripsi,
-    p.jenis_proyek,
-    p.sub_jenis_proyek,
-    p.status_final,
-    p.created_at,
-    p.updated_at,
-
-    p.kategori_produk_id,
-
-    kp.nama_kategori_produk,
-
-    COALESCE(
-      (
-        SELECT ARRAY_AGG(
-          pk.kategori_produk_id
-          ORDER BY pk.kategori_produk_id
-        )
-        FROM public.proyek_kategori pk
-        WHERE pk.proyek_id = p.id
-      ),
-      ARRAY[]::INTEGER[]
-    ) AS kategori_produk_ids,
-
-    COALESCE(
-      (
-        SELECT ARRAY_AGG(
-          kp2.nama_kategori_produk
-          ORDER BY kp2.nama_kategori_produk
-        )
-
-        FROM public.proyek_kategori pk2
-
-        JOIN public.kategori_produk kp2
-          ON kp2.id = pk2.kategori_produk_id
-
-        WHERE pk2.proyek_id = p.id
-      ),
-      ARRAY[]::TEXT[]
-    ) AS nama_kategori_produk_list
-
-  FROM public.proyek p
-
-  LEFT JOIN public.kategori_produk kp
-    ON kp.id = p.kategori_produk_id
-
-  WHERE p.id = $1
-`, [id]);
-    if (proyekResult.rows.length === 0) {
-      return res.status(404).json({
-        error: "Proyek tidak ditemukan"
-      });
-    }
-
-    const proyek = proyekResult.rows[0];
-
-    // ======================================================
-    // TERMIN PEMBAYARAN KLIEN
-    // ======================================================
-
 // EDIT TERMIN KLIEN
 
-app.put("/api/proyek/klien/termin/:id", (req, res) => simpanTerminKlien(req, res));
+app.put("/api/proyek/klien/termin/:id", wajibLogin, (req, res) => simpanTerminKlien(req, res));
 
 async function simpanTerminKlien(req, res, proyekIdDiizinkan = null) {
-    const client =
-      await pool.connect();
+    let client;
 
     let transaksiDimulai =
       false;
@@ -9529,8 +9448,15 @@ async function simpanTerminKlien(req, res, proyekIdDiizinkan = null) {
         tanggal_jatuh_tempo,
         tanggal_bayar,
         syarat_pembayaran
-      } = req.body;
+      } = req.body ?? {};
 
+      const statusTermin = status_pembayaran === "Sudah Dibayar"
+        ? "Dibayar"
+        : status_pembayaran || "Belum Dibayar";
+
+      if (!["Belum Dibayar", "Proses", "Dibayar"].includes(statusTermin)) {
+        return res.status(400).json({ error: "Status pembayaran termin klien tidak valid." });
+      }
 
       if (
         !nama_termin ||
@@ -9543,6 +9469,7 @@ async function simpanTerminKlien(req, res, proyekIdDiizinkan = null) {
       }
 
 
+      client = await pool.connect();
       await client.query("BEGIN");
 
       transaksiDimulai = true;
@@ -9920,8 +9847,7 @@ async function simpanTerminKlien(req, res, proyekIdDiizinkan = null) {
 
           nilaiNominal,
 
-          status_pembayaran ||
-            "Belum Dibayar",
+          statusTermin,
 
           tanggal_jatuh_tempo ||
             null,
@@ -10334,6 +10260,11 @@ async function simpanTerminKlien(req, res, proyekIdDiizinkan = null) {
         error
       );
 
+      if (!client) {
+        return res.status(503).json({
+          error: "Database sementara tidak dapat dihubungi. Periksa daftar termin sebelum mencoba lagi."
+        });
+      }
 
       return res.status(500).json({
         error:
@@ -10341,9 +10272,89 @@ async function simpanTerminKlien(req, res, proyekIdDiizinkan = null) {
       });
 
     } finally {
-      client.release();
+      client?.release();
     }
 }
+
+// DETAIL PROYEK
+app.get("/api/proyek/:id/detail",
+  async (req, res) => {
+
+  console.log("DETAIL PROYEK DIPANGGIL:", req.params.id);
+
+  try {
+
+    const id = req.params.id;
+
+    console.log("ID PROYEK:", id);
+
+    // ------------------------------------------
+    // 1. DATA UTAMA PROYEK
+    // ------------------------------------------
+
+    const proyekResult = await pool.query(`
+  SELECT
+    p.id,
+    p.nama_proyek,
+    p.nama_pengadaan,
+    p.deskripsi,
+    p.jenis_proyek,
+    p.sub_jenis_proyek,
+    p.status_final,
+    p.created_at,
+    p.updated_at,
+
+    p.kategori_produk_id,
+
+    kp.nama_kategori_produk,
+
+    COALESCE(
+      (
+        SELECT ARRAY_AGG(
+          pk.kategori_produk_id
+          ORDER BY pk.kategori_produk_id
+        )
+        FROM public.proyek_kategori pk
+        WHERE pk.proyek_id = p.id
+      ),
+      ARRAY[]::INTEGER[]
+    ) AS kategori_produk_ids,
+
+    COALESCE(
+      (
+        SELECT ARRAY_AGG(
+          kp2.nama_kategori_produk
+          ORDER BY kp2.nama_kategori_produk
+        )
+
+        FROM public.proyek_kategori pk2
+
+        JOIN public.kategori_produk kp2
+          ON kp2.id = pk2.kategori_produk_id
+
+        WHERE pk2.proyek_id = p.id
+      ),
+      ARRAY[]::TEXT[]
+    ) AS nama_kategori_produk_list
+
+  FROM public.proyek p
+
+  LEFT JOIN public.kategori_produk kp
+    ON kp.id = p.kategori_produk_id
+
+  WHERE p.id = $1
+`, [id]);
+    if (proyekResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Proyek tidak ditemukan"
+      });
+    }
+
+    const proyek = proyekResult.rows[0];
+
+    // ======================================================
+    // TERMIN PEMBAYARAN KLIEN
+    // ======================================================
 
 // DELETE TERMIN KLIEN
 
@@ -27578,7 +27589,11 @@ app.patch("/api/pendapatan/proyek/:proyekId/:sumber/:terminId/syarat-pembayaran"
   }
 });
 
-app.patch("/api/pendapatan/proyek/:proyekId/:sumber/:terminId/termin", validasiAksesProyek, async (req, res) => {
+app.route("/api/pendapatan/proyek/:proyekId/:sumber/:terminId/termin")
+  .put(validasiAksesProyek, simpanTerminPendapatan)
+  .patch(validasiAksesProyek, simpanTerminPendapatan);
+
+async function simpanTerminPendapatan(req, res) {
   const { sumber, terminId } = req.params;
   const { nama_termin, nominal, persentase, input_terakhir, status_pembayaran,
     tanggal_jatuh_tempo, tanggal_bayar, syarat_pembayaran } = req.body ?? {};
@@ -27667,11 +27682,14 @@ app.patch("/api/pendapatan/proyek/:proyekId/:sumber/:terminId/termin", validasiA
     if (client) await client.query("ROLLBACK").catch(() => {});
     if (error.status === 400) return res.status(400).json({ error: error.message });
     console.error("ERROR EDIT TERMIN PENDAPATAN SEWA:", error);
+    if (!client) {
+      return res.status(503).json({ error: "Database sementara tidak dapat dihubungi. Periksa daftar termin sebelum mencoba lagi." });
+    }
     return res.status(500).json({ error: "Gagal menyimpan pembayaran sewa." });
   } finally {
     client?.release();
   }
-});
+}
 
 app.get(
   "/api/pendapatan/detail",
