@@ -44,6 +44,10 @@
           <span>Kontrak selesai</span>
           <strong id="totalKontrakSelesai">—</strong>
         </button>
+        <button type="button" class="total-card total-card-extended" data-contract-status="diperpanjang" aria-controls="kontrakTableBody" aria-pressed="false">
+          <span>Kontrak diperpanjang</span>
+          <strong id="totalKontrakDiperpanjang">—</strong>
+        </button>
         <button type="button" class="total-card total-card-expired" data-contract-status="berakhir" aria-controls="kontrakTableBody" aria-pressed="false">
           <span>Sudah berakhir</span>
           <strong id="totalKontrakBerakhir">0</strong>
@@ -133,6 +137,17 @@
               <option value="selesai">
                 Kontrak Telah Selesai
               </option>
+
+              <option value="diperpanjang">
+                Kontrak Diperpanjang
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="filterPengadaan">Status Pengadaan</label>
+            <select id="filterPengadaan" disabled>
+              <option value="">Semua</option>
             </select>
           </div>
 
@@ -153,6 +168,7 @@
               <col class="contract-col-project">
               <col class="contract-col-period">
               <col class="contract-col-remaining">
+              <col class="contract-col-procurement">
               <col class="contract-col-status">
               <col class="contract-col-documents">
               <col class="contract-col-actions">
@@ -162,6 +178,7 @@
                 <th scope="col">Proyek / Klien</th>
                 <th scope="col">Periode kontrak</th>
                 <th scope="col">Sisa waktu</th>
+                <th scope="col">Status Pengadaan</th>
                 <th scope="col">Status</th>
                 <th scope="col">Dokumen</th>
                 <th scope="col">Aksi</th>
@@ -169,7 +186,7 @@
             </thead>
             <tbody id="kontrakTableBody" role="rowgroup">
               <tr role="row">
-                <td role="cell" colspan="6" class="table-message">Memuat data kontrak…</td>
+                <td role="cell" colspan="7" class="table-message">Memuat data kontrak…</td>
               </tr>
             </tbody>
           </table>

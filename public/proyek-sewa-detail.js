@@ -3857,6 +3857,7 @@ function renderPembayaran(
     <th>Tanggal Tagihan</th>
     <th>Tanggal Dibayar</th>
     <th>Status</th>
+    <th>Syarat Pembayaran</th>
   </tr>
 `;
 
@@ -3908,7 +3909,7 @@ let html = "";
 for (const [produkKey, grup] of grupProduk.entries()) {
  html += `
   <tr class="payment-product-group">
-    <th colspan="8">
+    <th colspan="9">
       ${escapeHtml(grup.nama)}
     </th>
   </tr>
@@ -3919,7 +3920,7 @@ for (const [produkKey, grup] of grupProduk.entries()) {
 
     html += `
       <tr class="payment-location-group">
-        <th colspan="8">
+        <th colspan="9">
           <div class="payment-group-heading">
             <span>
               ${escapeHtml(
@@ -4031,6 +4032,7 @@ for (const [produkKey, grup] of grupProduk.entries()) {
               ${escapeHtml(status)}
             </span>
           </td>
+          <td>${escapeHtml(item.syarat_pembayaran || "—")}</td>
         </tr>
         
         
@@ -4041,7 +4043,7 @@ for (const [produkKey, grup] of grupProduk.entries()) {
 
 tbody.innerHTML = html || `
   <tr>
-    <td colspan="8" class="message">
+    <td colspan="9" class="message">
       Belum ada pembayaran.
     </td>
   </tr>

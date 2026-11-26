@@ -45,7 +45,7 @@ body.sidebar-collapsed .kontrak-page {
 
 .contract-summary {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 12px;
   margin-top: 22px;
 }
@@ -93,6 +93,13 @@ button.total-card:hover { border-color: #818cf8; }
   --card-border: #cee9d8;
 }
 
+.total-card-extended {
+  --card-ink: #64359a;
+  --card-dot: #9361c8;
+  --card-surface: #f4edff;
+  --card-border: #e6d8f7;
+}
+
 .total-card-expired {
   --card-ink: #a52829;
   --card-dot: #dc4949;
@@ -118,6 +125,7 @@ button.total-card:hover { border-color: #818cf8; }
   display: flex;
   align-items: baseline;
   gap: 8px;
+  overflow-wrap: anywhere;
   color: var(--contract-muted);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -187,7 +195,7 @@ button.total-card:hover { border-color: #818cf8; }
 
 .kontrak-page .filter-card {
   display: grid;
-  grid-template-columns: minmax(150px, 1.65fr) minmax(100px, .8fr) minmax(140px, 1fr) auto;
+  grid-template-columns: minmax(145px, 1.65fr) minmax(92px, .8fr) repeat(2, minmax(120px, 1fr)) auto;
   align-items: end;
   gap: 10px;
   margin: 0;
@@ -279,15 +287,18 @@ button.total-card:hover { border-color: #818cf8; }
 }
 
 .contract-table {
-  min-width: 680px;
+  min-width: 850px;
   table-layout: fixed;
 }
 
-.contract-col-period { width: 16%; }
-.contract-col-remaining { width: 15%; }
+.contract-col-period { width: 15%; }
+.contract-col-remaining { width: 13%; }
+.contract-col-procurement { width: 13%; }
 .contract-col-status { width: 13%; }
 .contract-col-documents { width: 96px; }
 .contract-col-actions { width: 172px; }
+.contract-procurement { overflow-wrap: anywhere; }
+.contract-procurement-label { display: none; }
 
 .kontrak-page :is(th, td) {
   padding: 10px 12px;
@@ -352,6 +363,7 @@ button.total-card:hover { border-color: #818cf8; }
 .relation-badge { font-size: 10px; }
 .relation-klien, .completed-badge { color: #2442a5; background: #edf2ff; }
 .relation-partner { color: #6534a9; background: #f3edff; }
+.extended-badge { color: #64359a; background: #f4edff; }
 .expired-badge { color: #a32d30; background: #ffeded; }
 .today-badge, .warning-badge { color: #854809; background: #fff3dc; }
 .active-badge { color: #116145; background: #e7f6ed; }
@@ -417,6 +429,18 @@ button.total-card:hover { border-color: #818cf8; }
 .kontrak-page .document-count-button[aria-expanded="true"] {
   border-color: #a5b4fc;
   background: #e6eaff;
+}
+
+.kontrak-page .document-count-button.is-empty {
+  border-color: #f6d7dc;
+  color: #a52829;
+  background: #fff0f1;
+}
+
+.kontrak-page .document-count-button.is-empty:is(:hover, [aria-expanded="true"]) {
+  border-color: #edacb4;
+  color: #a52829;
+  background: #ffe2e6;
 }
 
 .kontrak-page td.table-message {
@@ -622,8 +646,8 @@ button.total-card:hover { border-color: #818cf8; }
   }
 }
 
-@media (max-width: 1120px) {
-  .contract-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1280px) {
+  .contract-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (max-width: 900px) {
@@ -690,7 +714,9 @@ button.total-card:hover { border-color: #818cf8; }
   .contract-table tbody tr:last-child { border-bottom: 0; }
   .contract-table tbody td { min-width: 0; padding: 0; border: 0; }
   .contract-table tbody td:first-child,
+  .contract-table tbody td.contract-procurement,
   .contract-table tbody td[data-contract-status-summary] { grid-column: 1 / -1; }
+  .contract-procurement-label { display: block; color: var(--contract-muted); font-size: 11px; }
   .contract-table tbody tr.is-document-selected { box-shadow: inset 3px 0 #6366f1; background: #eef1ff; }
   .contract-table tbody tr.is-document-selected td:first-child { box-shadow: none; }
   .contract-table .contract-status-actions { justify-content: flex-end; }

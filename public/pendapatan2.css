@@ -1,0 +1,253 @@
+.pendapatan2-page .projection-summary {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.pendapatan2-page .projection-filter { min-width: 0; }
+.pendapatan2-page #resetPendapatanFilter { min-height: 40px; }
+.pendapatan2-filter-info { margin: 8px 2px 0; color: #506078; font-size: 13px; }
+
+.pendapatan2-page .pendapatan-table-wrap {
+  overflow: auto;
+  max-height: 65vh;
+}
+
+.pendapatan2-page .pendapatan-table {
+  --nomor-width: 48px;
+  --nomor-offset: var(--nomor-width);
+  --proyek-width: clamp(116px, 27cqi, 236px);
+  --jenis-width: clamp(90px, 13cqi, 140px);
+  --kontrak-width: clamp(116px, 14cqi, 148px);
+  --tahun-header-height: 34px;
+  --jenis-start: calc(var(--nomor-offset) + var(--proyek-width));
+  --kontrak-start: calc(var(--jenis-start) + var(--jenis-width));
+  width: max-content;
+  min-width: 100%;
+}
+
+.pendapatan2-page .pendapatan-table :is(th, td) {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.pendapatan2-page .pendapatan-table th { font-size: 11px; }
+.pendapatan2-page .pendapatan-table-bulanan thead tr:first-child > th:nth-child(-n+7) {
+  vertical-align: middle;
+  text-align: left;
+}
+.pendapatan2-page .pendapatan-table tbody tr { --row-background: #fff; }
+.pendapatan2-page .pendapatan-table tbody tr:hover { --row-background: #f8faff; }
+.pendapatan2-page .pendapatan-table tbody td { background: var(--row-background); }
+
+.pendapatan2-page .pendapatan-table tr:not(.pendapatan-month-head) > :nth-child(-n+4) {
+  position: sticky;
+  white-space: normal;
+}
+
+.pendapatan2-page .pendapatan-table tbody tr > :nth-child(-n+4) { z-index: 2; }
+.pendapatan2-page .pendapatan-table thead tr:first-child > :nth-child(-n+4) { z-index: 3; }
+
+.pendapatan2-page .pendapatan-table tr:not(.pendapatan-month-head) > :first-child {
+  width: var(--nomor-width);
+  min-width: var(--nomor-width);
+  max-width: var(--nomor-width);
+  inset-inline-start: 0;
+  padding-inline: 6px;
+  text-align: center;
+}
+
+.pendapatan2-page .pendapatan-table tr:not(.pendapatan-month-head) > :nth-child(2) {
+  width: var(--proyek-width);
+  min-width: var(--proyek-width);
+  max-width: var(--proyek-width);
+  inset-inline-start: var(--nomor-offset);
+}
+
+.pendapatan2-page .pendapatan-table tr:not(.pendapatan-month-head) > :nth-child(3) {
+  width: var(--jenis-width);
+  min-width: var(--jenis-width);
+  max-width: var(--jenis-width);
+  inset-inline-start: var(--jenis-start);
+}
+
+.pendapatan2-page .pendapatan-table tr:not(.pendapatan-month-head) > :nth-child(4) {
+  width: var(--kontrak-width);
+  min-width: var(--kontrak-width);
+  max-width: var(--kontrak-width);
+  inset-inline-start: var(--kontrak-start);
+  padding-inline: 8px;
+  box-shadow: 3px 0 5px -4px #64748b;
+}
+
+.pendapatan2-page .pendapatan-contract-value { display: block; overflow-x: auto; white-space: nowrap; }
+
+@container (max-width: 520px) {
+  .pendapatan2-page .pendapatan-table {
+    --nomor-offset: 0px;
+    --proyek-width: clamp(76px, 28cqi, 132px);
+    --jenis-width: clamp(48px, 18cqi, 84px);
+    --kontrak-width: clamp(76px, 27cqi, 116px);
+  }
+
+  .pendapatan2-page .pendapatan-table tr:not(.pendapatan-month-head) > :first-child { inset-inline-start: auto; }
+  .pendapatan2-page .pendapatan-table tbody tr > :first-child { position: static; }
+  .pendapatan2-page .pendapatan-table thead tr:first-child > :first-child { z-index: 1; }
+  .pendapatan2-page .pendapatan-table tr:not(.pendapatan-month-head) > :nth-child(-n+4) { padding-inline: 4px; }
+  .pendapatan2-page .pendapatan-table tbody tr > :is(:nth-child(3), :nth-child(4)) { font-size: 11px; }
+}
+
+.pendapatan2-page .pendapatan-table :is(.amount, .tanggal-cell, .periode-cell, .persentase-cell) {
+  white-space: nowrap;
+}
+
+.pendapatan2-page .pendapatan-table .amount { text-align: end; font-variant-numeric: tabular-nums; }
+.pendapatan2-page .pendapatan-table td.pendapatan-total { font-weight: 400; }
+.pendapatan2-page .pendapatan-table .pendapatan-total-paid { color: #116145; }
+.pendapatan2-page .pendapatan-table .pendapatan-total-outstanding { color: #a32d30; }
+.pendapatan2-page .pendapatan-table-bulanan tbody td:is(:nth-child(3), :nth-child(4)) { font-weight: 400; }
+.pendapatan2-page .pendapatan-year-head {
+  height: var(--tahun-header-height);
+  padding-block: 0;
+  vertical-align: middle;
+  background: #e9edff;
+  color: var(--projection-accent);
+  text-align: center;
+}
+
+.pendapatan2-page .pendapatan-month-head th { top: var(--tahun-header-height); }
+.pendapatan2-page .pendapatan-year-total {
+  border-inline-end: 2px solid var(--projection-border);
+  font-weight: 750;
+}
+.pendapatan2-page .pendapatan-table-bulanan .projection-month { white-space: nowrap; }
+.pendapatan2-page .pendapatan-table-bulanan .projection-month > small { max-inline-size: 170px; }
+#pendapatanDetail {
+  --projection-dialog-width: 960px;
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  overflow: hidden;
+}
+
+#pendapatanDetail:has(#pendapatanDetailEdit:not([hidden])) { --projection-dialog-width: 520px; }
+#pendapatanDetail header { border-bottom: 1px solid var(--projection-border); }
+#pendapatanDetailTotal { max-width: 100%; overflow-wrap: anywhere; }
+#pendapatanDetailTable { max-height: none; min-height: 0; overscroll-behavior: contain; }
+.pendapatan2-detail-table { table-layout: fixed; }
+.pendapatan2-detail-table :is(th, td) { overflow-wrap: anywhere; }
+.pendapatan2-detail-table td:nth-child(7) { white-space: pre-wrap; }
+.pendapatan2-detail-table .pendapatan-status { white-space: normal; }
+
+.pendapatan-edit-termin {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+  padding: 14px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.pendapatan-edit-termin .projection-filter { min-width: 0; }
+.pendapatan-edit-termin :is(input, select, textarea) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 400;
+}
+
+.pendapatan-edit-termin textarea { min-height: 76px; }
+#pendapatanDetail .projection-detail-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px solid var(--projection-border);
+}
+#pendapatanDetail:has(#pendapatanDetailEdit[hidden]) [form="pendapatanDetailEdit"] { display: none; }
+#pendapatanEditError { flex-basis: 100%; color: #a12830; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .pendapatan2-detail-table,
+  .pendapatan2-detail-table tbody,
+  .pendapatan2-detail-table tbody tr { display: block; }
+  .pendapatan2-detail-table thead {
+    position: absolute;
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  .pendapatan2-detail-table tbody tr { padding-block: 6px; border-bottom: 1px solid var(--projection-border); }
+  .pendapatan2-detail-table tbody td {
+    display: grid;
+    grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+    gap: 8px;
+    padding: 6px 16px;
+    border: 0;
+  }
+  .pendapatan2-detail-table td::before { content: attr(data-label); color: #506078; font-weight: 600; }
+  .pendapatan2-detail-table td > :is(.pendapatan-status, button) { justify-self: start; }
+  .pendapatan2-detail-table td:empty { display: none; }
+}
+.pendapatan2-page .pendapatan-table :is(.deskripsi-cell, .syarat-cell) { max-width: 230px; }
+.pendapatan2-page .pendapatan-project-link {
+  display: block;
+  color: var(--projection-accent);
+  font-weight: 700;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.pendapatan2-page .pendapatan-subtext { display: block; color: #506078; font-size: 11px; font-weight: 400; }
+
+.pendapatan2-page .pendapatan-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.pendapatan2-page .sudah-dibayar { color: #116145; background: #e7f6ed; }
+.pendapatan2-page .proses { color: #854809; background: #fff3dc; }
+.pendapatan2-page .belum-dibayar { color: #a32d30; background: #ffeded; }
+.pendapatan2-page .empty-state { padding: 22px 16px; color: #506078; }
+.pendapatan2-page .error-state { color: #a12830; }
+
+.pendapatan2-pagination {
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--projection-border);
+  color: #506078;
+  font-size: 13px;
+}
+
+.pendapatan2-page-buttons { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.pendapatan2-page-buttons .page-button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--projection-accent);
+}
+
+.pendapatan2-page-buttons .page-button.active { background: var(--projection-accent); color: #fff; }
+.pendapatan2-page-buttons .page-button:disabled { opacity: .55; cursor: default; }
+
+@media (max-width: 1280px) {
+  .pendapatan2-page .projection-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .pendapatan2-page .projection-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pendapatan2-page .projection-summary > div:first-child { grid-column: 1 / -1; }
+}

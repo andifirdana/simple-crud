@@ -19,6 +19,7 @@ document.addEventListener(
       document.getElementById(
         "filterStatus"
       );
+    const filterPengadaan = document.getElementById("filterPengadaan");
 
     const resetFilter =
       document.getElementById(
@@ -37,6 +38,7 @@ document.addEventListener(
 
     const totalKontrakAktif = document.getElementById("totalKontrakAktif");
     const totalKontrakSelesai = document.getElementById("totalKontrakSelesai");
+    const totalKontrakDiperpanjang = document.getElementById("totalKontrakDiperpanjang");
     const totalKontrakBerakhir = document.getElementById("totalKontrakBerakhir");
     const totalKontrak90Hari = document.getElementById("totalKontrak90Hari");
     const totalKontrakBelumDitentukan = document.getElementById("totalKontrakBelumDitentukan");
@@ -162,6 +164,7 @@ const state = {
   status: [...filterStatus.options].some(option => option.value === statusUrl)
     ? statusUrl
     : "",
+  pengadaan: (urlParams.get("status_pengadaan") ?? "").trim().toLowerCase(),
 
   periode:
     periodeUrl === "3-bulan"
@@ -260,6 +263,9 @@ filterStatus.value =
       if (item.status_kontrak === "selesai") {
         label = "Kontrak selesai";
         warna = "completed-badge";
+      } else if (item.status_kontrak === "diperpanjang") {
+        label = "Kontrak diperpanjang";
+        warna = "extended-badge";
       } else if (item.status_kontrak === "berakhir") {
         label = "Sudah berakhir";
         warna = "expired-badge";
@@ -293,8 +299,8 @@ filterStatus.value =
       return Array.isArray(kontrak.dokumen_kontrak) ? kontrak.dokumen_kontrak : [];
     }
 
-    function labelJumlahDokumen(kontrak) {
-      return `${formatJumlahKontrak.format(dokumenKontrak(kontrak).length)} dokumen`;
+    function labelJumlahDokumen(jumlah) {
+      return `${formatJumlahKontrak.format(jumlah)} dokumen`;
     }
 
     function kontrakSama(a, b) {
@@ -381,10 +387,11 @@ filterStatus.value =
     function renderTable(data, bisaBukaDetailProyek) {
       displayedContracts = Array.isArray(data) ? data : [];
       if (displayedContracts.length === 0) {
-        tableBody.innerHTML = '<tr role="row"><td role="cell" colspan="6" class="table-message">Data kontrak tidak ditemukan.</td></tr>';
+        tableBody.innerHTML = '<tr role="row"><td role="cell" colspan="7" class="table-message">Data kontrak tidak ditemukan.</td></tr>';
       } else {
         tableBody.innerHTML = displayedContracts.map((item, index) => {
           const namaProyek = escapeHTML(item.nama_proyek || "—");
+          const jumlahDokumen = dokumenKontrak(item).length;
           return `
             <tr role="row">
               <td role="cell">
@@ -405,9 +412,13 @@ filterStatus.value =
                 </div>
               </td>
               <td role="cell">${getBerakhirBadge(item)}</td>
+              <td role="cell" class="contract-procurement">
+                <span class="contract-procurement-label">Status Pengadaan</span>
+                ${escapeHTML(String(item.status_pengadaan ?? "").trim() || "—")}
+              </td>
               <td role="cell" data-contract-status-summary="${index}">${renderStatusKontrak(item)}</td>
               <td role="cell">
-                <button type="button" class="note-button document-count-button" data-contract-documents="${index}" aria-controls="contractDocumentsPanel" aria-expanded="false">${labelJumlahDokumen(item)}</button>
+                <button type="button" class="note-button document-count-button${jumlahDokumen === 0 ? " is-empty" : ""}" data-contract-documents="${index}" aria-controls="contractDocumentsPanel" aria-expanded="false">${labelJumlahDokumen(jumlahDokumen)}</button>
               </td>
               <td role="cell">
                 <div class="contract-status-actions">
@@ -514,7 +525,11 @@ filterStatus.value =
             kontrakTerbaru.dokumen_kontrak = [...list, dokumen];
           }
           const tombol = tableBody.querySelector(`[data-contract-documents="${index}"]`);
-          if (tombol) tombol.textContent = labelJumlahDokumen(kontrakTerbaru);
+          if (tombol) {
+            const jumlahDokumen = dokumenKontrak(kontrakTerbaru).length;
+            tombol.textContent = labelJumlahDokumen(jumlahDokumen);
+            tombol.classList.toggle("is-empty", jumlahDokumen === 0);
+          }
           if (kontrakSama(selectedDocumentContract, kontrakTerbaru)) {
             selectedDocumentContract = kontrakTerbaru;
             renderPanelDokumen(kontrakTerbaru);
@@ -685,6 +700,8 @@ filterStatus.value =
 
     function renderRingkasan(ringkasan = {}) {
       totalKontrak.textContent = formatJumlahKontrak.format(ringkasan.total_kontrak ?? 0);
+      totalKontrakAktif.textContent = formatJumlahKontrak.format(ringkasan.kontrak_aktif ?? 0);
+      totalKontrakDiperpanjang.textContent = formatJumlahKontrak.format(ringkasan.kontrak_diperpanjang ?? 0);
       totalKontrakBerakhir.textContent = formatJumlahKontrak.format(ringkasan.sudah_berakhir ?? 0);
       totalKontrak90Hari.textContent = formatJumlahKontrak.format(ringkasan.akan_berakhir_90_hari ?? 0);
       totalKontrakBelumDitentukan.textContent = formatJumlahKontrak.format(ringkasan.belum_ditentukan ?? 0);
@@ -697,24 +714,21 @@ filterStatus.value =
       });
     }
 
-    function tampilkanJumlahAktifDanSelesai(ringkasan, jumlahSelesai) {
-      totalKontrakSelesai.textContent = jumlahSelesai == null ? "—" : formatJumlahKontrak.format(jumlahSelesai);
-
-      const [total, ...kategoriLain] = [
-        ringkasan?.total_kontrak,
-        jumlahSelesai,
-        ringkasan?.sudah_berakhir,
-        ringkasan?.akan_berakhir_90_hari,
-        ringkasan?.belum_ditentukan
-      ].map(jumlah => jumlah == null ? NaN : Number(jumlah));
-      const aktif = total - kategoriLain.reduce((sum, jumlah) => sum + jumlah, 0);
-      totalKontrakAktif.textContent = Number.isFinite(aktif) ? formatJumlahKontrak.format(aktif) : "—";
+    function renderPilihanPengadaan(pilihan = []) {
+      const options = pilihan.map(({ value, label }) => new Option(label, value));
+      if (state.pengadaan && !options.some(option => option.value === state.pengadaan)) {
+        options.push(new Option(state.pengadaan, state.pengadaan));
+      }
+      filterPengadaan.replaceChildren(new Option("Semua", ""), ...options);
+      filterPengadaan.value = state.pengadaan;
+      filterPengadaan.disabled = false;
     }
 
     async function muatJumlahSelesai(params, request) {
       const query = new URLSearchParams({
         search: params.get("search"),
         jenis: params.get("jenis"),
+        status_pengadaan: params.get("status_pengadaan"),
         page: "1",
         limit: "1",
         status: "selesai"
@@ -781,7 +795,7 @@ filterStatus.value =
         <tr role="row">
           <td
             role="cell"
-            colspan="6"
+            colspan="7"
             class="table-message"
           >
             Memuat data kontrak...
@@ -799,7 +813,7 @@ filterStatus.value =
         <tr role="row">
           <td
             role="cell"
-            colspan="6"
+            colspan="7"
             class="table-message"
           >
             ${escapeHTML(message)}
@@ -818,6 +832,7 @@ filterStatus.value =
       renderLoading();
       totalKontrakAktif.textContent = "—";
       totalKontrakSelesai.textContent = "—";
+      totalKontrakDiperpanjang.textContent = "—";
 
       try {
         const params = new URLSearchParams({
@@ -826,6 +841,7 @@ filterStatus.value =
           search: state.search,
           jenis: state.jenis,
           status: state.status,
+          status_pengadaan: state.pengadaan,
           periode: state.periode
         });
         const hanyaKontrakSelesai = state.status === "selesai" && !state.periode;
@@ -872,10 +888,13 @@ filterStatus.value =
         );
 
         renderRingkasan(result.ringkasan);
+        renderPilihanPengadaan(result.pilihan_status_pengadaan);
         renderPagination();
 
         const jumlahSelesai = hanyaKontrakSelesai ? result.pagination?.total_data : await permintaanSelesai;
-        if (request === latestRequest) tampilkanJumlahAktifDanSelesai(result.ringkasan, jumlahSelesai);
+        if (request === latestRequest) {
+          totalKontrakSelesai.textContent = jumlahSelesai == null ? "—" : formatJumlahKontrak.format(jumlahSelesai);
+        }
 
       } catch (error) {
         if (request !== latestRequest) return;
@@ -967,6 +986,13 @@ filterStatus.value =
     }
 
     filterStatus.addEventListener("change", () => terapkanFilterStatus(filterStatus.value));
+    filterPengadaan.addEventListener("change", () => {
+      clearTimeout(searchTimer);
+      state.search = searchInput.value.trim();
+      state.pengadaan = filterPengadaan.value;
+      state.page = 1;
+      loadKontrak();
+    });
     kartuStatus.forEach(kartu => {
       kartu.addEventListener("click", () => terapkanFilterStatus(kartu.dataset.contractStatus));
     });
@@ -984,10 +1010,12 @@ filterStatus.value =
         searchInput.value = "";
         filterJenis.value = "";
         filterStatus.value = "";
+        filterPengadaan.value = "";
 
         state.search = "";
         state.jenis = "";
         state.status = "";
+        state.pengadaan = "";
         state.periode = "";
         state.page = 1;
 

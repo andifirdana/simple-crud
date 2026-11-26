@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pendapatan 2 - Bisboard</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/proyeksi-pendapatan.css">
+  <link rel="stylesheet" href="/pendapatan2.css">
+</head>
+<body class="projection-body" data-pendapatan-bulanan>
+  <div id="sidebarContainer"></div>
+
+  <main class="projection-page pendapatan2-page">
+    <header class="projection-header">
+      <h1>Pendapatan 2</h1>
+    </header>
+
+    <div class="projection-filters" role="search" aria-label="Filter pendapatan">
+      <div class="projection-filter">
+        <label for="filterBulanAwalPendapatan">Bulan Awal</label>
+        <select id="filterBulanAwalPendapatan"></select>
+      </div>
+      <div class="projection-filter">
+        <label for="filterTahunAwalPendapatan">Tahun Awal</label>
+        <select id="filterTahunAwalPendapatan"></select>
+      </div>
+      <div class="projection-filter">
+        <label for="filterBulanAkhirPendapatan">Bulan Akhir</label>
+        <select id="filterBulanAkhirPendapatan"></select>
+      </div>
+      <div class="projection-filter">
+        <label for="filterTahunAkhirPendapatan">Tahun Akhir</label>
+        <select id="filterTahunAkhirPendapatan"></select>
+      </div>
+      <div class="projection-filter">
+        <label for="filterJenisPendapatan">Jenis Proyek</label>
+        <select id="filterJenisPendapatan"></select>
+      </div>
+      <div class="projection-filter">
+        <label for="filterStatusPembayaranPendapatan">Status Pembayaran</label>
+        <select id="filterStatusPembayaranPendapatan"></select>
+      </div>
+      <div class="projection-filter projection-search">
+        <label for="searchPendapatan">Pencarian</label>
+        <input id="searchPendapatan" type="search" placeholder="Cari proyek, klien, termin, kategori atau No Req Klien" autocomplete="off">
+      </div>
+      <button type="button" id="resetPendapatanFilter" class="projection-edit">Reset</button>
+      <button type="button" id="pendapatanExport" class="projection-export" disabled>Unduh Excel</button>
+    </div>
+    <p class="projection-message" id="pendapatanRentangError" role="alert" hidden>Periode awal harus sama dengan atau sebelum periode akhir.</p>
+    <p class="pendapatan2-filter-info" id="pendapatanStatusInfo" role="status" hidden></p>
+    <p class="pendapatan2-filter-info" id="pendapatanEditNotice" role="status" hidden></p>
+    <p class="projection-message" id="pendapatanExportError" role="alert" hidden></p>
+
+    <dl class="projection-summary" aria-label="Ringkasan pendapatan" aria-live="polite">
+      <div><dt>Total Pendapatan</dt><dd id="totalPendapatan">—</dd></div>
+      <div><dt>Total Belum Ditagih</dt><dd id="totalBelumDibayar">—</dd></div>
+      <div><dt>Total Request Invoice</dt><dd id="totalProses">—</dd></div>
+      <div><dt>Termin Dibayar</dt><dd id="jumlahTerminDibayar">—</dd></div>
+      <div><dt>Termin Belum Dibayar</dt><dd id="jumlahTerminBelumDibayar">—</dd></div>
+    </dl>
+
+    <section class="projection-panel" aria-label="Daftar pendapatan">
+      <div id="pendapatanGroup">
+        <div class="empty-state" role="status">Memuat data pendapatan…</div>
+      </div>
+      <nav id="pendapatanPagination" class="pendapatan2-pagination" aria-label="Navigasi halaman pendapatan" style="display: none;">
+        <span id="pendapatanPaginationInfo"></span>
+        <div id="pendapatanPaginationButtons" class="pendapatan2-page-buttons"></div>
+      </nav>
+    </section>
+
+    <dialog class="projection-dialog projection-detail" id="pendapatanDetail" aria-labelledby="pendapatanDetailTitle" aria-describedby="pendapatanDetailContext">
+      <header>
+        <div>
+          <h2 id="pendapatanDetailTitle">Rincian Bulanan</h2>
+          <p id="pendapatanDetailContext"></p>
+        </div>
+        <strong id="pendapatanDetailTotal"></strong>
+      </header>
+      <div class="projection-scroll" id="pendapatanDetailTable" role="region" aria-label="Rincian termin pendapatan" tabindex="0">
+        <table class="pendapatan2-detail-table" role="table">
+          <thead role="rowgroup"><tr role="row">
+            <th scope="col">Termin/Deskripsi</th>
+            <th scope="col">Nilai</th>
+            <th scope="col">Persentase</th>
+            <th scope="col">Status</th>
+            <th scope="col">Tanggal Tagihan</th>
+            <th scope="col">Tanggal Dibayar</th>
+            <th scope="col">Syarat Pembayaran</th>
+            <th scope="col">Aksi</th>
+          </tr></thead>
+          <tbody id="pendapatanDetailRows" role="rowgroup"></tbody>
+        </table>
+      </div>
+      <form id="pendapatanDetailEdit" class="pendapatan-edit-termin" hidden>
+        <div class="projection-filter">
+          <label for="pendapatanEditNama">Termin/Deskripsi</label>
+          <input id="pendapatanEditNama" name="nama_termin" required>
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanEditNominal">Nilai</label>
+          <input id="pendapatanEditNominal" name="nominal" type="number" min="0" step="0.01" required>
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanEditPersentase">Persentase</label>
+          <input id="pendapatanEditPersentase" name="persentase" type="number" min="0" step="any">
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanEditStatus">Status</label>
+          <select id="pendapatanEditStatus" name="status_pembayaran" required>
+            <option>Sudah Dibayar</option><option>Proses</option><option>Belum Dibayar</option>
+          </select>
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanEditTagihan">Tanggal Tagihan</label>
+          <input id="pendapatanEditTagihan" name="tanggal_jatuh_tempo" type="date">
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanEditBayar">Tanggal Dibayar</label>
+          <input id="pendapatanEditBayar" name="tanggal_bayar" type="date">
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanEditSyarat">Syarat Pembayaran</label>
+          <textarea id="pendapatanEditSyarat" name="syarat_pembayaran" rows="3"></textarea>
+        </div>
+      </form>
+      <footer class="projection-detail-actions">
+        <p id="pendapatanEditError" class="projection-message" role="alert" hidden></p>
+        <button type="button" id="pendapatanEditCancel" form="pendapatanDetailEdit" class="projection-edit">Batal</button>
+        <button type="submit" form="pendapatanDetailEdit" class="projection-export">Simpan</button>
+        <form method="dialog">
+          <button type="submit" id="pendapatanDetailClose" class="projection-edit" autofocus>Tutup</button>
+        </form>
+      </footer>
+    </dialog>
+  </main>
+
+  <script src="/layout.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/pendapatan.js"></script>
+</body>
+</html>

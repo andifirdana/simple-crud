@@ -8,6 +8,7 @@
 
   const state = {
     rows: [],
+    flags: [],
     page: 1,
     pageSize: 10,
     query: "",
@@ -359,8 +360,10 @@
     render();
 
     try {
-      const result =
-        await request(API);
+      const [result, flags] = await Promise.all([
+        request(API),
+        request(`${API}/flags`)
+      ]);
 
       if (
         version !== state.loadVersion
@@ -378,8 +381,12 @@
           "Format daftar status dari API tidak valid."
         );
       }
+      if (!Array.isArray(flags) || !flags.every(flag => typeof flag === "string")) {
+        throw new Error("Format daftar flag dari API tidak valid.");
+      }
 
       state.rows = rows;
+      state.flags = flags;
     } catch (error) {
       if (
         version !== state.loadVersion
@@ -445,9 +452,7 @@
   // ==========================================
 
   function isiPilihanFlag(flagTerpilih) {
-    const flags = [...new Set(
-      state.rows.map(row => String(row.flag ?? "").trim()).filter(Boolean)
-    )].sort((a, b) => a.localeCompare(b, "id-ID"));
+    const { flags } = state;
 
     const select = byId("flag");
     select.replaceChildren(

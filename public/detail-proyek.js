@@ -3722,6 +3722,11 @@ const terminModal =
     "terminModal"
   );
 
+function bukaModalTermin(editKlien = false) {
+  terminModal.classList.toggle("termin-edit-klien", editKlien);
+  terminModal.classList.add("show");
+  if (editKlien) document.getElementById("terminForm").scrollTop = 0;
+}
 
 const tambahTerminButton =
   document.getElementById(
@@ -3772,9 +3777,7 @@ if (tambahTerminButton) {
         null;
       aturInputTermin();
 
-      terminModal.classList.add(
-        "show"
-      );
+      bukaModalTermin();
 
     }
   );
@@ -4738,9 +4741,7 @@ window.editTerminKlien =
     }
 
 
-    terminModal.classList.add(
-      "show"
-    );
+    bukaModalTermin(true);
 
   };
 
@@ -6586,9 +6587,7 @@ function editTerminPartner(id) {
   // BUKA MODAL
   // ==================================================
 
-  terminModal.classList.add(
-    "show"
-  );
+  bukaModalTermin();
 
 }
 // ======================================================
@@ -11035,9 +11034,7 @@ aturInputTermin();
   }
 
 
-  modal.classList.add(
-    "show"
-  );
+  bukaModalTermin();
 
 }
 // ======================================================

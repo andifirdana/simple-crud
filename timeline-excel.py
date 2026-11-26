@@ -181,6 +181,17 @@ def write_projection(payload):
     ])
 
 
+def write_monthly_revenue(payload):
+    monthly = payload["bulanan"]
+    extra_columns = len(monthly[0]) - 8
+    return write_sheets([
+        ("Pendapatan Bulanan", worksheet(monthly, widths=(8, 42, 30, 20, 22, 22, 22, 22) + (22,) * extra_columns,
+                                       number_columns=(1,), money_columns=range(5, len(monthly[0]) + 1))),
+        ("Rincian Termin", worksheet(payload["rincian"], widths=(42, 30, 20, 22, 20, 36, 22, 18, 20, 18, 18, 42),
+                                    text_columns=(4,), money_columns=(7,), number_columns=(8,))),
+    ])
+
+
 def read_sheet_rows(raw, preferred_sheet):
     if not raw or len(raw) > MAX_FILE:
         raise ValueError("File Excel kosong atau melebihi 10 MB.")
@@ -379,6 +390,9 @@ def main():
         elif sys.argv[1:] == ['export-proyeksi-pendapatan']:
             payload = json.loads(sys.stdin.buffer.read(40 * 1024 * 1024))
             sys.stdout.buffer.write(write_projection(payload))
+        elif sys.argv[1:] == ['export-pendapatan-bulanan']:
+            payload = json.loads(sys.stdin.buffer.read(40 * 1024 * 1024))
+            sys.stdout.buffer.write(write_monthly_revenue(payload))
         elif sys.argv[1:] == ['import']:
             records = read_workbook(sys.stdin.buffer.read(MAX_FILE + 1))
             sys.stdout.write(json.dumps(records, ensure_ascii=False))

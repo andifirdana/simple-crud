@@ -2353,6 +2353,53 @@ body.modal-open {
   overflow: hidden;
 }
 
+#modalRoot #terminModal.termin-edit-klien .modal-content {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 40px);
+  padding: 0;
+  overflow: hidden;
+}
+
+#terminModal.termin-edit-klien .modal-header {
+  margin: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+#terminModal.termin-edit-klien #terminForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 20px;
+}
+
+#terminModal.termin-edit-klien .form-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#terminModal.termin-edit-klien .form-group { margin: 0; min-width: 0; }
+#terminModal.termin-edit-klien label { margin: 0; }
+#terminModal.termin-edit-klien :is(input, select, textarea) { min-width: 0; max-width: 100%; }
+#terminModal.termin-edit-klien textarea { min-height: 76px; }
+
+#terminModal.termin-edit-klien .modal-actions {
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (max-width: 650px) {
+  #modalRoot > #terminModal.termin-edit-klien { height: 100dvh !important; }
+  #modalRoot #terminModal.termin-edit-klien .modal-content { max-height: calc(100dvh - 24px); }
+}
+
 /* =====================================================
    MODAL TASK DETAIL PROYEK
 ===================================================== */
@@ -4140,29 +4187,19 @@ body.modal-open {
 
       </div>
 
-
-      <div class="modal-actions">
-
-        <button
-          type="button"
-          class="btn btn-secondary"
-          id="batalTermin"
-        >
-          Batal
-        </button>
-
-        <button
-  type="submit"
-  form="terminForm"
-  class="btn btn-primary"
-  id="simpanTerminButton"
->
-  Simpan
-</button>
-
-      </div>
-
     </form>
+
+    <div class="modal-actions">
+
+      <button type="button" class="btn btn-secondary" id="batalTermin">
+        Batal
+      </button>
+
+      <button type="submit" form="terminForm" class="btn btn-primary" id="simpanTerminButton">
+        Simpan
+      </button>
+
+    </div>
 
   </div>
 </div>
