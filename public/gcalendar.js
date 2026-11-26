@@ -6,9 +6,12 @@
   const API = '/api/calendar';
   const HOUR_HEIGHT = 96;
   const EMAIL_PATTERN = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+  const absenceLabels = { izin: 'Izin', cuti: 'Cuti', sakit: 'Sakit' };
 
   let events = [];
   let holidays = [];
+  let absences = [];
+  const deletingAbsences = new Set();
 
   let master = {
     pics: [],
@@ -20,6 +23,8 @@
   let ready = false;
   let saving = false;
   let holidaySaving = false;
+  let absenceSaving = false;
+  let absenceToDelete = null;
   let holidaysAvailable = false;
 
   let requestNumber = 0;
@@ -1114,7 +1119,7 @@
           ${escapeHtml(names)}
         </p>
 
-        <ul class="conflict-details">
+        <ul class="day-details">
           ${conflict.details.map(
             detail => `<li>${escapeHtml(detail)}</li>`
           ).join('')}
@@ -1123,6 +1128,53 @@
         <p class="conflict-note">
           Termasuk agenda di luar filter.
         </p>
+      </details>
+    `;
+  }
+
+  function ownsAbsence(absence) {
+    return absence.pic_id != null && absence.pic_id === String(master.current_pic_id);
+  }
+
+  function absenceDeleteButton(absence) {
+    if (!ownsAbsence(absence)) return '';
+
+    const label = escapeHtml(`Hapus pengajuan ${absenceLabels[absence.type]}`);
+    return `<button type="button" class="absence-remove"
+      data-delete-absence="${escapeHtml(absence.id)}"
+      aria-label="${label}" title="${label}"
+      aria-haspopup="dialog" aria-controls="absence-delete-dialog"
+      ${deletingAbsences.has(absence.id) ? 'disabled' : ''}>×</button>`;
+  }
+
+  function absenceMarkup(date, pic) {
+    const dailyAbsences = absences.filter(absence =>
+      absence.start_date <= date && absence.end_date >= date &&
+      (!pic || absence.pic_id === pic)
+    );
+    if (!dailyAbsences.length) return '';
+
+    if (dailyAbsences.length === 1) {
+      const [absence] = dailyAbsences;
+      return `
+        <p class="day-absences day-absence-single">
+          <strong>Pengajuan ${escapeHtml(absenceLabels[absence.type])}</strong>
+          <small>Diajukan oleh ${escapeHtml(absence.pic_name)}</small>
+          ${absenceDeleteButton(absence)}
+        </p>
+      `;
+    }
+
+    return `
+      <details class="day-absences">
+        <summary>${dailyAbsences.length} pengajuan PIC</summary>
+        <ul class="day-details">
+          ${dailyAbsences.map(absence => `<li>
+            <strong>${escapeHtml(absenceLabels[absence.type])}</strong>
+            · Diajukan oleh ${escapeHtml(absence.pic_name)}
+            ${absenceDeleteButton(absence)}
+          </li>`).join('')}
+        </ul>
       </details>
     `;
   }
@@ -1569,6 +1621,7 @@
 
   function renderWeek(visible) {
     const today = todayKey();
+    const pic = $('pic-filter').value;
 
     const days = weekDays(
       $('view-date').value
@@ -1642,6 +1695,7 @@
 
             ${holidayMarkup(day.key)}
             ${conflictAlert(conflict)}
+            ${absenceMarkup(day.key, pic)}
           </div>
         `;
       }).join('');
@@ -1754,28 +1808,40 @@
 
     loadError = '';
     events = [];
+    absences = [];
+    $('absence-load-error').hidden = true;
 
     render();
 
     $('status').textContent = 'Memuat agenda…';
 
     try {
-      const rows = await api(
-        `?from=${encodeURIComponent(range.from)}` +
-        `&to=${encodeURIComponent(range.to)}`
-      );
+      const query = new URLSearchParams(range);
+      const [agendaResult, absenceResult] = await Promise.allSettled([
+        api(`?${query}`),
+        api(`/absences?${query}`)
+      ]);
 
       if (number !== requestNumber) {
         return;
       }
 
-      if (!Array.isArray(rows)) {
+      if (absenceResult.status === 'fulfilled' && Array.isArray(absenceResult.value)) {
+        absences = absenceResult.value;
+      } else {
+        const message = absenceResult.reason?.message || 'Format daftar pengajuan tidak valid.';
+        $('absence-load-error').textContent = `Pengajuan PIC belum dapat dimuat. ${message}`;
+        $('absence-load-error').hidden = false;
+      }
+
+      if (agendaResult.status === 'rejected') throw agendaResult.reason;
+      if (!Array.isArray(agendaResult.value)) {
         throw new Error(
           'Format daftar agenda tidak valid.'
         );
       }
 
-      events = rows.map(normalizeEvent);
+      events = agendaResult.value.map(normalizeEvent);
 
       rememberEmailSuggestions(
         events.flatMap(event => event.additional_emails)
@@ -1804,7 +1870,7 @@
   }
 
   async function reload(options = {}) {
-    if (saving || holidaySaving) {
+    if (saving || holidaySaving || absenceSaving) {
       return;
     }
 
@@ -1813,6 +1879,7 @@
     // Abaikan permintaan agenda lama yang masih berjalan.
     requestNumber++;
     ready = false;
+    $('open-absence-dialog').disabled = true;
 
     $('status').textContent = 'Memuat data kalender…';
 
@@ -1884,6 +1951,7 @@
       }
 
       ready = true;
+      $('open-absence-dialog').disabled = !master.current_pic_id;
 
       await loadDay(options);
 
@@ -1907,6 +1975,128 @@
       render();
       notify(error.message);
     }
+  }
+
+  // ======================================================
+  // FORM PENGAJUAN PIC
+  // ======================================================
+
+  function updateAbsenceEndDate() {
+    const start = $('absence-start').value;
+    const end = $('absence-end');
+    end.min = validDateKey(start) ? start : '1000-01-01';
+    if (start && (!end.value || end.value < start)) end.value = start;
+  }
+
+  function openAbsenceDialog() {
+    const pic = master.pics.find(item => item.id === String(master.current_pic_id));
+    if (!ready || !pic) return;
+
+    $('absence-form').reset();
+    $('absence-error').hidden = true;
+    $('absence-pic').textContent = pic.name;
+    const date = $('view-date').value;
+    $('absence-start').value = validDateKey(date) ? date : todayKey();
+    updateAbsenceEndDate();
+    $('absence-dialog').showModal();
+  }
+
+  function closeAbsenceDialog() {
+    if (!absenceSaving) $('absence-dialog').close();
+  }
+
+  function setAbsenceSaving(value) {
+    absenceSaving = value;
+    for (const control of $('absence-form').elements) control.disabled = value;
+  }
+
+  async function saveAbsence(event) {
+    event.preventDefault();
+    if (absenceSaving || !$('absence-form').reportValidity()) return;
+    const errorMessage = $('absence-error');
+    errorMessage.hidden = true;
+
+    const body = {
+      type: $('absence-type').value,
+      start_date: $('absence-start').value,
+      end_date: $('absence-end').value
+    };
+    setAbsenceSaving(true);
+
+    let saved;
+    try {
+      saved = await api('/absences', { method: 'POST', body: JSON.stringify(body) });
+    } catch (error) {
+      errorMessage.textContent = error.message;
+      errorMessage.hidden = false;
+      return;
+    } finally {
+      setAbsenceSaving(false);
+    }
+
+    closeAbsenceDialog();
+    $('view-date').value = saved.start_date;
+    if (saved.pic_id !== $('pic-filter').value) $('pic-filter').value = '';
+    notify('Pengajuan berhasil dikirim.');
+    await loadDay();
+  }
+
+  function setAbsenceDeleting(id, deleting) {
+    if (deleting) deletingAbsences.add(id);
+    else deletingAbsences.delete(id);
+
+    for (const button of $('week-head').querySelectorAll('[data-delete-absence]')) {
+      if (button.dataset.deleteAbsence === id) button.disabled = deleting;
+    }
+  }
+
+  function openAbsenceDeleteDialog(button) {
+    const id = button.dataset.deleteAbsence;
+    const absence = absences.find(row => row.id === id);
+    const dialog = $('absence-delete-dialog');
+    if (dialog.open || !absence || !ownsAbsence(absence) || deletingAbsences.has(id)) return;
+
+    const period = absence.start_date === absence.end_date
+      ? absence.start_date
+      : `${absence.start_date} – ${absence.end_date}`;
+    absenceToDelete = id;
+    $('absence-delete-message').textContent = `Hapus pengajuan ${absenceLabels[absence.type]} untuk ${period}?`;
+    $('absence-delete-error').hidden = true;
+    button.focus({ preventScroll: true });
+    dialog.showModal();
+  }
+
+  async function deleteAbsence(event) {
+    event.preventDefault();
+    const id = absenceToDelete;
+    const dialog = $('absence-delete-dialog');
+    if (!dialog.open || !id || deletingAbsences.has(id)) return;
+
+    const confirmButton = $('absence-delete-confirm');
+    const cancelButton = $('absence-delete-cancel');
+    const errorMessage = $('absence-delete-error');
+    errorMessage.hidden = true;
+    confirmButton.disabled = true;
+    confirmButton.textContent = 'Menghapus…';
+    cancelButton.disabled = true;
+
+    setAbsenceDeleting(id, true);
+    try {
+      await api(`/absences/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    } catch (error) {
+      errorMessage.textContent = error.message;
+      errorMessage.hidden = false;
+      return;
+    } finally {
+      setAbsenceDeleting(id, false);
+      confirmButton.disabled = false;
+      confirmButton.textContent = 'Hapus';
+      cancelButton.disabled = false;
+    }
+
+    dialog.close();
+    notify('Pengajuan berhasil dihapus.');
+    await loadDay();
   }
 
   // ======================================================
@@ -3038,7 +3228,32 @@
     }
   );
 
+  $('open-absence-dialog').addEventListener('click', openAbsenceDialog);
+  $('absence-close').addEventListener('click', closeAbsenceDialog);
+  $('absence-cancel').addEventListener('click', closeAbsenceDialog);
+  $('absence-start').addEventListener('change', updateAbsenceEndDate);
+  $('absence-form').addEventListener('submit', saveAbsence);
+  $('absence-dialog').addEventListener('cancel', event => {
+    if (absenceSaving) event.preventDefault();
+  });
+  $('absence-delete-form').addEventListener('submit', deleteAbsence);
+  $('absence-delete-cancel').addEventListener('click', () => {
+    if (!deletingAbsences.has(absenceToDelete)) $('absence-delete-dialog').close();
+  });
+  $('absence-delete-dialog').addEventListener('cancel', event => {
+    if (deletingAbsences.has(absenceToDelete)) event.preventDefault();
+  });
+  $('absence-delete-dialog').addEventListener('close', () => {
+    if (!$('absence-delete-dialog').open) absenceToDelete = null;
+  });
+
   $('week-board').addEventListener('click', event => {
+    const absenceButton = event.target.closest('[data-delete-absence]');
+    if (absenceButton) {
+      openAbsenceDeleteDialog(absenceButton);
+      return;
+    }
+
     const holidayButton = event.target.closest(
       '[data-delete-holiday]'
     );

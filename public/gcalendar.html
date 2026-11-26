@@ -389,9 +389,9 @@
       box-shadow: 0 4px 12px #dc262626;
     }
 
-    /* INFORMASI BENTROK */
+    /* RINGKASAN PIC HARIAN */
 
-    .calendar-page .day-conflict {
+    .calendar-page :is(.day-conflict, .day-absences) {
       width: 100%;
       max-width: 100%;
       padding: 5px 7px;
@@ -404,7 +404,54 @@
       overflow-wrap: anywhere;
     }
 
-    .calendar-page .day-conflict summary {
+    .calendar-page .day-absences {
+      border-color: #ddd6fe;
+      background: #f5f3ff;
+      color: #4c1d95;
+    }
+
+    .calendar-page .day-absence-single {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .calendar-page .day-absence-single small {
+      display: block;
+      font-size: 11px;
+    }
+
+    .calendar-page :is(.day-absence-single, .day-absences li):has(> .absence-remove) {
+      position: relative;
+      min-height: 26px;
+      padding-inline-end: 30px;
+    }
+
+    .calendar-page .absence-remove {
+      position: absolute;
+      inset-block-start: 2px;
+      inset-inline-end: 2px;
+      display: grid;
+      place-items: center;
+      width: 24px;
+      min-height: 24px;
+      padding: 0;
+      border: 0;
+      border-radius: 6px;
+      background: #ede9fe;
+      color: #4c1d95;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .calendar-page .absence-remove:hover:not(:disabled) {
+      background: #ddd6fe;
+    }
+
+    .calendar-page .absence-remove:focus-visible {
+      outline-offset: -2px;
+    }
+
+    .calendar-page :is(.day-conflict, .day-absences) summary {
       cursor: pointer;
       font-weight: 600;
       text-align: center;
@@ -415,7 +462,7 @@
       font-weight: 600;
     }
 
-    .calendar-page .conflict-details {
+    .calendar-page .day-details {
       max-height: 160px;
       overflow: auto;
       margin: 7px 0;
@@ -423,13 +470,19 @@
       text-align: left;
     }
 
-    .calendar-page .conflict-details li + li {
+    .calendar-page .day-details li + li {
       margin-top: 7px;
     }
 
     .calendar-page .conflict-note {
       margin: 7px 0 0;
       font-size: 12px;
+    }
+
+    #absence-load-error {
+      padding: 0 20px 10px;
+      color: #b54848;
+      font-size: 13px;
     }
 
     /* JAM DAN KOLOM */
@@ -764,7 +817,9 @@
     }
 
     .calendar-dialog #agenda-form,
-    .calendar-dialog #holiday-form {
+    .calendar-dialog #holiday-form,
+    .calendar-dialog #absence-form,
+    .calendar-dialog #absence-delete-form {
       display: flex;
       flex-direction: column;
       max-height: 90vh;
@@ -1096,7 +1151,9 @@
     }
 
     .calendar-dialog #form-error,
-    .calendar-dialog #holiday-error {
+    .calendar-dialog #holiday-error,
+    .calendar-dialog #absence-error,
+    .calendar-dialog #absence-delete-error {
       margin: 0;
       padding: 10px 12px;
       border: 1px solid #f2d9d8;
@@ -1538,14 +1595,20 @@
       line-height: 1.7;
     }
 
-    #holiday-save {
+    #holiday-save,
+    #absence-delete-confirm {
       background: #dc2626;
       box-shadow: none;
     }
 
-    #holiday-save:hover {
+    #holiday-save:hover,
+    #absence-delete-confirm:hover:not(:disabled) {
       background: #b91c1c;
       box-shadow: none;
+    }
+
+    #absence-delete-dialog {
+      width: min(440px, calc(100% - 28px));
     }
 
     /* NOTIFIKASI */
@@ -1795,6 +1858,15 @@
               </svg>
               Tambah libur
             </button>
+
+            <button
+              type="button"
+              id="open-absence-dialog"
+              class="tool-button"
+              aria-haspopup="dialog"
+              aria-controls="absence-dialog"
+              disabled
+            >Ajukan Izin, Cuti, atau Sakit</button>
           </div>
 
           <!-- JUDUL MINGGU -->
@@ -1829,6 +1901,7 @@
 
           <!-- Elemen kompatibilitas JS lama; legenda tidak ditampilkan. -->
           <div id="legend" hidden></div>
+          <p id="absence-load-error" role="status" hidden></p>
 
           <!-- KALENDER -->
           <div id="calendar-scroll" class="scroll">
@@ -2035,6 +2108,65 @@
         >
           Simpan libur
         </button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="absence-dialog" class="calendar-dialog" aria-labelledby="absence-dialog-title">
+    <form id="absence-form">
+      <div class="modal-head">
+        <h2 id="absence-dialog-title">Ajukan Izin, Cuti, atau Sakit</h2>
+        <button type="button" id="absence-close" class="modal-close" aria-label="Tutup pengajuan">×</button>
+      </div>
+
+      <div class="form-body">
+        <p>Diajukan oleh <strong id="absence-pic"></strong></p>
+        <p id="absence-error" role="alert" hidden></p>
+
+        <label for="absence-type">
+          Jenis pengajuan
+          <select id="absence-type" required autofocus>
+            <option value="">Pilih jenis pengajuan</option>
+            <option value="izin">Izin</option>
+            <option value="cuti">Cuti</option>
+            <option value="sakit">Sakit</option>
+          </select>
+        </label>
+
+        <div class="form-row">
+          <label for="absence-start">
+            Tanggal mulai
+            <input id="absence-start" type="date" required min="1000-01-01" max="9999-12-31">
+          </label>
+
+          <label for="absence-end">
+            Tanggal selesai
+            <input id="absence-end" type="date" required min="1000-01-01" max="9999-12-31">
+          </label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="absence-cancel" class="secondary">Batal</button>
+        <button type="submit" class="primary">Kirim pengajuan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="absence-delete-dialog" class="calendar-dialog" aria-labelledby="absence-delete-title" aria-describedby="absence-delete-message">
+    <form id="absence-delete-form">
+      <div class="modal-head">
+        <h2 id="absence-delete-title">Hapus pengajuan?</h2>
+      </div>
+
+      <div class="form-body">
+        <p id="absence-delete-message"></p>
+        <p id="absence-delete-error" role="alert" hidden></p>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="absence-delete-cancel" class="secondary" autofocus>Batal</button>
+        <button type="submit" id="absence-delete-confirm" class="primary">Hapus</button>
       </div>
     </form>
   </dialog>

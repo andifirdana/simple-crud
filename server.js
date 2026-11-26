@@ -32,8 +32,6 @@ const app = express();
 // LOGIN
 // ======================================================
 
-app.use(express.json());
-
 // SESSION LOGIN
 
 app.use(
@@ -102,6 +100,10 @@ app.use((req, res, next) => {
 
   return res.status(403).json({ error: "Role Legal hanya dapat mengakses modul Kontrak." });
 });
+
+// Payload Simpan Produk & Order dapat memuat hasil impor Excel.
+app.put("/api/proyek-sewa/:id/produk", produkSewaRequireLogin, express.json({ limit: "20mb" }));
+app.use(express.json());
 
 const googleCalendar =
   require('./google-calendar-api')(
@@ -999,6 +1001,8 @@ async function validasiAksesProyek(
 // ======================================================
 // MENU
 // ======================================================
+const halamanProyeksiPendapatan = "/proyeksi-pendapatan.html";
+
 app.get('/api/menu',
    wajibLogin, 
   async (req, res) => {
@@ -1020,6 +1024,8 @@ app.get('/api/menu',
         status
       FROM master_menu
       WHERE status = 'Aktif'
+        OR LOWER(BTRIM(kode_menu)) IN ('proyeksi-pendapatan', 'proyeksi_pendapatan')
+        OR LOWER(LTRIM(SPLIT_PART(SPLIT_PART(BTRIM(url), '?', 1), '#', 1), '/')) = 'proyeksi-pendapatan.html'
       ORDER BY
         CASE
           WHEN group_menu = 'Overview' THEN 1
@@ -1030,8 +1036,10 @@ app.get('/api/menu',
         id
     `);
 
-    const menus = result.rows;
     const pathMenu = menu => String(menu.url || "").trim().split(/[?#]/)[0].replace(/^\//, "");
+    const menuProyeksi = menu => pathMenu(menu).toLowerCase() === halamanProyeksiPendapatan.slice(1) ||
+      ["proyeksi-pendapatan", "proyeksi_pendapatan"].includes(String(menu.kode_menu || "").trim().toLowerCase());
+    const menus = result.rows.filter(menu => menu.status === "Aktif");
 
     if (!menus.some(menu => pathMenu(menu) === "beranda.html")) {
       const dashboardIndex = menus.findIndex(menu => pathMenu(menu) === "dashboard.html");
@@ -1040,6 +1048,21 @@ app.get('/api/menu',
         nama_menu: "Beranda",
         url: "/beranda.html",
         group_menu: menus[dashboardIndex]?.group_menu || "Overview",
+        status: "Aktif"
+      });
+    }
+
+    const proyeksiAktif = menus.find(menuProyeksi);
+    if (proyeksiAktif) {
+      proyeksiAktif.url = halamanProyeksiPendapatan;
+    } else if (!result.rows.some(menuProyeksi)) {
+      let index = menus.findIndex(menu => pathMenu(menu) === "pendapatan.html");
+      if (index < 0) index = menus.findIndex(menu => pathMenu(menu) === "prognosa.html");
+      menus.splice(index < 0 ? menus.length : index + 1, 0, {
+        kode_menu: "proyeksi-pendapatan",
+        nama_menu: "Proyeksi Pendapatan",
+        url: halamanProyeksiPendapatan,
+        group_menu: menus[index]?.group_menu || "Laporan",
         status: "Aktif"
       });
     }
@@ -26157,35 +26180,9 @@ app.get(
 // GET PROGNOSA
 // ======================================================
 
-app.get(
-  "/api/prognosa",
-  async (req, res) => {
-
-    if (
-      !req.session ||
-      !req.session.user
-    ) {
-      return res.status(401).json({
-        error: "Belum login"
-      });
-    }
-
-    try {
-
-      const user =
-        req.session.user;
-
-      const isAdmin =
-        String(
-          user.role || ""
-        ).toLowerCase() === "admin";
-
-      const picId =
-        user.id;
-
-
-      const result =
-        await pool.query(
+async function ambilDataPrognosa(user) {
+  const isAdmin = String(user.role || "").toLowerCase() === "admin";
+  const result = await pool.query(
           `
 
           SELECT
@@ -26355,7 +26352,10 @@ app.get(
               pkt.tanggal_jatuh_tempo
               + INTERVAL '1 year'
             )::date
-              AS tanggal_prognosa
+              AS tanggal_prognosa,
+
+            TO_CHAR(pkt.tanggal_jatuh_tempo + INTERVAL '1 year', 'YYYY-MM-DD')
+              AS tanggal_proyeksi
 
 
           FROM public.proyek_klien_termin pkt
@@ -26414,15 +26414,20 @@ app.get(
             tanggal_prognosa ASC
 
           `,
-          [
-            isAdmin,
-            picId
-          ]
-        );
+          [isAdmin, user.id]
+  );
+  return result.rows;
+}
 
+app.get("/api/prognosa", async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({ error: "Belum login" });
+    }
 
+    try {
+      const rows = await ambilDataPrognosa(req.session.user);
       const prognosa =
-        result.rows.map(
+        rows.map(
           item => ({
 
             proyek_id:
@@ -26562,6 +26567,7 @@ app.get(
   }
 );
 
+require("./proyeksi-pendapatan-api")(app, wajibLogin, ambilDataPrognosa);
 
 app.get("/api/debug-tanggal-klien/:proyekId", async (req, res) => {
   try {
@@ -31649,6 +31655,36 @@ async function tentukanPartnerProyekSewa(
 // POST PROYEK SEWA
 // =====================================================
 
+function konflikNoReqKlien(produk, orderLama = []) {
+  const kunci = nomor => String(nomor ?? "").trim().toLowerCase();
+  const pemilik = new Map();
+  for (const order of orderLama) {
+    const nomor = kunci(order.no_req_klien);
+    if (!nomor) continue;
+    if (!pemilik.has(nomor)) pemilik.set(nomor, new Set());
+    pemilik.get(nomor).add(String(order.id));
+  }
+
+  const nomorDiajukan = new Map();
+  for (const item of produk) {
+    if (!Array.isArray(item?.orders)) continue;
+    for (const order of item.orders) {
+      const nomor = String(order?.no_req_klien ?? "").trim();
+      if (!nomor) continue;
+      const key = kunci(nomor);
+      const id = String(order.id);
+      const pemilikNomor = pemilik.get(key);
+      if (pemilikNomor && !pemilikNomor.has(id)) return { nomor, tersimpan: true };
+      if (!nomorDiajukan.has(key)) nomorDiajukan.set(key, new Set());
+      const orderDiajukan = nomorDiajukan.get(key);
+      if (orderDiajukan.has(id) || (orderDiajukan.size && !pemilikNomor)) return { nomor, tersimpan: false };
+      orderDiajukan.add(id);
+    }
+  }
+
+  return null;
+}
+
 app.post(
   "/api/proyek-sewa",
   async (req, res) => {
@@ -31723,6 +31759,11 @@ app.post(
 
       }
 
+
+      const konflikReq = konflikNoReqKlien(produk);
+      if (konflikReq) {
+        return res.status(409).json({ error: `No Req Klien ${konflikReq.nomor} sudah ada dalam proyek sewa ini.` });
+      }
 
       // =================================================
       // MULAI TRANSACTION
@@ -34092,6 +34133,44 @@ app.put(
 // kontrak proyek lama.
 // =====================================================
 
+const bacaFileOrderExcel = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 0 }
+}).single("file");
+
+app.get("/api/proyek-sewa/order/excel-template", produkSewaRequireLogin, async (req, res) => {
+  try {
+    const { runExcel } = require("./timeline-excel");
+    const workbook = await runExcel("template-order", {});
+    res.attachment("template-order.xlsx");
+    return res.send(workbook);
+  } catch (error) {
+    if (!error.status) console.error("ERROR TEMPLATE EXCEL ORDER SEWA:", error);
+    return res.status(error.status || 500).json({
+      error: error.status ? error.message : "Gagal membuat template Excel order. Silakan coba kembali."
+    });
+  }
+});
+
+app.post("/api/proyek-sewa/order/excel-preview", produkSewaRequireLogin, (req, res, next) => {
+  bacaFileOrderExcel(req, res, error => {
+    if (error || !req.file || !/\.xlsx$/i.test(req.file.originalname)) {
+      return res.status(400).json({ error: "Pilih satu file Excel .xlsx dengan ukuran maksimal 10 MB." });
+    }
+    return next();
+  });
+}, async (req, res) => {
+  try {
+    const { runExcel } = require("./timeline-excel");
+    return res.json({ rows: await runExcel("import-order", req.file.buffer) });
+  } catch (error) {
+    if (!error.status) console.error("ERROR PREVIEW EXCEL ORDER SEWA:", error);
+    return res.status(error.status || 500).json({
+      error: error.status ? error.message : "Gagal membaca Excel order. Silakan coba kembali."
+    });
+  }
+});
+
 app.put(
   "/api/proyek-sewa/:id/produk",
   async (req, res) => {
@@ -34228,6 +34307,12 @@ app.put(
           [proyekSewaId]
         )
       ).rows;
+
+      const konflikReq = konflikNoReqKlien(daftar, orderLama);
+      if (konflikReq) {
+        const pesan = `No Req Klien ${konflikReq.nomor} sudah ada dalam proyek sewa ini.`;
+        gagal(konflikReq.tersimpan ? `${pesan} Muat ulang untuk memperbarui order yang tersimpan.` : pesan, 409);
+      }
 
       const orderDenganPembayaran = new Set(
         (

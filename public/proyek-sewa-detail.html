@@ -597,6 +597,7 @@
 
     .inline-order-header {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 15px;
@@ -607,6 +608,87 @@
       margin: 0;
       color: #111827;
       font-size: 14px;
+    }
+
+    .inline-order-buttons,
+    .order-excel-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .order-excel-preview {
+      padding: 14px;
+      margin-bottom: 16px;
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      background: #f8faff;
+    }
+
+    .order-excel-header {
+      justify-content: space-between;
+    }
+
+    .order-excel-header h4,
+    .order-excel-file,
+    .order-excel-help,
+    .order-excel-message {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .order-excel-help,
+    .order-excel-message {
+      margin-top: 8px;
+    }
+
+    .order-excel-table-wrap {
+      max-height: 400px;
+      overflow: auto;
+      margin-top: 10px;
+    }
+
+    .order-excel-table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    .order-excel-table th,
+    .order-excel-table td {
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+      border: 1px solid #e5e7eb;
+      overflow-wrap: anywhere;
+    }
+
+    .order-excel-table thead th {
+      position: sticky;
+      top: 0;
+      background: #eef2ff;
+    }
+
+    .order-excel-table .order-excel-invalid {
+      background: #fef2f2;
+    }
+
+    .order-excel-error {
+      display: block;
+      color: #991b1b;
+    }
+
+    .order-excel-duplicate {
+      display: block;
+      color: #854d0e;
+    }
+
+    .order-excel-target {
+      min-width: 15rem;
+      max-width: 22rem;
+      margin-top: 6px;
     }
 
     .inline-order-list {
@@ -2463,6 +2545,45 @@
     </div>
 
   </div>
+
+  <template id="orderExcelTemplate">
+    <section class="order-excel-preview" aria-label="Preview Order Excel" hidden>
+      <input class="order-excel-file-input" type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+      <div class="order-excel-header">
+        <div>
+          <h4>Preview Order Excel</h4>
+          <p class="order-excel-file"></p>
+        </div>
+        <div class="inline-order-buttons">
+          <button type="button" class="btn btn-secondary order-excel-close">Tutup</button>
+          <button type="button" class="btn btn-primary order-excel-confirm" disabled>Tambahkan ke Order</button>
+        </div>
+      </div>
+      <p class="order-excel-help">Gunakan nama dari daftar Lokasi, tanggal Excel atau DD/MM/YYYY, dan format teks untuk nomor yang diawali nol.</p>
+      <p class="order-excel-help">Untuk update, isi No Req Klien dan kolom yang ingin diubah. Jika nomor cocok dengan beberapa order, pilih order tujuan.</p>
+      <p class="order-excel-message" role="status"></p>
+      <div class="order-excel-table-wrap" role="region" aria-label="Baris order dari Excel" tabindex="0" hidden>
+        <table class="order-excel-table">
+          <thead>
+            <tr>
+              <th scope="col">Baris Excel</th>
+              <th scope="col">No Req Klien</th>
+              <th scope="col">Tanggal Req Klien</th>
+              <th scope="col">Quantity</th>
+              <th scope="col">Lokasi</th>
+              <th scope="col">Tanggal DO</th>
+              <th scope="col">No DO</th>
+              <th scope="col">Harga / Bulan</th>
+              <th scope="col">Total Harga</th>
+              <th scope="col">End Date</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </template>
 
   <!-- =====================================================
        SCRIPT

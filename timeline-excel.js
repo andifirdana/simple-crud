@@ -5,6 +5,7 @@ const path = require("node:path");
 let runningJobs = 0;
 
 function runExcel(mode, input) {
+  const membacaExcel = mode === "import" || mode === "import-order";
   if (runningJobs >= 2) {
     return Promise.reject(Object.assign(new Error("Excel lain sedang diproses. Tunggu sebentar lalu coba kembali."), { status: 503 }));
   }
@@ -23,7 +24,7 @@ function runExcel(mode, input) {
         if (error) {
           let message = "Pemrosesan Excel gagal. Silakan coba kembali.";
           let status = 500;
-          if (mode === "import" && !error.killed) {
+          if (membacaExcel && !error.killed) {
             try {
               const detail = JSON.parse(stderr.toString("utf8"));
               if (typeof detail.error === "string") {
@@ -34,7 +35,7 @@ function runExcel(mode, input) {
           }
           return reject(Object.assign(new Error(message), { status }));
         }
-        if (mode === "import") {
+        if (membacaExcel) {
           try { return resolve(JSON.parse(stdout.toString("utf8"))); }
           catch { return reject(new Error("Hasil pembacaan Excel tidak valid.")); }
         }

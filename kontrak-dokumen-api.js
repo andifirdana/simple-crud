@@ -31,7 +31,7 @@ const kataKunci = [
   ["Kontrak", "Pengadaan", "Barang", "dan", "Jasa"].join(`${pemisah}+`)
 ].join("|");
 const polaKontrak = `(^|[^[:alnum:]])(${kataKunci})($|[^[:alnum:]])`;
-const kategoriDokumen = ["Draft", "PKS", "KPBJ", "SPK", "Routing Slip"];
+const kategoriDokumen = ["Draft", "PKS", "KPBJ", "SPK", "Routing Slip", "NDA", "Syarat Tender"];
 const kategoriNormal = kategoriDokumen.map(kategori => kategori.toLowerCase());
 
 function kondisiPdf(sumber) {

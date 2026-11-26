@@ -174,6 +174,10 @@ module.exports = function registerCalendarApi(
       );
     }
 
+    // Login BISBOARD memakai ID dari public.pic.
+    const sessionPic = pics.find(pic => pic.id === String(user?.id ?? ''));
+    if (sessionPic) return sessionPic.id;
+
     const names = [
       user?.nama,
       user?.nama_lengkap,
@@ -202,21 +206,7 @@ module.exports = function registerCalendarApi(
         )
     );
 
-    if (matches.length === 1) {
-      return matches[0].id;
-    }
-
-    if (matches.length > 1) {
-      return null;
-    }
-
-    // Pada BISBOARD, session.user.id juga dipakai sebagai ID PIC.
-    return (
-      pics.find(
-        pic =>
-          pic.id === String(user?.id ?? '')
-      )?.id ?? null
-    );
+    return matches.length === 1 ? matches[0].id : null;
   }
 
   // ======================================================
@@ -272,7 +262,8 @@ module.exports = function registerCalendarApi(
 
   function calendarHandleError(
     res,
-    error
+    error,
+    fallback = 'Gagal memproses agenda'
   ) {
     if (error.status) {
       return res
@@ -299,7 +290,7 @@ module.exports = function registerCalendarApi(
     return res
       .status(500)
       .json({
-        error: 'Gagal memproses agenda'
+        error: fallback
       });
   }
 
@@ -981,6 +972,152 @@ module.exports = function registerCalendarApi(
       }
     }
   );
+
+  // ======================================================
+  // PENGAJUAN IZIN, CUTI, DAN SAKIT PIC
+  // ======================================================
+
+  const absenceTypes = new Set(['izin', 'cuti', 'sakit']);
+  const absenceFields = `
+    id::text AS id,
+    pic_id::text AS pic_id,
+    nama_pic AS pic_name,
+    jenis AS type,
+    TO_CHAR(tanggal_mulai, 'YYYY-MM-DD') AS start_date,
+    TO_CHAR(tanggal_akhir, 'YYYY-MM-DD') AS end_date
+  `;
+  let absenceSetup;
+
+  async function withAbsenceTable(run) {
+    try {
+      return await run();
+    } catch (error) {
+      if (error.code !== '42P01') throw error;
+    }
+
+    absenceSetup ??= pool.query(`
+      CREATE TABLE IF NOT EXISTS public.calendar_pic_absences (
+        id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        pic_id bigint REFERENCES public.pic(id) ON DELETE SET NULL,
+        nama_pic text NOT NULL,
+        jenis text NOT NULL CHECK (jenis IN ('izin', 'cuti', 'sakit')),
+        tanggal_mulai date NOT NULL,
+        tanggal_akhir date NOT NULL CHECK (tanggal_akhir >= tanggal_mulai),
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        UNIQUE (pic_id, jenis, tanggal_mulai, tanggal_akhir)
+      )
+    `).finally(() => { absenceSetup = undefined; });
+    await absenceSetup;
+    return run();
+  }
+
+  function queryAbsences(sql, values) {
+    return withAbsenceTable(() => pool.query(sql, values));
+  }
+
+  async function createAbsence(picId, type, start, end) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
+
+      // Urutkan pengajuan dari PIC yang sama agar pengecekan melihat hasil transaksi sebelumnya.
+      const pic = await client.query(`
+        SELECT nama FROM public.pic
+        WHERE id = $1 AND is_active IS DISTINCT FROM FALSE
+        FOR NO KEY UPDATE
+      `, [picId]);
+      if (!pic.rows.length) throw calendarError(403, 'Akun PIC tidak aktif atau tidak ditemukan.');
+
+      const clash = await client.query(`
+        SELECT TO_CHAR(GREATEST(tanggal_mulai, $2::date), 'DD/MM/YYYY') AS date
+        FROM public.calendar_pic_absences
+        WHERE pic_id = $1 AND tanggal_mulai <= $3::date AND tanggal_akhir >= $2::date
+        ORDER BY tanggal_mulai
+        LIMIT 1
+      `, [picId, start, end]);
+      if (clash.rows.length) {
+        throw calendarError(409, `Anda sudah memiliki pengajuan untuk tanggal ${clash.rows[0].date}. Setiap PIC hanya bisa mengajukan satu kali per tanggal.`);
+      }
+
+      const result = await client.query(`
+        INSERT INTO public.calendar_pic_absences (pic_id, nama_pic, jenis, tanggal_mulai, tanggal_akhir)
+        VALUES ($1, $2, $3, $4::date, $5::date)
+        RETURNING ${absenceFields}
+      `, [picId, pic.rows[0].nama, type, start, end]);
+
+      await client.query('COMMIT');
+      return result.rows[0];
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  app.get('/api/calendar/absences', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      const { from, to } = req.query;
+      if (!calendarValidDate(from) || !calendarValidDate(to) || to < from) {
+        throw calendarError(400, 'Rentang tanggal pengajuan tidak valid.');
+      }
+
+      const result = await queryAbsences(`
+        SELECT ${absenceFields}
+        FROM public.calendar_pic_absences
+        WHERE tanggal_mulai <= $2::date AND tanggal_akhir >= $1::date
+        ORDER BY tanggal_mulai, nama_pic, id
+      `, [from, to]);
+
+      return res.json(result.rows);
+    } catch (error) {
+      return calendarHandleError(res, error, 'Gagal memuat pengajuan PIC.');
+    }
+  });
+
+  app.post('/api/calendar/absences', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      const picId = String(req.session.user.id ?? '');
+      const { type, start_date: start, end_date: end } = req.body ?? {};
+      if (!calendarValidId(picId)) {
+        throw calendarError(401, 'Silakan login kembali.');
+      }
+      if (!absenceTypes.has(type)) {
+        throw calendarError(400, 'Pilih jenis pengajuan Izin, Cuti, atau Sakit.');
+      }
+      if (!calendarValidDate(start) || !calendarValidDate(end) || end < start) {
+        throw calendarError(400, 'Tanggal mulai dan selesai harus valid dan berurutan.');
+      }
+
+      const absence = await withAbsenceTable(() => createAbsence(picId, type, start, end));
+      return res.status(201).json(absence);
+    } catch (error) {
+      return calendarHandleError(res, error, 'Gagal menyimpan pengajuan PIC.');
+    }
+  });
+
+  app.delete('/api/calendar/absences/:id', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      const { id } = req.params;
+      const picId = String(req.session.user.id ?? '');
+      if (!calendarValidId(picId)) throw calendarError(401, 'Silakan login kembali.');
+      if (!calendarValidId(id)) throw calendarError(400, 'ID pengajuan tidak valid.');
+
+      const result = await queryAbsences(`
+        DELETE FROM public.calendar_pic_absences
+        WHERE id = $1 AND pic_id = $2
+        RETURNING id::text AS id
+      `, [id, picId]);
+
+      if (!result.rows.length) throw calendarError(404, 'Pengajuan tidak ditemukan atau Anda bukan pengajunya.');
+      return res.json({ id: result.rows[0].id });
+    } catch (error) {
+      return calendarHandleError(res, error, 'Gagal menghapus pengajuan PIC.');
+    }
+  });
 
   // ======================================================
   // DETAIL AGENDA

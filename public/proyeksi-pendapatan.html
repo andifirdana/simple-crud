@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proyeksi Pendapatan - Bisboard</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/project-table-actions.css">
+  <link rel="stylesheet" href="/proyeksi-pendapatan.css">
+</head>
+<body class="projection-body">
+  <div id="sidebarContainer"></div>
+
+  <main class="projection-page">
+    <header class="projection-header">
+      <h1>Proyeksi Pendapatan</h1>
+    </header>
+
+    <form class="projection-filters" id="projectionFilters" role="search" aria-label="Filter proyeksi pendapatan">
+      <div class="projection-filter">
+        <label for="projectionYear">Tahun</label>
+        <select id="projectionYear" name="tahun" disabled></select>
+      </div>
+      <div class="projection-filter">
+        <label for="projectionType">Jenis Proyek</label>
+        <select id="projectionType" name="jenis_proyek" disabled>
+          <option value="">Semua Jenis Proyek</option>
+        </select>
+      </div>
+      <div class="projection-filter projection-search">
+        <label for="projectionSearch">Nama proyek atau nama proyeksi</label>
+        <input type="search" id="projectionSearch" name="search" placeholder="Cari nama proyek" autocomplete="off" maxlength="150">
+      </div>
+      <button type="button" id="projectionExport" class="projection-export" disabled>Ekspor Excel</button>
+    </form>
+    <p id="projectionExportStatus" class="projection-message" role="status" hidden></p>
+
+    <dl class="projection-summary" aria-label="Ringkasan proyeksi" aria-live="polite">
+      <div><dt>Total Proyeksi</dt><dd id="projectionTotal">—</dd></div>
+      <div><dt>Jumlah Proyek</dt><dd id="projectionCount">—</dd></div>
+      <div><dt>Periode</dt><dd id="projectionPeriod">—</dd></div>
+    </dl>
+
+    <section class="projection-panel" aria-label="Proyeksi pendapatan per proyek">
+      <header class="projection-panel-actions">
+        <p id="projectionHoldStatus" class="projection-selection-status" role="status" hidden></p>
+        <button type="button" id="projectionHoldSelected" class="projection-edit" aria-controls="projectionHoldRows" disabled>Hold</button>
+      </header>
+      <div class="projection-scroll" role="region" aria-label="Tabel proyeksi bulanan" tabindex="0">
+        <table class="projection-table" id="projectionMainTable">
+          <colgroup>
+            <col class="projection-col-check">
+            <col class="projection-col-name">
+            <col class="projection-col-type">
+            <col class="projection-col-increase">
+            <col span="13">
+            <col class="projection-col-action">
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col" class="projection-check-cell">Pilih</th>
+              <th scope="col">Nama Proyek (Proyeksi)</th>
+              <th scope="col">Jenis Proyek</th>
+              <th scope="col">Kenaikan (%)</th>
+              <th scope="col">Januari</th>
+              <th scope="col">Februari</th>
+              <th scope="col">Maret</th>
+              <th scope="col">April</th>
+              <th scope="col">Mei</th>
+              <th scope="col">Juni</th>
+              <th scope="col">Juli</th>
+              <th scope="col">Agustus</th>
+              <th scope="col">September</th>
+              <th scope="col">Oktober</th>
+              <th scope="col">November</th>
+              <th scope="col">Desember</th>
+              <th scope="col">Total</th>
+              <th scope="col">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="projectionRows">
+            <tr><td class="projection-empty" colspan="18">Memuat data proyeksi…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="projection-panel projection-hold" aria-labelledby="projectionHoldTitle">
+      <header class="projection-panel-actions">
+        <h2 id="projectionHoldTitle">Hold</h2>
+        <p id="projectionRestoreStatus" class="projection-selection-status" role="status" hidden></p>
+        <button type="button" id="projectionRestoreSelected" class="projection-edit" aria-controls="projectionRows" disabled>Kembalikan ke Proyeksi</button>
+      </header>
+      <div class="projection-scroll" role="region" aria-label="Tabel proyek Hold" tabindex="0">
+        <table class="projection-table" id="projectionHoldTable">
+          <tbody id="projectionHoldRows">
+            <tr><td class="projection-empty" colspan="18">Memuat proyek Hold…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <dialog class="projection-dialog projection-detail" id="projectionDetail" aria-labelledby="projectionDetailTitle" aria-describedby="projectionDetailContext">
+      <header>
+        <div>
+          <h2 id="projectionDetailTitle">Rincian Bulanan</h2>
+          <p id="projectionDetailContext"></p>
+        </div>
+        <strong id="projectionDetailTotal"></strong>
+      </header>
+      <div class="projection-scroll" role="region" aria-label="Daftar rincian bulanan" tabindex="0">
+        <table class="projection-detail-table">
+          <thead>
+            <tr><th scope="col">Tanggal Proyeksi</th><th scope="col">Termin</th><th scope="col">Nominal Awal</th><th scope="col">Nominal Proyeksi</th></tr>
+          </thead>
+          <tbody id="projectionDetailRows"></tbody>
+        </table>
+      </div>
+      <form method="dialog" class="projection-detail-actions">
+        <button type="submit" class="projection-edit" autofocus>Tutup</button>
+      </form>
+    </dialog>
+
+    <dialog class="projection-dialog projection-editor" id="projectionEditor" aria-labelledby="projectionEditorTitle">
+      <form id="projectionEditorForm">
+        <header>
+          <h2 id="projectionEditorTitle">Edit Proyeksi</h2>
+          <p id="projectionEditorContext"></p>
+        </header>
+        <div class="projection-filter">
+          <label for="projectionNameInput">Nama Proyek (Proyeksi)</label>
+          <input type="text" id="projectionNameInput" maxlength="255" autocomplete="off" autofocus>
+        </div>
+        <div class="projection-filter">
+          <label for="projectionIncreaseInput">Persentase Kenaikan (%)</label>
+          <input type="number" id="projectionIncreaseInput" inputmode="decimal" min="0" step="any" placeholder="0">
+        </div>
+        <dl class="projection-editor-totals">
+          <div><dt>Total Awal</dt><dd id="projectionEditorBase">—</dd></div>
+          <div><dt>Total Setelah Kenaikan</dt><dd><output id="projectionEditorResult" for="projectionIncreaseInput">—</output></dd></div>
+        </dl>
+        <p class="projection-editor-scope">Penyesuaian disimpan di browser ini untuk tahun yang dipilih.</p>
+        <p id="projectionEditorError" class="projection-message" role="alert" hidden></p>
+        <footer>
+          <button type="button" id="projectionEditorCancel" class="projection-edit">Batal</button>
+          <button type="submit" id="projectionEditorSave" class="projection-export">Simpan</button>
+        </footer>
+      </form>
+    </dialog>
+  </main>
+
+  <script src="/layout.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/proyeksi-pendapatan.js"></script>
+</body>
+</html>

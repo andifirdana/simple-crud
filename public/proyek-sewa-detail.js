@@ -23,6 +23,7 @@ let masterProduk = [];
 let masterCabang = [];
 
 let modeEditProduk = false;
+const previewOrderExcel = new WeakMap();
 
 
 // =====================================================
@@ -349,33 +350,27 @@ function hitungEndDate(
   */
 
   const result =
-    new Date(
-      year,
-      month - 1,
-      1
-    );
+    new Date(0);
+
+  result.setFullYear(year, month - 1, 1);
 
   result.setMonth(
     result.getMonth() +
     Number(durasiBulan)
   );
 
-  const lastDay =
-    new Date(
-      result.getFullYear(),
-      result.getMonth() + 1,
-      0
-    ).getDate();
+  const akhirBulan = new Date(result);
+  akhirBulan.setMonth(akhirBulan.getMonth() + 1, 0);
 
   result.setDate(
     Math.min(
       day,
-      lastDay
+      akhirBulan.getDate()
     )
   );
 
   const yyyy =
-    result.getFullYear();
+    String(result.getFullYear()).padStart(4, "0");
 
   const mm =
     String(
@@ -1421,6 +1416,10 @@ function buatProdukOptions(
 // OPTION CABANG
 // =====================================================
 
+function namaCabang(item) {
+  return item.nama_cabang || item.nama || item.cabang || "-";
+}
+
 function buatCabangOptions(
   selectedId = null
 ) {
@@ -1445,12 +1444,7 @@ function buatCabangOptions(
               value="${item.id}"
               ${selected}
             >
-              ${escapeHtml(
-                item.nama_cabang ||
-                item.nama ||
-                item.cabang ||
-                "-"
-              )}
+              ${escapeHtml(namaCabang(item))}
             </option>
           `;
 
@@ -1818,12 +1812,17 @@ function buatProdukInline(
             </h3>
 
 
-            <button
-              type="button"
-              class="btn btn-secondary btnTambahOrderInline"
-            >
-              + Tambah Order
-            </button>
+            <div class="inline-order-buttons">
+              <a class="btn btn-secondary" href="/api/proyek-sewa/order/excel-template" download="template-order.xlsx">
+                Unduh Template Excel
+              </a>
+              <button type="button" class="btn btn-secondary btnUploadOrderExcel" disabled>
+                Upload Excel
+              </button>
+              <button type="button" class="btn btn-secondary btnTambahOrderInline">
+                + Tambah Order
+              </button>
+            </div>
 
           </div>
 
@@ -1842,7 +1841,7 @@ function buatProdukInline(
                     )
                     .join("")
 
-                : buatOrderInline()
+                : buatOrderInline({}, true)
             }
 
           </div>
@@ -2039,7 +2038,8 @@ function buatOrderInlineView(
 // =====================================================
 
 function buatOrderInline(
-  order = {}
+  order = {},
+  barisAwal = false
 ) {
 
   return `
@@ -2047,6 +2047,7 @@ function buatOrderInline(
       class="inline-order-row"
 
       data-order-id="${order.id || ""}"
+      ${barisAwal ? "data-order-awal" : ""}
 
       data-harga-per-bulan="${angka(
         order.harga_per_bulan
@@ -2315,251 +2316,396 @@ function buatOrderInline(
 // HITUNG SATU PRODUK
 // =====================================================
 
-function hitungProdukInline(
-  product,
-  updateGrandTotal = true
-) {
+function konteksProdukOrder(product) {
+  const produkId = product.querySelector(".inlineProdukSelect")?.value;
+  const master = masterProduk.find(item => String(item.id) === String(produkId));
+  const hargaKontrak = product.dataset.productId &&
+    String(produkId) === String(product.dataset.originalProdukId);
+  const hargaItem = angka(hargaKontrak ? product.dataset.originalHarga : master?.harga_jual_per_item);
+  const durasiInput = angka(product.querySelector(".inlineDurasi")?.value);
 
-  if (!product) {
+  return {
+    produkId,
+    master,
+    hargaItem,
+    durasi: Math.max(1, durasiInput),
+    durasiValid: Number.isSafeInteger(durasiInput) && durasiInput > 0
+  };
+}
+
+function hitungNilaiOrder(hargaItem, durasi, quantity, tanggalDO) {
+  const hargaPerBulan = Math.max(0, angka(quantity)) * hargaItem;
+  return {
+    hargaPerBulan,
+    totalHarga: hargaPerBulan * durasi,
+    endDate: hitungEndDate(tanggalDO, durasi)
+  };
+}
+
+function hitungProdukInline(product, updateGrandTotal = true) {
+  if (!product) return;
+
+  const konteks = konteksProdukOrder(product);
+  const { master, hargaItem, durasi } = konteks;
+  const hargaInput = product.querySelector(".inlineHargaItem");
+  const subJenisInput = product.querySelector(".inlineSubJenis");
+  const tombolUpload = product.querySelector(".btnUploadOrderExcel");
+
+  if (hargaInput) hargaInput.value = rupiah(hargaItem);
+  if (subJenisInput) subJenisInput.value = master?.sub_jenis_proyek || master?.nama_sub_jenis_proyek || "";
+  if (tombolUpload) tombolUpload.disabled = !konteks.produkId;
+
+  for (const order of product.querySelectorAll(".inline-order-row")) {
+    const quantity = order.querySelector(".inlineQuantity")?.value;
+    const tanggalDO = order.querySelector(".inlineTanggalDO")?.value;
+    const hasil = hitungNilaiOrder(hargaItem, durasi, quantity, tanggalDO);
+
+    order.dataset.hargaPerBulan = hasil.hargaPerBulan;
+    order.dataset.totalHarga = hasil.totalHarga;
+
+    const hargaBulan = order.querySelector(".inlineHargaBulan");
+    const totalHarga = order.querySelector(".inlineTotalHarga");
+    const endDate = order.querySelector(".inlineEndDate");
+    if (hargaBulan) hargaBulan.value = rupiah(hasil.hargaPerBulan);
+    if (totalHarga) totalHarga.value = rupiah(hasil.totalHarga);
+    if (endDate) endDate.value = hasil.endDate;
+  }
+
+  const preview = previewOrderExcel.get(product);
+  if (preview) renderPreviewOrderExcel(preview, konteks);
+  if (updateGrandTotal) hitungSemuaProduk();
+}
+
+const kolomOrderExcel = [
+  "no_req_klien", "tanggal_req_klien", "quantity", "lokasi", "tanggal_do", "no_do"
+];
+
+const fieldOrderInline = {
+  cabang_id: { selector: ".inlineCabang", label: "Lokasi" },
+  quantity: { selector: ".inlineQuantity", label: "Quantity" },
+  tanggal_req_klien: { selector: ".inlineTanggalReqKlien", label: "Tanggal Req Klien" },
+  tanggal_do: { selector: ".inlineTanggalDO", label: "Tanggal DO" },
+  no_do: { selector: ".inlineNoDO", label: "No DO" }
+};
+
+function bacaOrderInline(row) {
+  const values = {};
+  for (const [field, { selector }] of Object.entries(fieldOrderInline)) {
+    values[field] = row.querySelector(selector)?.value.trim() || null;
+  }
+
+  return {
+    ...values,
+    id: Number(row.dataset.orderId) || null,
+    cabang_id: Number(values.cabang_id) || null,
+    quantity: values.quantity === null ? null : angka(values.quantity),
+    no_req_klien: row.querySelector(".inlineNoReqKlien")?.value.trim() || null,
+    end_date: row.querySelector(".inlineEndDate")?.value || null
+  };
+}
+
+function kunciNoReqKlien(nomor) {
+  return String(nomor ?? "").trim().toLowerCase();
+}
+
+function indeksNoReqOrder() {
+  const indeks = new Map();
+  for (const row of document.querySelectorAll("#productEditContainer .inline-order-row")) {
+    const nilai = bacaOrderInline(row);
+    const kunci = kunciNoReqKlien(nilai.no_req_klien);
+    if (!kunci) continue;
+
+    if (!indeks.has(kunci)) indeks.set(kunci, []);
+    indeks.get(kunci).push({ row, product: row.closest(".inline-product-card"), nilai });
+  }
+  return indeks;
+}
+
+function perubahanOrder(lama, masukan) {
+  const perubahan = {};
+  for (const field of Object.keys(fieldOrderInline)) {
+    const value = masukan[field];
+    if (value != null && value !== "" && String(lama[field] ?? "") !== String(value)) {
+      perubahan[field] = value;
+    }
+  }
+  return perubahan;
+}
+
+function perbaruiOrderInline(row, perubahan) {
+  for (const [field, value] of Object.entries(perubahan)) {
+    const input = row.querySelector(fieldOrderInline[field].selector);
+    input.value = String(value);
+    if (field === "cabang_id") input.dispatchEvent(new Event("change"));
+  }
+  if (perubahan.quantity != null) row.dataset.quantityDiisi = "true";
+}
+
+function konfirmasiNoReqOrder(duplikat) {
+  if (duplikat.length === 0) return true;
+  const daftar = duplikat.slice(0, 8).map(({ nomor, perubahan, konteks }) => {
+    const fields = Object.keys(perubahan).map(field => fieldOrderInline[field].label);
+    return `${nomor}${konteks ? ` (${konteks})` : ""} — ${fields.join(", ") || "Tidak ada nilai yang berubah"}`;
+  });
+  if (duplikat.length > 8) daftar.push(`dan ${duplikat.length - 8} baris lainnya`);
+  return confirm(`No Req Klien sudah ada. Perbarui order dengan nomor berikut?\n\n${daftar.join("\n")}\n\nKolom yang kosong mempertahankan nilai lama.`);
+}
+
+function labelOrderTujuan(entri) {
+  const produk = entri.product.querySelector(".inlineProdukSelect")?.selectedOptions[0]?.textContent.trim() || "Produk";
+  const lokasi = entri.row.querySelector(".inlineCabang")?.selectedOptions?.[0]?.textContent.trim();
+  const quantity = entri.row.querySelector(".inlineQuantity")?.value;
+  const noDO = entri.row.querySelector(".inlineNoDO")?.value;
+  const id = entri.nilai.id;
+  return [id ? `Order #${id}` : "Order baru di form", produk, lokasi, `Qty ${quantity || "—"}`, `No DO ${noDO || "—"}`]
+    .filter(Boolean).join(" · ");
+}
+
+function rencanaOrderExcel(preview) {
+  const indeks = indeksNoReqOrder();
+  const penambahan = [];
+  const pembaruan = new Map();
+  const duplikat = [];
+  const baris = preview.rows.map(row => {
+    const kunci = kunciNoReqKlien(row.no_req_klien);
+    const cocok = indeks.get(kunci) || [];
+    const pilihanSebelumnya = preview.orderTujuan.get(row.baris);
+    if (cocok.length === 0) {
+      const errors = { ...row.errors };
+      if (pilihanSebelumnya) errors.no_req_klien = "Order tujuan sudah berubah. Unggah ulang Excel untuk memilih tujuan kembali.";
+      for (const kolom of kolomOrderExcel.slice(0, 4)) {
+        if (!row[kolom] && !errors[kolom]) errors[kolom] = "Wajib diisi.";
+      }
+      if (Object.keys(errors).length) return { row: { ...row, errors } };
+    }
+    if (Object.keys(row.errors).length) return { row };
+
+    const pilihan = cocok.length > 1 || pilihanSebelumnya ? cocok : [];
+    const target = pilihan.length ? pilihan.find(item => item.row === pilihanSebelumnya) : cocok[0];
+    if (pilihan.length && !target) {
+      return {
+        pilihan,
+        row: { ...row, errors: { no_req_klien: "Pilih order tujuan untuk nomor ini." } }
+      };
+    }
+
+    if (!target) {
+      const entri = { product: preview.product, nilai: { ...row } };
+      penambahan.push(entri);
+      indeks.set(kunci, [entri]);
+      return { row, product: preview.product, nilai: row };
+    }
+
+    const perubahan = perubahanOrder(target.nilai, row);
+    target.nilai = { ...target.nilai, ...perubahan };
+    if (target.row) pembaruan.set(target, { ...pembaruan.get(target), ...perubahan });
+    const dikenal = target.row ? labelOrderTujuan(target) : `baris ${target.nilai.baris} pada file ini`;
+    duplikat.push({ nomor: row.no_req_klien, perubahan, konteks: dikenal });
+    return { row, product: target.product, nilai: target.nilai, duplikat: dikenal, pilihan, target };
+  });
+  return { baris, penambahan, pembaruan, duplikat };
+}
+
+function validasiOrderExcel(row) {
+  const errors = { ...row.errors };
+  const quantity = row.quantity ? Number(row.quantity) : null;
+  if (row.quantity && !errors.quantity && (
+    !/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(row.quantity) ||
+    !Number.isInteger(quantity) || quantity < 1 || quantity > 2147483647
+  )) {
+    errors.quantity = "Gunakan bilangan bulat antara 1 dan 2.147.483.647.";
+  }
+
+  let cabangId = null;
+  if (row.lokasi && !errors.lokasi) {
+    const lokasi = row.lokasi.toLocaleLowerCase("id-ID");
+    const cocok = masterCabang.filter(item => namaCabang(item).trim().toLocaleLowerCase("id-ID") === lokasi);
+    if (cocok.length === 1) {
+      cabangId = cocok[0].id;
+    } else {
+      errors.lokasi = cocok.length === 0
+        ? "Lokasi tidak ditemukan. Gunakan nama dari daftar Lokasi."
+        : "Nama lokasi cocok dengan lebih dari satu cabang.";
+    }
+  }
+
+  return { ...row, errors, cabang_id: cabangId, quantity: errors.quantity ? row.quantity : quantity };
+}
+
+function renderPreviewOrderExcel(preview, konteks) {
+  if (preview.panel.hidden) return;
+
+  const { rows, confirmButton, table, tbody, message } = preview;
+  table.hidden = rows.length === 0;
+  if (rows.length === 0) {
+    confirmButton.disabled = true;
+    tbody.replaceChildren();
     return;
   }
 
+  const rencana = rencanaOrderExcel(preview);
+  const jumlahInvalid = rencana.baris.filter(({ row }) => Object.keys(row.errors).length > 0).length;
+  const konteksPerProduk = new Map([[preview.product, konteks]]);
+  for (const { product } of rencana.baris) {
+    if (product && !konteksPerProduk.has(product)) konteksPerProduk.set(product, konteksProdukOrder(product));
+  }
+  const siapHitung = [...konteksPerProduk.values()].every(item => item.produkId && item.durasiValid);
+  confirmButton.disabled = jumlahInvalid > 0 || !siapHitung;
 
-  const produkSelect =
-    product.querySelector(
-      ".inlineProdukSelect"
-    );
+  const informasi = [];
+  if (jumlahInvalid) informasi.push(`${jumlahInvalid} baris perlu diperbaiki. Lihat pesan pada kolom yang ditandai.`);
+  else if (rencana.duplikat.length) informasi.push(`${rencana.penambahan.length} order baru. ${rencana.duplikat.length} baris dengan nomor yang sudah ada memerlukan konfirmasi update.`);
+  else informasi.push(`${rows.length} baris order siap ditambahkan.`);
+  if (!konteks.produkId) informasi.push("Pilih produk untuk menghitung harga dan End Date.");
+  else if (!siapHitung) informasi.push("Pastikan produk dan durasi yang terkait sudah diisi dengan benar.");
+  message.textContent = informasi.join(" ");
 
-  const produkId =
-    produkSelect?.value;
+  preview.pilihanOrder = new Map();
+  tbody.innerHTML = rencana.baris.map(({ row, product, nilai, duplikat, pilihan = [], target }) => {
+    let pilihOrder = "";
+    if (pilihan.length) {
+      preview.pilihanOrder.set(row.baris, pilihan);
+      const options = pilihan.map((item, index) =>
+        `<option value="${index}"${item === target ? " selected" : ""}>${escapeHtml(labelOrderTujuan(item))}</option>`
+      ).join("");
+      pilihOrder = `<select class="inline-control order-excel-target" data-baris-excel="${row.baris}"
+        aria-label="Order tujuan untuk baris Excel ${row.baris}"><option value="">Pilih order tujuan</option>${options}</select>`;
+    }
+    const cells = kolomOrderExcel.map(kolom => {
+      const error = row.errors[kolom];
+      const value = escapeHtml(row[kolom]);
+      const pilihanTujuan = kolom === "no_req_klien" ? pilihOrder : "";
+      if (error) return `<td class="order-excel-invalid">${value}<small class="order-excel-error">${escapeHtml(error)}</small>${pilihanTujuan}</td>`;
+      const catatan = kolom === "no_req_klien" && duplikat && !pilihanTujuan
+        ? `<small class="order-excel-duplicate">${escapeHtml(duplikat)} sudah ada.</small>`
+        : "";
+      return `<td>${value}${catatan}${pilihanTujuan}</td>`;
+    }).join("");
+    const hitung = konteksPerProduk.get(product);
+    const hasil = konteks.produkId && hitung?.produkId && hitung.durasiValid && nilai
+      ? hitungNilaiOrder(hitung.hargaItem, hitung.durasi, nilai.quantity, nilai.tanggal_do)
+      : null;
+    return `<tr><th scope="row">${escapeHtml(row.baris)}</th>${cells}
+      <td>${hasil ? rupiah(hasil.hargaPerBulan) : ""}</td>
+      <td>${hasil ? rupiah(hasil.totalHarga) : ""}</td>
+      <td>${hasil?.endDate || ""}</td></tr>`;
+  }).join("");
 
+  return rencana;
+}
 
-  const master =
-    masterProduk.find(
-      item =>
-        String(item.id) ===
-        String(produkId)
-    );
-
-
-  // =================================================
-  // HARGA KONTRAK
-  // =================================================
-
-  const originalProdukId =
-    product.dataset
-      .originalProdukId;
-
-  const originalHarga =
-    angka(
-      product.dataset
-        .originalHarga
-    );
-
-  let hargaItem = 0;
-
-
-  /*
-    Produk existing tidak diganti:
-    gunakan harga kontrak lama.
-  */
-
-  if (
-    product.dataset.productId &&
-    String(produkId) ===
-    String(originalProdukId)
-  ) {
-
-    hargaItem =
-      originalHarga;
-
-  } else {
-
-    /*
-      Produk baru / produk diganti:
-      ambil harga master terbaru.
-    */
-
-    hargaItem =
-      angka(
-        master
-          ?.harga_jual_per_item
-      );
-
+function pilihFileOrderExcel(product, tombolUpload) {
+  const sudahAda = previewOrderExcel.get(product);
+  if (sudahAda) {
+    sudahAda.input.click();
+    return;
   }
 
+  const panel = document.getElementById("orderExcelTemplate").content.firstElementChild.cloneNode(true);
+  const list = product.querySelector(".inline-order-list");
+  list.before(panel);
 
-  // =================================================
-  // HARGA ITEM
-  // =================================================
+  const preview = {
+    panel,
+    product,
+    input: panel.querySelector(".order-excel-file-input"),
+    fileName: panel.querySelector(".order-excel-file"),
+    confirmButton: panel.querySelector(".order-excel-confirm"),
+    table: panel.querySelector(".order-excel-table-wrap"),
+    tbody: panel.querySelector("tbody"),
+    message: panel.querySelector(".order-excel-message"),
+    rows: [],
+    orderTujuan: new Map(),
+    pilihanOrder: new Map(),
+    request: null
+  };
+  previewOrderExcel.set(product, preview);
 
-  const hargaInput =
-    product.querySelector(
-      ".inlineHargaItem"
-    );
+  preview.tbody.addEventListener("change", event => {
+    const select = event.target;
+    if (!select.matches(".order-excel-target")) return;
+    const baris = Number(select.dataset.barisExcel);
+    const row = preview.pilihanOrder.get(baris)?.[select.value]?.row;
+    if (row) preview.orderTujuan.set(baris, row);
+    else preview.orderTujuan.delete(baris);
+    renderPreviewOrderExcel(preview, konteksProdukOrder(product));
+    preview.tbody.querySelector(`[data-baris-excel="${baris}"]`)?.focus();
+  });
 
-  if (hargaInput) {
-
-    hargaInput.value =
-      rupiah(
-        hargaItem
-      );
-
+  function tutupPreview() {
+    preview.request?.abort();
+    preview.rows = [];
+    preview.orderTujuan.clear();
+    preview.pilihanOrder.clear();
+    preview.tbody.replaceChildren();
+    panel.hidden = true;
+    tombolUpload.focus();
   }
 
+  panel.querySelector(".order-excel-close").addEventListener("click", tutupPreview);
+  preview.confirmButton.addEventListener("click", () => {
+    if (!modeEditProduk || panel.hidden) return;
+    const rencana = renderPreviewOrderExcel(preview, konteksProdukOrder(product));
+    if (preview.confirmButton.disabled || !konfirmasiNoReqOrder(rencana.duplikat)) return;
 
-  // =================================================
-  // SUB JENIS
-  // =================================================
+    const produkDiubah = new Set([product]);
+    for (const [entri, perubahan] of rencana.pembaruan) {
+      perbaruiOrderInline(entri.row, perubahan);
+      produkDiubah.add(entri.product);
+    }
 
-  const subJenisInput =
-    product.querySelector(
-      ".inlineSubJenis"
-    );
+    list.insertAdjacentHTML("beforeend", rencana.penambahan.map(entri => buatOrderInline(entri.nilai)).join(""));
+    const awal = list.querySelector("[data-order-awal]");
+    if (rencana.penambahan.length && awal && awal.querySelector(".inlineQuantity").value === "1" &&
+        ![".inlineCabang", ".order-lokasi .sewa-search-input", ".inlineNoReqKlien",
+          ".inlineTanggalReqKlien", ".inlineTanggalDO", ".inlineNoDO"].some(
+          selector => awal.querySelector(selector)?.value.trim()
+        )) {
+      awal.remove();
+    }
 
-  if (subJenisInput) {
-
-    subJenisInput.value =
-      master
-        ?.sub_jenis_proyek ||
-      master
-        ?.nama_sub_jenis_proyek ||
-      "";
-
-  }
-
-
-  // =================================================
-  // DURASI
-  // =================================================
-
-  const durasiInput =
-    product.querySelector(
-      ".inlineDurasi"
-    );
-
-  const durasi =
-    Math.max(
-      1,
-      angka(
-        durasiInput?.value
-      )
-    );
-
-
-  // =================================================
-  // HITUNG SETIAP ORDER
-  // =================================================
-
-  product
-    .querySelectorAll(
-      ".inline-order-row"
-    )
-    .forEach(
-      order => {
-
-        const quantityInput =
-          order.querySelector(
-            ".inlineQuantity"
-          );
-
-        const qty =
-          Math.max(
-            0,
-            angka(
-              quantityInput?.value
-            )
-          );
-
-
-        // ===========================================
-        // HARGA
-        // ===========================================
-
-        const hargaPerBulan =
-          qty *
-          hargaItem;
-
-        const totalHarga =
-          hargaPerBulan *
-          durasi;
-
-        order.dataset
-          .hargaPerBulan =
-            hargaPerBulan;
-
-        order.dataset
-          .totalHarga =
-            totalHarga;
-
-
-        const hargaBulanInput =
-          order.querySelector(
-            ".inlineHargaBulan"
-          );
-
-        if (hargaBulanInput) {
-
-          hargaBulanInput.value =
-            rupiah(
-              hargaPerBulan
-            );
-
-        }
-
-
-        const totalHargaInput =
-          order.querySelector(
-            ".inlineTotalHarga"
-          );
-
-        if (totalHargaInput) {
-
-          totalHargaInput.value =
-            rupiah(
-              totalHarga
-            );
-
-        }
-
-
-        // ===========================================
-        // END DATE
-        // ===========================================
-
-        const tanggalDO =
-          order
-            .querySelector(
-              ".inlineTanggalDO"
-            )
-            ?.value ||
-          "";
-
-        const endDateInput =
-          order.querySelector(
-            ".inlineEndDate"
-          );
-
-        if (endDateInput) {
-
-          endDateInput.value =
-            hitungEndDate(
-              tanggalDO,
-              durasi
-            );
-
-        }
-
-      }
-    );
-
-
-  if (updateGrandTotal) {
-
+    initPencarianProdukLokasiInline(list);
+    tutupPreview();
+    for (const item of produkDiubah) hitungProdukInline(item, false);
     hitungSemuaProduk();
+  });
 
-  }
+  preview.input.addEventListener("change", async () => {
+    const file = preview.input.files[0];
+    if (!file) return;
+    preview.input.value = "";
+    preview.request?.abort();
+    preview.rows = [];
+    preview.orderTujuan.clear();
+    preview.pilihanOrder.clear();
+    preview.fileName.textContent = file.name;
+    panel.hidden = false;
+    renderPreviewOrderExcel(preview, konteksProdukOrder(product));
 
+    if (!/\.xlsx$/i.test(file.name) || file.size > 10 * 1024 * 1024) {
+      preview.message.textContent = "Pilih satu file Excel .xlsx dengan ukuran maksimal 10 MB.";
+      return;
+    }
+
+    const request = new AbortController();
+    preview.request = request;
+    preview.message.textContent = "Membaca file Excel…";
+    const body = new FormData();
+    body.append("file", file);
+
+    try {
+      const result = await fetchJSON("/api/proyek-sewa/order/excel-preview", {
+        method: "POST", body, signal: request.signal
+      });
+      if (request.signal.aborted || !product.isConnected) return;
+      preview.rows = result.rows.map(validasiOrderExcel);
+      renderPreviewOrderExcel(preview, konteksProdukOrder(product));
+    } catch (error) {
+      if (!request.signal.aborted && product.isConnected) preview.message.textContent = error.message;
+    }
+  });
+
+  preview.input.click();
 }
 
 
@@ -2942,35 +3088,7 @@ document
 
             sub_jenis_proyek: "",
 
-            durasi_bulan: 1,
-
-            orders: [
-              {
-                id: null,
-
-                cabang_id: null,
-
-                quantity: 1,
-
-                no_req_klien: null,
-
-                tanggal_req_klien:
-                  null,
-
-                tanggal_do:
-                  null,
-
-                no_do:
-                  null,
-
-                end_date:
-                  null,
-
-                harga_per_bulan: 0,
-
-                total_harga: 0
-              }
-            ]
+            durasi_bulan: 1
           },
           jumlahProduk
         )
@@ -2998,6 +3116,12 @@ document
     event => {
 
       if (!modeEditProduk) {
+        return;
+      }
+
+      const tombolUpload = event.target.closest(".btnUploadOrderExcel");
+      if (tombolUpload && !tombolUpload.disabled) {
+        pilihFileOrderExcel(tombolUpload.closest(".inline-product-card"), tombolUpload);
         return;
       }
 
@@ -3245,6 +3369,10 @@ document
         return;
       }
 
+      if (event.target.matches(".inlineQuantity")) {
+        event.target.closest(".inline-order-row").dataset.quantityDiisi = "true";
+      }
+
       const product =
         event.target.closest(
           ".inline-product-card"
@@ -3261,6 +3389,48 @@ document
 // =====================================================
 // BUILD PAYLOAD PRODUK & ORDER
 // =====================================================
+
+function gabungkanDuplikatOrderManual() {
+  const rencana = [];
+  const duplikat = [];
+  for (const entri of indeksNoReqOrder().values()) {
+    if (entri.length < 2) continue;
+    const tersimpan = entri.filter(item => item.nilai.id);
+    if (tersimpan.length > 1) {
+      if (tersimpan.length === entri.length) continue;
+      alert(`No Req Klien ${entri[0].nilai.no_req_klien} punya beberapa order tersimpan. Ubah No DO pada baris order tujuan lalu hapus baris tambahan.`);
+      return false;
+    }
+
+    const target = tersimpan[0] || entri[0];
+    const sumber = entri.filter(item => item !== target);
+    let nilai = target.nilai;
+    for (const item of sumber) {
+      const masukan = { ...item.nilai };
+      if (masukan.quantity === 1 && item.row.dataset.quantityDiisi !== "true") masukan.quantity = null;
+      nilai = { ...nilai, ...perubahanOrder(nilai, masukan) };
+    }
+    const perubahan = perubahanOrder(target.nilai, nilai);
+    const konteks = target.product.querySelector(".inlineProdukSelect")?.selectedOptions[0]?.textContent.trim();
+    duplikat.push({ nomor: target.nilai.no_req_klien, perubahan, konteks });
+    rencana.push({ target, sumber, perubahan });
+  }
+
+  if (!konfirmasiNoReqOrder(duplikat)) return false;
+
+  const produkDiubah = new Set();
+  for (const { target, sumber, perubahan } of rencana) {
+    perbaruiOrderInline(target.row, perubahan);
+    produkDiubah.add(target.product);
+    for (const item of sumber) {
+      item.row.remove();
+      produkDiubah.add(item.product);
+    }
+  }
+  for (const product of produkDiubah) hitungProdukInline(product, false);
+  if (produkDiubah.size) hitungSemuaProduk();
+  return true;
+}
 
 function buildProdukOrderPayload() {
 
@@ -3292,86 +3462,7 @@ function buildProdukOrderPayload() {
               ?.value
           );
 
-        const orders =
-          [
-            ...product
-              .querySelectorAll(
-                ".inline-order-row"
-              )
-          ]
-            .map(
-              order => ({
-
-                id:
-                  Number(
-                    order.dataset
-                      .orderId
-                  ) ||
-                  null,
-
-                cabang_id:
-                  Number(
-                    order
-                      .querySelector(
-                        ".inlineCabang"
-                      )
-                      ?.value
-                  ) ||
-                  null,
-
-                quantity:
-                  angka(
-                    order
-                      .querySelector(
-                        ".inlineQuantity"
-                      )
-                      ?.value
-                  ),
-
-                no_req_klien:
-                  order
-                    .querySelector(
-                      ".inlineNoReqKlien"
-                    )
-                    ?.value
-                    ?.trim() ||
-                  null,
-
-                tanggal_req_klien:
-                  order
-                    .querySelector(
-                      ".inlineTanggalReqKlien"
-                    )
-                    ?.value ||
-                  null,
-
-                tanggal_do:
-                  order
-                    .querySelector(
-                      ".inlineTanggalDO"
-                    )
-                    ?.value ||
-                  null,
-
-                no_do:
-                  order
-                    .querySelector(
-                      ".inlineNoDO"
-                    )
-                    ?.value
-                    ?.trim() ||
-                  null,
-
-                end_date:
-                  order
-                    .querySelector(
-                      ".inlineEndDate"
-                    )
-                    ?.value ||
-                  null
-
-              })
-            );
+        const orders = [...product.querySelectorAll(".inline-order-row")].map(bacaOrderInline);
 
         return {
 
@@ -3409,6 +3500,8 @@ document
   ?.addEventListener(
     "click",
     async () => {
+
+      if (!modeEditProduk || !gabungkanDuplikatOrderManual()) return;
 
       const produk =
         buildProdukOrderPayload();
