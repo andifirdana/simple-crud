@@ -13,7 +13,7 @@
 
   <main class="projection-page pendapatan2-page">
     <header class="projection-header">
-      <h1>Pendapatan 2</h1>
+      <h1>Proyeksi Pendapatan</h1>
     </header>
 
     <div class="projection-filters" role="search" aria-label="Filter pendapatan">
@@ -36,6 +36,10 @@
       <div class="projection-filter">
         <label for="filterJenisPendapatan">Jenis Proyek</label>
         <select id="filterJenisPendapatan"></select>
+      </div>
+      <div class="projection-filter">
+        <label for="filterSubJenisPendapatan">Subjenis Proyek</label>
+        <select id="filterSubJenisPendapatan"><option value="">Semua Subjenis Proyek</option></select>
       </div>
       <div class="projection-filter">
         <label for="filterStatusPembayaranPendapatan">Status Pembayaran</label>
@@ -136,10 +140,57 @@
         </form>
       </footer>
     </dialog>
+
+    <dialog class="projection-dialog projection-detail" id="pendapatanTambahDetail" aria-labelledby="pendapatanTambahTitle" aria-describedby="pendapatanTambahProyek">
+      <header>
+        <div>
+          <h2 id="pendapatanTambahTitle">Tambah Termin Klien</h2>
+          <p id="pendapatanTambahProyek"></p>
+        </div>
+      </header>
+      <form id="pendapatanTambahForm" class="pendapatan-edit-termin">
+        <small id="pendapatanTambahInfo" role="status"></small>
+        <div class="projection-filter">
+          <label for="pendapatanTambahNama">Nama Termin</label>
+          <input id="pendapatanTambahNama" name="nama_termin" placeholder="Contoh: Termin 1" required autofocus>
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanTambahPersentase">Persentase</label>
+          <input id="pendapatanTambahPersentase" name="persentase" type="number" min="0.000001" max="100" step="any">
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanTambahNominal">Nominal</label>
+          <input id="pendapatanTambahNominal" name="nominal" type="number" min="0.01" step="0.01" required>
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanTambahStatus">Status Pembayaran</label>
+          <select id="pendapatanTambahStatus" name="status_pembayaran" required>
+            <option>Belum Dibayar</option><option>Proses</option><option>Dibayar</option>
+          </select>
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanTambahTagihan">Tanggal Tagihan</label>
+          <input id="pendapatanTambahTagihan" name="tanggal_jatuh_tempo" type="date">
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanTambahBayar">Tanggal Bayar</label>
+          <input id="pendapatanTambahBayar" name="tanggal_bayar" type="date">
+        </div>
+        <div class="projection-filter">
+          <label for="pendapatanTambahSyarat">Syarat Pembayaran</label>
+          <textarea id="pendapatanTambahSyarat" name="syarat_pembayaran" rows="3" placeholder="Contoh: Pembayaran setelah BAST ditandatangani"></textarea>
+        </div>
+      </form>
+      <footer class="projection-detail-actions">
+        <p id="pendapatanTambahError" class="projection-message" role="alert" hidden></p>
+        <button type="button" id="pendapatanTambahCancel" class="projection-edit">Batal</button>
+        <button type="submit" id="pendapatanTambahSimpan" form="pendapatanTambahForm" class="projection-export" disabled>Simpan</button>
+      </footer>
+    </dialog>
   </main>
 
   <script src="/layout.js"></script>
   <script src="/sidebar.js"></script>
-  <script src="/pendapatan.js?v=filter-periode"></script>
+  <script src="/pendapatan.js?v=filter-subjenis"></script>
 </body>
 </html>

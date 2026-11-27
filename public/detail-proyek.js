@@ -3339,6 +3339,18 @@ function nilaiSubmitKlienTampil(klien) {
 // RENDER TERMIN KLIEN
 // ======================================================
 
+function nilaiTerminKlien(termin, nilaiFinal) {
+  let nominal = Number(termin.nominal) || 0;
+  let persentase = Number(String(termin.persentase ?? "").trim().replace(/%/g, "").replace(",", ".")) || 0;
+
+  if (nilaiFinal > 0) {
+    if (nominal <= 0 && persentase > 0) nominal = nilaiFinal * persentase / 100;
+    if (persentase <= 0 && nominal > 0) persentase = nominal / nilaiFinal * 100;
+  }
+
+  return { nominal, persentase };
+}
+
 function renderTermin(
   klien
 ) {
@@ -3461,39 +3473,6 @@ function renderTermin(
   }
 
 
-  // ================================================
-  // TOTAL NOMINAL ASLI DARI DATABASE
-  // ================================================
-
-  const totalNominalDatabase =
-    termin.reduce(
-      (total, item) => {
-
-        return (
-          total +
-          (
-            Number(
-              item.nominal || 0
-            ) || 0
-          )
-        );
-
-      },
-      0
-    );
-
-
-  /*
-   * Jika nilai final submit/nego belum tersedia,
-   * gunakan total nominal untuk membantu
-   * menghitung persentase yang kosong.
-   */
-  const nilaiFinalEfektif =
-    nilaiFinalAsli > 0
-      ? nilaiFinalAsli
-      : totalNominalDatabase;
-
-
   let totalPersentase = 0;
 
   let totalNominalTampil = 0;
@@ -3508,48 +3487,7 @@ function renderTermin(
       .map(
         item => {
 
-          let nominal =
-            Number(
-              item.nominal || 0
-            ) || 0;
-
-
-          let persentase =
-            Number(
-              item.persentase || 0
-            ) || 0;
-
-
-          // Persentase diisi, nominal kosong
-          if (
-            nominal <= 0 &&
-            persentase > 0 &&
-            nilaiFinalEfektif > 0
-          ) {
-
-            nominal =
-              (
-                nilaiFinalEfektif *
-                persentase
-              ) / 100;
-
-          }
-
-
-          // Nominal diisi, persentase kosong
-          if (
-            persentase <= 0 &&
-            nominal > 0 &&
-            nilaiFinalEfektif > 0
-          ) {
-
-            persentase =
-              (
-                nominal /
-                nilaiFinalEfektif
-              ) * 100;
-
-          }
+          const { nominal, persentase } = nilaiTerminKlien(item, nilaiFinalAsli);
 
 
           totalPersentase +=
@@ -4530,21 +4468,8 @@ window.editTerminKlien =
     // NORMALISASI PERSENTASE
     // ==================================================
 
-    const persentaseText =
-      String(
-        termin.persentase ?? ""
-      )
-        .trim()
-        .replace(/%/g, "")
-        .replace(",", ".");
-
-
-    const persentaseTermin =
-      persentaseText === ""
-        ? null
-        : Number(
-            persentaseText
-          );
+    const { nominal: nominalTermin, persentase: persentaseTermin } =
+      nilaiTerminKlien(termin, ambilNilaiFinal(detailData.klien));
 
 
     // ==================================================
@@ -4552,10 +4477,7 @@ window.editTerminKlien =
     // ==================================================
 
     inputTerminTerakhir =
-      Number.isFinite(
-        persentaseTermin
-      ) &&
-      persentaseTermin > 0
+      !(Number(termin.nominal) > 0) && persentaseTermin > 0
         ? "persentase"
         : "nominal";
 
@@ -4642,7 +4564,6 @@ window.editTerminKlien =
     if (persentaseInput) {
 
       if (
-        persentaseTermin !== null &&
         Number.isFinite(
           persentaseTermin
         ) &&
@@ -4659,10 +4580,7 @@ window.editTerminKlien =
 
 
       persentaseInput.value =
-        persentaseTermin !== null &&
-        Number.isFinite(
-          persentaseTermin
-        )
+        Number.isFinite(persentaseTermin) && persentaseTermin > 0
           ? String(
               persentaseTermin
             )
@@ -4672,29 +4590,8 @@ window.editTerminKlien =
 
 
     if (nominalInput) {
-
-      setNilaiNominal(
-        nominalInput,
-        termin.nominal
-      );
-
+      setNilaiNominal(nominalInput, nominalTermin > 0 ? nominalTermin : termin.nominal);
     }
-
-    if (
-  getNilaiDasarTerminAktif() <= 0 &&
-  nominalInput
-) {
-
-  nominalInput.dispatchEvent(
-    new Event(
-      "input",
-      {
-        bubbles: true
-      }
-    )
-  );
-
-}
 
     if (statusInput) {
 
@@ -10765,37 +10662,6 @@ if (editPartnerButton) {
             }
 
 
-            // ===============================
-            // CEK DUPLIKAT PARTNER
-            // ===============================
-
-            const partnerIds =
-              partnerPayload.map(
-                item =>
-                  item.partner_id
-              );
-
-
-            const uniqueIds =
-              new Set(
-                partnerIds
-              );
-
-
-            if (
-              uniqueIds.size !==
-              partnerIds.length
-            ) {
-
-              alert(
-                "Partner yang sama tidak boleh ditambahkan dua kali."
-              );
-
-              return;
-
-            }
-
-
             try {
 
               const saveResponse =
@@ -13499,25 +13365,7 @@ async function mulaiDetailProyek() {
     }
 
     function unavailable(option) {
-      if (
-        option.disabled ||
-        option.parentElement?.disabled
-      ) {
-        return true;
-      }
-
-      if (kind !== "partner") return false;
-
-      // Jangan tampilkan partner yang sudah dipilih
-      // pada kartu partner lain.
-      return Array.from(
-        document.querySelectorAll(
-          "#editPartnerContainer .edit-partner-id"
-        )
-      ).some(other =>
-        other !== select &&
-        other.value === option.value
-      );
+      return option.disabled || option.parentElement?.disabled;
     }
 
     function render() {

@@ -9415,6 +9415,11 @@ app.get(
 
 // EDIT TERMIN KLIEN
 
+function normalisasiStatusTerminKlien(status) {
+  if (status === "Sudah Dibayar") return "Dibayar";
+  return status || "Belum Dibayar";
+}
+
 app.put("/api/proyek/klien/termin/:id", wajibLogin, (req, res) => simpanTerminKlien(req, res));
 
 async function simpanTerminKlien(req, res, proyekIdDiizinkan = null) {
@@ -9450,9 +9455,7 @@ async function simpanTerminKlien(req, res, proyekIdDiizinkan = null) {
         syarat_pembayaran
       } = req.body ?? {};
 
-      const statusTermin = status_pembayaran === "Sudah Dibayar"
-        ? "Dibayar"
-        : status_pembayaran || "Belum Dibayar";
+      const statusTermin = normalisasiStatusTerminKlien(status_pembayaran);
 
       if (!["Belum Dibayar", "Proses", "Dibayar"].includes(statusTermin)) {
         return res.status(400).json({ error: "Status pembayaran termin klien tidak valid." });
@@ -11675,16 +11678,11 @@ app.delete(
 
 // TAMBAH TERMIN KLIEN
 
-app.post(
-  "/api/proyek/klien/:proyekKlienId/termin",
-  async (req, res) => {
-    const client =
-      await pool.connect();
+app.post("/api/proyek/klien/:proyekKlienId/termin", (req, res) => tambahTerminKlien(req, res));
 
+async function tambahTerminKlien(req, res, proyekIdDiizinkan = null) {
+    let client;
     try {
-      await client.query("BEGIN");
-
-
       const proyekKlienId =
         Number(
           req.params.proyekKlienId
@@ -11692,13 +11690,9 @@ app.post(
 
 
       if (
-        !Number.isInteger(proyekKlienId) ||
+        !Number.isSafeInteger(proyekKlienId) ||
         proyekKlienId <= 0
       ) {
-        await client.query(
-          "ROLLBACK"
-        );
-
         return res.status(400).json({
           error:
             "ID proyek klien tidak valid"
@@ -11715,36 +11709,30 @@ app.post(
         tanggal_jatuh_tempo,
         tanggal_bayar,
         syarat_pembayaran
-      } = req.body;
+      } = req.body ?? {};
 
 
       if (
-        !nama_termin?.trim()
+        typeof nama_termin !== "string" || !nama_termin.trim() || nama_termin.includes("\0")
       ) {
-        await client.query(
-          "ROLLBACK"
-        );
-
         return res.status(400).json({
           error:
             "Nama termin wajib diisi"
         });
       }
-        await client.query(
-      `
-        SELECT id
+      const statusTermin = normalisasiStatusTerminKlien(status_pembayaran);
+      if (!["Belum Dibayar", "Proses", "Dibayar"].includes(statusTermin)) {
+        return res.status(400).json({ error: "Status pembayaran termin klien tidak valid." });
+      }
+      if (proyekIdDiizinkan !== null && (
+        !tanggalTerminValid(tanggal_jatuh_tempo ?? null) || !tanggalTerminValid(tanggal_bayar ?? null) ||
+        (syarat_pembayaran != null && (typeof syarat_pembayaran !== "string" || syarat_pembayaran.includes("\0")))
+      )) {
+        return res.status(400).json({ error: "Periksa tanggal dan syarat pembayaran termin." });
+      }
 
-        FROM public.proyek_klien
-
-        WHERE id = $1
-
-        FOR UPDATE
-      `,
-      [
-        proyekKlienId
-      ]
-    );
-
+      client = await pool.connect();
+      await client.query("BEGIN");
 
       // ================================================
       // AMBIL INFORMASI PROYEK UNTUK LOG
@@ -11762,11 +11750,14 @@ app.post(
             JOIN public.proyek p
               ON p.id = pk.proyek_id
 
-            WHERE pk.id = $1
-
-            LIMIT 1
+            WHERE pk.id = $1 AND (
+              $2::bigint IS NULL OR (
+                pk.proyek_id = $2 AND LOWER(BTRIM(COALESCE(p.jenis_proyek, ''))) <> 'sewa'
+              )
+            )
+            FOR UPDATE OF pk
           `,
-          [proyekKlienId]
+          [proyekKlienId, proyekIdDiizinkan]
         );
 
 
@@ -12100,8 +12091,7 @@ app.post(
 
             nominalSimpan,
 
-            status_pembayaran ||
-              "Belum Dibayar",
+            statusTermin,
 
             tanggal_jatuh_tempo ||
               null,
@@ -12377,9 +12367,9 @@ app.post(
       });
 
     } catch (error) {
-      await client.query(
-        "ROLLBACK"
-      );
+      if (client) await client.query("ROLLBACK").catch(rollbackError => {
+        console.error("ERROR ROLLBACK TAMBAH TERMIN KLIEN:", rollbackError);
+      });
 
       console.error(
         "ERROR CREATE TERMIN KLIEN:",
@@ -12392,10 +12382,9 @@ app.post(
       });
 
     } finally {
-      client.release();
+      client?.release();
     }
-  }
-);
+}
 // ======================================================
 // GET URL FILE DOKUMEN KLIEN
 // ======================================================
@@ -17160,10 +17149,7 @@ const syaratPembayaran =
         jenisProyek ===
         "transaksi";
 
-      const nilaiDasarPartner =
-        parseAngka(
-          partnerData.nilai_dasar_partner
-        );
+      const nilaiDasarPartner = Number(partnerData.nilai_dasar_partner);
 
 
       // ==================================================
@@ -17207,19 +17193,8 @@ const syaratPembayaran =
         );
 
 
-      const totalNominalSebelumnya =
-        parseAngka(
-          totalTerminResult
-            .rows[0]
-            .total_nominal
-        );
-
-      const totalPersentaseSebelumnya =
-        parseAngka(
-          totalTerminResult
-            .rows[0]
-            .total_persentase
-        );
+      const totalNominalSebelumnya = Number(totalTerminResult.rows[0].total_nominal);
+      const totalPersentaseSebelumnya = Number(totalTerminResult.rows[0].total_persentase);
 
 
       let persentaseFinal =
@@ -17427,6 +17402,26 @@ const syaratPembayaran =
         */
 
         if (nilaiDasarPartner > 0) {
+          if (menggunakanNominal) {
+            const sisaNominal = nilaiDasarPartner - totalNominalSebelumnya;
+            if (nominalFinal - sisaNominal > 0.000001) {
+              const sisaRupiah = new Intl.NumberFormat("id-ID", {
+                style: "currency", currency: "IDR", maximumFractionDigits: 2, minimumFractionDigits: 0
+              }).format(Math.max(0, sisaNominal));
+              throw validationError(`Nominal termin tidak boleh melebihi sisa nilai partner (${sisaRupiah}).`);
+            }
+
+            const sisaPersentase = Number((100 - totalPersentaseSebelumnya).toFixed(6));
+            // Gunakan sisa persentase saat nominal melunasi sisa nilai dan selisihnya hanya pembulatan.
+            if (
+              Math.abs(nominalFinal - sisaNominal) <= 0.000001 &&
+              sisaPersentase > 0 &&
+              Number(Math.abs(persentaseFinal - sisaPersentase).toFixed(2)) <= 0.01
+            ) {
+              persentaseFinal = sisaPersentase;
+            }
+          }
+
           const totalSetelahDitambah =
             totalPersentaseSebelumnya +
             persentaseFinal;
@@ -17588,19 +17583,8 @@ const syaratPembayaran =
         );
 
 
-      const nilaiFinalPartner =
-        parseAngka(
-          nilaiFinalResult
-            .rows[0]
-            .nilai_final_partner
-        );
-
-      const totalNominalTermin =
-        parseAngka(
-          nilaiFinalResult
-            .rows[0]
-            .total_nominal_termin
-        );
+      const nilaiFinalPartner = Number(nilaiFinalResult.rows[0].nilai_final_partner);
+      const totalNominalTermin = Number(nilaiFinalResult.rows[0].total_nominal_termin);
 
 
       // ==================================================
@@ -21091,16 +21075,6 @@ app.put(
         return res.status(400).json({
           error:
             "Terdapat partner yang tidak valid"
-        });
-      }
-
-      if (
-        new Set(partnerIds).size !==
-        partnerIds.length
-      ) {
-        return res.status(400).json({
-          error:
-            "Partner yang sama tidak boleh ditambahkan dua kali"
         });
       }
 
@@ -27530,6 +27504,47 @@ function parameterAksesEditSyarat(user) {
   return [userAdalahAdmin(user), Number.isSafeInteger(id) && id > 0 ? id : null];
 }
 
+const ruteTambahTerminPendapatan = "/api/pendapatan/proyek/:proyekId/klien/:proyekKlienId/termin";
+
+app.get(ruteTambahTerminPendapatan, validasiAksesProyek, async (req, res) => {
+  const klienId = Number(req.params.proyekKlienId);
+  if (!Number.isSafeInteger(klienId) || klienId <= 0) {
+    return res.status(400).json({ error: "ID proyek klien tidak valid." });
+  }
+  try {
+    const { rows: [proyek] } = await pool.query(`
+      SELECT pk.id AS proyek_klien_id, p.id AS proyek_id,
+             COALESCE(NULLIF(pk.nilai_nego_3, 0), NULLIF(pk.nilai_nego_2, 0),
+                      NULLIF(pk.nilai_nego_1, 0), NULLIF(pk.nilai_submit, 0), 0) AS nilai_dasar,
+             COALESCE(termin.total_nominal, 0) AS total_nominal
+      FROM public.proyek_klien pk
+      JOIN public.proyek p ON p.id = pk.proyek_id
+      LEFT JOIN LATERAL (
+        SELECT SUM(t.nominal) AS total_nominal
+        FROM public.proyek_klien_termin t
+        WHERE t.proyek_klien_id = pk.id
+      ) termin ON TRUE
+      WHERE pk.id = $1 AND p.id = $2
+        AND LOWER(BTRIM(COALESCE(p.jenis_proyek, ''))) <> 'sewa'
+    `, [klienId, req.proyekId]);
+    if (!proyek) return res.status(404).json({ error: "Data proyek klien tidak ditemukan." });
+    return res.json({ data: proyek });
+  } catch (error) {
+    console.error("ERROR DATA PROYEK TERMIN KLIEN:", error);
+    return res.status(500).json({ error: "Data proyek untuk tambah termin gagal dimuat." });
+  }
+});
+
+app.post(ruteTambahTerminPendapatan, validasiAksesProyek,
+  (req, res) => tambahTerminKlien(req, res, req.proyekId));
+
+function tanggalTerminValid(tanggal) {
+  return tanggal === null || (
+    typeof tanggal === "string" && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(tanggal) &&
+    !Number.isNaN(Date.parse(tanggal)) && new Date(tanggal).toISOString().slice(0, 10) === tanggal
+  );
+}
+
 const sumberSyaratPendapatan = {
   reguler: { tabel: "proyek_klien_termin", relasi: "proyek_klien", relasiId: "proyek_klien_id" },
   sewa: { tabel: "proyek_sewa_pembayaran", relasi: "proyek_sewa", relasiId: "proyek_sewa_id" }
@@ -27600,14 +27615,10 @@ async function simpanTerminPendapatan(req, res) {
   if (!Object.hasOwn(sumberSyaratPendapatan, sumber) || !/^[1-9]\d*$/.test(terminId) || !Number.isSafeInteger(Number(terminId))) {
     return res.status(400).json({ error: "Termin pembayaran tidak valid." });
   }
-  const tanggalValid = tanggal => tanggal === null || (
-    typeof tanggal === "string" && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(tanggal) &&
-    !Number.isNaN(Date.parse(tanggal)) && new Date(tanggal).toISOString().slice(0, 10) === tanggal
-  );
   if (typeof nama_termin !== "string" || !nama_termin.trim() || nama_termin.includes("\0") ||
       typeof syarat_pembayaran !== "string" || syarat_pembayaran.includes("\0") ||
       !["Sudah Dibayar", "Proses", "Belum Dibayar"].includes(status_pembayaran) ||
-      !tanggalValid(tanggal_jatuh_tempo) || !tanggalValid(tanggal_bayar) ||
+      !tanggalTerminValid(tanggal_jatuh_tempo) || !tanggalTerminValid(tanggal_bayar) ||
       !["", "nominal", "persentase"].includes(input_terakhir)) {
     return res.status(400).json({ error: "Periksa deskripsi, status, tanggal, dan syarat pembayaran." });
   }
@@ -27764,8 +27775,8 @@ app.get(
             t.persentase,
             t.nominal,
             t.status_pembayaran,
-            t.tanggal_jatuh_tempo,
-            t.tanggal_bayar,
+            TO_CHAR(t.tanggal_jatuh_tempo::date, 'YYYY-MM-DD') AS tanggal_jatuh_tempo,
+            TO_CHAR(t.tanggal_bayar::date, 'YYYY-MM-DD') AS tanggal_bayar,
             t.created_at,
 
             -- ==========================================
@@ -27778,7 +27789,7 @@ app.get(
             -- gunakan tanggal jatuh tempo
             -- ==========================================
 
-            CASE
+            TO_CHAR((CASE
               WHEN
                 LOWER(
                   TRIM(
@@ -27839,7 +27850,7 @@ app.get(
                   t.created_at::date,
                   pk.tanggal_mulai
                 )
-            END AS tanggal_pendapatan,
+            END)::date, 'YYYY-MM-DD') AS tanggal_pendapatan,
 
             -- ==========================================
             -- NILAI PENDAPATAN / NILAI TERMIN
@@ -28201,6 +28212,31 @@ app.get(
         });
       }
 
+      const perOrder = req.query.per_order === "1";
+      const sumberSewa = perOrder ? `
+          FROM public.proyek_sewa_order pesanan
+          JOIN public.proyek_sewa_produk produk ON produk.id = pesanan.proyek_sewa_produk_id
+          JOIN public.proyek_sewa ps ON ps.id = produk.proyek_sewa_id
+          LEFT JOIN public.master_produk_sewa master_produk ON master_produk.id = produk.produk_id
+          LEFT JOIN public.master_cabang lokasi_order ON lokasi_order.id = pesanan.cabang_id
+          LEFT JOIN public.proyek_sewa_pembayaran pembayaran
+            ON pembayaran.proyek_sewa_order_id = pesanan.id
+            AND pembayaran.proyek_sewa_id = ps.id
+        ` : `
+          FROM public.proyek_sewa_pembayaran pembayaran
+          JOIN public.proyek_sewa ps ON ps.id = pembayaran.proyek_sewa_id
+          LEFT JOIN public.proyek_sewa_order pesanan ON pesanan.id = pembayaran.proyek_sewa_order_id
+          LEFT JOIN public.proyek_sewa_produk produk ON produk.id = pesanan.proyek_sewa_produk_id
+          LEFT JOIN (
+            SELECT produk_order.proyek_sewa_id,
+                   ARRAY_AGG(DISTINCT BTRIM(o.no_req_klien) ORDER BY BTRIM(o.no_req_klien)) AS daftar_no_req_klien
+            FROM public.proyek_sewa_produk produk_order
+            JOIN public.proyek_sewa_order o ON o.proyek_sewa_produk_id = produk_order.id
+            WHERE NULLIF(BTRIM(o.no_req_klien), '') IS NOT NULL
+            GROUP BY produk_order.proyek_sewa_id
+          ) req_sewa ON req_sewa.proyek_sewa_id = ps.id
+        `;
+      const nilaiOrder = "COALESCE(pesanan.total_harga, pesanan.quantity * produk.harga_per_item * produk.durasi_bulan, 0)";
       const result =
         await pool.query(
           `
@@ -28219,6 +28255,13 @@ app.get(
 
             ps.nomor_pr,
             pesanan.no_req_klien,
+            ${perOrder ? `
+              pesanan.id AS proyek_sewa_order_id,
+              master_produk.item_produk,
+              lokasi_order.nama_cabang,
+              pesanan.quantity,
+              COALESCE(pesanan.tanggal_do, pesanan.tanggal_req_klien, pesanan.created_at::date) AS tanggal_order_pendapatan,
+            ` : "COALESCE(req_sewa.daftar_no_req_klien, ARRAY[]::text[]) AS daftar_no_req_klien,"}
 
             p.id
               AS proyek_id,
@@ -28255,19 +28298,16 @@ app.get(
             klien.status_pengadaan,
             klien.status_teknis,
 
-            COALESCE(
-              ps.total_nilai,
-              0
-            )::numeric
+            (${perOrder ? nilaiOrder : "COALESCE(ps.total_nilai, 0)"})::numeric
               AS nilai_kontrak,
 
             pembayaran.deskripsi
               AS nama_termin,
 
             100 * pembayaran.nominal / NULLIF(
-              CASE WHEN pembayaran.proyek_sewa_order_id IS NOT NULL
+              ${perOrder ? nilaiOrder : `CASE WHEN pembayaran.proyek_sewa_order_id IS NOT NULL
                 THEN pesanan.quantity * produk.harga_per_item * produk.durasi_bulan
-                ELSE ps.total_nilai END, 0
+                ELSE ps.total_nilai END`}, 0
             ) AS persentase,
 
             COALESCE(
@@ -28302,17 +28342,7 @@ app.get(
             pembayaran.created_at,
             pembayaran.updated_at
 
-          FROM public.proyek_sewa_pembayaran
-            pembayaran
-
-          INNER JOIN public.proyek_sewa ps
-            ON ps.id =
-              pembayaran.proyek_sewa_id
-
-          LEFT JOIN public.proyek_sewa_order pesanan
-            ON pesanan.id = pembayaran.proyek_sewa_order_id
-          LEFT JOIN public.proyek_sewa_produk produk
-            ON produk.id = pesanan.proyek_sewa_produk_id
+          ${sumberSewa}
 
           INNER JOIN public.proyek p
             ON p.id =
@@ -28355,7 +28385,8 @@ app.get(
               DESC,
 
             pembayaran.id
-              DESC
+              DESC,
+            pesanan.id
           `, parameterAksesEditSyarat(req.session.user)
         );
 

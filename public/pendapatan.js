@@ -51,6 +51,7 @@ const filterJenisPendapatan =
   document.getElementById(
     "filterJenisPendapatan"
   );
+const filterSubJenisPendapatan = tampilPendapatanBulanan ? document.getElementById("filterSubJenisPendapatan") : null;
 
 const filterStatusPembayaranPendapatan =
   document.getElementById(
@@ -276,6 +277,8 @@ function getBulan(value) {
 // ======================================================
 
 function getTanggalPendapatan(item) {
+  if (isOrderSewaTanpaTermin(item)) return item.tanggal_order_pendapatan ?? null;
+
   const tanggalTagihan =
     item?.tanggal_tagihan ||
     item?.tanggal_jatuh_tempo ||
@@ -546,6 +549,10 @@ function updateUrlPendapatan() {
     );
   }
 
+  if (filterSubJenisPendapatan?.value) {
+    params.set("sub_jenis_proyek", filterSubJenisPendapatan.value);
+  }
+
   if (
     filterStatusPembayaranPendapatan
   ) {
@@ -728,9 +735,12 @@ async function loadPendapatan({ pertahankanFilter = false } = {}) {
         ? `/api/pendapatan/detail?${apiQuery}`
         : "/api/pendapatan/detail";
 
+    const sewaParams = new URLSearchParams(apiParams);
+    if (tampilPendapatanBulanan) sewaParams.set("per_order", "1");
+    const querySewa = sewaParams.toString();
     const urlPendapatanSewa =
-      apiQuery
-        ? `/api/pendapatan/sewa/detail?${apiQuery}`
+      querySewa
+        ? `/api/pendapatan/sewa/detail?${querySewa}`
         : "/api/pendapatan/sewa/detail";
 
     const [
@@ -799,7 +809,7 @@ async function loadPendapatan({ pertahankanFilter = false } = {}) {
         : [];
 
     allPendapatan = [
-      ...pendapatanProyek.map(
+      ...pendapatanProyek.filter(item => !tampilPendapatanBulanan || !isPendapatanSewa(item)).map(
         item => ({
           ...item,
 
@@ -809,7 +819,7 @@ async function loadPendapatan({ pertahankanFilter = false } = {}) {
         })
       ),
 
-      ...pendapatanSewa.map(
+      ...pendapatanSewa.filter(item => !tampilPendapatanBulanan || item.proyek_sewa_order_id != null).map(
         item => ({
           ...item,
 
@@ -948,6 +958,20 @@ function loadFilterBulanPendapatan(select = filterBulanPendapatan, tanpaBulan = 
   select.value = dipilih;
 }
 
+function getSubJenisPendapatan(item) {
+  return String(item.sub_jenis_proyek ?? "").trim();
+}
+
+function loadFilterSubJenisPendapatan() {
+  if (!filterSubJenisPendapatan) return;
+  const jenis = filterJenisPendapatan?.value;
+  const daftar = [...new Set(allPendapatan
+    .filter(item => !jenis || item.jenis_proyek === jenis)
+    .map(getSubJenisPendapatan)
+    .filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
+  isiSelectPendapatan(filterSubJenisPendapatan, daftar, "Semua Subjenis Proyek");
+}
+
 // ======================================================
 // FILTER OPTIONS
 // ======================================================
@@ -1001,6 +1025,7 @@ function loadPendapatanFilters() {
     daftarJenis,
     "Semua Jenis Proyek"
   );
+  loadFilterSubJenisPendapatan();
 
   isiSelectPendapatan(
     filterStatusPembayaranPendapatan,
@@ -1216,6 +1241,13 @@ function setFilterPendapatanDariUrl() {
     }
   }
 
+  if (filterSubJenisPendapatan) {
+    loadFilterSubJenisPendapatan();
+    const subJenisUrl = pendapatanUrlParams.get("sub_jenis_proyek")?.trim().toLowerCase();
+    const pilihan = [...filterSubJenisPendapatan.options].find(option => option.value.toLowerCase() === subJenisUrl);
+    filterSubJenisPendapatan.value = pilihan?.value || "";
+  }
+
 
   if (
     filterStatusPembayaranPendapatan
@@ -1271,6 +1303,11 @@ function setDefaultPendapatanFilter() {
       "";
   }
 
+  if (filterSubJenisPendapatan) {
+    filterSubJenisPendapatan.value = "";
+    loadFilterSubJenisPendapatan();
+  }
+
   if (
     filterStatusPembayaranPendapatan
   ) {
@@ -1317,6 +1354,7 @@ function applyPendapatanFilter(
       filterJenisPendapatan
         ?.value || ""
     );
+  const subJenisDipilih = filterSubJenisPendapatan?.value;
 
   const statusPembayaranDipilih =
     String(
@@ -1413,7 +1451,8 @@ function applyPendapatanFilter(
           matchTahun &&
           matchBulan &&
           matchRentang &&
-          matchJenis
+          matchJenis &&
+          (!subJenisDipilih || getSubJenisPendapatan(item) === subJenisDipilih)
         );
       }
     );
@@ -1433,6 +1472,8 @@ function applyPendapatanFilter(
       ) {
         return true;
       }
+
+      if (isOrderSewaTanpaTermin(item)) return false;
 
       if (
         statusPembayaranDipilih ===
@@ -1508,7 +1549,7 @@ function applyPendapatanFilter(
   }
 
   updatePendapatanSummary(
-    dataSummary
+    dataSummary.filter(item => !isOrderSewaTanpaTermin(item))
   );
 
   renderPendapatanPage();
@@ -1715,6 +1756,10 @@ function isPendapatanSewa(item) {
 
 }
 
+function isOrderSewaTanpaTermin(item) {
+  return item?.proyek_sewa_order_id != null && item.termin_id == null && isPendapatanSewa(item);
+}
+
 function getPendapatanProjectLink(item) {
   const sewa = isPendapatanSewa(item);
   const id = Number(sewa ? item.proyek_sewa_id : item.proyek_id);
@@ -1744,6 +1789,17 @@ const namaBulanPendapatan = Array.from({ length: 12 }, (_, index) =>
   formatBulanPendapatan.format(new Date(Date.UTC(2000, index, 1)))
 );
 
+function getNoReqSewa(item) {
+  const nomor = String(item.no_req_klien ?? "");
+  return nomor.trim() ? nomor : "—";
+}
+
+function getKeteranganOrderSewa(item) {
+  const namaProyek = item.nama_proyek || "—";
+  const proyek = item.nomor_pr ? `${namaProyek} (${item.nomor_pr})` : namaProyek;
+  return [proyek, item.item_produk || "—", item.nama_cabang || "—", item.quantity ?? "—"].join(" - ");
+}
+
 function kelompokkanPendapatanBulanan(data) {
   const grup = new Map();
   for (const item of data) {
@@ -1751,14 +1807,20 @@ function kelompokkanPendapatanBulanan(data) {
     const nomorBulan = getBulan(tanggal);
     const tahun = nomorBulan >= 1 && nomorBulan <= 12 ? getTahun(tanggal) : null;
     const sewa = isPendapatanSewa(item);
-    const proyek = sewa ? item.proyek_sewa_id : item.proyek_id;
+    if (sewa && item.proyek_sewa_order_id == null) continue;
     const klien = item.proyek_klien_id ?? item.klien_id ?? item.nama_klien ?? item.perusahaan_klien;
-    const key = JSON.stringify([sewa, proyek ?? item.nomor_pr ?? item.nama_proyek, klien]);
+    const key = sewa
+      ? `sewa:${item.proyek_sewa_order_id}`
+      : JSON.stringify([item.proyek_id ?? item.nomor_pr ?? item.nama_proyek, klien]);
     if (!grup.has(key)) {
       grup.set(key, { item, perTahun: new Map(), tanpaTanggal: null, sudahDibayar: 0, outstanding: 0 });
     }
 
     const row = grup.get(key);
+    if (tahun != null && !row.perTahun.has(tahun)) {
+      row.perTahun.set(tahun, { bulan: Array(12).fill(null), total: 0 });
+    }
+    if (isOrderSewaTanpaTermin(item)) continue;
     const nilai = getNilaiPendapatan(item);
     if (getStatusPembayaranPendapatan(item) === "Sudah Dibayar") row.sudahDibayar += nilai;
     else row.outstanding += nilai;
@@ -1766,7 +1828,6 @@ function kelompokkanPendapatanBulanan(data) {
     if (tahun == null) {
       sel = row.tanpaTanggal ??= { nilai: 0, termin: [] };
     } else {
-      if (!row.perTahun.has(tahun)) row.perTahun.set(tahun, { bulan: Array(12).fill(null), total: 0 });
       const rekap = row.perTahun.get(tahun);
       sel = rekap.bulan[nomorBulan - 1] ??= { nilai: 0, termin: [] };
       rekap.total += nilai;
@@ -1803,7 +1864,7 @@ function susunExcelPendapatan(data) {
   const proyek = kelompokkanPendapatanBulanan(data);
   const tahunTampil = pilihTahunPendapatanBulanan(proyek);
   const adaTanpaTanggal = proyek.some(row => row.tanpaTanggal);
-  const header = ["No", "Proyek", "Kategori / No PR", "Jenis Proyek", "Nilai Kontrak",
+  const header = ["No", "Proyek", "Kategori / No Req Klien", "Jenis Proyek", "Nilai Kontrak",
     "Total Sudah Dibayar", "Total Outstanding", "Total Termin"];
   for (const tahun of tahunTampil) {
     header.push(...namaBulanPendapatan.map(bulan => `${bulan} ${tahun}`), `Total ${tahun}`);
@@ -1821,7 +1882,8 @@ function susunExcelPendapatan(data) {
   for (const [index, row] of proyek.entries()) {
     const { item, perTahun, tanpaTanggal, sudahDibayar, outstanding } = row;
     const identitas = [item.nama_proyek || item.nomor_pr || "—", getKeteranganProyekPendapatan(item), item.jenis_proyek ?? ""];
-    const nilai = [index + 1, ...identitas, angkaExcel(getNilaiKontrakBulanan(row)), sudahDibayar, outstanding, sudahDibayar + outstanding];
+    const nilai = [index + 1, identitas[0], isPendapatanSewa(item) ? getNoReqSewa(item) : identitas[1], identitas[2],
+      angkaExcel(getNilaiKontrakBulanan(row)), sudahDibayar, outstanding, sudahDibayar + outstanding];
     const tambahRincian = (sel, periode) => {
       for (const termin of sel?.termin ?? []) {
         rincian.push([...identitas, termin.no_req_klien ?? "", periode, getDeskripsiPendapatan(termin) || "",
@@ -1846,6 +1908,11 @@ function susunExcelPendapatan(data) {
     bulanan.push(nilai);
   }
   return { bulanan, rincian };
+}
+
+function bisaTambahTerminPendapatan(item) {
+  return item && !isPendapatanSewa(item) && item.bisa_edit_syarat_pembayaran === true &&
+    item.proyek_id && item.proyek_klien_id;
 }
 
 function renderPendapatanBulanan(data, startIndex, tahunTampil, adaTanpaTanggal) {
@@ -1879,7 +1946,7 @@ function renderPendapatanBulanan(data, startIndex, tahunTampil, adaTanpaTanggal)
   return `
     <div class="pendapatan-table-wrap" role="region" aria-label="Tabel pendapatan bulanan" tabindex="0">
       <table class="pendapatan-table pendapatan-table-bulanan">
-        <colgroup span="7"></colgroup>
+        <colgroup span="8"></colgroup>
         ${tahunTampil.map(() => '<colgroup span="13"></colgroup>').join("")}
         ${adaTanpaTanggal ? '<colgroup span="1"></colgroup>' : ""}
         <thead><tr>
@@ -1888,6 +1955,7 @@ function renderPendapatanBulanan(data, startIndex, tahunTampil, adaTanpaTanggal)
           <th scope="col" class="pendapatan-total pendapatan-total-paid" ${rowSpan}>Total Sudah Dibayar</th>
           <th scope="col" class="pendapatan-total pendapatan-total-outstanding" ${rowSpan}>Total Outstanding</th>
           <th scope="col" class="pendapatan-total" ${rowSpan}>Total Termin</th>
+          <th scope="col" ${rowSpan}>Aksi</th>
           ${tahunTampil.map(tahun => `<th scope="colgroup" colspan="13" class="pendapatan-year-head">${tahun}</th>`).join("")}
           ${adaTanpaTanggal ? `<th scope="col" ${rowSpan}>Tanpa Tanggal</th>` : ""}
         </tr>${tahunTampil.length ? `<tr class="pendapatan-month-head">
@@ -1897,18 +1965,25 @@ function renderPendapatanBulanan(data, startIndex, tahunTampil, adaTanpaTanggal)
         <tbody>${data.map((row, index) => {
           const { item, perTahun, tanpaTanggal, sudahDibayar, outstanding } = row;
           const link = getPendapatanProjectLink(item);
-          const nama = item.nama_proyek || item.nomor_pr || "—";
-          const keterangan = getKeteranganProyekPendapatan(item);
+          const sewa = isPendapatanSewa(item);
+          const namaProyek = item.nama_proyek || item.nomor_pr || "—";
+          const nama = sewa ? `No Req Klien: ${getNoReqSewa(item)}` : namaProyek;
+          const keterangan = sewa ? getKeteranganOrderSewa(item) : getKeteranganProyekPendapatan(item);
           const subtext = keterangan ? `<span class="pendapatan-subtext">${escapeHtml(keterangan)}</span>` : "";
+          const subJenis = getSubJenisPendapatan(item);
           const nilaiKontrak = getNilaiKontrakBulanan(row);
           return `<tr>
             <td>${startIndex + index + 1}</td>
-            <td>${link ? `<a href="${link}" class="pendapatan-project-link">${escapeHtml(nama)}</a>` : escapeHtml(nama)}${subtext}</td>
-            <td>${escapeHtml(item.jenis_proyek || "—")}</td>
+            <td>${link ? `<a href="${link}" class="pendapatan-project-link${sewa ? " pendapatan-sewa-nomor" : ""}">${escapeHtml(nama)}</a>` : escapeHtml(nama)}${subtext}</td>
+            <td>${escapeHtml(item.jenis_proyek || "—")}${subJenis ? `<span class="pendapatan-subtext">${escapeHtml(subJenis)}</span>` : ""}</td>
             <td class="amount"><span class="pendapatan-contract-value">${nilaiKontrak == null ? "—" : formatRupiah(nilaiKontrak)}</span></td>
             ${cellNominal(sudahDibayar, "pendapatan-total pendapatan-total-paid")}
             ${cellNominal(outstanding, "pendapatan-total pendapatan-total-outstanding")}
             ${cellNominal(sudahDibayar + outstanding, "pendapatan-total")}
+            <td class="pendapatan-aksi">${bisaTambahTerminPendapatan(item)
+              ? `<button type="button" class="projection-export" data-tambah-termin="${index}" aria-haspopup="dialog"
+                  aria-controls="pendapatanTambahDetail" aria-label="Tambah termin ${escapeHtml(nama)}">Tambah Termin</button>`
+              : "—"}</td>
             ${tahunTampil.map(tahun => {
               const rekap = perTahun.get(tahun);
               const bulanan = namaBulanPendapatan.map((_, nomor) => cellBulanan(rekap?.bulan[nomor], index, nomor, nama, tahun));
@@ -1960,6 +2035,146 @@ tombolUnduhPendapatan?.addEventListener("click", async () => {
 });
 
 if (tampilPendapatanBulanan) {
+  const modalTambah = document.getElementById("pendapatanTambahDetail");
+  const formTambah = document.getElementById("pendapatanTambahForm");
+  const namaProyekTambah = document.getElementById("pendapatanTambahProyek");
+  const infoTambah = document.getElementById("pendapatanTambahInfo");
+  const errorTambah = document.getElementById("pendapatanTambahError");
+  const batalTambah = document.getElementById("pendapatanTambahCancel");
+  const simpanTambah = document.getElementById("pendapatanTambahSimpan");
+  const notice = document.getElementById("pendapatanEditNotice");
+  const bidang = formTambah.elements;
+  let proyekTambah;
+  let urlTermin;
+  let permintaanProyek;
+  let inputTerakhir = "nominal";
+  let menyimpan = false;
+
+  function perbaruiModeTermin() {
+    const nilaiDasar = Number(proyekTambah?.nilai_dasar) || 0;
+    bidang.nominal.disabled = bidang.persentase.disabled = !proyekTambah;
+    bidang.persentase.readOnly = nilaiDasar <= 0;
+    bidang.persentase.required = nilaiDasar > 0;
+    bidang.persentase.value = "";
+    bidang.nominal.value = "";
+    inputTerakhir = "nominal";
+    simpanTambah.disabled = !proyekTambah;
+    infoTambah.textContent = proyekTambah
+      ? nilaiDasar > 0
+        ? `Nilai dasar ${formatRupiah(nilaiDasar)}`
+        : "Persentase dihitung otomatis dari total nominal termin."
+      : "";
+  }
+
+  pendapatanGroup.addEventListener("click", async event => {
+    const tombol = event.target.closest("[data-tambah-termin]");
+    if (!tombol || modalTambah.open || menyimpan) return;
+    const item = barisPendapatanBulanan[Number(tombol.dataset.tambahTermin)]?.item;
+    if (!bisaTambahTerminPendapatan(item)) return;
+    permintaanProyek?.abort();
+    permintaanProyek = new AbortController();
+    const { signal } = permintaanProyek;
+    urlTermin = `/api/pendapatan/proyek/${encodeURIComponent(item.proyek_id)}/klien/${encodeURIComponent(item.proyek_klien_id)}/termin`;
+    proyekTambah = null;
+    formTambah.reset();
+    errorTambah.hidden = true;
+    perbaruiModeTermin();
+    namaProyekTambah.textContent = [item.nama_proyek, item.nama_klien || item.perusahaan_klien].filter(Boolean).join(" · ");
+    infoTambah.textContent = "Memuat nilai proyek…";
+    tombol.focus({ preventScroll: true });
+    modalTambah.showModal();
+    formTambah.scrollTop = 0;
+    try {
+      const response = await fetch(urlTermin, {
+        signal, headers: { Accept: "application/json" }
+      }).catch(() => {
+        throw new Error("Data proyek gagal dimuat. Periksa koneksi dan buka kembali form.");
+      });
+      const result = await response.json().catch(() => null);
+      if (signal.aborted) return;
+      if (!response.ok || !result?.data) {
+        throw new Error(result?.error || "Data proyek untuk tambah termin gagal dimuat.");
+      }
+      proyekTambah = result.data;
+      perbaruiModeTermin();
+    } catch (error) {
+      if (signal.aborted) return;
+      infoTambah.textContent = "";
+      errorTambah.textContent = error.message;
+      errorTambah.hidden = false;
+    }
+  });
+
+  formTambah.addEventListener("input", event => {
+    const { name, value } = event.target;
+    if (!proyekTambah) return;
+    const nilaiDasar = Number(proyekTambah.nilai_dasar);
+    if (name === "persentase" && nilaiDasar > 0) {
+      inputTerakhir = name;
+      const persen = Number(Number(value).toFixed(2));
+      bidang.nominal.value = persen > 0 ? Math.round(nilaiDasar * persen / 100) : "";
+    } else if (name === "nominal") {
+      inputTerakhir = name;
+      const nominal = Math.round(Number(value));
+      const dasar = nilaiDasar > 0 ? nilaiDasar : Number(proyekTambah.total_nominal) + nominal;
+      bidang.persentase.value = nominal > 0 && dasar > 0 ? Number((nominal / dasar * 100).toFixed(2)) : "";
+    }
+  });
+
+  batalTambah.addEventListener("click", () => modalTambah.close());
+  modalTambah.addEventListener("cancel", event => {
+    if (menyimpan) event.preventDefault();
+  });
+  modalTambah.addEventListener("close", () => {
+    if (!modalTambah.open) permintaanProyek?.abort();
+  });
+
+  formTambah.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (menyimpan || !proyekTambah) return;
+    const payload = Object.fromEntries(new FormData(formTambah));
+    payload.input_terakhir = inputTerakhir;
+    payload.tanggal_jatuh_tempo ||= null;
+    payload.tanggal_bayar ||= null;
+    menyimpan = batalTambah.disabled = simpanTambah.disabled = true;
+    for (const control of bidang) control.disabled = true;
+    errorTambah.hidden = true;
+    notice.hidden = true;
+    try {
+      const response = await fetch(urlTermin, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(() => {
+        throw new Error("Tidak dapat menghubungi server. Periksa daftar termin sebelum mencoba menyimpan lagi.");
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || `Gagal menambah termin (HTTP ${response.status}).`);
+      if (result?.data?.id == null) throw new Error("Server tidak mengonfirmasi penyimpanan. Periksa daftar termin sebelum mencoba lagi.");
+      modalTambah.close();
+      await loadPendapatan({ pertahankanFilter: true });
+      const idTerm = String(result.data.id);
+      const adaTermin = item => !isPendapatanSewa(item) && String(item.termin_id) === idTerm;
+      const terminBaru = allPendapatan.find(adaTermin);
+      notice.textContent = "Termin klien berhasil ditambahkan.";
+      if (terminBaru && !filteredPendapatan.some(adaTermin)) {
+        const tanggal = getTanggalPendapatan(terminBaru);
+        const bulan = namaBulanPendapatan[getBulan(tanggal) - 1];
+        const periode = bulan ? `${bulan} ${getTahun(tanggal)}` : "Tanpa Tanggal";
+        notice.textContent += ` Sesuaikan filter untuk melihat termin baru (${periode}).`;
+      }
+      notice.hidden = false;
+    } catch (error) {
+      errorTambah.textContent = error.message;
+      errorTambah.hidden = false;
+    } finally {
+      menyimpan = batalTambah.disabled = false;
+      for (const control of bidang) control.disabled = false;
+    }
+  });
+}
+
+if (tampilPendapatanBulanan) {
   const modal = document.getElementById("pendapatanDetail");
   const detailTable = document.getElementById("pendapatanDetailTable");
   const detailRows = document.getElementById("pendapatanDetailRows");
@@ -1994,6 +2209,7 @@ if (tampilPendapatanBulanan) {
     const { item } = row;
     const periode = bulan === "tanpa-tanggal" ? "Tanpa Tanggal" : `${namaBulanPendapatan[bulan]} ${tahun}`;
     document.getElementById("pendapatanDetailContext").textContent = [
+      isPendapatanSewa(item) ? `No Req Klien: ${getNoReqSewa(item)}` : null,
       item.nama_proyek || item.nomor_pr || "—", item.nama_klien || item.perusahaan_klien, periode
     ].filter(Boolean).join(" · ");
     document.getElementById("pendapatanDetailTotal").textContent = formatRupiah(sel.nilai);
@@ -2688,9 +2904,13 @@ if (filterBulanPendapatan) {
 if (filterJenisPendapatan) {
   filterJenisPendapatan.addEventListener(
     "change",
-    () => applyPendapatanFilter()
+    () => {
+      loadFilterSubJenisPendapatan();
+      applyPendapatanFilter();
+    }
   );
 }
+filterSubJenisPendapatan?.addEventListener("change", () => applyPendapatanFilter());
 
 if (
   filterStatusPembayaranPendapatan

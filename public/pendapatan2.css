@@ -30,7 +30,7 @@
 }
 
 .pendapatan2-page .pendapatan-table th { font-size: 11px; }
-.pendapatan2-page .pendapatan-table-bulanan thead tr:first-child > th:nth-child(-n+7) {
+.pendapatan2-page .pendapatan-table-bulanan thead tr:first-child > th:nth-child(-n+8) {
   vertical-align: middle;
   text-align: left;
 }
@@ -101,6 +101,7 @@
 
 .pendapatan2-page .pendapatan-table .amount { text-align: end; font-variant-numeric: tabular-nums; }
 .pendapatan2-page .pendapatan-table td.pendapatan-total { font-weight: 400; }
+.pendapatan2-page .pendapatan-aksi button { white-space: nowrap; }
 .pendapatan2-page .pendapatan-table .pendapatan-total-paid { color: #116145; }
 .pendapatan2-page .pendapatan-table .pendapatan-total-outstanding { color: #a32d30; }
 .pendapatan2-page .pendapatan-table-bulanan tbody td:is(:nth-child(3), :nth-child(4)) { font-weight: 400; }
@@ -120,15 +121,16 @@
 }
 .pendapatan2-page .pendapatan-table-bulanan .projection-month { white-space: nowrap; }
 .pendapatan2-page .pendapatan-table-bulanan .projection-month > small { max-inline-size: 170px; }
-#pendapatanDetail {
-  --projection-dialog-width: 960px;
+:is(#pendapatanDetail, #pendapatanTambahDetail) {
   max-height: calc(100dvh - 24px);
   padding: 0;
   overflow: hidden;
 }
 
-#pendapatanDetail:has(#pendapatanDetailEdit:not([hidden])) { --projection-dialog-width: 520px; }
-#pendapatanDetail header { border-bottom: 1px solid var(--projection-border); }
+#pendapatanDetail { --projection-dialog-width: 960px; }
+#pendapatanDetail:has(#pendapatanDetailEdit:not([hidden])),
+#pendapatanTambahDetail { --projection-dialog-width: 520px; }
+:is(#pendapatanDetail, #pendapatanTambahDetail) header { border-bottom: 1px solid var(--projection-border); }
 #pendapatanDetailTotal { max-width: 100%; overflow-wrap: anywhere; }
 #pendapatanDetailTable { max-height: none; min-height: 0; overscroll-behavior: contain; }
 .pendapatan2-detail-table { table-layout: fixed; }
@@ -161,13 +163,14 @@
 }
 
 .pendapatan-edit-termin textarea { min-height: 76px; }
-#pendapatanDetail .projection-detail-actions {
+:is(#pendapatanDetail, #pendapatanTambahDetail) .projection-detail-actions {
   flex-wrap: wrap;
   gap: 8px;
   border-top: 1px solid var(--projection-border);
 }
 #pendapatanDetail:has(#pendapatanDetailEdit[hidden]) [form="pendapatanDetailEdit"] { display: none; }
-#pendapatanEditError { flex-basis: 100%; color: #a12830; overflow-wrap: anywhere; }
+:is(#pendapatanEditError, #pendapatanTambahError) { flex-basis: 100%; color: #a12830; overflow-wrap: anywhere; }
+#pendapatanTambahInfo { color: #506078; font-weight: 400; }
 
 @media (max-width: 760px) {
   .pendapatan2-detail-table,
@@ -200,6 +203,7 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+.pendapatan2-page .pendapatan-project-link.pendapatan-sewa-nomor { white-space: pre-wrap; }
 .pendapatan2-page .pendapatan-subtext { display: block; color: #506078; font-size: 11px; font-weight: 400; }
 
 .pendapatan2-page .pendapatan-status {
